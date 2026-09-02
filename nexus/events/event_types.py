@@ -28,3 +28,4 @@ class EventType:
 
     NETWORK_ONLINE = "network.online"
     NETWORK_OFFLINE = "network.offline"
+    RUNTIME_MODE_CHANGED = "runtime.mode_changed"

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from nexus.core.runtime import RuntimeMode
+
 
 @dataclass
 class HealthStatus:
@@ -17,11 +19,18 @@ class HealthStatus:
     tool_registry: bool = False
     terminal_sandbox: bool = False
 
+    network_online: bool = False
+    runtime_mode: RuntimeMode = RuntimeMode.OFFLINE
+    runtime_reason: str | None = None
+
     @property
     def ready(self) -> bool:
         """
         Indica se todos os componentes essenciais
         estão operacionais.
+
+        A conectividade externa não é considerada
+        um requisito para o Nexus operar localmente.
         """
 
         return all(

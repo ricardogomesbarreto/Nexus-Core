@@ -2,6 +2,13 @@ from nexus.config.settings import settings
 from nexus.core.application import NexusApplication
 
 
+WIDTH = 46
+
+
+def status_line(label, status):
+    return f"║ {label:<17} {status:<25}║"
+
+
 def main():
     app = NexusApplication()
 
@@ -9,54 +16,111 @@ def main():
 
     health = app.status()
 
+    runtime_mode = health.runtime_mode.value
+
+    network_status = (
+        "✓ ONLINE"
+        if health.network_online
+        else "✗ OFFLINE"
+    )
+
     print()
-    print("╔══════════════════════════════════════════════╗")
-    print("║                 N E X U S                    ║")
-    print(f"║                 v{settings.version:<19}║")
-    print("╠══════════════════════════════════════════════╣")
+    print("╔" + "═" * WIDTH + "╗")
+    print("║" + " N E X U S ".center(WIDTH) + "║")
+    print("║" + f"v{settings.version}".center(WIDTH) + "║")
+    print("╠" + "═" * WIDTH + "╣")
 
     print(
-        f"║ Core             {'✓ ONLINE' if health.core else '✗ ERROR':<22}║"
+        status_line(
+            "Core",
+            "✓ ONLINE" if health.core else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ Configuration    {'✓ READY' if health.configuration else '✗ ERROR':<22}║"
+        status_line(
+            "Configuration",
+            "✓ READY" if health.configuration else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ Database         {'✓ READY' if health.database else '✗ ERROR':<22}║"
+        status_line(
+            "Database",
+            "✓ READY" if health.database else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ Logger           {'✓ READY' if health.logger else '✗ ERROR':<22}║"
+        status_line(
+            "Logger",
+            "✓ READY" if health.logger else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ EventBus         {'✓ READY' if health.event_bus else '✗ ERROR':<22}║"
+        status_line(
+            "EventBus",
+            "✓ READY" if health.event_bus else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ SecurityGate     {'✓ READY' if health.security_gate else '✗ ERROR':<22}║"
+        status_line(
+            "SecurityGate",
+            "✓ READY" if health.security_gate else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ ToolRegistry     {'✓ READY' if health.tool_registry else '✗ ERROR':<22}║"
+        status_line(
+            "ToolRegistry",
+            "✓ READY" if health.tool_registry else "✗ ERROR",
+        )
     )
 
     print(
-        f"║ Terminal Sandbox {'✓ READY' if health.terminal_sandbox else '✗ ERROR':<22}║"
+        status_line(
+            "Terminal Sandbox",
+            "✓ READY"
+            if health.terminal_sandbox
+            else "✗ ERROR",
+        )
     )
 
-    print("╠══════════════════════════════════════════════╣")
+    print("╠" + "═" * WIDTH + "╣")
 
     print(
-        f"║ Health Monitor   {'✓ READY' if health.ready else '✗ ERROR':<22}║"
+        status_line(
+            "Health Monitor",
+            "✓ READY" if health.ready else "✗ ERROR",
+        )
     )
 
-    print("╠══════════════════════════════════════════════╣")
-    print(f"║ Node: {settings.node_name:<35}║")
-    print("║ Mode: OFFLINE                                ║")
-    print("╚══════════════════════════════════════════════╝")
+    print("╠" + "═" * WIDTH + "╣")
+
+    print(
+        status_line(
+            "Node",
+            settings.node_name,
+        )
+    )
+
+    print(
+        status_line(
+            "Network",
+            network_status,
+        )
+    )
+
+    print(
+        status_line(
+            "Mode",
+            runtime_mode,
+        )
+    )
+
+    print("╚" + "═" * WIDTH + "╝")
     print()
 
 

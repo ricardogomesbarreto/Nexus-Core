@@ -4,7 +4,7 @@ from nexus.core.application import NexusApplication
 
 def test_settings():
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.1.9"
+    assert settings.version == "0.2.0"
 
 
 def test_application_initialization():
