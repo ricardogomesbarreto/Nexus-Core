@@ -2,6 +2,7 @@ from nexus.config.settings import settings
 from nexus.core.connectivity import ConnectivityManager
 from nexus.core.logger import setup_logger
 from nexus.core.runtime import RuntimeMode
+from nexus.core.runtime_state import RuntimeStateController
 from nexus.database.database import Database
 from nexus.events import EventBus, EventType
 from nexus.monitoring.health import HealthStatus
@@ -42,6 +43,8 @@ class NexusApplication:
 
         self.health = HealthStatus()
 
+        self.runtime_state = RuntimeStateController()
+
     def initialize(self):
         self.logger.info("Inicializando Nexus Core")
 
@@ -62,68 +65,73 @@ class NexusApplication:
         )
 
         if settings.offline_mode:
-            self.health.network_online = False
-            self.health.runtime_mode = RuntimeMode.OFFLINE
-            self.health.runtime_reason = (
-                "Modo offline forçado pela configuração"
-            )
-
-            self.event_bus.publish(
-                EventType.RUNTIME_MODE_CHANGED,
-                {
-                    "mode": RuntimeMode.OFFLINE.value,
-                    "reason": self.health.runtime_reason,
-                },
+            self.runtime_state = RuntimeStateController(
+                initial_mode=RuntimeMode.OFFLINE,
+                initial_reason=(
+                    "Modo offline forçado pela configuração"
+                ),
             )
 
         else:
-            connectivity = self.connectivity_manager.check()
+            connectivity = (
+                self.connectivity_manager.check()
+            )
 
-            self.health.network_online = connectivity.online
+            self.health.network_online = (
+                connectivity.online
+            )
 
             if connectivity.online:
-                self.health.runtime_mode = RuntimeMode.ONLINE
-                self.health.runtime_reason = (
-                    "Conectividade externa disponível"
+                self.runtime_state = RuntimeStateController(
+                    initial_mode=RuntimeMode.ONLINE,
+                    initial_reason=(
+                        "Conectividade externa disponível"
+                    ),
                 )
 
                 self.event_bus.publish(
                     EventType.NETWORK_ONLINE,
                     {
                         "endpoint": connectivity.endpoint,
-                        "latency_ms": connectivity.latency_ms,
-                    },
-                )
-
-                self.event_bus.publish(
-                    EventType.RUNTIME_MODE_CHANGED,
-                    {
-                        "mode": RuntimeMode.ONLINE.value,
-                        "reason": self.health.runtime_reason,
+                        "latency_ms": (
+                            connectivity.latency_ms
+                        ),
                     },
                 )
 
             else:
-                self.health.runtime_mode = RuntimeMode.OFFLINE
-                self.health.runtime_reason = (
-                    "Conectividade externa indisponível"
+                self.runtime_state = RuntimeStateController(
+                    initial_mode=RuntimeMode.OFFLINE,
+                    initial_reason=(
+                        "Conectividade externa indisponível"
+                    ),
                 )
 
                 self.event_bus.publish(
                     EventType.NETWORK_OFFLINE,
                     {
                         "endpoint": connectivity.endpoint,
-                        "latency_ms": connectivity.latency_ms,
+                        "latency_ms": (
+                            connectivity.latency_ms
+                        ),
                     },
                 )
 
-                self.event_bus.publish(
-                    EventType.RUNTIME_MODE_CHANGED,
-                    {
-                        "mode": RuntimeMode.OFFLINE.value,
-                        "reason": self.health.runtime_reason,
-                    },
-                )
+        self.health.runtime_mode = (
+            self.runtime_state.mode
+        )
+
+        self.health.runtime_reason = (
+            self.runtime_state.reason
+        )
+
+        self.event_bus.publish(
+            EventType.RUNTIME_MODE_CHANGED,
+            {
+                "mode": self.runtime_state.mode.value,
+                "reason": self.runtime_state.reason,
+            },
+        )
 
         self.event_bus.publish(
             EventType.SYSTEM_START,
