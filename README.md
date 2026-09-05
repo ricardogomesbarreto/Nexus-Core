@@ -2,10 +2,10 @@
 
 Assistente pessoal de inteligência artificial **local-first, multimodal, modular, seguro e orientado a agentes**.
 
-> **Versão estável atual:** `v0.2.3 — Automatic DEGRADED Runtime Detection`
-> **Próxima versão planejada:** `v0.2.4 — Environment & Runtime Configuration`
+> **Versão estável atual:** `v0.2.4 — Environment & Runtime Configuration`
+> **Próxima versão planejada:** `v0.3.0 — Local Model Layer`
 > **Status:** Development
-> **Test baseline:** `151 passed`
+> **Test baseline:** `184 passed`
 
 ---
 
@@ -23,6 +23,7 @@ Antes da integração de modelos de inteligência artificial, memória, voz, vis
 * runtime;
 * observabilidade;
 * conectividade;
+* configuração;
 * lifecycle;
 * testabilidade;
 * governança;
@@ -84,6 +85,8 @@ O desenvolvimento do Nexus Core segue princípios estruturais que devem permanec
 * **Regressão automatizada**
 * **Separação de responsabilidades**
 * **Fail-safe defaults**
+* **Configuração explícita**
+* **Scope control**
 
 Segurança não é tratada como uma funcionalidade adicionada posteriormente.
 
@@ -93,9 +96,23 @@ Ela faz parte da fundação arquitetural do Nexus Core.
 
 # Estado atual
 
-A versão `v0.2.3` consolida a infraestrutura de runtime e conectividade introduzindo **detecção automática do estado `DEGRADED`**.
+A versão `v0.2.4` consolida a infraestrutura de configuração do runtime introduzindo:
 
-O Nexus Core agora distingue duas dimensões diferentes:
+* configuração por variáveis de ambiente;
+* allowlist explícita de parâmetros configuráveis;
+* parsing tipado;
+* normalização;
+* validação semântica;
+* defaults seguros;
+* `ConfigurationError`;
+* fail-fast para configuração inválida;
+* carregamento determinístico;
+* isolamento dos testes em relação ao ambiente do host;
+* proteção de parâmetros estruturais contra overrides ambientais.
+
+A semântica de conectividade estabilizada introduzida pela `v0.2.3` permanece integralmente preservada.
+
+O Nexus Core continua distinguindo duas dimensões:
 
 ```text
 observação bruta da rede
@@ -153,7 +170,7 @@ DEGRADED
 ONLINE
 ```
 
-O estado `DEGRADED` da `v0.2.3` significa especificamente:
+O estado `DEGRADED`, introduzido operacionalmente na `v0.2.3`, significa:
 
 > uma mudança ou instabilidade de conectividade externa foi observada, mas ainda não foi confirmada como novo estado estável.
 
@@ -170,7 +187,11 @@ Essas dimensões exigem sinais adicionais que ainda não fazem parte da arquitet
 Atualmente o projeto possui:
 
 * Núcleo da aplicação
-* Configuração tipada
+* Configuração tipada e imutável
+* Environment configuration loader
+* Allowlist de configuração externa
+* Parsing e validação de configuração
+* Fail-fast para configuração inválida
 * Logging estruturado
 * Banco de dados SQLite
 * EventBus
@@ -206,8 +227,8 @@ Atualmente o projeto possui:
 ## Baseline atual
 
 ```text
-Version:       v0.2.3
-Tests:         151 passed
+Version:       v0.2.4
+Tests:         184 passed
 Runtime:       Python 3.12
 Database:      SQLite
 Sandbox:       Docker
@@ -222,9 +243,19 @@ Status:        DEVELOPMENT
 ```text
 NEXUS CORE
 │
+├── Configuration Boundary
+│   │
+│   ├── Environment
+│   │
+│   ├── load_settings()
+│   │   ├── parsing
+│   │   ├── normalization
+│   │   ├── validation
+│   │   └── controlled overrides
+│   │
+│   └── Settings(frozen=True)
+│
 └── NexusApplication
-    │
-    ├── Configuration
     │
     ├── Logger
     │
@@ -307,9 +338,539 @@ health.runtime_snapshot()
 
 ---
 
+# Configuração
+
+A `v0.2.4` estabelece um boundary explícito entre o ambiente do processo e a configuração utilizada pelo Nexus Core.
+
+Fluxo:
+
+```text
+Environment
+    │
+    ▼
+load_settings()
+    │
+    ├── parsing tipado
+    ├── normalização
+    ├── validação
+    ├── defaults seguros
+    └── overrides permitidos
+    │
+    ▼
+Settings(frozen=True)
+    │
+    ▼
+settings = load_settings()
+    │
+    ▼
+Nexus Core
+```
+
+A estrutura principal permanece:
+
+```python
+@dataclass(frozen=True)
+class Settings:
+    ...
+```
+
+`Settings` representa um snapshot tipado e imutável de configuração.
+
+A entrada de configuração externa é responsabilidade de:
+
+```python
+load_settings()
+```
+
+---
+
+## Defaults
+
+Os valores padrão permanecem centralizados em `Settings`.
+
+Parâmetros operacionais atuais:
+
+```python
+node_name: str = "NEXUS-NODE-01"
+
+offline_mode: bool = True
+
+connectivity_monitor_interval: float = 30.0
+
+connectivity_confirmation_threshold: int = 2
+```
+
+A centralização evita múltiplas fontes independentes de defaults entre:
+
+```text
+Settings
+```
+
+e:
+
+```text
+load_settings()
+```
+
+O loader deriva os valores padrão de `Settings()` e aplica somente os overrides explicitamente suportados.
+
+---
+
+## Variáveis de ambiente suportadas
+
+A `v0.2.4` permite somente:
+
+```text
+NEXUS_NODE_NAME
+NEXUS_OFFLINE_MODE
+NEXUS_CONNECTIVITY_MONITOR_INTERVAL
+NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD
+```
+
+Essa lista funciona como uma allowlist.
+
+O loader não transforma automaticamente qualquer variável `NEXUS_*` em configuração interna.
+
+---
+
+## `NEXUS_NODE_NAME`
+
+Default:
+
+```text
+NEXUS-NODE-01
+```
+
+Exemplo:
+
+```bash
+export NEXUS_NODE_NAME="NEXUS-DESKTOP-01"
+```
+
+O valor é normalizado com remoção de whitespace externo.
+
+Exemplo:
+
+```text
+"  NEXUS-DESKTOP-01  "
+```
+
+torna-se:
+
+```text
+NEXUS-DESKTOP-01
+```
+
+Valores vazios ou compostos apenas por whitespace são rejeitados.
+
+Exemplo inválido:
+
+```bash
+export NEXUS_NODE_NAME="   "
+```
+
+Resultado:
+
+```text
+ConfigurationError
+```
+
+---
+
+## `NEXUS_OFFLINE_MODE`
+
+Default seguro:
+
+```text
+true
+```
+
+Valores permitidos:
+
+```text
+true
+false
+```
+
+O parsing é case-insensitive e remove whitespace externo.
+
+Portanto são válidos:
+
+```text
+true
+TRUE
+ True
+
+false
+FALSE
+ False
+```
+
+Valores como:
+
+```text
+yes
+1
+enabled
+on
+```
+
+não são aceitos.
+
+Essa decisão é deliberada.
+
+O objetivo é manter um contrato explícito, previsível e sem múltiplas convenções booleanas implícitas.
+
+Exemplo:
+
+```bash
+export NEXUS_OFFLINE_MODE=false
+```
+
+---
+
+## `NEXUS_CONNECTIVITY_MONITOR_INTERVAL`
+
+Default:
+
+```text
+30.0
+```
+
+Representa o intervalo em segundos entre ciclos do monitor de conectividade.
+
+Exemplo:
+
+```bash
+export NEXUS_CONNECTIVITY_MONITOR_INTERVAL=15.5
+```
+
+O valor deve ser:
+
+```text
+float
+finito
+> 0
+```
+
+São rejeitados:
+
+```text
+0
+-1
+nan
+inf
+-inf
+valor não numérico
+```
+
+Configurações inválidas produzem:
+
+```text
+ConfigurationError
+```
+
+---
+
+## `NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD`
+
+Default:
+
+```text
+2
+```
+
+Representa quantas observações consecutivas divergentes são necessárias para substituir o estado confirmado de conectividade.
+
+Exemplo:
+
+```bash
+export NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD=3
+```
+
+O valor deve ser:
+
+```text
+integer >= 2
+```
+
+São rejeitados:
+
+```text
+0
+1
+-1
+2.5
+abc
+```
+
+---
+
+## Campos não configuráveis por ambiente
+
+Na `v0.2.4`, os seguintes campos não podem ser alterados através de variáveis de ambiente:
+
+```text
+app_name
+version
+project_root
+data_dir
+logs_dir
+database_dir
+database_file
+```
+
+Portanto variáveis como:
+
+```text
+NEXUS_APP_NAME
+NEXUS_VERSION
+NEXUS_PROJECT_ROOT
+NEXUS_DATA_DIR
+NEXUS_LOGS_DIR
+NEXUS_DATABASE_DIR
+NEXUS_DATABASE_FILE
+```
+
+não alteram esses valores.
+
+Essa restrição reduz a superfície de configuração e evita transformar configuração externa em uma forma indireta de controle sobre caminhos estruturais do sistema.
+
+---
+
+## Variáveis desconhecidas
+
+O loader consulta apenas os nomes explicitamente suportados.
+
+Variáveis `NEXUS_*` não pertencentes à allowlist não são convertidas automaticamente em configuração.
+
+Na arquitetura atual elas são simplesmente ignoradas pelo loader.
+
+---
+
+## `ConfigurationError`
+
+Configurações externas inválidas produzem:
+
+```python
+ConfigurationError
+```
+
+A exceção deriva de:
+
+```python
+ValueError
+```
+
+Objetivo:
+
+* distinguir falhas de configuração externa;
+* evitar fallback silencioso;
+* facilitar diagnóstico;
+* preservar fail-fast;
+* impedir que valores inválidos avancem para o runtime.
+
+---
+
+## Fail-fast
+
+Configuração inválida não é substituída silenciosamente por defaults.
+
+Fluxo:
+
+```text
+Environment
+    │
+    ▼
+load_settings()
+    │
+    ├── válido
+    │     │
+    │     ▼
+    │   Settings
+    │
+    └── inválido
+          │
+          ▼
+   ConfigurationError
+          │
+          ▼
+    startup interrompido
+```
+
+Esse comportamento evita um cenário em que o operador acredita ter configurado determinado comportamento enquanto o processo executa silenciosamente com outro.
+
+---
+
+## Leitura do ambiente
+
+Quando chamado sem argumento:
+
+```python
+load_settings()
+```
+
+o loader utiliza:
+
+```python
+os.environ
+```
+
+Exemplo conceitual:
+
+```python
+settings = load_settings()
+```
+
+---
+
+## Configuração determinística para testes
+
+Para obter exclusivamente os defaults, independentemente do ambiente do host:
+
+```python
+load_settings({})
+```
+
+Isso permite que testes de default não dependam de:
+
+```text
+shell
+CI
+systemd environment
+container environment
+user session
+```
+
+---
+
+## Singleton global
+
+O módulo mantém compatibilidade com a arquitetura existente através de:
+
+```python
+settings = load_settings()
+```
+
+Isso significa que o ambiente é avaliado quando o módulo de configuração é importado no processo.
+
+O objeto resultante passa a ser utilizado pelos consumidores atuais.
+
+Mudanças posteriores em `os.environ` não reconfiguram automaticamente esse singleton.
+
+A `v0.2.4` não implementa reload dinâmico.
+
+---
+
+## Perfis de ambiente
+
+A `v0.2.4` **não introduz perfis artificiais** como:
+
+```text
+development
+production
+staging
+testing
+```
+
+Essa capacidade havia sido considerada no planejamento inicial, mas foi deliberadamente adiada.
+
+Ainda não existe comportamento operacional suficientemente diferente entre esses perfis para justificar uma abstração formal.
+
+Criar perfis sem semântica real adicionaria complexidade ornamental.
+
+Se perfis se tornarem necessários no futuro, deverão surgir a partir de requisitos concretos.
+
+---
+
+## `.env`
+
+A `v0.2.4` não introduz:
+
+```text
+.env
+python-dotenv
+```
+
+A configuração permanece baseada diretamente no ambiente do processo.
+
+Isso preserva:
+
+* zero dependências externas adicionais;
+* comportamento explícito;
+* boundary simples;
+* integração natural com shells, containers e service managers.
+
+---
+
+## Segurança da configuração
+
+Configuração externa não representa autoridade operacional.
+
+Ela não pode:
+
+* contornar `SecurityGate`;
+* registrar ferramentas arbitrárias;
+* conceder permissões;
+* alterar paths internos na `v0.2.4`;
+* alterar a versão reportada;
+* conceder acesso direto ao host;
+* executar comandos.
+
+O sistema de configuração e o sistema de autorização permanecem separados.
+
+---
+
+# `offline_mode = True`
+
+Força o runtime para:
+
+```text
+OFFLINE
+```
+
+independentemente da disponibilidade real da Internet.
+
+Nesse modo:
+
+* nenhuma verificação periódica é iniciada;
+* nenhum `ConnectivityMonitor` é criado;
+* `connectivity_monitor` permanece `None`;
+* não existe polling externo em background;
+* não existe detecção automática de `DEGRADED`;
+* o comportamento é determinístico;
+* a operação local permanece soberana.
+
+Esse continua sendo o default seguro.
+
+---
+
+# `offline_mode = False`
+
+Permite que o Nexus:
+
+1. verifique a conectividade externa;
+2. determine `ONLINE` ou `OFFLINE`;
+3. estabeleça o estado inicial;
+4. publique os eventos iniciais;
+5. inicie o monitor de conectividade;
+6. detecte mudanças brutas da rede;
+7. coloque o runtime em `DEGRADED` durante confirmação;
+8. confirme automaticamente `ONLINE` ou `OFFLINE`.
+
+Exemplo:
+
+```bash
+NEXUS_OFFLINE_MODE=false \
+PYTHONPATH="$PWD" \
+python -m nexus.main
+```
+
+---
+
 # Fluxo de conectividade e runtime
 
-A arquitetura da `v0.2.3` separa aquisição, interpretação, estado autoritativo e observabilidade.
+A arquitetura separa aquisição, interpretação, estado autoritativo e observabilidade.
 
 ```text
 ConnectivityManager
@@ -409,6 +970,18 @@ O modelo nunca receberá autoridade arbitrária sobre o host.
 # NexusApplication
 
 `NexusApplication` coordena o ciclo de vida dos principais componentes do Nexus Core.
+
+Antes de sua utilização, a configuração global já foi carregada através de:
+
+```text
+Environment
+    │
+    ▼
+load_settings()
+    │
+    ▼
+settings
+```
 
 Durante a inicialização atual, a aplicação:
 
@@ -516,101 +1089,6 @@ Isso garante liberação dos recursos mesmo quando ocorre uma exceção durante 
 
 ---
 
-# Configuração
-
-A configuração principal é representada por uma estrutura tipada.
-
-Entre os parâmetros atuais:
-
-```python
-offline_mode: bool = True
-connectivity_monitor_interval: float = 30.0
-connectivity_confirmation_threshold: int = 2
-```
-
----
-
-## `offline_mode = True`
-
-Força o runtime para:
-
-```text
-OFFLINE
-```
-
-independentemente da disponibilidade real da Internet.
-
-Nesse modo:
-
-* nenhuma verificação periódica é iniciada;
-* nenhum `ConnectivityMonitor` é criado;
-* `connectivity_monitor` permanece `None`;
-* não existe polling externo em background;
-* não existe detecção automática de `DEGRADED`;
-* o comportamento é determinístico;
-* a operação local permanece soberana.
-
----
-
-## `offline_mode = False`
-
-Permite que o Nexus:
-
-1. verifique a conectividade externa;
-2. determine `ONLINE` ou `OFFLINE`;
-3. estabeleça o estado inicial;
-4. publique os eventos iniciais;
-5. inicie o monitor de conectividade;
-6. detecte mudanças brutas da rede;
-7. coloque o runtime em `DEGRADED` durante confirmação;
-8. confirme automaticamente `ONLINE` ou `OFFLINE`.
-
----
-
-## Intervalo de monitoramento
-
-O intervalo operacional padrão é:
-
-```text
-30.0 segundos
-```
-
-O `ConnectivityMonitor` rejeita intervalos menores ou iguais a zero.
-
----
-
-## Threshold de confirmação
-
-O threshold padrão é:
-
-```text
-2 observações consecutivas
-```
-
-Configuração:
-
-```python
-connectivity_confirmation_threshold = 2
-```
-
-Valores menores que:
-
-```text
-2
-```
-
-são rejeitados.
-
-Para um threshold genérico `N`, uma nova condição precisa ser observada `N` vezes consecutivamente antes de substituir o estado estável confirmado.
-
-Enquanto a confirmação não é concluída:
-
-```text
-runtime_mode = DEGRADED
-```
-
----
-
 # Connectivity Manager
 
 O `ConnectivityManager` possui uma responsabilidade limitada e explícita:
@@ -667,7 +1145,7 @@ Uma falha em comunicação não concede qualquer autoridade adicional ao sistema
 
 # Connectivity Runtime Evaluator
 
-A `v0.2.3` introduz:
+A `v0.2.3` introduziu:
 
 ```text
 ConnectivityRuntimeEvaluator
@@ -808,7 +1286,7 @@ ONLINE
   │
   └── ONLINE observado novamente
          ▼
-      ONLINE
+       ONLINE
 ```
 
 Nesse caso o sistema não confirma `OFFLINE`.
@@ -827,7 +1305,7 @@ Isso impede que observações antigas sejam acumuladas incorretamente através d
 
 A `v0.2.2` introduziu o `ConnectivityMonitor`.
 
-A `v0.2.3` estende sua responsabilidade integrando o `ConnectivityRuntimeEvaluator`.
+A `v0.2.3` estendeu sua responsabilidade integrando o `ConnectivityRuntimeEvaluator`.
 
 O componente recebe explicitamente:
 
@@ -905,7 +1383,7 @@ Nenhuma dependência externa foi adicionada para essa funcionalidade.
 
 ## Serialização de ciclos
 
-A `v0.2.3` adiciona um lock dedicado ao ciclo de monitoramento:
+A `v0.2.3` adicionou um lock dedicado ao ciclo de monitoramento:
 
 ```text
 _cycle_lock
@@ -1023,7 +1501,7 @@ permite observar se a worker associada continua viva.
 
 # Semântica das transições de conectividade
 
-A `v0.2.3` separa:
+A arquitetura separa:
 
 ```text
 mudança na observação bruta da rede
@@ -1358,11 +1836,11 @@ O Nexus Core foi projetado para preservar sua capacidade local mesmo nesse estad
 
 ## DEGRADED
 
-Na `v0.2.3`, `DEGRADED` possui uma semântica operacional específica:
+`DEGRADED` possui uma semântica operacional específica:
 
 > existe uma mudança de conectividade observada que ainda aguarda confirmação suficiente para substituir o estado estável anterior.
 
-Exemplos:
+Exemplo:
 
 ```text
 network_online=False
@@ -1558,7 +2036,7 @@ OFFLINE
 
 ---
 
-# Semântica de monitoramento — v0.2.3
+# Semântica de monitoramento
 
 Exemplo completo:
 
@@ -1829,7 +2307,7 @@ Possíveis evoluções futuras:
 * polkit;
 * namespaces adicionais.
 
-Essa dívida não foi misturada à `v0.2.3`, porque constitui uma mudança independente de infraestrutura e segurança.
+Essa dívida permanece fora do escopo da `v0.2.4`, pois constitui uma mudança independente de infraestrutura e segurança.
 
 ---
 
@@ -1842,7 +2320,7 @@ Exemplo conceitual:
 ```text
 ╔══════════════════════════════════════════════╗
 ║                   N E X U S                  ║
-║                    v0.2.3                    ║
+║                    v0.2.4                    ║
 ╠══════════════════════════════════════════════╣
 ║ Core                              ✓ ONLINE   ║
 ║ Configuration                     ✓ READY    ║
@@ -1863,7 +2341,7 @@ Exemplo conceitual:
 
 A interface atual é textual.
 
-Atualização dinâmica de UI não faz parte do escopo da `v0.2.3`.
+Atualização dinâmica de UI não faz parte do escopo da `v0.2.4`.
 
 ---
 
@@ -1883,11 +2361,30 @@ Execução:
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Baseline da `v0.2.3`:
+Baseline da `v0.2.4`:
 
 ```text
-151 passed
+184 passed
 ```
+
+Também foi executada regressão completa com ambiente válido e não-default:
+
+```bash
+NEXUS_NODE_NAME="NEXUS-CI-01" \
+NEXUS_OFFLINE_MODE=false \
+NEXUS_CONNECTIVITY_MONITOR_INTERVAL=12.5 \
+NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD=4 \
+PYTHONPATH="$PWD" \
+pytest -q
+```
+
+Resultado:
+
+```text
+184 passed
+```
+
+Isso demonstra que a suíte não depende acidentalmente dos defaults ambientais do host.
 
 ---
 
@@ -1936,7 +2433,7 @@ A suíte cobre, entre outros:
 * continuidade da worker após falha de subscriber;
 * serialização de chamadas concorrentes de `check_once()`;
 * consistência entre runtime inicial e rede inicial;
-* independência entre HealthStatus e inicialização do evaluator;
+* independência entre `HealthStatus` e inicialização do evaluator;
 * monitor desabilitado em forced offline;
 * lifecycle da aplicação;
 * `initialize()` one-shot;
@@ -1944,6 +2441,30 @@ A suíte cobre, entre outros:
 * ordem monitor stop → system stop;
 * shutdown em `finally`;
 * uso de runtime snapshot no entrypoint;
+* defaults de configuração;
+* overrides ambientais suportados;
+* boolean parsing estrito;
+* normalização case-insensitive;
+* normalização de whitespace;
+* validação de `node_name`;
+* rejeição de `node_name` vazio;
+* rejeição de intervalo zero;
+* rejeição de intervalo negativo;
+* rejeição de `NaN`;
+* rejeição de infinito;
+* rejeição de sintaxe numérica inválida;
+* validação de threshold;
+* rejeição de threshold menor que `2`;
+* rejeição de float como threshold;
+* proteção de `app_name` contra override;
+* proteção de `version` contra override;
+* proteção de `project_root` contra override;
+* proteção de paths internos contra override;
+* leitura real de `os.environ`;
+* construção do singleton em processo novo;
+* fail-fast em processo novo;
+* independência dos testes em relação ao ambiente externo;
+* regressão completa sob configuração não-default;
 * regressão completa.
 
 ---
@@ -1962,11 +2483,21 @@ O `ConnectivityRuntimeEvaluator` também pode ser exercitado isoladamente atrav�
 
 Testes que precisam verificar comportamento concorrente utilizam primitivas de sincronização explícitas.
 
+Configuração default pode ser testada através de:
+
+```python
+load_settings({})
+```
+
+sem depender do ambiente real da máquina.
+
+Quando o objetivo é testar `os.environ`, o ambiente é explicitamente controlado pelo teste.
+
 ---
 
 # Dependências
 
-O runtime Python da `v0.2.3` não exige pacotes externos obrigatórios.
+O runtime Python da `v0.2.4` não exige pacotes externos obrigatórios.
 
 Arquivo:
 
@@ -1978,7 +2509,7 @@ deve refletir:
 
 ```text
 # Nexus Core runtime dependencies
-# No external Python packages are required at v0.2.3.
+# No external Python packages are required at v0.2.4.
 ```
 
 Para desenvolvimento:
@@ -1994,13 +2525,26 @@ inclui:
 pytest==9.1.1
 ```
 
-A `v0.2.3` utiliza apenas biblioteca padrão para a nova funcionalidade:
+A funcionalidade de configuração da `v0.2.4` utiliza somente componentes da biblioteca padrão:
 
 ```text
+os
+math
+collections.abc
 dataclasses
-threading
-logging
+pathlib
 ```
+
+Nenhuma dependência como:
+
+```text
+python-dotenv
+pydantic
+dynaconf
+environs
+```
+
+foi adicionada.
 
 ---
 
@@ -2014,6 +2558,7 @@ Nexus Core/
 ├── nexus/
 │   │
 │   ├── config/
+│   │   ├── __init__.py
 │   │   └── settings.py
 │   │
 │   ├── core/
@@ -2024,6 +2569,8 @@ Nexus Core/
 │   │   ├── logger.py
 │   │   ├── runtime.py
 │   │   └── runtime_state.py
+│   │
+│   ├── database/
 │   │
 │   ├── events/
 │   │
@@ -2043,13 +2590,15 @@ Nexus Core/
 ├── tests/
 │   ├── test_application_connectivity_monitor.py
 │   ├── test_application_runtime.py
+│   ├── test_connectivity.py
 │   ├── test_connectivity_monitor.py
 │   ├── test_connectivity_runtime_evaluator.py
 │   ├── test_core.py
 │   ├── test_health.py
 │   ├── test_main.py
 │   ├── test_runtime.py
-│   └── test_runtime_state.py
+│   ├── test_runtime_state.py
+│   └── test_settings_environment.py
 │
 ├── README.md
 └── ...
@@ -2208,7 +2757,7 @@ Baseline histórico:
 
 # v0.2.3 — Automatic DEGRADED Runtime Detection
 
-A `v0.2.3` introduz uma política determinística de confirmação de mudanças de conectividade e ativa automaticamente o estado `DEGRADED`.
+A `v0.2.3` introduziu uma política determinística de confirmação de mudanças de conectividade e ativou automaticamente o estado `DEGRADED`.
 
 Entregue:
 
@@ -2292,7 +2841,7 @@ Uma única observação divergente não substitui imediatamente o estado estáve
 
 ### Scope control
 
-A release não inventa sinais que o sistema ainda não possui.
+A release não inventou sinais que o sistema ainda não possuía.
 
 `DEGRADED` não foi associado artificialmente a:
 
@@ -2301,6 +2850,167 @@ A release não inventa sinais que o sistema ainda não possui.
 * APIs;
 * LLMs;
 * serviços HTTP.
+
+---
+
+# v0.2.4 — Environment & Runtime Configuration
+
+A `v0.2.4` estabelece a primeira infraestrutura formal de configuração externa do Nexus Core.
+
+Ela cria um boundary explícito entre:
+
+```text
+Environment
+```
+
+e:
+
+```text
+Settings
+```
+
+através de:
+
+```python
+load_settings()
+```
+
+Entregue:
+
+* `ConfigurationError`;
+* `load_settings()`;
+* leitura de `os.environ`;
+* suporte a mapping explícito para testes;
+* `Settings(frozen=True)` preservado;
+* defaults centralizados em `Settings`;
+* allowlist explícita de environment variables;
+* `NEXUS_NODE_NAME`;
+* `NEXUS_OFFLINE_MODE`;
+* `NEXUS_CONNECTIVITY_MONITOR_INTERVAL`;
+* `NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD`;
+* parsing booleano estrito;
+* parsing numérico;
+* normalização case-insensitive;
+* normalização de whitespace;
+* validação de nome do node;
+* validação de intervalo positivo;
+* rejeição de `NaN`;
+* rejeição de infinito;
+* validação de threshold mínimo;
+* proteção de paths internos;
+* proteção da versão;
+* proteção do nome da aplicação;
+* fail-fast em ambiente inválido;
+* singleton carregado no startup;
+* testes determinísticos independentes do ambiente do host;
+* testes reais em processo novo;
+* regressão completa com ambiente não-default;
+* nenhuma dependência externa adicional;
+* nenhum `.env`;
+* nenhum `python-dotenv`;
+* nenhum perfil artificial de ambiente;
+* nenhuma configuração dinâmica;
+* nenhuma expansão de autoridade operacional.
+
+Baseline:
+
+```text
+184 tests passing
+```
+
+---
+
+## Princípios de engenharia da v0.2.4
+
+### Single source of truth
+
+Defaults permanecem centralizados em:
+
+```text
+Settings
+```
+
+O loader não mantém uma segunda tabela independente de defaults.
+
+---
+
+### Explicit allowlist
+
+Somente quatro variáveis ambientais possuem significado operacional.
+
+Não existe mapeamento genérico de qualquer chave `NEXUS_*`.
+
+---
+
+### Fail-safe defaults
+
+Na ausência de configuração:
+
+```text
+offline_mode = True
+```
+
+continua sendo a política padrão.
+
+---
+
+### Fail-fast
+
+Configuração externa inválida não é silenciosamente ignorada nem substituída.
+
+Ela produz:
+
+```text
+ConfigurationError
+```
+
+---
+
+### Determinismo
+
+Testes de defaults utilizam:
+
+```python
+load_settings({})
+```
+
+e não dependem do ambiente real da máquina.
+
+---
+
+### Security First
+
+A release não permite configuração externa de:
+
+```text
+version
+project_root
+data_dir
+logs_dir
+database_dir
+database_file
+```
+
+---
+
+### Scope control
+
+A release não introduz:
+
+* providers;
+* modelos;
+* perfis artificiais;
+* `.env`;
+* reload;
+* sistema genérico de configuração;
+* secrets manager;
+* configuração remota.
+
+---
+
+### Zero dependency growth
+
+A implementação utiliza exclusivamente biblioteca padrão.
 
 ---
 
@@ -2353,24 +3063,31 @@ Entregue:
 
 ### v0.2.4 — Environment & Runtime Configuration
 
-**Status: próxima versão planejada**
+**Status: concluída**
 
-Planejado:
+Entregue:
 
-* configuração por ambiente;
-* perfis `development`;
-* perfis de produção;
-* overrides controlados;
-* validação;
-* configuração externa;
-* governança de parâmetros;
-* preparação para providers e modelos.
+* environment configuration boundary;
+* `ConfigurationError`;
+* `load_settings()`;
+* `Settings(frozen=True)` preservado;
+* defaults centralizados;
+* allowlist de overrides;
+* parsing tipado;
+* validação explícita;
+* fail-fast;
+* configuração determinística;
+* proteção de parâmetros estruturais;
+* nenhuma dependência externa adicional;
+* 184 testes passando.
 
 ---
 
 # Inteligência artificial
 
 ## v0.3.0 — Local Model Layer
+
+**Status: próxima versão planejada**
 
 Planejado:
 
@@ -2379,6 +3096,8 @@ Planejado:
 * execução isolada;
 * contratos de entrada e saída;
 * observabilidade;
+* lifecycle do modelo;
+* tratamento explícito de falhas;
 * nenhuma autoridade direta sobre ferramentas.
 
 Candidato atual:
@@ -2386,6 +3105,8 @@ Candidato atual:
 ```text
 Ollama
 ```
+
+O modelo local deverá ser integrado como uma camada de inteligência, não como uma camada de autoridade operacional.
 
 ---
 
@@ -2706,12 +3427,13 @@ release: Nexus Core v0.1.9 health check
 feat: Nexus Core v0.2.0 Implement Connectivity and Runtime Modes
 feat: Nexus Core v0.2.1 Implement Runtime State Controller
 feat: Nexus Core v0.2.2 Implement Continuous Connectivity Monitoring
+feat: Nexus Core v0.2.3 Implement Automatic DEGRADED Runtime Detection
 ```
 
-Commit planejado para a release atual:
+Commit previsto para a `v0.2.4`:
 
 ```text
-feat: Nexus Core v0.2.3 Implement Automatic DEGRADED Runtime Detection
+feat: Nexus Core v0.2.4 Implement Environment and Runtime Configuration
 ```
 
 Cada release possui sua própria tag.
@@ -2723,6 +3445,13 @@ v0.2.0
 v0.2.1
 v0.2.2
 v0.2.3
+v0.2.4
+```
+
+Mensagem prevista para a tag da release:
+
+```text
+release: Nexus Core v0.2.4 Environment & Runtime Configuration
 ```
 
 ---
@@ -2748,6 +3477,10 @@ Limitações e regras atuais:
 * latência não participa da política de `DEGRADED`;
 * o monitor atual observa conectividade externa booleana;
 * não existem probes de serviços individuais;
+* configuração externa está limitada a quatro parâmetros;
+* não existe reload dinâmico de configuração;
+* não existem perfis formais de ambiente;
+* `.env` não é carregado automaticamente;
 * memória persistente ainda não está implementada;
 * Knowledge Base ainda não está implementada;
 * modelo local ainda não está integrado;
@@ -2828,6 +3561,14 @@ Serviços online poderão complementar o sistema.
 
 Eles não devem substituir sua fundação local.
 
+A configuração da `v0.2.4` preserva essa filosofia mantendo:
+
+```text
+offline_mode = True
+```
+
+como default.
+
 ---
 
 # Privacidade
@@ -2851,6 +3592,8 @@ Integrações online deverão ser:
 * observáveis;
 * limitadas ao necessário.
 
+Configuração ambiental futura que envolva credenciais deverá possuir tratamento específico e não deverá reutilizar indiscriminadamente o mecanismo atual de parâmetros operacionais.
+
 ---
 
 # Observabilidade
@@ -2860,6 +3603,7 @@ O Nexus Core deverá evoluir mantendo rastreabilidade de:
 * lifecycle;
 * runtime;
 * conectividade;
+* configuração;
 * ferramentas;
 * autorizações;
 * falhas;
@@ -2901,6 +3645,8 @@ SecurityGate
           BLOCK
 ```
 
+Configuração externa também não altera essa cadeia de autoridade.
+
 ---
 
 # Fronteira entre inteligência e execução
@@ -2922,9 +3668,9 @@ LLM directly executes arbitrary host commands
 
 ---
 
-# Escopo da v0.2.3
+# Escopo da v0.2.4
 
-A `v0.2.3` é deliberadamente uma release de infraestrutura de runtime.
+A `v0.2.4` é deliberadamente uma release de infraestrutura de configuração.
 
 Ela **não** introduz:
 
@@ -2947,13 +3693,29 @@ Ela **não** introduz:
 * service health;
 * degradação baseada em latência;
 * avaliação HTTP de serviços;
-* política de disponibilidade de modelos.
+* política de disponibilidade de modelos;
+* `.env`;
+* `python-dotenv`;
+* secrets manager;
+* configuração remota;
+* perfis artificiais de ambiente;
+* reload dinâmico;
+* configuração externa de paths;
+* configuração externa da versão;
+* configuração externa do nome da aplicação.
 
 Ela introduz uma capacidade menor e fundamental:
 
-> interpretar mudanças de conectividade de forma estabilizada, utilizando `DEGRADED` durante o período de confirmação antes de assumir um novo estado `ONLINE` ou `OFFLINE`.
+> carregar overrides ambientais explícitos sobre parâmetros operacionais existentes, com parsing tipado, normalização, validação, defaults seguros e falha imediata para configuração inválida.
 
-Esse modelo incremental reduz complexidade e facilita auditoria.
+Esse modelo incremental:
+
+* reduz complexidade;
+* limita a superfície de configuração;
+* preserva compatibilidade;
+* melhora testabilidade;
+* evita configuration drift;
+* prepara um boundary confiável para as próximas camadas.
 
 ---
 
@@ -2962,16 +3724,37 @@ Esse modelo incremental reduz complexidade e facilita auditoria.
 A próxima release planejada é:
 
 ```text
-v0.2.4 — Environment & Runtime Configuration
+v0.3.0 — Local Model Layer
 ```
 
 Objetivo:
 
-* externalizar configuração de runtime de forma controlada;
-* introduzir perfis de ambiente;
-* validar parâmetros;
-* permitir overrides explícitos;
-* preparar a infraestrutura para providers e modelos futuros.
+* introduzir a primeira camada formal de modelo local;
+* manter execução local-first;
+* estabelecer contratos explícitos de entrada e saída;
+* definir lifecycle do modelo;
+* definir tratamento de indisponibilidade;
+* preservar isolamento entre inteligência e autoridade operacional;
+* não conceder ao modelo acesso direto a ferramentas;
+* não conceder ao modelo acesso direto ao sistema operacional.
+
+Arquitetura conceitual inicial:
+
+```text
+User / Application
+        │
+        ▼
+Local Model Layer
+        │
+        ▼
+Structured Model Response
+```
+
+A integração com ferramentas permanece para versões posteriores:
+
+```text
+v0.3.2 — Controlled Agent & Tool Calling
+```
 
 ---
 
@@ -2986,13 +3769,13 @@ A licença do projeto será definida posteriormente.
 ```text
 Nexus Core
 ────────────────────────────────────────────────
-Stable Version:       v0.2.3
-Next Development:     v0.2.4
+Stable Version:       v0.2.4
+Next Development:     v0.3.0
 Runtime:              Python 3.12
 Database:             SQLite
 Sandbox:              Docker
 Testing:              pytest
-Tests:                151 passed
+Tests:                184 passed
 Development Status:   ACTIVE
 ────────────────────────────────────────────────
 ```

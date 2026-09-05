@@ -1,8 +1,17 @@
+import math
+import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+class ConfigurationError(ValueError):
+    """
+    Erro de configuração externa inválida.
+    """
 
 
 @dataclass(frozen=True)
@@ -12,7 +21,7 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.2.3"
+    version: str = "0.2.4"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT
@@ -29,4 +38,99 @@ class Settings:
     connectivity_confirmation_threshold: int = 2
 
 
-settings = Settings()
+def _parse_bool(
+    environment_name: str,
+    value: str,
+) -> bool:
+    normalized = value.strip().lower()
+
+    if normalized == "true":
+        return True
+
+    if normalized == "false":
+        return False
+
+    raise ConfigurationError(
+        f"{environment_name} deve ser 'true' ou 'false'"
+    )
+
+
+def load_settings(
+    environment: Mapping[str, str] | None = None,
+) -> Settings:
+    """
+    Carrega configurações com overrides explícitos de ambiente.
+
+    Quando environment não é fornecido, utiliza os.environ.
+    """
+
+    source = os.environ if environment is None else environment
+    defaults = Settings()
+
+    node_name = defaults.node_name
+    if "NEXUS_NODE_NAME" in source:
+        node_name = source["NEXUS_NODE_NAME"].strip()
+
+        if not node_name:
+            raise ConfigurationError(
+                "NEXUS_NODE_NAME não pode ser vazio"
+            )
+
+    offline_mode = defaults.offline_mode
+    if "NEXUS_OFFLINE_MODE" in source:
+        offline_mode = _parse_bool(
+            "NEXUS_OFFLINE_MODE",
+            source["NEXUS_OFFLINE_MODE"],
+        )
+
+    monitor_interval = defaults.connectivity_monitor_interval
+    if "NEXUS_CONNECTIVITY_MONITOR_INTERVAL" in source:
+        try:
+            monitor_interval = float(
+                source["NEXUS_CONNECTIVITY_MONITOR_INTERVAL"]
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_CONNECTIVITY_MONITOR_INTERVAL deve ser um número"
+            ) from exc
+
+        if (
+            not math.isfinite(monitor_interval)
+            or monitor_interval <= 0
+        ):
+            raise ConfigurationError(
+                "NEXUS_CONNECTIVITY_MONITOR_INTERVAL "
+                "deve ser finito e maior que zero"
+            )
+
+    confirmation_threshold = (
+        defaults.connectivity_confirmation_threshold
+    )
+    if "NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD" in source:
+        try:
+            confirmation_threshold = int(
+                source[
+                    "NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD"
+                ]
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD "
+                "deve ser um inteiro"
+            ) from exc
+
+        if confirmation_threshold < 2:
+            raise ConfigurationError(
+                "NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD "
+                "deve ser maior ou igual a 2"
+            )
+
+    return Settings(
+        node_name=node_name,
+        offline_mode=offline_mode,
+        connectivity_monitor_interval=monitor_interval,
+        connectivity_confirmation_threshold=confirmation_threshold,
+    )
+
+
+settings = load_settings()

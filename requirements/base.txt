@@ -1,2 +1,2 @@
 # Nexus Core runtime dependencies
-# No external Python packages are required at v0.2.3.
+# No external Python packages are required at v0.2.4.

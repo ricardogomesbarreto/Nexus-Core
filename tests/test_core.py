@@ -1,10 +1,12 @@
-from nexus.config.settings import settings
+from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
 
 
 def test_settings():
+    settings = load_settings({})
+
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.2.3"
+    assert settings.version == "0.2.4"
     assert settings.connectivity_monitor_interval == 30.0
     assert settings.connectivity_confirmation_threshold == 2
 

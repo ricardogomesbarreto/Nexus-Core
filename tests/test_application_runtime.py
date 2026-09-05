@@ -1,4 +1,4 @@
-from nexus.config.settings import settings
+from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
 from nexus.core.connectivity import ConnectivityManager
 from nexus.core.runtime import RuntimeMode
@@ -14,6 +14,8 @@ def test_application_has_connectivity_manager():
 
 
 def test_offline_mode_configuration():
+    settings = load_settings({})
+
     assert settings.offline_mode is True
 
 
@@ -26,7 +28,12 @@ def test_default_runtime_is_offline():
     finally:
         app.database.close()
 
-def test_application_initialize_forced_offline():
+def test_application_initialize_forced_offline(monkeypatch):
+    monkeypatch.setattr(
+        "nexus.core.application.settings",
+        load_settings({}),
+    )
+
     app = NexusApplication()
 
     try:
@@ -34,7 +41,9 @@ def test_application_initialize_forced_offline():
 
         assert app.health.network_online is False
         assert app.health.runtime_mode == RuntimeMode.OFFLINE
-        assert app.health.runtime_reason == "Modo offline forçado pela configuração"
+        assert app.health.runtime_reason == (
+            "Modo offline forçado pela configuração"
+        )
     finally:
         app.shutdown()
 
