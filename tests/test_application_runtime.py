@@ -36,13 +36,14 @@ def test_application_initialize_forced_offline():
         assert app.health.runtime_mode == RuntimeMode.OFFLINE
         assert app.health.runtime_reason == "Modo offline forçado pela configuração"
     finally:
-        app.database.close()
+        app.shutdown()
 
 def test_application_initialize_online(monkeypatch):
     class FakeSettings:
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -69,7 +70,7 @@ def test_application_initialize_online(monkeypatch):
         assert app.health.runtime_mode == RuntimeMode.ONLINE
         assert app.health.runtime_reason == "Conectividade externa disponível"
     finally:
-        app.database.close()
+        app.shutdown()
 
 
 def test_application_initialize_online_events(monkeypatch):
@@ -77,6 +78,7 @@ def test_application_initialize_online_events(monkeypatch):
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -118,7 +120,7 @@ def test_application_initialize_online_events(monkeypatch):
         assert EventType.NETWORK_ONLINE in event_types
         assert EventType.RUNTIME_MODE_CHANGED in event_types
     finally:
-        app.database.close()
+        app.shutdown()
 
 
 def test_application_initialize_offline_events(monkeypatch):
@@ -126,6 +128,7 @@ def test_application_initialize_offline_events(monkeypatch):
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -173,13 +176,14 @@ def test_application_initialize_offline_events(monkeypatch):
             "Conectividade externa indisponível"
         )
     finally:
-        app.database.close()
+        app.shutdown()
 
 def test_application_initialize_forced_offline_events(monkeypatch):
     class FakeSettings:
         offline_mode = True
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -210,13 +214,14 @@ def test_application_initialize_forced_offline_events(monkeypatch):
             "Modo offline forçado pela configuração"
         )
     finally:
-        app.database.close()
+        app.shutdown()
 
 def test_application_forced_offline_event_data(monkeypatch):
     class FakeSettings:
         offline_mode = True
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -245,13 +250,14 @@ def test_application_forced_offline_event_data(monkeypatch):
         )
 
     finally:
-        app.database.close()
+        app.shutdown()
 
 def test_application_runtime_health_consistency(monkeypatch):
     class FakeSettings:
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -285,13 +291,14 @@ def test_application_runtime_health_consistency(monkeypatch):
         assert health.ready is True
 
     finally:
-        app.database.close()
+        app.shutdown()
 
 def test_application_offline_health_consistency(monkeypatch):
     class FakeSettings:
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -325,12 +332,13 @@ def test_application_offline_health_consistency(monkeypatch):
         assert health.ready is True
 
     finally:
-        app.database.close()
+        app.shutdown()
 def test_application_online_event_data(monkeypatch):
     class FakeSettings:
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -368,7 +376,7 @@ def test_application_online_event_data(monkeypatch):
         assert event.data["latency_ms"] == 18.0
 
     finally:
-        app.database.close()
+        app.shutdown()
 
 
 def test_application_offline_event_data(monkeypatch):
@@ -376,6 +384,7 @@ def test_application_offline_event_data(monkeypatch):
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -413,7 +422,7 @@ def test_application_offline_event_data(monkeypatch):
         assert event.data["latency_ms"] is None
 
     finally:
-        app.database.close()
+        app.shutdown()
 
 
 def test_application_runtime_mode_changed_online_data(monkeypatch):
@@ -421,6 +430,7 @@ def test_application_runtime_mode_changed_online_data(monkeypatch):
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -460,7 +470,7 @@ def test_application_runtime_mode_changed_online_data(monkeypatch):
         )
 
     finally:
-        app.database.close()
+        app.shutdown()
 
 
 def test_application_runtime_mode_changed_offline_data(monkeypatch):
@@ -468,6 +478,7 @@ def test_application_runtime_mode_changed_offline_data(monkeypatch):
         offline_mode = False
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -507,4 +518,4 @@ def test_application_runtime_mode_changed_offline_data(monkeypatch):
         )
 
     finally:
-        app.database.close()
+        app.shutdown()

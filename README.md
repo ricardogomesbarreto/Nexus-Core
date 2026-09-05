@@ -1,134 +1,101 @@
 # Nexus Core
 
-Assistente pessoal de inteligência artificial local-first, multimodal, modular e orientado a agentes.
+Assistente pessoal de inteligência artificial **local-first, multimodal, modular, seguro e orientado a agentes**.
 
-**Versão atual:** `v0.2.0`
+> **Versão estável atual:** `v0.2.2 — Continuous Connectivity Monitoring`
+> **Próxima versão planejada:** `v0.2.3 — Automatic DEGRADED Runtime Detection`
+> **Status:** Development
+> **Test baseline:** `134 passed`
 
-## Objetivos
+---
 
-* Conversação por texto e voz
-* Operação offline e online
-* Memória persistente
-* Knowledge Base
-* Visão computacional
-* Interpretação de tela
-* Automação do desktop
-* Desenvolvimento de software assistido
-* Geração multimídia
-* Integração futura com Arduino e ESP32
-* Arquitetura distribuída para múltiplos dispositivos
-* Arquitetura com modelos locais e provedores online
-* Sistema de segurança centralizado
+## Visão geral
 
-## Princípios
+O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local, preservando privacidade, controle operacional, segurança e independência de serviços externos.
 
-* Open Source
-* Local First
-* Security First
-* Privacy First
-* Modularidade
-* Testabilidade
-* Observabilidade
-* Princípio do menor privilégio
+O projeto é desenvolvido incrementalmente.
 
-## Estado atual
+Antes da integração de modelos de inteligência artificial, memória, voz, visão, automação ou interfaces multimodais, o Nexus Core estabelece primeiro uma fundação sólida de:
 
-A versão `v0.2.0` amplia a infraestrutura do Nexus Core com a introdução do gerenciamento de conectividade e dos modos de operação do sistema.
+* segurança;
+* autorização;
+* execução controlada;
+* runtime;
+* observabilidade;
+* conectividade;
+* lifecycle;
+* testabilidade;
+* governança;
+* rastreabilidade.
 
-O Nexus agora consegue determinar, durante sua inicialização, se existe conectividade externa e definir automaticamente seu modo de execução como `ONLINE` ou `OFFLINE`.
+O objetivo de longo prazo é construir um assistente capaz de oferecer:
 
-Também é possível forçar o funcionamento em modo offline por meio da configuração da aplicação.
+* conversação por texto e voz;
+* operação offline e online;
+* modelos de IA locais;
+* integração opcional com provedores online;
+* memória persistente;
+* Knowledge Base;
+* visão computacional;
+* interpretação de tela;
+* automação controlada do desktop;
+* desenvolvimento de software assistido;
+* leitura e análise de arquivos;
+* pesquisa web;
+* geração multimídia;
+* arquitetura orientada a agentes;
+* integração com Arduino e ESP32;
+* comunicação com dispositivos externos;
+* arquitetura distribuída entre computadores e dispositivos;
+* interface gráfica multimodal.
 
-Atualmente o projeto possui:
+O Nexus Core **não** é projetado como um LLM com acesso irrestrito ao computador.
 
-* Núcleo da aplicação
-* Configuração tipada
-* Sistema de logs
-* Banco SQLite
-* Sistema de eventos
-* Health Status
-* Health Check integrado
-* Gerenciamento de conectividade
-* Detecção de estado da rede
-* Runtime Mode
-* Modos `ONLINE`, `OFFLINE` e `DEGRADED`
-* Arquitetura de ferramentas
-* Registro de ferramentas
-* Executor central de ferramentas
-* Security Gate
-* Política de riscos
-* Política de permissões por ferramenta
-* Segurança de caminhos
-* Auditoria de operações
-* Ferramentas de filesystem
-* Terminal isolado em Docker
-* Status detalhado da aplicação
-* Monitoramento dos componentes essenciais
-* Eventos de conectividade
-* Eventos de mudança de runtime
-* Suíte automatizada de testes
-
-> O modo `DEGRADED` já faz parte do modelo de runtime, mas sua determinação automática ainda não está implementada. Atualmente o `ConnectivityManager` diferencia conectividade disponível e indisponível.
-
-## Gerenciamento de conectividade
-
-O Nexus Core possui um `ConnectivityManager` responsável por verificar a disponibilidade de conectividade externa.
-
-A verificação utiliza um endpoint configurável e possui timeout para evitar bloqueios prolongados durante a inicialização.
-
-O resultado da verificação fornece:
+A arquitetura estabelece fronteiras explícitas entre:
 
 ```text
-online
-latency_ms
-endpoint
+INTELIGÊNCIA
+DECISÃO
+AUTORIZAÇÃO
+EXECUÇÃO
 ```
 
-Atualmente, `latency_ms` está reservado na estrutura de status, mas a implementação ainda não realiza a medição efetiva da latência.
+---
 
-A conectividade externa não é requisito para o funcionamento do núcleo local do Nexus.
+# Princípios de engenharia
 
-## Modos de operação
+O desenvolvimento do Nexus Core segue princípios estruturais que devem permanecer válidos durante toda a evolução do projeto.
 
-O Nexus Core possui uma camada de runtime representada por `RuntimeMode`.
+* **Open Source**
+* **Local First**
+* **Security First**
+* **Privacy First**
+* **Least Privilege**
+* **Defense in Depth**
+* **Modularidade**
+* **Testabilidade**
+* **Observabilidade**
+* **Auditabilidade**
+* **Determinismo quando aplicável**
+* **Isolamento de falhas**
+* **Contratos explícitos entre componentes**
+* **Evolução incremental**
+* **Compatibilidade controlada**
+* **Regressão automatizada**
+* **Separação de responsabilidades**
+* **Fail-safe defaults**
 
-Os modos disponíveis são:
+Segurança não é tratada como uma funcionalidade adicionada posteriormente.
 
-```text
-ONLINE
-OFFLINE
-DEGRADED
-```
+Ela faz parte da fundação arquitetural do Nexus Core.
 
-### ONLINE
+---
 
-Indica que o Nexus possui conectividade externa disponível.
+# Estado atual
 
-### OFFLINE
+A versão `v0.2.2` consolida o **monitoramento contínuo de conectividade** do Nexus Core, permitindo transições automáticas e controladas entre `ONLINE` e `OFFLINE`.
 
-Indica que a conectividade externa está indisponível ou que o modo offline foi explicitamente forçado pela configuração.
-
-### DEGRADED
-
-Representa um estado futuro em que o Nexus possui conectividade, porém algum serviço externo necessário está parcialmente indisponível.
-
-A detecção automática de `DEGRADED` será implementada posteriormente.
-
-## Configuração de modo offline
-
-O Nexus possui uma configuração:
-
-```python
-offline_mode: bool = True
-```
-
-Quando:
-
-```text
-offline_mode = True
-```
-
-o Nexus força sua operação em `OFFLINE`, independentemente da disponibilidade da Internet.
+O estado inicial continua sendo determinado durante `NexusApplication.initialize()`.
 
 Quando:
 
@@ -136,517 +103,2293 @@ Quando:
 offline_mode = False
 ```
 
-o Nexus realiza a verificação automática de conectividade.
+um `ConnectivityMonitor` é iniciado e passa a verificar periodicamente a conectividade externa.
 
-Essa abordagem permite que o sistema tenha comportamento determinístico em ambientes que exigem operação exclusivamente local.
+Quando ocorre uma mudança efetiva de conectividade, o estado de runtime é atualizado de maneira controlada e os eventos correspondentes são publicados.
 
-## Eventos de conectividade e runtime
+Atualmente o projeto possui:
 
-A arquitetura de eventos foi ampliada para representar mudanças relacionadas à conectividade e ao modo de operação.
+* Núcleo da aplicação
+* Configuração tipada
+* Logging estruturado
+* Banco de dados SQLite
+* EventBus
+* Catálogo de eventos
+* Health Status
+* Health Check
+* Connectivity Manager
+* Connectivity Monitor
+* Runtime Mode
+* Runtime State Controller
+* Runtime snapshots
+* Health runtime snapshots
+* Estados `ONLINE`, `OFFLINE` e `DEGRADED`
+* Arquitetura modular de ferramentas
+* Tool Registry
+* Tool Executor
+* Security Gate
+* Política de risco
+* Permissões por ferramenta
+* Segurança de caminhos
+* Audit Log
+* Ferramentas seguras de filesystem
+* Terminal Sandbox isolado com Docker
+* Painel de status
+* Lifecycle controlado da aplicação
+* Suíte automatizada de testes
 
-Eventos disponíveis:
+O valor `DEGRADED` já existe no domínio de runtime, mas sua determinação automática ainda **não** faz parte da implementação atual.
+
+---
+
+## Baseline atual
 
 ```text
-network.online
-network.offline
-runtime.mode_changed
+Version:       v0.2.2
+Tests:         134 passed
+Runtime:       Python 3.12
+Database:      SQLite
+Sandbox:       Docker
+Branch model:  main
+Status:        DEVELOPMENT
 ```
 
-### NETWORK_ONLINE
+---
 
-Publicado quando o Nexus detecta conectividade externa disponível.
-
-Os dados do evento incluem:
+# Arquitetura atual
 
 ```text
-endpoint
+NEXUS CORE
+│
+└── NexusApplication
+    │
+    ├── Configuration
+    │
+    ├── Logger
+    │
+    ├── Database
+    │   └── SQLite
+    │
+    ├── EventBus
+    │   └── NexusEvent
+    │
+    ├── ConnectivityManager
+    │   └── Point-in-time connectivity check
+    │
+    ├── ConnectivityMonitor
+    │   └── Nexus-ConnectivityMonitor
+    │       ├── Periodic polling
+    │       ├── Transition detection
+    │       ├── Failure containment
+    │       └── Graceful shutdown
+    │
+    ├── RuntimeStateController
+    │   ├── Authoritative runtime state
+    │   ├── Atomic transitions
+    │   └── Immutable snapshots
+    │
+    ├── HealthStatus
+    │   └── Runtime observability projection
+    │
+    ├── SecurityGate
+    │   ├── Risk Policy
+    │   ├── Tool Permissions
+    │   ├── Path Security
+    │   └── Audit Log
+    │
+    └── Tool System
+        ├── NexusTool
+        ├── ToolResult
+        ├── ToolRegistry
+        ├── ToolExecutor
+        ├── Filesystem Tools
+        └── TerminalSandboxTool
+            └── Docker
+```
+
+O `RuntimeStateController` é a **fonte autoritativa** do estado operacional.
+
+O `HealthStatus` mantém uma projeção voltada à observabilidade.
+
+Quando componentes concorrentes precisam observar:
+
+```text
+network_online
+runtime_mode
+runtime_reason
+```
+
+como uma única unidade lógica, devem utilizar:
+
+```python
+health.runtime_snapshot()
+```
+
+O `ConnectivityMonitor` coordena verificações periódicas, detecção de transições e atualização do estado de runtime.
+
+---
+
+# Fluxo de autoridade
+
+Uma das regras fundamentais do Nexus Core é que a futura camada de inteligência artificial **não terá autoridade direta sobre o sistema operacional**.
+
+O modelo arquitetural é:
+
+```text
+INTELIGÊNCIA
+     │
+     ▼
+PLANEJAMENTO / DECISÃO
+     │
+     ▼
+TOOL REGISTRY
+     │
+     ▼
+TOOL EXECUTOR
+     │
+     ▼
+SECURITY GATE
+     │
+     ├── autorizado
+     │      │
+     │      ▼
+     │    TOOL
+     │      │
+     │      ▼
+     │  EXECUÇÃO CONTROLADA
+     │
+     └── negado
+            │
+            ▼
+         BLOQUEIO
+```
+
+O modelo de IA poderá **propor** ações.
+
+O `ToolExecutor` será responsável por coordenar sua execução.
+
+O `SecurityGate` será responsável por determinar se a operação é permitida.
+
+O modelo nunca receberá autoridade arbitrária sobre o host.
+
+---
+
+# NexusApplication
+
+`NexusApplication` coordena o ciclo de vida dos principais componentes do Nexus Core.
+
+Durante a inicialização atual, a aplicação:
+
+1. Inicializa o sistema de logging.
+2. Inicializa o banco SQLite.
+3. Inicializa o `EventBus`.
+4. Inicializa o `SecurityGate`.
+5. Inicializa o `ToolRegistry`.
+6. Registra as ferramentas disponíveis.
+7. Inicializa o `ToolExecutor`.
+8. Inicializa o `ConnectivityManager`.
+9. Verifica a política `offline_mode`.
+10. Quando permitido, executa uma verificação inicial de conectividade.
+11. Determina o modo inicial de runtime.
+12. Inicializa o `RuntimeStateController`.
+13. Atualiza o `HealthStatus`.
+14. Publica os eventos iniciais correspondentes.
+15. Publica `SYSTEM_START`.
+16. Registra a inicialização no banco.
+17. Quando `offline_mode=False`, cria e inicia o `ConnectivityMonitor`.
+
+---
+
+## Contrato de inicialização
+
+`initialize()` possui semântica **one-shot**.
+
+Depois de uma inicialização bem-sucedida:
+
+```python
+app.initialize()
+```
+
+uma segunda chamada:
+
+```python
+app.initialize()
+```
+
+levanta:
+
+```text
+RuntimeError
+```
+
+Isso evita:
+
+* repetição de side effects;
+* duplicação de eventos;
+* reinicialização indevida de componentes;
+* criação acidental de múltiplas workers;
+* vazamento de threads.
+
+---
+
+## Contrato de shutdown
+
+`shutdown()` é idempotente.
+
+Chamadas repetidas após um shutdown bem-sucedido não repetem:
+
+* `SYSTEM_STOP`;
+* fechamento do banco;
+* encerramento da worker;
+* side effects de finalização.
+
+Quando existe um monitor ativo, a ordem é:
+
+```text
+ConnectivityMonitor.stop()
+        │
+        ▼
+SYSTEM_STOP
+        │
+        ▼
+Database.close()
+        │
+        ▼
+shutdown concluído
+```
+
+A worker de conectividade é encerrada **antes** de `SYSTEM_STOP`.
+
+Se `ConnectivityMonitor.stop()` não conseguir finalizar a worker dentro do timeout definido, o shutdown não é marcado falsamente como concluído.
+
+---
+
+## Entrypoint principal
+
+O fluxo principal utiliza:
+
+```python
+try:
+    ...
+finally:
+    app.shutdown()
+```
+
+depois que a inicialização foi concluída com sucesso.
+
+Isso garante liberação dos recursos mesmo quando ocorre uma exceção durante o restante da execução.
+
+---
+
+# Configuração
+
+A configuração principal é representada por uma estrutura tipada.
+
+Entre os parâmetros atuais:
+
+```python
+offline_mode: bool = True
+connectivity_monitor_interval: float = 30.0
+```
+
+---
+
+## `offline_mode = True`
+
+Força o runtime para:
+
+```text
+OFFLINE
+```
+
+independentemente da disponibilidade real da Internet.
+
+Nesse modo:
+
+* nenhuma verificação periódica é iniciada;
+* nenhum `ConnectivityMonitor` é criado;
+* `connectivity_monitor` permanece `None`;
+* não existe polling externo em background;
+* o comportamento é determinístico;
+* a operação local permanece soberana.
+
+---
+
+## `offline_mode = False`
+
+Permite que o Nexus:
+
+1. verifique a conectividade externa;
+2. determine `ONLINE` ou `OFFLINE`;
+3. estabeleça o estado inicial;
+4. publique os eventos iniciais;
+5. inicie o monitor de conectividade;
+6. detecte mudanças posteriores automaticamente.
+
+---
+
+## Intervalo de monitoramento
+
+O intervalo operacional padrão é:
+
+```text
+30.0 segundos
+```
+
+O `ConnectivityMonitor` rejeita intervalos menores ou iguais a zero.
+
+---
+
+# Connectivity Manager
+
+O `ConnectivityManager` possui uma responsabilidade limitada e explícita:
+
+> realizar uma verificação pontual da conectividade externa.
+
+Fluxo:
+
+```text
+ConnectivityManager.check()
+        │
+        ▼
+ConnectivityStatus
+        ├── online
+        ├── endpoint
+        └── latency_ms
+```
+
+O componente não possui worker própria.
+
+Ele não decide políticas de runtime e não mantém o estado autoritativo.
+
+---
+
+## ConnectivityStatus
+
+O resultado da verificação possui:
+
+```python
+online: bool
+latency_ms: float | None
+endpoint: str | None
+```
+
+Atualmente:
+
+```text
 latency_ms
 ```
 
-### NETWORK_OFFLINE
+faz parte do contrato estrutural, mas não existe medição ativa de latência.
 
-Publicado quando o Nexus realiza a verificação automática e detecta ausência de conectividade externa.
+Portanto, sua presença não deve ser interpretada como implementação de benchmarking de rede.
 
-Os dados do evento incluem:
+---
+
+## Falhas de conectividade
+
+Falhas de rede ou I/O durante a verificação são interpretadas como indisponibilidade externa.
+
+Uma falha em comunicação não concede qualquer autoridade adicional ao sistema.
+
+---
+
+# Connectivity Monitor
+
+A `v0.2.2` introduz o `ConnectivityMonitor`.
+
+Sua responsabilidade é transformar verificações pontuais em monitoramento periódico controlado.
+
+O componente recebe explicitamente:
 
 ```text
-endpoint
-latency_ms
+ConnectivityManager
+RuntimeStateController
+EventBus
+HealthStatus
+poll interval
+logger
 ```
 
-### RUNTIME_MODE_CHANGED
+---
 
-Publicado quando o modo de execução é determinado ou alterado.
+## Worker
 
-Os dados incluem:
+O monitor utiliza uma thread dedicada:
+
+```text
+Name:    Nexus-ConnectivityMonitor
+Daemon:  True
+```
+
+Implementação baseada na biblioteca padrão do Python:
+
+```python
+threading.Thread
+threading.Event
+threading.RLock
+```
+
+Nenhuma dependência externa foi adicionada para essa funcionalidade.
+
+---
+
+## `daemon=True`
+
+`daemon=True` funciona apenas como fallback no encerramento do processo.
+
+Ele **não** é a estratégia normal de shutdown.
+
+A estratégia oficial é:
+
+```text
+stop event
+    │
+    ▼
+join
+    │
+    ▼
+worker encerrada
+```
+
+---
+
+## Loop de monitoramento
+
+O loop utiliza:
+
+```python
+stop_event.wait(interval)
+```
+
+em vez de:
+
+```python
+time.sleep(interval)
+```
+
+Isso permite que o shutdown interrompa a espera imediatamente.
+
+---
+
+## `start()`
+
+`start()` é idempotente enquanto a worker existente estiver viva.
+
+Chamadas repetidas não criam múltiplas threads concorrentes para a mesma instância.
+
+---
+
+## `stop()`
+
+`stop()`:
+
+1. sinaliza o `stop_event`;
+2. aguarda a worker através de `join()`;
+3. respeita timeout;
+4. levanta `TimeoutError` se a worker permanecer viva.
+
+Também é seguro chamar `stop()`:
+
+* antes de `start()`;
+* repetidamente após o encerramento.
+
+---
+
+## `is_running`
+
+A propriedade:
+
+```python
+monitor.is_running
+```
+
+permite observar se a worker associada continua viva.
+
+---
+
+# Detecção de transições
+
+Cada ciclo de monitoramento executa:
+
+```text
+ConnectivityManager.check()
+        │
+        ▼
+ConnectivityStatus
+```
+
+O modo desejado é derivado diretamente:
+
+```text
+online=True  → ONLINE
+online=False → OFFLINE
+```
+
+A atualização é realizada através de uma transição condicional atômica no `RuntimeStateController`.
+
+---
+
+## Estado inalterado
+
+Se o estado observado for igual ao estado atual:
+
+```text
+nenhuma transição
+nenhum NETWORK_*
+nenhum RUNTIME_MODE_CHANGED
+```
+
+Isso evita:
+
+* event flooding;
+* timestamps artificiais;
+* side effects repetidos;
+* atualizações sem mudança real de estado.
+
+---
+
+## Mudança efetiva
+
+Quando existe mudança:
+
+```text
+ConnectivityStatus
+        │
+        ▼
+RuntimeStateController
+        │
+        ▼
+HealthStatus
+        │
+        ▼
+NETWORK_ONLINE / NETWORK_OFFLINE
+        │
+        ▼
+RUNTIME_MODE_CHANGED
+```
+
+---
+
+# Runtime State Controller
+
+O `RuntimeStateController` é a fonte autoritativa do estado operacional do Nexus Core.
+
+Ele mantém:
 
 ```text
 mode
 reason
+changed_at
 ```
+
+---
+
+## Thread safety
+
+O controlador utiliza:
+
+```python
+threading.RLock
+```
+
+para proteger seu estado interno.
+
+Leituras individuais de:
+
+```python
+mode
+reason
+changed_at
+```
+
+são sincronizadas.
+
+---
+
+## Snapshot
+
+Para leitura consistente do conjunto de estado:
+
+```python
+controller.snapshot()
+```
+
+retorna um:
+
+```text
+RuntimeStateSnapshot
+```
+
+imutável.
+
+Campos:
+
+```text
+mode
+reason
+changed_at
+```
+
+---
+
+## `transition()`
+
+Preserva o contrato histórico da `v0.2.1`.
+
+Uma transição válida:
+
+```python
+controller.transition(
+    RuntimeMode.ONLINE,
+    "Conectividade externa disponível",
+)
+```
+
+retorna:
+
+```text
+True
+```
+
+Transição para o mesmo estado:
+
+```text
+ValueError
+```
+
+Transição inválida:
+
+```text
+ValueError
+```
+
+---
+
+## `transition_if_changed()`
+
+A `v0.2.2` adiciona transições condicionais.
+
+Se o estado já for igual ao desejado:
+
+```text
+False
+```
+
+sem alterar:
+
+```text
+mode
+reason
+changed_at
+```
+
+Quando existe mudança:
+
+```text
+True
+```
+
+---
+
+## `transition_if_changed_result()`
+
+Para consumidores concorrentes, existe:
+
+```python
+transition_if_changed_result()
+```
+
+que realiza sob o mesmo lock:
+
+```text
+comparação
+transição
+captura do resultado
+```
+
+Retorna:
+
+```text
+RuntimeTransitionResult
+```
+
+com:
+
+```text
+changed
+mode
+reason
+changed_at
+```
+
+Isso elimina uma janela de corrida entre:
+
+```text
+alterar estado
+        │
+        ▼
+liberar lock
+        │
+        ▼
+ler snapshot
+```
+
+---
+
+# Runtime Modes
+
+Os modos definidos atualmente são:
+
+```text
+ONLINE
+OFFLINE
+DEGRADED
+```
+
+---
+
+## ONLINE
+
+Representa conectividade externa disponível.
+
+Não significa:
+
+* autorização;
+* confiança;
+* permissão para executar ferramentas;
+* permissão para acessar serviços arbitrários;
+* elevação de privilégio.
+
+---
+
+## OFFLINE
+
+Representa indisponibilidade externa ou operação offline forçada.
+
+O Nexus Core foi projetado para preservar sua capacidade local mesmo nesse estado.
+
+---
+
+## DEGRADED
+
+Existe atualmente no modelo de domínio.
+
+Entretanto:
+
+```text
+DEGRADED
+```
+
+ainda **não possui determinação automática**.
+
+A implementação dessa lógica está planejada para:
+
+```text
+v0.2.3
+```
+
+---
+
+# Health Status
+
+`HealthStatus` representa o estado de saúde e observabilidade dos componentes.
+
+Entre os campos atuais estão:
+
+```text
+core
+configuration
+database
+logger
+event_bus
+security_gate
+tool_registry
+terminal_sandbox
+network_online
+runtime_mode
+runtime_reason
+```
+
+---
+
+## Readiness
+
+A propriedade:
+
+```python
+health.ready
+```
+
+representa a disponibilidade estrutural dos componentes necessários ao funcionamento local.
+
+Conectividade externa **não determina readiness**.
+
+Portanto:
+
+```text
+Network OFFLINE
+```
+
+não implica necessariamente:
+
+```text
+Nexus unavailable
+```
+
+Essa distinção é fundamental para a arquitetura local-first.
+
+---
+
+## Runtime observability
+
+Os campos de runtime do `HealthStatus` são uma projeção do estado operacional.
+
+A fonte autoritativa continua sendo:
+
+```text
+RuntimeStateController
+```
+
+---
+
+## Atualização atômica
+
+Componentes concorrentes devem utilizar:
+
+```python
+health.update_runtime(
+    network_online=...,
+    runtime_mode=...,
+    runtime_reason=...,
+)
+```
+
+para atualizar os três campos como uma unidade lógica.
+
+---
+
+## Runtime snapshot
+
+Para leitura consistente:
+
+```python
+health.runtime_snapshot()
+```
+
+retorna:
+
+```text
+HealthRuntimeSnapshot
+```
+
+imutável.
+
+Campos:
+
+```text
+network_online
+runtime_mode
+runtime_reason
+```
+
+O entrypoint principal utiliza esse snapshot para evitar leituras concorrentes incoerentes.
+
+---
+
+# Event Architecture
+
+O Nexus Core utiliza um `EventBus` interno para comunicação desacoplada entre componentes.
+
+Eventos são representados por:
+
+```text
+NexusEvent
+```
+
+---
+
+## Eventos relevantes de runtime
+
+```text
+NETWORK_ONLINE
+NETWORK_OFFLINE
+RUNTIME_MODE_CHANGED
+```
+
+---
+
+# Semântica de inicialização
+
+Durante a inicialização em modo automático:
+
+```text
+offline_mode=False
+```
+
+o Nexus executa uma verificação inicial.
+
+Exemplo online:
+
+```text
+NETWORK_ONLINE
+RUNTIME_MODE_CHANGED(ONLINE)
+SYSTEM_START
+```
+
+Exemplo offline:
+
+```text
+NETWORK_OFFLINE
+RUNTIME_MODE_CHANGED(OFFLINE)
+SYSTEM_START
+```
+
+O evento inicial `RUNTIME_MODE_CHANGED` representa o estabelecimento inicial do estado de runtime.
+
+Esse contrato já existia na `v0.2.1` e foi preservado.
+
+---
+
+# Semântica de monitoramento — v0.2.2
+
+Após a inicialização, o monitor somente publica novos eventos quando ocorre uma mudança efetiva.
 
 Exemplo:
 
 ```text
-mode: ONLINE
-reason: Conectividade externa disponível
+Inicialização
+OFFLINE
+  ├── NETWORK_OFFLINE
+  └── RUNTIME_MODE_CHANGED(OFFLINE)
+
+Primeiro polling
+OFFLINE
+  └── nenhum evento
+
+Polling posterior
+ONLINE
+  ├── NETWORK_ONLINE
+  └── RUNTIME_MODE_CHANGED(ONLINE)
+
+Polling seguinte
+ONLINE
+  └── nenhum evento
+```
+
+Isso preserva:
+
+* determinismo;
+* auditabilidade;
+* baixo ruído;
+* ausência de event flooding.
+
+---
+
+# Falhas em subscribers
+
+O `EventBus` preserva o comportamento de propagação de exceções de subscribers.
+
+Entretanto, a `v0.2.2` endurece o fluxo de eventos de transição.
+
+Se um subscriber de:
+
+```text
+NETWORK_ONLINE
 ```
 
 ou:
 
 ```text
-mode: OFFLINE
-reason: Conectividade externa indisponível
+NETWORK_OFFLINE
 ```
 
-## Health Check
-
-O Nexus Core possui um mecanismo centralizado de verificação do estado dos componentes essenciais.
-
-Os componentes monitorados são:
+falhar, o monitor ainda tenta publicar:
 
 ```text
-Core
-Configuration
-Database
-Logger
-EventBus
-SecurityGate
-ToolRegistry
-Terminal Sandbox
+RUNTIME_MODE_CHANGED
 ```
 
-Além desses componentes, o Health Status também acompanha:
+para a mesma transição.
 
-```text
-Network Online
-Runtime Mode
-Runtime Reason
+A falha do primeiro evento continua visível ao chamador de:
+
+```python
+check_once()
 ```
 
-O sistema fornece um estado geral:
+---
+
+## Falha nos dois eventos
+
+Se a publicação do evento de rede e a publicação de `RUNTIME_MODE_CHANGED` falharem:
+
+* o primeiro erro permanece como erro principal;
+* a falha adicional é registrada no logger.
+
+---
+
+# Isolamento de falhas da worker
+
+O boundary da worker protege o loop contra exceções inesperadas.
+
+Fluxo:
 
 ```text
-Health Monitor
+cycle
+  │
+  ├── success
+  │      └── continue
+  │
+  └── exception
+         │
+         ├── log
+         └── continue
 ```
 
-A conectividade externa **não é requisito para o Nexus ser considerado `READY`**.
+Portanto, uma falha inesperada em um ciclo não encerra permanentemente o monitor.
 
-Portanto, um Nexus funcionando completamente em modo offline pode apresentar:
+Isso inclui falhas originadas por subscribers durante publicação de eventos.
+
+---
+
+# Security Gate
+
+O `SecurityGate` é a principal fronteira de autorização operacional do Nexus Core.
+
+Ferramentas não devem executar ações sensíveis apenas porque:
+
+* o LLM pediu;
+* um arquivo pediu;
+* uma página web pediu;
+* uma imagem contém instruções;
+* um PDF contém instruções;
+* uma mensagem externa contém instruções.
+
+Conteúdo externo é tratado como **não confiável**.
+
+---
+
+# Prompt Injection
+
+Prompt injection não representa autoridade.
+
+Conteúdo proveniente de:
+
+* páginas web;
+* PDFs;
+* documentos;
+* imagens;
+* mensagens;
+* memória externa;
+* arquivos;
+* resultados de ferramentas;
+
+deve ser tratado como dado.
+
+Não como autorização.
+
+---
+
+# Tool Architecture
+
+O sistema de ferramentas é estruturado em camadas.
 
 ```text
-Network: OFFLINE
-Mode: OFFLINE
-Health Monitor: READY
-```
-
-## Arquitetura atual
-
-```text
-NEXUS CORE
-
-│
-└── NexusApplication
-    │
-    ├── EventBus
-    │
-    ├── Database
-    │
-    ├── ConnectivityManager
-    │
-    ├── HealthStatus
-    │
-    ├── SecurityGate
-    │
-    ├── ToolRegistry
-    │
-    └── ToolExecutor
+Future Model Layer
         │
-        └── SecurityGate
-            │
-            ├── Risk Policy
-            ├── Tool Permissions
-            ├── Path Security
-            └── Audit Log
-                │
-                └── Tools
-                    ├── Filesystem
-                    ├── System Info
-                    └── Terminal Sandbox
-                        │
-                        └── Docker
+        ▼
+Planner / Agent
+        │
+        ▼
+ToolRegistry
+        │
+        ▼
+ToolExecutor
+        │
+        ▼
+SecurityGate
+        │
+        ▼
+Tool
 ```
 
-## Sistema de segurança
+---
 
-Toda ferramenta executada pelo Nexus deve passar pelo `SecurityGate`.
+## Tool Registry
 
-O sistema utiliza:
+Responsável por registrar e localizar ferramentas disponíveis.
 
-* Níveis de risco
-* Política central de segurança
-* Permissões individuais por ferramenta
-* Proteção de caminhos
-* Auditoria
-* Bloqueio de ferramentas não registradas
-* Princípio do menor privilégio
+O modelo não recebe acesso arbitrário ao sistema apenas por conhecer o nome de uma ferramenta.
 
-Os níveis de risco são:
+---
+
+## Tool Executor
+
+Coordena a execução das ferramentas.
+
+Ele funciona como intermediário entre:
 
 ```text
-SAFE
-LOW
-MEDIUM
-HIGH
-CRITICAL
+intenção
+autorização
+execução
+resultado
 ```
 
-A política atual permite automaticamente operações de baixo risco, exige confirmação para operações de risco médio e bloqueia operações de alto risco ou críticas.
+---
 
-## Terminal Sandbox
+## Security boundary
 
-O terminal do Nexus não executa comandos diretamente no sistema operacional do usuário.
+O `ToolExecutor` deve respeitar as decisões do `SecurityGate`.
 
-A execução ocorre dentro de um container Docker isolado.
+A arquitetura não permite que o modelo simplesmente contorne essa camada.
 
-Características atuais:
+---
 
-* Sem acesso à rede
-* Filesystem somente leitura
-* `/tmp` temporário
-* Limite de memória
-* Limite de CPU
-* Limite de processos
-* `no-new-privileges`
-* Remoção automática do container
-* Execução como usuário não-root
-* Limite de tempo
-* Limite de saída
+# Filesystem Security
 
-Essa camada constitui a infraestrutura atual de execução controlada de comandos do Nexus Core.
+Operações de filesystem são sujeitas a validações explícitas.
 
-## Painel de status
+Entre os objetivos da arquitetura:
 
-A aplicação possui uma interface de status executável pelo terminal.
+* evitar traversal;
+* restringir áreas permitidas;
+* validar caminhos;
+* impedir acesso acidental a regiões sensíveis;
+* preservar least privilege.
 
-Execução:
+---
 
-```bash
-python -m nexus.main
+# Terminal Sandbox
+
+O Nexus Core já possui uma ferramenta de terminal executada em sandbox Docker.
+
+Objetivo:
+
+```text
+comando
+  │
+  ▼
+ToolExecutor
+  │
+  ▼
+SecurityGate
+  │
+  ▼
+TerminalSandboxTool
+  │
+  ▼
+Docker
 ```
 
-O painel apresenta:
+A sandbox reduz a exposição direta do host.
 
-* Versão do Nexus
-* Estado do Core
-* Configuration
-* Database
-* Logger
-* EventBus
-* SecurityGate
-* ToolRegistry
-* Terminal Sandbox
-* Health Monitor
-* Node
-* Estado da rede
-* Modo de operação
+---
 
-Exemplo em modo offline:
+## Limitação de segurança do Docker
+
+O usuário do sistema atualmente pertence ao grupo:
+
+```text
+docker
+```
+
+Esse grupo possui poder equivalente a root em diversos cenários.
+
+Isso é uma dívida técnica de segurança conhecida.
+
+Possíveis evoluções futuras:
+
+* Podman rootless;
+* Docker rootless;
+* helper privilegiado isolado;
+* políticas adicionais de sandbox;
+* AppArmor;
+* polkit;
+* namespaces adicionais.
+
+Essa dívida não foi misturada à `v0.2.2`, porque constitui uma mudança independente de infraestrutura e segurança.
+
+---
+
+# Painel de status
+
+O entrypoint principal apresenta um painel textual com o estado operacional.
+
+Exemplo conceitual:
 
 ```text
 ╔══════════════════════════════════════════════╗
-║                  N E X U S                   ║
-║                    v0.2.0                    ║
+║                   N E X U S                  ║
+║                    v0.2.2                    ║
 ╠══════════════════════════════════════════════╣
-║ Core              ✓ ONLINE                  ║
-║ Configuration     ✓ READY                   ║
-║ Database          ✓ READY                   ║
-║ Logger            ✓ READY                   ║
-║ EventBus          ✓ READY                   ║
-║ SecurityGate      ✓ READY                   ║
-║ ToolRegistry      ✓ READY                   ║
-║ Terminal Sandbox  ✓ READY                   ║
+║ Core                              ✓ ONLINE   ║
+║ Configuration                     ✓ READY    ║
+║ Database                          ✓ READY    ║
+║ Logger                            ✓ READY    ║
+║ EventBus                          ✓ READY    ║
+║ SecurityGate                      ✓ READY    ║
+║ ToolRegistry                      ✓ READY    ║
+║ Terminal Sandbox                  ✓ READY    ║
 ╠══════════════════════════════════════════════╣
-║ Health Monitor    ✓ READY                   ║
+║ Health Monitor                    ✓ READY    ║
 ╠══════════════════════════════════════════════╣
-║ Node              NEXUS-NODE-01             ║
-║ Network           ✗ OFFLINE                 ║
-║ Mode              OFFLINE                   ║
+║ Node                         NEXUS-NODE-01    ║
+║ Network                           ✗ OFFLINE  ║
+║ Mode                               OFFLINE   ║
 ╚══════════════════════════════════════════════╝
 ```
 
-O painel utiliza os valores reais do `HealthStatus`, não um modo de operação fixo.
+A interface atual é textual.
 
-## Testes
+Atualização dinâmica de UI não faz parte do escopo da `v0.2.2`.
 
-O projeto possui uma suíte automatizada utilizando `pytest`.
+---
 
-Estado atual:
+# Testes
 
-```text
-87 passed
-```
+Testes automatizados são parte obrigatória do processo de engenharia do Nexus Core.
 
-Os testes devem ser executados a partir da raiz do projeto:
-
-```bash
-python -m pytest -q
-```
-
-A suíte atual valida, entre outros componentes:
-
-* Configuração
-* Banco de dados
-* Logging
-* EventBus
-* Security Gate
-* Tool Registry
-* Ferramentas
-* Path Security
-* Terminal Sandbox
-* Health Check
-* Connectivity Manager
-* Runtime Mode
-* Eventos de conectividade
-* Eventos de mudança de runtime
-* Integração entre runtime e Health Status
-* Painel e inicialização da aplicação
-
-## Ambiente
-
-Ambiente de desenvolvimento atual:
-
-* Ubuntu 24.04 LTS
-* Python 3.12
-* Git
-* Docker
-* SQLite
-* pytest
-
-## Dependências
-
-O Nexus Core mantém o runtime Python sem dependências externas obrigatórias neste estágio.
-
-Dependências de desenvolvimento:
+A suíte atual utiliza:
 
 ```text
 pytest
 ```
 
-Arquivos:
+Execução:
 
-```text
-requirements/
-
-├── base.txt
-└── dev.txt
+```bash
+PYTHONPATH="$PWD" pytest -q
 ```
 
-O arquivo `base.txt` permanece sem dependências externas obrigatórias.
+Baseline da `v0.2.2`:
 
-O arquivo `dev.txt` contém as dependências necessárias para desenvolvimento e testes.
+```text
+134 passed
+```
 
-## Estrutura do projeto
+---
+
+## Cobertura arquitetural atual
+
+A suíte cobre, entre outros:
+
+* inicialização da aplicação;
+* shutdown;
+* runtime modes;
+* transições válidas;
+* transições inválidas;
+* estado autoritativo;
+* snapshots;
+* imutabilidade;
+* concorrência;
+* competing writers;
+* health status;
+* health snapshots;
+* connectivity manager;
+* monitoramento contínuo;
+* transições offline → online;
+* transições online → offline;
+* ausência de eventos em estado estável;
+* intervalo inválido;
+* worker thread;
+* nome da worker;
+* daemon flag;
+* start idempotente;
+* stop idempotente;
+* stop antes de start;
+* timeout de shutdown;
+* sobrevivência da worker após exceções;
+* falha de subscriber;
+* continuidade da worker após falha de subscriber;
+* monitor desabilitado em forced offline;
+* lifecycle da aplicação;
+* `initialize()` one-shot;
+* `shutdown()` idempotente;
+* ordem monitor stop → system stop;
+* shutdown em `finally`;
+* uso de runtime snapshot no entrypoint.
+
+---
+
+## Determinismo
+
+Transições podem ser testadas diretamente através de:
+
+```python
+monitor.check_once()
+```
+
+sem depender de polling real.
+
+Testes que precisam verificar comportamento da worker utilizam primitivas de sincronização como:
+
+```text
+threading.Event
+threading.Barrier
+```
+
+em vez de depender exclusivamente de sleeps arbitrários.
+
+---
+
+# Dependências
+
+O runtime Python da `v0.2.2` não exige pacotes externos obrigatórios.
+
+Arquivo:
+
+```text
+requirements/base.txt
+```
+
+deve refletir:
+
+```text
+# Nexus Core runtime dependencies
+# No external Python packages are required at v0.2.2.
+```
+
+Para desenvolvimento:
+
+```text
+requirements/dev.txt
+```
+
+inclui:
+
+```text
+-r base.txt
+pytest==9.1.1
+```
+
+A `v0.2.2` utiliza apenas biblioteca padrão para sua nova funcionalidade de concorrência:
+
+```text
+threading
+logging
+```
+
+---
+
+# Estrutura do projeto
+
+Estrutura conceitual atual:
 
 ```text
 Nexus Core/
-
 │
 ├── nexus/
+│   │
 │   ├── config/
+│   │   └── settings.py
+│   │
 │   ├── core/
 │   │   ├── application.py
 │   │   ├── connectivity.py
+│   │   ├── connectivity_monitor.py
 │   │   ├── logger.py
-│   │   └── runtime.py
-│   ├── database/
+│   │   ├── runtime.py
+│   │   └── runtime_state.py
+│   │
 │   ├── events/
+│   │
 │   ├── monitoring/
+│   │   └── health.py
+│   │
 │   ├── security/
+│   │
 │   ├── tools/
+│   │
 │   └── main.py
 │
 ├── requirements/
 │   ├── base.txt
 │   └── dev.txt
 │
-├── scripts/
 ├── tests/
-├── data/
-├── logs/
-├── .gitignore
-└── README.md
+│   ├── test_application_connectivity_monitor.py
+│   ├── test_application_runtime.py
+│   ├── test_connectivity_monitor.py
+│   ├── test_core.py
+│   ├── test_health.py
+│   ├── test_main.py
+│   └── test_runtime_state.py
+│
+├── README.md
+└── ...
 ```
 
-## Histórico de versões
+A árvore acima destaca os componentes relevantes à arquitetura atual e não pretende representar necessariamente todos os arquivos auxiliares existentes.
 
-### v0.1.0 — Foundation
+---
 
-* Estrutura inicial do projeto
-* Ambiente virtual
-* Configuração inicial
-* Logging
-* SQLite
-* CLI/status
-* Estrutura inicial de testes
+# Histórico recente
 
-### v0.1.1 — Infrastructure Core
+## v0.1.0 — Foundation
 
-* Settings tipado
-* Logging estruturado
-* Eventos do sistema
-* Banco SQLite
-* Health Status
-* Ciclo de vida da aplicação
+Fundação inicial do Nexus Core.
 
-### v0.1.2 — Event Architecture
+Objetivos:
 
-* EventBus
-* NexusEvent
-* Catálogo de eventos
-* Publicação e assinatura
-* Múltiplos handlers
-* Testes de eventos
+* estrutura do projeto;
+* configuração;
+* logging;
+* banco de dados;
+* arquitetura inicial.
 
-### v0.1.3 — Security Gate
+---
 
-* RiskLevel
-* PermissionDecision
-* SecurityPolicy
-* SecurityRequest
-* SecurityResult
-* SecurityGate
+## v0.1.1 — Infrastructure Core
 
-### v0.1.4 — Tool Architecture
+Expansão da infraestrutura central.
 
-* NexusTool
-* ToolResult
-* ToolRegistry
-* ToolExecutor
-* Integração entre ferramentas e Security Gate
+---
 
-### v0.1.5 — Path Security
+## v0.1.2 — Event Architecture
 
-* Proteção de caminhos
-* Prevenção de traversal
-* Tratamento de symlinks
-* Áreas protegidas
-* Área autorizada dentro do HOME
+Introdução do modelo de eventos internos.
 
-### v0.1.6 — Tool Permissions + Audit Log
+---
 
-* ToolPermissionPolicy
-* Permissões individuais
-* AuditLogger
-* Auditoria de decisões de segurança
-* Auditoria dos resultados de execução
+## v0.1.3 — Security Gate
 
-### v0.1.7 — Secure File Tools
+Introdução da fronteira de autorização central.
 
-* ListDirectoryTool
-* ReadFileTool
-* Proteção de caminhos
-* Limite de leitura de 1 MB
-* Leitura UTF-8
-* Auditoria
-* Testes
+---
 
-### v0.1.8 — Terminal Sandbox
+## v0.1.4 — Tool Architecture
 
-* TerminalSandboxTool
-* Execução através do Docker
-* Isolamento de rede
-* Filesystem somente leitura
-* Limites de CPU e memória
-* Limite de processos
-* `no-new-privileges`
-* Remoção automática dos containers
-* Execução sem privilégios de root
-* Timeout
-* Limite de saída
+Estruturação do sistema de ferramentas.
 
-### v0.1.9 — Health Check & Application Status
+---
 
-* HealthStatus ampliado
-* Monitoramento de oito componentes
-* Integração do Health Check ao NexusApplication
-* Integração do ToolRegistry
-* Integração do ToolExecutor
-* Integração do SecurityGate
-* Registro do Terminal Sandbox
-* Painel de status detalhado
-* Identificação da versão da aplicação
-* Verificação do estado geral `READY`
-* 58 testes automatizados passando
+## v0.1.5 — Path Security
 
-### v0.2.0 — Connectivity & Runtime Mode
+Validação de caminhos e proteção de filesystem.
 
-* ConnectivityManager
-* Detecção automática de conectividade externa
-* Configuração de modo offline
-* RuntimeMode
-* Estados `ONLINE`, `OFFLINE` e `DEGRADED`
-* RuntimeStatus como estrutura reservada para evolução do estado de runtime
-* Integração de RuntimeMode e runtime_reason ao HealthStatus
-* Eventos `NETWORK_ONLINE`
-* Eventos `NETWORK_OFFLINE`
-* Evento `RUNTIME_MODE_CHANGED`
-* Dados associados aos eventos de runtime
-* Detecção de modo ONLINE
-* Detecção de modo OFFLINE
-* Suporte a OFFLINE forçado
-* Painel de status com modo dinâmico
-* Painel de status com estado da rede
-* Testes automatizados de conectividade e runtime
-* 87 testes automatizados passando
+---
 
-## Próximas etapas
+## v0.1.6 — Tool Permissions + Audit Log
 
-O desenvolvimento seguirá de forma incremental, mantendo a segurança como requisito estrutural.
+Permissões explícitas por ferramenta e auditoria.
 
-Próximas áreas previstas:
+---
 
-* Configuração de ambientes `development` e `production`
-* Detecção e implementação do estado `DEGRADED`
-* Monitoramento contínuo de conectividade
-* Detecção de mudanças de conectividade durante a execução
-* Interface gráfica
-* Interface de voz
-* Speech-to-Text
-* Text-to-Speech
-* Wake Word
-* Integração com modelos locais
-* Memória persistente
-* Knowledge Base
-* Visão computacional
-* Interpretação de tela
-* Agentes
-* Automação controlada do desktop
-* Integração com Arduino e ESP32
-* Arquitetura distribuída
-* Integração opcional com provedores online
+## v0.1.7 — Secure File Tools
 
-## Segurança e limitações atuais
+Ferramentas de filesystem integradas ao modelo de segurança.
 
-O Nexus Core ainda está em desenvolvimento.
+---
 
-A arquitetura atual prioriza impedir que o núcleo de inteligência tenha autoridade irrestrita sobre o sistema operacional.
+## v0.1.8 — Terminal Sandbox
 
-Em especial:
+Execução controlada de terminal em sandbox Docker.
 
-* O LLM não deve possuir acesso direto ao sistema operacional.
-* Ferramentas devem passar pelo `SecurityGate`.
-* Conteúdo obtido da web, PDFs, imagens ou outros documentos deve ser tratado como dado não confiável.
-* Prompt injection deve ser tratado como conteúdo não confiável e nunca como uma instrução privilegiada.
-* Operações de alto risco permanecem bloqueadas.
-* A execução de comandos utiliza sandbox Docker.
-* O uso do grupo `docker` pelo usuário possui implicações de segurança e deverá ser posteriormente substituído ou restringido por uma camada privilegiada específica.
-* A conectividade externa não deve conceder autoridade adicional ao núcleo de inteligência.
-* O modo `ONLINE` representa disponibilidade de rede, não autorização automática para executar ações externas.
+---
 
-## Licença
+## v0.1.9 — Health Check & Application Status
+
+Health checks e status operacional da aplicação.
+
+---
+
+## v0.2.0 — Connectivity & Runtime Modes
+
+Introduziu:
+
+* `ConnectivityManager`;
+* `ConnectivityStatus`;
+* `RuntimeMode`;
+* `ONLINE`;
+* `OFFLINE`;
+* `DEGRADED`;
+* política `offline_mode`;
+* eventos de conectividade;
+* determinação inicial do runtime.
+
+Baseline histórico:
+
+```text
+87 tests passing
+```
+
+---
+
+## v0.2.1 — Runtime State Controller
+
+Introduziu:
+
+* `RuntimeStateController`;
+* estado centralizado;
+* `reason`;
+* `changed_at`;
+* validação formal de transições;
+* integração do runtime com a aplicação;
+* preservação dos eventos iniciais.
+
+Baseline histórico:
+
+```text
+97 tests passing
+```
+
+---
+
+# v0.2.2 — Continuous Connectivity Monitoring
+
+A `v0.2.2` introduz monitoramento contínuo e controlado da conectividade externa.
+
+Entregue:
+
+* `ConnectivityMonitor`;
+* worker `Nexus-ConnectivityMonitor`;
+* polling periódico;
+* intervalo configurável;
+* intervalo padrão de `30.0` segundos;
+* nenhuma worker em forced offline;
+* detecção `ONLINE ↔ OFFLINE`;
+* ausência de eventos em estado estável;
+* transições atômicas;
+* `RuntimeTransitionResult`;
+* `RuntimeStateSnapshot`;
+* `HealthRuntimeSnapshot`;
+* sincronização de runtime health;
+* `threading.RLock`;
+* `threading.Event`;
+* shutdown responsivo;
+* timeout de stop;
+* lifecycle da aplicação endurecido;
+* `initialize()` one-shot;
+* `shutdown()` idempotente;
+* shutdown garantido no entrypoint;
+* proteção contra falhas inesperadas da worker;
+* tentativa independente de eventos de transição;
+* continuidade da worker após falha de subscriber;
+* regressão completa.
+
+Baseline:
+
+```text
+134 tests passing
+```
+
+---
+
+## Princípios de engenharia da v0.2.2
+
+A implementação preserva:
+
+### Local First
+
+O funcionamento local não depende da disponibilidade da Internet.
+
+### Security First
+
+Conectividade não altera as fronteiras de autorização.
+
+### Determinismo
+
+Transições podem ser testadas por `check_once()` sem aguardar polling.
+
+### Observabilidade
+
+O estado de runtime possui representação autoritativa e projeção de health.
+
+### Isolamento de falhas
+
+Exceções inesperadas de ciclos não encerram permanentemente a worker.
+
+### Lifecycle explícito
+
+A worker possui inicialização e shutdown controlados.
+
+### Scope control
+
+Nenhuma funcionalidade de LLM, memória, voz, visão ou automação foi misturada nesta release.
+
+---
+
+# Roadmap
+
+O roadmap é evolutivo.
+
+Cada versão deve adicionar uma responsabilidade pequena, clara e testável.
+
+---
+
+## Infraestrutura de runtime
+
+### v0.2.2 — Continuous Connectivity Monitoring
+
+**Status: concluída**
+
+Entregue:
+
+* polling contínuo de conectividade;
+* transições `ONLINE ↔ OFFLINE`;
+* worker dedicada;
+* lifecycle controlado;
+* snapshots consistentes;
+* health sincronizado;
+* eventos somente em transições;
+* isolamento de falhas;
+* shutdown determinístico;
+* 134 testes passando.
+
+---
+
+### v0.2.3 — Automatic DEGRADED Runtime Detection
+
+**Status: próxima versão planejada**
+
+Objetivo:
+
+* definir formalmente as condições de `DEGRADED`;
+* distinguir conectividade de disponibilidade parcial;
+* preservar `RuntimeStateController` como fonte autoritativa;
+* integrar o novo estado ao EventBus;
+* definir razões explícitas para degradação;
+* manter comportamento local-first;
+* adicionar observabilidade;
+* adicionar testes determinísticos;
+* evitar heurísticas implícitas.
+
+---
+
+### v0.2.4 — Environment & Runtime Configuration
+
+Planejado:
+
+* configuração por ambiente;
+* perfis `development`;
+* perfis de produção;
+* overrides controlados;
+* validação;
+* configuração externa;
+* governança de parâmetros;
+* preparação para providers e modelos.
+
+---
+
+# Inteligência artificial
+
+## v0.3.0 — Local Model Layer
+
+Planejado:
+
+* integração com modelo local;
+* provider local;
+* execução isolada;
+* contratos de entrada e saída;
+* observabilidade;
+* nenhuma autoridade direta sobre ferramentas.
+
+Candidato atual:
+
+```text
+Ollama
+```
+
+---
+
+## v0.3.1 — Provider Abstraction & Model Routing
+
+Planejado:
+
+* interface comum para providers;
+* modelo local;
+* provider online opcional;
+* política de roteamento;
+* disponibilidade;
+* fallback controlado;
+* proteção de credenciais.
+
+Modelo conceitual:
+
+```text
+Task
+ │
+ ▼
+Model Router
+ │
+ ├── Local Provider
+ │
+ └── Online Provider
+```
+
+A preferência arquitetural permanece:
+
+```text
+LOCAL FIRST
+```
+
+---
+
+## v0.3.2 — Controlled Agent & Tool Calling
+
+Planejado:
+
+```text
+Model
+  │
+  ▼
+Planner / Agent
+  │
+  ▼
+ToolRegistry
+  │
+  ▼
+ToolExecutor
+  │
+  ▼
+SecurityGate
+  │
+  ▼
+Tool
+```
+
+O LLM nunca terá acesso direto ao shell ou ao sistema operacional.
+
+---
+
+# Memória e conhecimento
+
+## v0.4.0 — Persistent Memory Foundation
+
+Planejado:
+
+* modelo formal de memória;
+* persistência;
+* recuperação;
+* proveniência;
+* expiração;
+* remoção;
+* limites de autoridade.
+
+Os eventos:
+
+```text
+memory.created
+memory.recalled
+```
+
+podem existir no catálogo arquitetural antes da implementação do subsistema.
+
+Sua existência **não significa que memória persistente já esteja implementada**.
+
+---
+
+## v0.4.1 — Knowledge Base
+
+Planejado:
+
+* ingestão controlada;
+* indexação;
+* recuperação;
+* metadados;
+* proveniência;
+* tratamento de documentos como conteúdo não confiável;
+* mitigação de prompt injection.
+
+---
+
+# Voz
+
+## v0.5.x — Voice Foundation
+
+Planejado:
+
+* Speech-to-Text;
+* Text-to-Speech;
+* Wake Word;
+* Voice Activity Detection;
+* pipeline de interação por voz.
+
+Tecnologias candidatas:
+
+```text
+whisper.cpp
+openWakeWord
+Piper
+```
+
+---
+
+# Visão
+
+## v0.6.x — Vision & Screen Understanding
+
+Planejado:
+
+* Computer Vision;
+* captura de tela;
+* interpretação de tela;
+* contexto visual;
+* análise multimodal;
+* câmera.
+
+---
+
+# Automação
+
+## v0.7.x — Controlled Desktop Automation
+
+Planejado:
+
+* automação controlada do desktop;
+* ações governadas;
+* autorização baseada em risco;
+* observabilidade;
+* rollback quando aplicável;
+* integração com Agent/Planner.
+
+---
+
+# Hardware e distribuição
+
+## v0.8.x — Devices & Distributed Architecture
+
+Planejado:
+
+* Arduino;
+* ESP32;
+* sensores;
+* comunicação local;
+* múltiplos nodes;
+* descoberta de dispositivos;
+* autenticação entre nodes;
+* arquitetura distribuída.
+
+Firmware embarcado seguirá preferencialmente:
+
+```text
+C / C++
+```
+
+em vez de MicroPython.
+
+---
+
+# Interface multimodal
+
+## v0.9.x — Multimodal Interface
+
+Planejado:
+
+* interface gráfica;
+* interação textual;
+* voz;
+* contexto visual;
+* status operacional;
+* experiência multimodal;
+* UI circular futurista.
+
+Tecnologia candidata para desktop:
+
+```text
+PySide6
+```
+
+---
+
+# v1.0.0 — Production Baseline
+
+A versão `1.0.0` somente deverá ser considerada quando o Nexus Core possuir um baseline operacional com:
+
+* arquitetura madura;
+* segurança revisada;
+* testes abrangentes;
+* documentação consistente;
+* observabilidade;
+* gestão de configuração;
+* atualização segura;
+* modelos locais;
+* memória controlada;
+* ferramentas governadas;
+* lifecycle confiável;
+* comportamento offline funcional.
+
+---
+
+# Critérios de qualidade para novas versões
+
+Cada versão deve possuir:
+
+* escopo explícito;
+* responsabilidades bem definidas;
+* implementação mínima coerente;
+* testes unitários;
+* testes de integração;
+* regressão completa;
+* revisão arquitetural;
+* documentação atualizada;
+* dependências revisadas;
+* revisão Git;
+* commit versionado;
+* tag própria;
+* push de commit;
+* push de tag;
+* verificação final no repositório remoto.
+
+Fluxo:
+
+```text
+PLANEJAMENTO
+    │
+    ▼
+IMPLEMENTAÇÃO
+    │
+    ▼
+TESTES UNITÁRIOS
+    │
+    ▼
+TESTES DE INTEGRAÇÃO
+    │
+    ▼
+REGRESSÃO COMPLETA
+    │
+    ▼
+REVISÃO ARQUITETURAL
+    │
+    ▼
+README
+    │
+    ▼
+REQUIREMENTS
+    │
+    ▼
+GIT REVIEW
+    │
+    ▼
+COMMIT
+    │
+    ▼
+TAG
+    │
+    ▼
+PUSH
+    │
+    ▼
+VERIFICAÇÃO FINAL
+```
+
+Nenhuma versão deve ser considerada concluída enquanto existirem inconsistências conhecidas entre:
+
+```text
+implementação
+testes
+arquitetura
+documentação
+requirements
+roadmap
+Git
+```
+
+---
+
+# Convenção de commits
+
+O projeto utiliza:
+
+```text
+<type>: Nexus Core v<VERSION> <description>
+```
+
+Exemplos históricos:
+
+```text
+checkpoint: Nexus Core v0.1.8 terminal sandbox
+release: Nexus Core v0.1.9 health check
+feat: Nexus Core v0.2.0 Implement Connectivity and Runtime Modes
+feat: Nexus Core v0.2.1 Implement Runtime State Controller
+```
+
+Commit planejado para a release atual:
+
+```text
+feat: Nexus Core v0.2.2 Implement Continuous Connectivity Monitoring
+```
+
+Cada release possui sua própria tag.
+
+Exemplos:
+
+```text
+v0.2.0
+v0.2.1
+v0.2.2
+```
+
+---
+
+# Segurança e limitações atuais
+
+O projeto permanece em desenvolvimento.
+
+Limitações e regras atuais:
+
+* o LLM ainda não está integrado;
+* o LLM não possui acesso direto ao sistema operacional;
+* ferramentas passam pelo `SecurityGate`;
+* operações perigosas permanecem sujeitas à política de segurança;
+* conteúdo externo é não confiável;
+* prompt injection não representa autoridade;
+* o terminal utiliza sandbox Docker;
+* pertencimento ao grupo `docker` representa dívida técnica de segurança;
+* `ONLINE` não significa autorização;
+* `DEGRADED` ainda não possui determinação automática;
+* `latency_ms` ainda não é medido ativamente;
+* o monitor atual cobre apenas conectividade `ONLINE ↔ OFFLINE`;
+* memória persistente ainda não está implementada;
+* Knowledge Base ainda não está implementada;
+* modelo local ainda não está integrado;
+* interface gráfica ainda não está implementada;
+* voz ainda não está implementada;
+* visão ainda não está implementada;
+* automação do desktop ainda não está implementada.
+
+Essas limitações são explicitadas deliberadamente para distinguir:
+
+```text
+IMPLEMENTADO
+```
+
+de:
+
+```text
+PLANEJADO
+```
+
+---
+
+# Tecnologias atuais
+
+Baseline:
+
+```text
+Operating System: Ubuntu 24.04 LTS
+Runtime:          Python 3.12
+Database:         SQLite
+Tests:            pytest
+Sandbox:          Docker
+Version Control:  Git
+Remote:           GitHub
+```
+
+---
+
+# Tecnologias candidatas futuras
+
+Dependendo da evolução arquitetural:
+
+```text
+Ollama
+Hermes Agent
+whisper.cpp
+openWakeWord
+Piper
+ComfyUI
+PySide6
+AppArmor
+polkit
+systemd
+Podman rootless
+Docker rootless
+```
+
+Nenhuma tecnologia futura deve ser considerada compromisso definitivo até passar pela revisão arquitetural da versão correspondente.
+
+---
+
+# Filosofia Local First
+
+O Nexus Core deve continuar útil mesmo quando:
+
+```text
+Internet unavailable
+```
+
+O sistema local não deve depender estruturalmente de:
+
+* disponibilidade de APIs externas;
+* conta em serviço remoto;
+* conectividade constante;
+* cloud obrigatória.
+
+Serviços online poderão complementar o sistema.
+
+Eles não devem substituir sua fundação local.
+
+---
+
+# Privacidade
+
+O objetivo de longo prazo é manter localmente, sempre que possível:
+
+* processamento;
+* memória;
+* contexto;
+* voz;
+* conhecimento;
+* documentos;
+* automações;
+* preferências.
+
+Integrações online deverão ser:
+
+* opcionais;
+* explícitas;
+* governadas;
+* observáveis;
+* limitadas ao necessário.
+
+---
+
+# Observabilidade
+
+O Nexus Core deverá evoluir mantendo rastreabilidade de:
+
+* lifecycle;
+* runtime;
+* conectividade;
+* ferramentas;
+* autorizações;
+* falhas;
+* mudanças de estado;
+* memória futura;
+* providers futuros;
+* operações de agentes.
+
+Observabilidade não deve implicar coleta indiscriminada de dados sensíveis.
+
+---
+
+# Governança de ferramentas
+
+Nenhuma ferramenta deve receber autoridade apenas por estar registrada.
+
+O fluxo correto permanece:
+
+```text
+Tool requested
+      │
+      ▼
+ToolRegistry
+      │
+      ▼
+ToolExecutor
+      │
+      ▼
+SecurityGate
+      │
+      ├── ALLOW
+      │     │
+      │     ▼
+      │   EXECUTE
+      │
+      └── DENY
+            │
+            ▼
+          BLOCK
+```
+
+---
+
+# Fronteira entre inteligência e execução
+
+Uma futura camada de modelo deverá operar sob o princípio:
+
+```text
+LLM proposes
+System decides
+Security authorizes
+Tool executes
+```
+
+Nunca:
+
+```text
+LLM directly executes arbitrary host commands
+```
+
+---
+
+# Escopo da v0.2.2
+
+A `v0.2.2` é deliberadamente uma release de infraestrutura.
+
+Ela **não** introduz:
+
+* modelo local;
+* Agent;
+* Planner;
+* memória;
+* Knowledge Base;
+* voz;
+* wake word;
+* visão;
+* câmera;
+* screen understanding;
+* desktop automation;
+* GUI;
+* geração de imagens;
+* geração de vídeos.
+
+Ela introduz uma capacidade menor e fundamental:
+
+> manter o estado de conectividade atualizado continuamente de forma testável, thread-safe e controlada.
+
+Esse modelo incremental reduz complexidade e facilita auditoria.
+
+---
+
+# Próximo passo
+
+A próxima release planejada é:
+
+```text
+v0.2.3 — Automatic DEGRADED Runtime Detection
+```
+
+A implementação deverá começar somente após o fechamento completo da `v0.2.2`:
+
+```text
+README
+requirements
+version
+tests
+Git review
+commit
+tag
+push
+remote verification
+```
+
+---
+
+# Licença
 
 A licença do projeto será definida posteriormente.
+
+---
+
+# Status
+
+```text
+Nexus Core
+────────────────────────────────────────────────
+Stable Version:       v0.2.2
+Next Development:     v0.2.3
+Runtime:              Python 3.12
+Database:             SQLite
+Sandbox:              Docker
+Testing:              pytest
+Tests:                134 passed
+Development Status:   ACTIVE
+────────────────────────────────────────────────
+```
 
 ---
 

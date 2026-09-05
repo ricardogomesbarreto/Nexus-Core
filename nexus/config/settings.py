@@ -12,7 +12,7 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.2.0"
+    version: str = "0.2.2"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT
@@ -24,6 +24,8 @@ class Settings:
     database_file: Path = PROJECT_ROOT / "data" / "database" / "nexus.db"
 
     offline_mode: bool = True
+
+    connectivity_monitor_interval: float = 30.0
 
 
 settings = Settings()

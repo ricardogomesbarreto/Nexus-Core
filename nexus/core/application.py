@@ -1,5 +1,6 @@
 from nexus.config.settings import settings
 from nexus.core.connectivity import ConnectivityManager
+from nexus.core.connectivity_monitor import ConnectivityMonitor
 from nexus.core.logger import setup_logger
 from nexus.core.runtime import RuntimeMode
 from nexus.core.runtime_state import RuntimeStateController
@@ -41,11 +42,21 @@ class NexusApplication:
 
         self.connectivity_manager = ConnectivityManager()
 
+        self.connectivity_monitor: ConnectivityMonitor | None = None
+
         self.health = HealthStatus()
 
         self.runtime_state = RuntimeStateController()
 
+        self._initialized = False
+        self._shutdown_complete = False
+
     def initialize(self):
+        if self._initialized:
+            raise RuntimeError(
+                "NexusApplication já foi inicializada"
+            )
+
         self.logger.info("Inicializando Nexus Core")
 
         self.health.core = True
@@ -72,13 +83,15 @@ class NexusApplication:
                 ),
             )
 
+            self.health.update_runtime(
+                network_online=False,
+                runtime_mode=self.runtime_state.mode,
+                runtime_reason=self.runtime_state.reason,
+            )
+
         else:
             connectivity = (
                 self.connectivity_manager.check()
-            )
-
-            self.health.network_online = (
-                connectivity.online
             )
 
             if connectivity.online:
@@ -117,13 +130,11 @@ class NexusApplication:
                     },
                 )
 
-        self.health.runtime_mode = (
-            self.runtime_state.mode
-        )
-
-        self.health.runtime_reason = (
-            self.runtime_state.reason
-        )
+            self.health.update_runtime(
+                network_online=connectivity.online,
+                runtime_mode=self.runtime_state.mode,
+                runtime_reason=self.runtime_state.reason,
+            )
 
         self.event_bus.publish(
             EventType.RUNTIME_MODE_CHANGED,
@@ -146,16 +157,40 @@ class NexusApplication:
             "Nexus Core inicializado",
         )
 
+        if not settings.offline_mode:
+            self.connectivity_monitor = ConnectivityMonitor(
+                connectivity_manager=self.connectivity_manager,
+                runtime_state=self.runtime_state,
+                event_bus=self.event_bus,
+                health=self.health,
+                interval=(
+                    settings.connectivity_monitor_interval
+                ),
+                logger=self.logger,
+            )
+
+            self.connectivity_monitor.start()
+
+        self._initialized = True
+
         self.logger.info("Nexus Core inicializado")
 
     def status(self):
         return self.health
 
     def shutdown(self):
+        if self._shutdown_complete:
+            return
+
+        if self.connectivity_monitor is not None:
+            self.connectivity_monitor.stop()
+
         self.event_bus.publish(
             EventType.SYSTEM_STOP
         )
 
         self.database.close()
+
+        self._shutdown_complete = True
 
         self.logger.info("Nexus Core finalizado")

@@ -4,7 +4,8 @@ from nexus.core.application import NexusApplication
 
 def test_settings():
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.2.0"
+    assert settings.version == "0.2.2"
+    assert settings.connectivity_monitor_interval == 30.0
 
 
 def test_application_initialization():
@@ -20,4 +21,4 @@ def test_application_initialization():
     assert health.logger is True
     assert health.ready is True
 
-    app.database.close()
+    app.shutdown()

@@ -153,3 +153,156 @@ def test_runtime_state_invalid_transition_does_not_change_timestamp():
         )
 
     assert controller.changed_at == original_changed_at
+
+
+def test_runtime_state_snapshot_default():
+    controller = RuntimeStateController()
+
+    snapshot = controller.snapshot()
+
+    assert snapshot.mode == RuntimeMode.OFFLINE
+    assert snapshot.reason is None
+    assert snapshot.changed_at is None
+
+
+def test_runtime_state_snapshot_after_transition():
+    controller = RuntimeStateController()
+
+    controller.transition(
+        RuntimeMode.ONLINE,
+        "Conectividade externa disponível",
+    )
+
+    snapshot = controller.snapshot()
+
+    assert snapshot.mode == RuntimeMode.ONLINE
+    assert snapshot.reason == "Conectividade externa disponível"
+    assert snapshot.changed_at == controller.changed_at
+
+
+def test_runtime_state_snapshot_is_immutable():
+    from dataclasses import FrozenInstanceError
+
+    controller = RuntimeStateController()
+
+    snapshot = controller.snapshot()
+
+    with pytest.raises(FrozenInstanceError):
+        snapshot.mode = RuntimeMode.ONLINE
+
+
+def test_runtime_state_transition_if_changed_same_state_is_noop():
+    controller = RuntimeStateController(
+        initial_mode=RuntimeMode.OFFLINE,
+        initial_reason="Conectividade externa indisponível",
+    )
+
+    changed = controller.transition_if_changed(
+        RuntimeMode.OFFLINE,
+        "Conectividade externa indisponível",
+    )
+
+    assert changed is False
+
+    snapshot = controller.snapshot()
+
+    assert snapshot.mode == RuntimeMode.OFFLINE
+    assert snapshot.reason == "Conectividade externa indisponível"
+    assert snapshot.changed_at is None
+
+
+def test_runtime_state_transition_if_changed_performs_transition():
+    controller = RuntimeStateController()
+
+    changed = controller.transition_if_changed(
+        RuntimeMode.ONLINE,
+        "Conectividade externa disponível",
+    )
+
+    assert changed is True
+
+    snapshot = controller.snapshot()
+
+    assert snapshot.mode == RuntimeMode.ONLINE
+    assert snapshot.reason == "Conectividade externa disponível"
+    assert snapshot.changed_at is not None
+
+
+def test_runtime_state_transition_if_changed_is_atomic_for_competing_writers():
+    from threading import Barrier, Thread
+
+    controller = RuntimeStateController()
+
+    barrier = Barrier(3)
+    results = []
+    errors = []
+
+    def worker():
+        try:
+            barrier.wait()
+
+            changed = controller.transition_if_changed(
+                RuntimeMode.ONLINE,
+                "Conectividade externa disponível",
+            )
+
+            results.append(changed)
+        except Exception as exc:
+            errors.append(exc)
+
+    first = Thread(target=worker)
+    second = Thread(target=worker)
+
+    first.start()
+    second.start()
+
+    barrier.wait()
+
+    first.join()
+    second.join()
+
+    assert errors == []
+    assert sorted(results) == [False, True]
+
+    snapshot = controller.snapshot()
+
+    assert snapshot.mode == RuntimeMode.ONLINE
+    assert snapshot.reason == "Conectividade externa disponível"
+    assert snapshot.changed_at is not None
+
+
+def test_runtime_state_transition_if_changed_result_on_transition():
+    controller = RuntimeStateController()
+
+    result = controller.transition_if_changed_result(
+        RuntimeMode.ONLINE,
+        "Conectividade externa disponível",
+    )
+
+    assert result.changed is True
+    assert result.mode == RuntimeMode.ONLINE
+    assert result.reason == "Conectividade externa disponível"
+    assert result.changed_at is not None
+
+    snapshot = controller.snapshot()
+
+    assert result.mode == snapshot.mode
+    assert result.reason == snapshot.reason
+    assert result.changed_at == snapshot.changed_at
+
+
+def test_runtime_state_transition_if_changed_result_on_noop():
+    controller = RuntimeStateController(
+        initial_mode=RuntimeMode.OFFLINE,
+        initial_reason="Conectividade externa indisponível",
+    )
+
+    result = controller.transition_if_changed_result(
+        RuntimeMode.OFFLINE,
+        "Conectividade externa indisponível",
+    )
+
+    assert result.changed is False
+    assert result.mode == RuntimeMode.OFFLINE
+    assert result.reason == "Conectividade externa indisponível"
+    assert result.changed_at is None
