@@ -45,6 +45,7 @@ def build_monitor(
     event_bus=None,
     interval=10.0,
     logger=None,
+    initial_network_online=None,
 ):
     manager = StaticConnectivityManager(status)
 
@@ -66,11 +67,23 @@ def build_monitor(
         else EventBus()
     )
 
+    if initial_network_online is None:
+        if runtime_state.mode == RuntimeMode.ONLINE:
+            initial_network_online = True
+        elif runtime_state.mode == RuntimeMode.OFFLINE:
+            initial_network_online = False
+        else:
+            raise ValueError(
+                "initial_network_online deve ser explícito "
+                "para runtime inicial DEGRADED"
+            )
+
     monitor = ConnectivityMonitor(
         connectivity_manager=manager,
         runtime_state=runtime_state,
         event_bus=event_bus,
         health=health,
+        initial_network_online=initial_network_online,
         interval=interval,
         logger=logger,
     )
@@ -137,7 +150,7 @@ def test_check_once_same_offline_state_does_not_publish_events():
     assert events == []
 
 
-def test_check_once_offline_to_online_updates_state_and_publishes_events():
+def test_check_once_offline_to_online_uses_degraded_confirmation():
     event_bus = EventBus()
     events = []
 
@@ -160,20 +173,24 @@ def test_check_once_offline_to_online_updates_state_and_publishes_events():
         event_bus=event_bus,
     )
 
-    changed = monitor.check_once()
+    first_changed = monitor.check_once()
 
-    assert changed is True
+    assert first_changed is True
 
-    assert runtime_state.mode == RuntimeMode.ONLINE
-    assert runtime_state.reason == (
-        "Conectividade externa disponível"
+    first_snapshot = runtime_state.snapshot()
+
+    assert first_snapshot.mode == RuntimeMode.DEGRADED
+    assert first_snapshot.reason == (
+        "Conectividade externa detectada; aguardando confirmação"
     )
-    assert runtime_state.changed_at is not None
+    assert first_snapshot.changed_at is not None
 
-    assert health.network_online is True
-    assert health.runtime_mode == RuntimeMode.ONLINE
-    assert health.runtime_reason == (
-        "Conectividade externa disponível"
+    first_health = health.runtime_snapshot()
+
+    assert first_health.network_online is True
+    assert first_health.runtime_mode == RuntimeMode.DEGRADED
+    assert first_health.runtime_reason == (
+        "Conectividade externa detectada; aguardando confirmação"
     )
 
     assert [
@@ -190,22 +207,57 @@ def test_check_once_offline_to_online_updates_state_and_publishes_events():
     }
 
     assert events[1].data == {
+        "mode": RuntimeMode.DEGRADED.value,
+        "reason": (
+            "Conectividade externa detectada; aguardando confirmação"
+        ),
+    }
+
+    second_changed = monitor.check_once()
+
+    assert second_changed is True
+
+    second_snapshot = runtime_state.snapshot()
+
+    assert second_snapshot.mode == RuntimeMode.ONLINE
+    assert second_snapshot.reason == (
+        "Conectividade externa disponível"
+    )
+
+    second_health = health.runtime_snapshot()
+
+    assert second_health.network_online is True
+    assert second_health.runtime_mode == RuntimeMode.ONLINE
+    assert second_health.runtime_reason == (
+        "Conectividade externa disponível"
+    )
+
+    assert [
+        event.event_type
+        for event in events
+    ] == [
+        EventType.NETWORK_ONLINE,
+        EventType.RUNTIME_MODE_CHANGED,
+        EventType.RUNTIME_MODE_CHANGED,
+    ]
+
+    assert events[-1].data == {
         "mode": RuntimeMode.ONLINE.value,
         "reason": "Conectividade externa disponível",
     }
 
 
-def test_check_once_online_to_offline_updates_state_and_publishes_events():
+def test_check_once_online_to_offline_uses_degraded_confirmation():
     runtime_state = RuntimeStateController(
         initial_mode=RuntimeMode.ONLINE,
         initial_reason="Conectividade externa disponível",
     )
 
     health = HealthStatus()
-    health.network_online = True
-    health.runtime_mode = RuntimeMode.ONLINE
-    health.runtime_reason = (
-        "Conectividade externa disponível"
+    health.update_runtime(
+        network_online=True,
+        runtime_mode=RuntimeMode.ONLINE,
+        runtime_reason="Conectividade externa disponível",
     )
 
     event_bus = EventBus()
@@ -231,20 +283,24 @@ def test_check_once_online_to_offline_updates_state_and_publishes_events():
         event_bus=event_bus,
     )
 
-    changed = monitor.check_once()
+    first_changed = monitor.check_once()
 
-    assert changed is True
+    assert first_changed is True
 
-    assert runtime_state.mode == RuntimeMode.OFFLINE
-    assert runtime_state.reason == (
-        "Conectividade externa indisponível"
+    first_snapshot = runtime_state.snapshot()
+
+    assert first_snapshot.mode == RuntimeMode.DEGRADED
+    assert first_snapshot.reason == (
+        "Perda de conectividade aguardando confirmação"
     )
-    assert runtime_state.changed_at is not None
+    assert first_snapshot.changed_at is not None
 
-    assert health.network_online is False
-    assert health.runtime_mode == RuntimeMode.OFFLINE
-    assert health.runtime_reason == (
-        "Conectividade externa indisponível"
+    first_health = health.runtime_snapshot()
+
+    assert first_health.network_online is False
+    assert first_health.runtime_mode == RuntimeMode.DEGRADED
+    assert first_health.runtime_reason == (
+        "Perda de conectividade aguardando confirmação"
     )
 
     assert [
@@ -261,6 +317,41 @@ def test_check_once_online_to_offline_updates_state_and_publishes_events():
     }
 
     assert events[1].data == {
+        "mode": RuntimeMode.DEGRADED.value,
+        "reason": (
+            "Perda de conectividade aguardando confirmação"
+        ),
+    }
+
+    second_changed = monitor.check_once()
+
+    assert second_changed is True
+
+    second_snapshot = runtime_state.snapshot()
+
+    assert second_snapshot.mode == RuntimeMode.OFFLINE
+    assert second_snapshot.reason == (
+        "Conectividade externa indisponível"
+    )
+
+    second_health = health.runtime_snapshot()
+
+    assert second_health.network_online is False
+    assert second_health.runtime_mode == RuntimeMode.OFFLINE
+    assert second_health.runtime_reason == (
+        "Conectividade externa indisponível"
+    )
+
+    assert [
+        event.event_type
+        for event in events
+    ] == [
+        EventType.NETWORK_OFFLINE,
+        EventType.RUNTIME_MODE_CHANGED,
+        EventType.RUNTIME_MODE_CHANGED,
+    ]
+
+    assert events[-1].data == {
         "mode": RuntimeMode.OFFLINE.value,
         "reason": "Conectividade externa indisponível",
     }
@@ -340,6 +431,7 @@ def test_check_once_isolates_unexpected_connectivity_exception():
         runtime_state=runtime_state,
         event_bus=event_bus,
         health=health,
+        initial_network_online=False,
         interval=10.0,
         logger=logger,
     )
@@ -557,14 +649,17 @@ def test_transition_attempts_runtime_event_if_network_subscriber_fails():
         EventType.RUNTIME_MODE_CHANGED,
     ]
 
-    assert runtime_state.mode == RuntimeMode.ONLINE
+    assert runtime_state.mode == RuntimeMode.DEGRADED
+    assert runtime_state.reason == (
+        "Conectividade externa detectada; aguardando confirmação"
+    )
 
     snapshot = health.runtime_snapshot()
 
     assert snapshot.network_online is True
-    assert snapshot.runtime_mode == RuntimeMode.ONLINE
+    assert snapshot.runtime_mode == RuntimeMode.DEGRADED
     assert snapshot.runtime_reason == (
-        "Conectividade externa disponível"
+        "Conectividade externa detectada; aguardando confirmação"
     )
 
 
@@ -621,6 +716,7 @@ def test_worker_survives_network_subscriber_failure_and_continues():
         runtime_state=runtime_state,
         event_bus=event_bus,
         health=health,
+        initial_network_online=False,
         interval=0.01,
     )
 
@@ -639,7 +735,7 @@ def test_worker_survives_network_subscriber_failure_and_continues():
         event.data["mode"]
         for event in runtime_events
     ][:2] == [
-        RuntimeMode.ONLINE.value,
+        RuntimeMode.DEGRADED.value,
         RuntimeMode.OFFLINE.value,
     ]
 
@@ -651,3 +747,262 @@ def test_worker_survives_network_subscriber_failure_and_continues():
 
     assert health_snapshot.network_online is False
     assert health_snapshot.runtime_mode == RuntimeMode.OFFLINE
+
+
+def test_monitor_enters_degraded_before_confirming_offline():
+    class SequenceConnectivityManager:
+        def __init__(self):
+            self.statuses = iter(
+                [
+                    ConnectivityStatus(
+                        online=False,
+                        endpoint="https://example.com",
+                    ),
+                    ConnectivityStatus(
+                        online=False,
+                        endpoint="https://example.com",
+                    ),
+                ]
+            )
+
+        def check(self):
+            return next(self.statuses)
+
+    runtime_state = RuntimeStateController(
+        initial_mode=RuntimeMode.ONLINE,
+        initial_reason="Conectividade externa disponível",
+    )
+
+    health = HealthStatus()
+    health.update_runtime(
+        network_online=True,
+        runtime_mode=RuntimeMode.ONLINE,
+        runtime_reason="Conectividade externa disponível",
+    )
+
+    event_bus = EventBus()
+    events = []
+
+    event_bus.subscribe(
+        EventType.NETWORK_OFFLINE,
+        lambda event: events.append(event),
+    )
+    event_bus.subscribe(
+        EventType.RUNTIME_MODE_CHANGED,
+        lambda event: events.append(event),
+    )
+
+    monitor = ConnectivityMonitor(
+        connectivity_manager=SequenceConnectivityManager(),
+        runtime_state=runtime_state,
+        event_bus=event_bus,
+        health=health,
+        initial_network_online=True,
+        interval=60.0,
+    )
+
+    first_changed = monitor.check_once()
+
+    assert first_changed is True
+
+    first_snapshot = runtime_state.snapshot()
+
+    assert first_snapshot.mode == RuntimeMode.DEGRADED
+    assert first_snapshot.reason == (
+        "Perda de conectividade aguardando confirmação"
+    )
+
+    first_health = health.runtime_snapshot()
+
+    assert first_health.network_online is False
+    assert first_health.runtime_mode == RuntimeMode.DEGRADED
+
+    assert [
+        event.event_type
+        for event in events
+    ] == [
+        EventType.NETWORK_OFFLINE,
+        EventType.RUNTIME_MODE_CHANGED,
+    ]
+
+    assert events[-1].data["mode"] == RuntimeMode.DEGRADED.value
+
+    second_changed = monitor.check_once()
+
+    assert second_changed is True
+
+    second_snapshot = runtime_state.snapshot()
+
+    assert second_snapshot.mode == RuntimeMode.OFFLINE
+    assert second_snapshot.reason == (
+        "Conectividade externa indisponível"
+    )
+
+    second_health = health.runtime_snapshot()
+
+    assert second_health.network_online is False
+    assert second_health.runtime_mode == RuntimeMode.OFFLINE
+
+    assert [
+        event.event_type
+        for event in events
+    ] == [
+        EventType.NETWORK_OFFLINE,
+        EventType.RUNTIME_MODE_CHANGED,
+        EventType.RUNTIME_MODE_CHANGED,
+    ]
+
+    assert events[-1].data["mode"] == RuntimeMode.OFFLINE.value
+
+
+def test_concurrent_check_once_calls_are_serialized():
+    class BlockingConnectivityManager:
+        def __init__(self):
+            self.calls = 0
+            self.first_entered = threading.Event()
+            self.second_entered = threading.Event()
+            self.release_first = threading.Event()
+            self.lock = threading.Lock()
+
+        def check(self):
+            with self.lock:
+                self.calls += 1
+                call_number = self.calls
+
+            if call_number == 1:
+                self.first_entered.set()
+
+                assert self.release_first.wait(
+                    timeout=1.0
+                ) is True
+            else:
+                self.second_entered.set()
+
+            return ConnectivityStatus(
+                online=False,
+                endpoint="https://example.com",
+            )
+
+    manager = BlockingConnectivityManager()
+
+    runtime_state = RuntimeStateController(
+        initial_mode=RuntimeMode.OFFLINE,
+        initial_reason="Conectividade externa indisponível",
+    )
+
+    health = HealthStatus()
+    health.update_runtime(
+        network_online=False,
+        runtime_mode=RuntimeMode.OFFLINE,
+        runtime_reason="Conectividade externa indisponível",
+    )
+
+    monitor = ConnectivityMonitor(
+        connectivity_manager=manager,
+        runtime_state=runtime_state,
+        event_bus=EventBus(),
+        health=health,
+        initial_network_online=False,
+        interval=60.0,
+    )
+
+    first_thread = threading.Thread(
+        target=monitor.check_once,
+    )
+    second_thread = threading.Thread(
+        target=monitor.check_once,
+    )
+
+    first_thread.start()
+
+    assert manager.first_entered.wait(timeout=1.0) is True
+
+    second_thread.start()
+
+    try:
+        assert manager.second_entered.wait(
+            timeout=0.05
+        ) is False
+    finally:
+        manager.release_first.set()
+
+        first_thread.join(timeout=1.0)
+        second_thread.join(timeout=1.0)
+
+    assert first_thread.is_alive() is False
+    assert second_thread.is_alive() is False
+    assert manager.calls == 2
+
+
+def test_monitor_uses_explicit_initial_network_state_not_health_projection():
+    manager = StaticConnectivityManager(
+        ConnectivityStatus(
+            online=True,
+            endpoint="https://example.com",
+        )
+    )
+
+    runtime_state = RuntimeStateController(
+        initial_mode=RuntimeMode.ONLINE,
+        initial_reason="Conectividade externa disponível",
+    )
+
+    health = HealthStatus()
+
+    monitor = ConnectivityMonitor(
+        connectivity_manager=manager,
+        runtime_state=runtime_state,
+        event_bus=EventBus(),
+        health=health,
+        interval=60.0,
+        initial_network_online=True,
+    )
+
+    changed = monitor.check_once()
+
+    assert changed is False
+    assert runtime_state.mode == RuntimeMode.ONLINE
+
+    snapshot = health.runtime_snapshot()
+
+    assert snapshot.network_online is True
+    assert snapshot.runtime_mode == RuntimeMode.ONLINE
+    assert snapshot.runtime_reason == (
+        "Conectividade externa disponível"
+    )
+
+
+@pytest.mark.parametrize(
+    ("initial_mode", "initial_network_online"),
+    [
+        (RuntimeMode.OFFLINE, True),
+        (RuntimeMode.ONLINE, False),
+        (RuntimeMode.DEGRADED, True),
+        (RuntimeMode.DEGRADED, False),
+    ],
+)
+def test_monitor_rejects_inconsistent_initial_runtime_and_network_state(
+    initial_mode,
+    initial_network_online,
+):
+    runtime_state = RuntimeStateController(
+        initial_mode=initial_mode,
+        initial_reason="Estado inicial de teste",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="estado inicial de runtime é incompatível",
+    ):
+        ConnectivityMonitor(
+            connectivity_manager=StaticConnectivityManager(
+                ConnectivityStatus(
+                    online=initial_network_online,
+                )
+            ),
+            runtime_state=runtime_state,
+            event_bus=EventBus(),
+            health=HealthStatus(),
+            initial_network_online=initial_network_online,
+            interval=60.0,
+        )

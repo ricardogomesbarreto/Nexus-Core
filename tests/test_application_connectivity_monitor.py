@@ -35,6 +35,7 @@ def test_application_forced_offline_does_not_start_connectivity_monitor(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -59,6 +60,7 @@ def test_application_online_starts_connectivity_monitor(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -91,6 +93,7 @@ def test_application_initial_offline_starts_connectivity_monitor(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -124,6 +127,7 @@ def test_application_monitor_detects_offline_to_online_transition(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -133,6 +137,7 @@ def test_application_monitor_detects_offline_to_online_transition(
     statuses = iter(
         [
             OfflineStatus(),
+            OnlineStatus(),
             OnlineStatus(),
         ]
     )
@@ -164,7 +169,6 @@ def test_application_monitor_detects_offline_to_online_transition(
         app.initialize()
 
         assert app.runtime_state.mode == RuntimeMode.OFFLINE
-        assert app.health.runtime_mode == RuntimeMode.OFFLINE
 
         assert [
             event.event_type
@@ -174,20 +178,46 @@ def test_application_monitor_detects_offline_to_online_transition(
             EventType.RUNTIME_MODE_CHANGED,
         ]
 
-        changed = app.connectivity_monitor.check_once()
+        first_changed = app.connectivity_monitor.check_once()
 
-        assert changed is True
+        assert first_changed is True
+        assert app.runtime_state.mode == RuntimeMode.DEGRADED
+        assert app.runtime_state.reason == (
+            "Conectividade externa detectada; aguardando confirmação"
+        )
 
+        first_health = app.health.runtime_snapshot()
+
+        assert first_health.network_online is True
+        assert first_health.runtime_mode == RuntimeMode.DEGRADED
+
+        assert [
+            event.event_type
+            for event in events
+        ] == [
+            EventType.NETWORK_OFFLINE,
+            EventType.RUNTIME_MODE_CHANGED,
+            EventType.NETWORK_ONLINE,
+            EventType.RUNTIME_MODE_CHANGED,
+        ]
+
+        assert events[-1].data["mode"] == (
+            RuntimeMode.DEGRADED.value
+        )
+
+        second_changed = app.connectivity_monitor.check_once()
+
+        assert second_changed is True
         assert app.runtime_state.mode == RuntimeMode.ONLINE
         assert app.runtime_state.reason == (
             "Conectividade externa disponível"
         )
 
-        snapshot = app.health.runtime_snapshot()
+        second_health = app.health.runtime_snapshot()
 
-        assert snapshot.network_online is True
-        assert snapshot.runtime_mode == RuntimeMode.ONLINE
-        assert snapshot.runtime_reason == (
+        assert second_health.network_online is True
+        assert second_health.runtime_mode == RuntimeMode.ONLINE
+        assert second_health.runtime_reason == (
             "Conectividade externa disponível"
         )
 
@@ -199,7 +229,12 @@ def test_application_monitor_detects_offline_to_online_transition(
             EventType.RUNTIME_MODE_CHANGED,
             EventType.NETWORK_ONLINE,
             EventType.RUNTIME_MODE_CHANGED,
+            EventType.RUNTIME_MODE_CHANGED,
         ]
+
+        assert events[-1].data["mode"] == (
+            RuntimeMode.ONLINE.value
+        )
     finally:
         app.shutdown()
 
@@ -212,6 +247,7 @@ def test_application_monitor_detects_online_to_offline_transition(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -221,6 +257,7 @@ def test_application_monitor_detects_online_to_offline_transition(
     statuses = iter(
         [
             OnlineStatus(),
+            OfflineStatus(),
             OfflineStatus(),
         ]
     )
@@ -252,7 +289,6 @@ def test_application_monitor_detects_online_to_offline_transition(
         app.initialize()
 
         assert app.runtime_state.mode == RuntimeMode.ONLINE
-        assert app.health.runtime_mode == RuntimeMode.ONLINE
 
         assert [
             event.event_type
@@ -262,20 +298,46 @@ def test_application_monitor_detects_online_to_offline_transition(
             EventType.RUNTIME_MODE_CHANGED,
         ]
 
-        changed = app.connectivity_monitor.check_once()
+        first_changed = app.connectivity_monitor.check_once()
 
-        assert changed is True
+        assert first_changed is True
+        assert app.runtime_state.mode == RuntimeMode.DEGRADED
+        assert app.runtime_state.reason == (
+            "Perda de conectividade aguardando confirmação"
+        )
 
+        first_health = app.health.runtime_snapshot()
+
+        assert first_health.network_online is False
+        assert first_health.runtime_mode == RuntimeMode.DEGRADED
+
+        assert [
+            event.event_type
+            for event in events
+        ] == [
+            EventType.NETWORK_ONLINE,
+            EventType.RUNTIME_MODE_CHANGED,
+            EventType.NETWORK_OFFLINE,
+            EventType.RUNTIME_MODE_CHANGED,
+        ]
+
+        assert events[-1].data["mode"] == (
+            RuntimeMode.DEGRADED.value
+        )
+
+        second_changed = app.connectivity_monitor.check_once()
+
+        assert second_changed is True
         assert app.runtime_state.mode == RuntimeMode.OFFLINE
         assert app.runtime_state.reason == (
             "Conectividade externa indisponível"
         )
 
-        snapshot = app.health.runtime_snapshot()
+        second_health = app.health.runtime_snapshot()
 
-        assert snapshot.network_online is False
-        assert snapshot.runtime_mode == RuntimeMode.OFFLINE
-        assert snapshot.runtime_reason == (
+        assert second_health.network_online is False
+        assert second_health.runtime_mode == RuntimeMode.OFFLINE
+        assert second_health.runtime_reason == (
             "Conectividade externa indisponível"
         )
 
@@ -287,7 +349,12 @@ def test_application_monitor_detects_online_to_offline_transition(
             EventType.RUNTIME_MODE_CHANGED,
             EventType.NETWORK_OFFLINE,
             EventType.RUNTIME_MODE_CHANGED,
+            EventType.RUNTIME_MODE_CHANGED,
         ]
+
+        assert events[-1].data["mode"] == (
+            RuntimeMode.OFFLINE.value
+        )
     finally:
         app.shutdown()
 
@@ -300,6 +367,7 @@ def test_application_shutdown_stops_monitor_before_system_stop(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -349,6 +417,7 @@ def test_application_shutdown_does_not_complete_if_monitor_stop_times_out(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -416,6 +485,7 @@ def test_application_rejects_repeated_initialize(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -446,6 +516,7 @@ def test_application_shutdown_is_idempotent(
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -467,3 +538,58 @@ def test_application_shutdown_is_idempotent(
 
     assert len(events) == 1
     assert events[0].event_type == EventType.SYSTEM_STOP
+
+
+def test_application_passes_connectivity_confirmation_threshold(
+    monkeypatch,
+):
+    class FakeSettings:
+        offline_mode = False
+        version = "0.2.0"
+        node_name = "NEXUS-NODE-01"
+        connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 3
+
+    monkeypatch.setattr(
+        "nexus.core.application.settings",
+        FakeSettings(),
+    )
+
+    statuses = iter(
+        [
+            OfflineStatus(),
+            OnlineStatus(),
+            OnlineStatus(),
+            OnlineStatus(),
+        ]
+    )
+
+    app = NexusApplication()
+
+    monkeypatch.setattr(
+        app.connectivity_manager,
+        "check",
+        lambda: next(statuses),
+    )
+
+    try:
+        app.initialize()
+
+        assert app.runtime_state.mode == RuntimeMode.OFFLINE
+
+        first_changed = app.connectivity_monitor.check_once()
+
+        assert first_changed is True
+        assert app.runtime_state.mode == RuntimeMode.DEGRADED
+
+        second_changed = app.connectivity_monitor.check_once()
+
+        assert second_changed is False
+        assert app.runtime_state.mode == RuntimeMode.DEGRADED
+
+        third_changed = app.connectivity_monitor.check_once()
+
+        assert third_changed is True
+        assert app.runtime_state.mode == RuntimeMode.ONLINE
+    finally:
+        app.shutdown()

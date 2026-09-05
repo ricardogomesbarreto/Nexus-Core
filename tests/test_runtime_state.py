@@ -46,68 +46,73 @@ def test_runtime_state_online_to_offline():
     assert controller.changed_at is not None
 
 
-def test_runtime_state_rejects_offline_to_degraded():
+def test_runtime_state_offline_to_degraded():
     controller = RuntimeStateController()
 
-    with pytest.raises(ValueError):
-        controller.transition(
-            RuntimeMode.DEGRADED,
-            "Serviço externo parcialmente indisponível",
-        )
+    changed = controller.transition(
+        RuntimeMode.DEGRADED,
+        "Conectividade externa detectada; aguardando confirmação",
+    )
 
-    assert controller.mode == RuntimeMode.OFFLINE
-    assert controller.reason is None
-    assert controller.changed_at is None
+    assert changed is True
+    assert controller.mode == RuntimeMode.DEGRADED
+    assert controller.reason == (
+        "Conectividade externa detectada; aguardando confirmação"
+    )
+    assert controller.changed_at is not None
 
 
-def test_runtime_state_rejects_online_to_degraded():
-    controller = RuntimeStateController()
+def test_runtime_state_online_to_degraded():
+    controller = RuntimeStateController(
+        initial_mode=RuntimeMode.ONLINE,
+        initial_reason="Conectividade externa disponível",
+    )
 
-    controller.transition(
+    changed = controller.transition(
+        RuntimeMode.DEGRADED,
+        "Perda de conectividade aguardando confirmação",
+    )
+
+    assert changed is True
+    assert controller.mode == RuntimeMode.DEGRADED
+    assert controller.reason == (
+        "Perda de conectividade aguardando confirmação"
+    )
+    assert controller.changed_at is not None
+
+
+def test_runtime_state_degraded_to_online():
+    controller = RuntimeStateController(
+        initial_mode=RuntimeMode.DEGRADED,
+        initial_reason="Mudança de conectividade em confirmação",
+    )
+
+    changed = controller.transition(
         RuntimeMode.ONLINE,
         "Conectividade externa disponível",
     )
 
-    with pytest.raises(ValueError):
-        controller.transition(
-            RuntimeMode.DEGRADED,
-            "Serviço externo parcialmente indisponível",
-        )
-
+    assert changed is True
     assert controller.mode == RuntimeMode.ONLINE
     assert controller.reason == "Conectividade externa disponível"
+    assert controller.changed_at is not None
 
 
-def test_runtime_state_rejects_degraded_to_online():
+def test_runtime_state_degraded_to_offline():
     controller = RuntimeStateController(
         initial_mode=RuntimeMode.DEGRADED,
-        initial_reason="Estado reservado para evolução futura",
+        initial_reason="Mudança de conectividade em confirmação",
     )
 
-    with pytest.raises(ValueError):
-        controller.transition(
-            RuntimeMode.ONLINE,
-            "Conectividade externa disponível",
-        )
-
-    assert controller.mode == RuntimeMode.DEGRADED
-    assert controller.reason == "Estado reservado para evolução futura"
-
-
-def test_runtime_state_rejects_degraded_to_offline():
-    controller = RuntimeStateController(
-        initial_mode=RuntimeMode.DEGRADED,
-        initial_reason="Estado reservado para evolução futura",
+    changed = controller.transition(
+        RuntimeMode.OFFLINE,
+        "Conectividade externa indisponível",
     )
 
-    with pytest.raises(ValueError):
-        controller.transition(
-            RuntimeMode.OFFLINE,
-            "Conectividade externa indisponível",
-        )
-
-    assert controller.mode == RuntimeMode.DEGRADED
-    assert controller.reason == "Estado reservado para evolução futura"
+    assert changed is True
+    assert controller.mode == RuntimeMode.OFFLINE
+    assert controller.reason == "Conectividade externa indisponível"
+    assert controller.changed_at is not None
 
 
 def test_runtime_state_rejects_same_state_transition():
@@ -136,7 +141,7 @@ def test_runtime_state_changed_at_is_utc():
     assert controller.changed_at.tzinfo == timezone.utc
 
 
-def test_runtime_state_invalid_transition_does_not_change_timestamp():
+def test_runtime_state_rejected_same_state_does_not_change_timestamp():
     controller = RuntimeStateController()
 
     controller.transition(
@@ -148,8 +153,8 @@ def test_runtime_state_invalid_transition_does_not_change_timestamp():
 
     with pytest.raises(ValueError):
         controller.transition(
-            RuntimeMode.DEGRADED,
-            "Serviço externo parcialmente indisponível",
+            RuntimeMode.ONLINE,
+            "Nenhuma mudança de estado",
         )
 
     assert controller.changed_at == original_changed_at

@@ -45,12 +45,12 @@ def test_health_degraded():
     health = HealthStatus(
         network_online=True,
         runtime_mode=RuntimeMode.DEGRADED,
-        runtime_reason="Serviço externo parcialmente indisponível",
+        runtime_reason="Mudança de conectividade aguardando confirmação",
     )
 
     assert health.network_online is True
     assert health.runtime_mode == RuntimeMode.DEGRADED
-    assert health.runtime_reason == "Serviço externo parcialmente indisponível"
+    assert health.runtime_reason == "Mudança de conectividade aguardando confirmação"
 
 
 def test_health_runtime_snapshot_default():

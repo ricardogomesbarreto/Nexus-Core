@@ -180,11 +180,16 @@ class RuntimeStateController:
         valid_transitions = {
             RuntimeMode.OFFLINE: {
                 RuntimeMode.ONLINE,
+                RuntimeMode.DEGRADED,
             },
             RuntimeMode.ONLINE: {
                 RuntimeMode.OFFLINE,
+                RuntimeMode.DEGRADED,
             },
-            RuntimeMode.DEGRADED: set(),
+            RuntimeMode.DEGRADED: {
+                RuntimeMode.ONLINE,
+                RuntimeMode.OFFLINE,
+            },
         }
 
         allowed_targets = valid_transitions.get(

@@ -163,10 +163,14 @@ class NexusApplication:
                 runtime_state=self.runtime_state,
                 event_bus=self.event_bus,
                 health=self.health,
+                initial_network_online=connectivity.online,
                 interval=(
                     settings.connectivity_monitor_interval
                 ),
                 logger=self.logger,
+                confirmation_threshold=(
+                    settings.connectivity_confirmation_threshold
+                ),
             )
 
             self.connectivity_monitor.start()

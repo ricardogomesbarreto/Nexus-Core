@@ -2,6 +2,9 @@ import logging
 from threading import Event, RLock, Thread, current_thread
 
 from nexus.core.connectivity import ConnectivityManager
+from nexus.core.connectivity_runtime_evaluator import (
+    ConnectivityRuntimeEvaluator,
+)
 from nexus.core.runtime import RuntimeMode
 from nexus.core.runtime_state import RuntimeStateController
 from nexus.events import EventBus, EventType
@@ -27,12 +30,26 @@ class ConnectivityMonitor:
         runtime_state: RuntimeStateController,
         event_bus: EventBus,
         health: HealthStatus,
+        initial_network_online: bool,
         interval: float = 10.0,
         logger=None,
+        confirmation_threshold: int = 2,
     ):
         if interval <= 0:
             raise ValueError(
                 "O intervalo de monitoramento deve ser maior que zero"
+            )
+
+        expected_initial_mode = (
+            RuntimeMode.ONLINE
+            if initial_network_online
+            else RuntimeMode.OFFLINE
+        )
+
+        if runtime_state.mode != expected_initial_mode:
+            raise ValueError(
+                "O estado inicial de runtime é incompatível "
+                "com initial_network_online"
             )
 
         self.connectivity_manager = connectivity_manager
@@ -40,6 +57,11 @@ class ConnectivityMonitor:
         self.event_bus = event_bus
         self.health = health
         self.interval = interval
+
+        self.runtime_evaluator = ConnectivityRuntimeEvaluator(
+            initial_network_online=initial_network_online,
+            confirmation_threshold=confirmation_threshold,
+        )
 
         self.logger = (
             logger
@@ -49,6 +71,7 @@ class ConnectivityMonitor:
 
         self._stop_event = Event()
         self._lifecycle_lock = RLock()
+        self._cycle_lock = RLock()
         self._thread: Thread | None = None
 
     @property
@@ -67,85 +90,78 @@ class ConnectivityMonitor:
         Executa uma única verificação de conectividade.
 
         Retorna True somente quando ocorre uma transição efetiva
-        entre ONLINE e OFFLINE.
+        de modo de runtime, incluindo transições por DEGRADED.
 
-        Repetições do estado atual não geram eventos.
+        Eventos NETWORK_* representam mudanças na observação bruta.
+        RUNTIME_MODE_CHANGED representa mudanças no modo estabilizado.
         """
-        try:
-            connectivity = self.connectivity_manager.check()
-        except Exception:
-            self.logger.exception(
-                "Falha inesperada durante a verificação "
-                "de conectividade"
-            )
-            return False
+        with self._cycle_lock:
+            try:
+                connectivity = self.connectivity_manager.check()
+            except Exception:
+                self.logger.exception(
+                    "Falha inesperada durante a verificação "
+                    "de conectividade"
+                )
+                return False
 
-        target_mode = (
-            RuntimeMode.ONLINE
-            if connectivity.online
-            else RuntimeMode.OFFLINE
-        )
-
-        reason = (
-            "Conectividade externa disponível"
-            if connectivity.online
-            else "Conectividade externa indisponível"
-        )
-
-        result = self.runtime_state.transition_if_changed_result(
-            target_mode,
-            reason,
-        )
-
-        self.health.update_runtime(
-            network_online=connectivity.online,
-            runtime_mode=result.mode,
-            runtime_reason=result.reason,
-        )
-
-        if not result.changed:
-            return False
-
-        network_event = (
-            EventType.NETWORK_ONLINE
-            if connectivity.online
-            else EventType.NETWORK_OFFLINE
-        )
-
-        network_publish_error = None
-
-        try:
-            self.event_bus.publish(
-                network_event,
-                {
-                    "endpoint": connectivity.endpoint,
-                    "latency_ms": connectivity.latency_ms,
-                },
-            )
-        except Exception as exc:
-            network_publish_error = exc
-
-        try:
-            self.event_bus.publish(
-                EventType.RUNTIME_MODE_CHANGED,
-                {
-                    "mode": result.mode.value,
-                    "reason": result.reason,
-                },
-            )
-        except Exception:
-            if network_publish_error is None:
-                raise
-
-            self.logger.exception(
-                "Falha adicional ao publicar "
-                "RUNTIME_MODE_CHANGED"
+            evaluation = self.runtime_evaluator.evaluate(
+                connectivity.online
             )
 
-        if network_publish_error is not None:
-            raise network_publish_error
+            result = self.runtime_state.transition_if_changed_result(
+                evaluation.target_mode,
+                evaluation.reason,
+            )
 
-        return True
+            self.health.update_runtime(
+                network_online=evaluation.network_online,
+                runtime_mode=result.mode,
+                runtime_reason=result.reason,
+            )
+
+            network_publish_error = None
+
+            if evaluation.network_changed:
+                network_event = (
+                    EventType.NETWORK_ONLINE
+                    if evaluation.network_online
+                    else EventType.NETWORK_OFFLINE
+                )
+
+                try:
+                    self.event_bus.publish(
+                        network_event,
+                        {
+                            "endpoint": connectivity.endpoint,
+                            "latency_ms": connectivity.latency_ms,
+                        },
+                    )
+                except Exception as exc:
+                    network_publish_error = exc
+
+            if result.changed:
+                try:
+                    self.event_bus.publish(
+                        EventType.RUNTIME_MODE_CHANGED,
+                        {
+                            "mode": result.mode.value,
+                            "reason": result.reason,
+                        },
+                    )
+                except Exception:
+                    if network_publish_error is None:
+                        raise
+
+                    self.logger.exception(
+                        "Falha adicional ao publicar "
+                        "RUNTIME_MODE_CHANGED"
+                    )
+
+            if network_publish_error is not None:
+                raise network_publish_error
+
+            return result.changed
 
     def start(self) -> None:
         """

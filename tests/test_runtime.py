@@ -27,8 +27,8 @@ def test_runtime_status_online():
 def test_runtime_status_degraded():
     status = RuntimeStatus(
         mode=RuntimeMode.DEGRADED,
-        reason="Serviço externo parcialmente indisponível",
+        reason="Mudança de conectividade aguardando confirmação",
     )
 
     assert status.mode == RuntimeMode.DEGRADED
-    assert status.reason == "Serviço externo parcialmente indisponível"
+    assert status.reason == "Mudança de conectividade aguardando confirmação"

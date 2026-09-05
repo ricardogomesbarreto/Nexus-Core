@@ -44,6 +44,7 @@ def test_application_initialize_online(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -79,6 +80,7 @@ def test_application_initialize_online_events(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -129,6 +131,7 @@ def test_application_initialize_offline_events(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -184,6 +187,7 @@ def test_application_initialize_forced_offline_events(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -222,6 +226,7 @@ def test_application_forced_offline_event_data(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -258,6 +263,7 @@ def test_application_runtime_health_consistency(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -299,6 +305,7 @@ def test_application_offline_health_consistency(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -339,6 +346,7 @@ def test_application_online_event_data(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -385,6 +393,7 @@ def test_application_offline_event_data(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -431,6 +440,7 @@ def test_application_runtime_mode_changed_online_data(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",
@@ -479,6 +489,7 @@ def test_application_runtime_mode_changed_offline_data(monkeypatch):
         version = "0.2.0"
         node_name = "NEXUS-NODE-01"
         connectivity_monitor_interval = 60.0
+        connectivity_confirmation_threshold = 2
 
     monkeypatch.setattr(
         "nexus.core.application.settings",

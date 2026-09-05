@@ -4,8 +4,9 @@ from nexus.core.application import NexusApplication
 
 def test_settings():
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.2.2"
+    assert settings.version == "0.2.3"
     assert settings.connectivity_monitor_interval == 30.0
+    assert settings.connectivity_confirmation_threshold == 2
 
 
 def test_application_initialization():

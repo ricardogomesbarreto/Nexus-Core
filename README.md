@@ -2,10 +2,10 @@
 
 Assistente pessoal de inteligência artificial **local-first, multimodal, modular, seguro e orientado a agentes**.
 
-> **Versão estável atual:** `v0.2.2 — Continuous Connectivity Monitoring`
-> **Próxima versão planejada:** `v0.2.3 — Automatic DEGRADED Runtime Detection`
+> **Versão estável atual:** `v0.2.3 — Automatic DEGRADED Runtime Detection`
+> **Próxima versão planejada:** `v0.2.4 — Environment & Runtime Configuration`
 > **Status:** Development
-> **Test baseline:** `134 passed`
+> **Test baseline:** `151 passed`
 
 ---
 
@@ -93,19 +93,79 @@ Ela faz parte da fundação arquitetural do Nexus Core.
 
 # Estado atual
 
-A versão `v0.2.2` consolida o **monitoramento contínuo de conectividade** do Nexus Core, permitindo transições automáticas e controladas entre `ONLINE` e `OFFLINE`.
+A versão `v0.2.3` consolida a infraestrutura de runtime e conectividade introduzindo **detecção automática do estado `DEGRADED`**.
 
-O estado inicial continua sendo determinado durante `NexusApplication.initialize()`.
-
-Quando:
+O Nexus Core agora distingue duas dimensões diferentes:
 
 ```text
-offline_mode = False
+observação bruta da rede
+        │
+        ▼
+network_online
+
+interpretação estabilizada do runtime
+        │
+        ▼
+runtime_mode
 ```
 
-um `ConnectivityMonitor` é iniciado e passa a verificar periodicamente a conectividade externa.
+Uma única mudança observada na conectividade não altera imediatamente o runtime entre `ONLINE` e `OFFLINE`.
 
-Quando ocorre uma mudança efetiva de conectividade, o estado de runtime é atualizado de maneira controlada e os eventos correspondentes são publicados.
+Com o threshold padrão:
+
+```text
+connectivity_confirmation_threshold = 2
+```
+
+uma observação divergente coloca temporariamente o runtime em:
+
+```text
+DEGRADED
+```
+
+até que a mudança seja confirmada ou cancelada por recuperação.
+
+Exemplo:
+
+```text
+ONLINE
+  │
+  │ primeira observação OFFLINE
+  ▼
+DEGRADED
+  │
+  │ segunda observação OFFLINE consecutiva
+  ▼
+OFFLINE
+```
+
+E simetricamente:
+
+```text
+OFFLINE
+  │
+  │ primeira observação ONLINE
+  ▼
+DEGRADED
+  │
+  │ segunda observação ONLINE consecutiva
+  ▼
+ONLINE
+```
+
+O estado `DEGRADED` da `v0.2.3` significa especificamente:
+
+> uma mudança ou instabilidade de conectividade externa foi observada, mas ainda não foi confirmada como novo estado estável.
+
+Ele **não** significa:
+
+* indisponibilidade parcial de um provider;
+* degradação de um serviço HTTP específico;
+* falha parcial de um modelo;
+* latência elevada;
+* perda parcial de capacidades de IA.
+
+Essas dimensões exigem sinais adicionais que ainda não fazem parte da arquitetura atual.
 
 Atualmente o projeto possui:
 
@@ -118,12 +178,15 @@ Atualmente o projeto possui:
 * Health Status
 * Health Check
 * Connectivity Manager
+* Connectivity Runtime Evaluator
 * Connectivity Monitor
 * Runtime Mode
 * Runtime State Controller
 * Runtime snapshots
 * Health runtime snapshots
 * Estados `ONLINE`, `OFFLINE` e `DEGRADED`
+* Detecção automática de conectividade instável
+* Confirmação configurável de mudanças de conectividade
 * Arquitetura modular de ferramentas
 * Tool Registry
 * Tool Executor
@@ -138,15 +201,13 @@ Atualmente o projeto possui:
 * Lifecycle controlado da aplicação
 * Suíte automatizada de testes
 
-O valor `DEGRADED` já existe no domínio de runtime, mas sua determinação automática ainda **não** faz parte da implementação atual.
-
 ---
 
 ## Baseline atual
 
 ```text
-Version:       v0.2.2
-Tests:         134 passed
+Version:       v0.2.3
+Tests:         151 passed
 Runtime:       Python 3.12
 Database:      SQLite
 Sandbox:       Docker
@@ -176,10 +237,19 @@ NEXUS CORE
     ├── ConnectivityManager
     │   └── Point-in-time connectivity check
     │
+    ├── ConnectivityRuntimeEvaluator
+    │   ├── Raw connectivity interpretation
+    │   ├── Confirmation threshold
+    │   ├── DEGRADED detection
+    │   ├── Oscillation handling
+    │   └── Deterministic state machine
+    │
     ├── ConnectivityMonitor
     │   └── Nexus-ConnectivityMonitor
     │       ├── Periodic polling
-    │       ├── Transition detection
+    │       ├── Serialized monitoring cycles
+    │       ├── Runtime evaluation
+    │       ├── Raw network change detection
     │       ├── Failure containment
     │       └── Graceful shutdown
     │
@@ -211,6 +281,16 @@ O `RuntimeStateController` é a **fonte autoritativa** do estado operacional.
 
 O `HealthStatus` mantém uma projeção voltada à observabilidade.
 
+O `HealthStatus` não é utilizado pelo monitor como fonte para reconstruir o estado inicial da rede.
+
+O estado bruto inicial é passado explicitamente ao `ConnectivityMonitor` através de:
+
+```text
+initial_network_online
+```
+
+O construtor valida que esse valor seja consistente com o estado inicial do `RuntimeStateController`.
+
 Quando componentes concorrentes precisam observar:
 
 ```text
@@ -225,7 +305,59 @@ como uma única unidade lógica, devem utilizar:
 health.runtime_snapshot()
 ```
 
-O `ConnectivityMonitor` coordena verificações periódicas, detecção de transições e atualização do estado de runtime.
+---
+
+# Fluxo de conectividade e runtime
+
+A arquitetura da `v0.2.3` separa aquisição, interpretação, estado autoritativo e observabilidade.
+
+```text
+ConnectivityManager
+        │
+        ▼
+ConnectivityStatus
+        │
+        │ raw online: bool
+        ▼
+ConnectivityRuntimeEvaluator
+        │
+        │ target mode
+        ▼
+RuntimeStateController
+        │
+        ├──────────────► EventBus
+        │
+        ▼
+HealthStatus
+```
+
+Responsabilidades:
+
+```text
+ConnectivityManager
+    → observa conectividade
+
+ConnectivityRuntimeEvaluator
+    → interpreta sequência de observações
+
+RuntimeStateController
+    → mantém estado autoritativo
+
+HealthStatus
+    → projeta estado para observabilidade
+
+EventBus
+    → comunica mudanças
+```
+
+Essa separação evita misturar:
+
+```text
+observação
+interpretação
+autoridade
+observabilidade
+```
 
 ---
 
@@ -261,7 +393,7 @@ SECURITY GATE
      └── negado
             │
             ▼
-         BLOQUEIO
+          BLOQUEIO
 ```
 
 O modelo de IA poderá **propor** ações.
@@ -290,13 +422,16 @@ Durante a inicialização atual, a aplicação:
 8. Inicializa o `ConnectivityManager`.
 9. Verifica a política `offline_mode`.
 10. Quando permitido, executa uma verificação inicial de conectividade.
-11. Determina o modo inicial de runtime.
+11. Determina o modo inicial `ONLINE` ou `OFFLINE`.
 12. Inicializa o `RuntimeStateController`.
 13. Atualiza o `HealthStatus`.
 14. Publica os eventos iniciais correspondentes.
 15. Publica `SYSTEM_START`.
 16. Registra a inicialização no banco.
-17. Quando `offline_mode=False`, cria e inicia o `ConnectivityMonitor`.
+17. Quando `offline_mode=False`, cria o `ConnectivityMonitor`.
+18. Passa explicitamente a observação inicial da rede ao monitor.
+19. Configura o threshold de confirmação.
+20. Inicia a worker de conectividade.
 
 ---
 
@@ -390,6 +525,7 @@ Entre os parâmetros atuais:
 ```python
 offline_mode: bool = True
 connectivity_monitor_interval: float = 30.0
+connectivity_confirmation_threshold: int = 2
 ```
 
 ---
@@ -410,6 +546,7 @@ Nesse modo:
 * nenhum `ConnectivityMonitor` é criado;
 * `connectivity_monitor` permanece `None`;
 * não existe polling externo em background;
+* não existe detecção automática de `DEGRADED`;
 * o comportamento é determinístico;
 * a operação local permanece soberana.
 
@@ -424,7 +561,9 @@ Permite que o Nexus:
 3. estabeleça o estado inicial;
 4. publique os eventos iniciais;
 5. inicie o monitor de conectividade;
-6. detecte mudanças posteriores automaticamente.
+6. detecte mudanças brutas da rede;
+7. coloque o runtime em `DEGRADED` durante confirmação;
+8. confirme automaticamente `ONLINE` ou `OFFLINE`.
 
 ---
 
@@ -437,6 +576,38 @@ O intervalo operacional padrão é:
 ```
 
 O `ConnectivityMonitor` rejeita intervalos menores ou iguais a zero.
+
+---
+
+## Threshold de confirmação
+
+O threshold padrão é:
+
+```text
+2 observações consecutivas
+```
+
+Configuração:
+
+```python
+connectivity_confirmation_threshold = 2
+```
+
+Valores menores que:
+
+```text
+2
+```
+
+são rejeitados.
+
+Para um threshold genérico `N`, uma nova condição precisa ser observada `N` vezes consecutivamente antes de substituir o estado estável confirmado.
+
+Enquanto a confirmação não é concluída:
+
+```text
+runtime_mode = DEGRADED
+```
 
 ---
 
@@ -482,23 +653,181 @@ latency_ms
 
 faz parte do contrato estrutural, mas não existe medição ativa de latência.
 
-Portanto, sua presença não deve ser interpretada como implementação de benchmarking de rede.
+Sua presença não deve ser interpretada como implementação de benchmarking ou como sinal usado para determinar `DEGRADED`.
 
 ---
 
 ## Falhas de conectividade
 
-Falhas de rede ou I/O durante a verificação são interpretadas como indisponibilidade externa.
+Falhas de rede ou I/O tratadas pelo `ConnectivityManager` são interpretadas como indisponibilidade externa.
 
 Uma falha em comunicação não concede qualquer autoridade adicional ao sistema.
 
 ---
 
+# Connectivity Runtime Evaluator
+
+A `v0.2.3` introduz:
+
+```text
+ConnectivityRuntimeEvaluator
+```
+
+Ele implementa a política determinística que transforma observações brutas de conectividade em um modo alvo de runtime.
+
+O evaluator:
+
+* não executa I/O;
+* não cria threads;
+* não utiliza `EventBus`;
+* não utiliza logger;
+* não atualiza `HealthStatus`;
+* não modifica diretamente o `RuntimeStateController`.
+
+Ele mantém apenas o estado necessário para interpretar sequências de conectividade.
+
+---
+
+## Resultado da avaliação
+
+Cada avaliação retorna um:
+
+```text
+ConnectivityRuntimeEvaluation
+```
+
+imutável.
+
+Campos:
+
+```text
+target_mode
+reason
+network_online
+network_changed
+```
+
+Onde:
+
+```text
+network_online
+```
+
+representa a observação bruta mais recente;
+
+e:
+
+```text
+target_mode
+```
+
+representa a interpretação estabilizada ou provisória do runtime.
+
+---
+
+## Estado confirmado
+
+O evaluator mantém internamente a última condição de rede confirmada.
+
+Exemplo:
+
+```text
+confirmed_network_online = True
+```
+
+significa que o estado estável conhecido é online.
+
+Uma observação diferente inicia um processo de confirmação.
+
+---
+
+## ONLINE → DEGRADED → OFFLINE
+
+Com threshold `2`:
+
+```text
+Estado confirmado:
+ONLINE
+
+Observação 1:
+online=False
+
+Resultado:
+network_online=False
+runtime_mode=DEGRADED
+reason="Perda de conectividade aguardando confirmação"
+
+Observação 2:
+online=False
+
+Resultado:
+network_online=False
+runtime_mode=OFFLINE
+reason="Conectividade externa indisponível"
+```
+
+---
+
+## OFFLINE → DEGRADED → ONLINE
+
+```text
+Estado confirmado:
+OFFLINE
+
+Observação 1:
+online=True
+
+Resultado:
+network_online=True
+runtime_mode=DEGRADED
+reason="Conectividade externa detectada; aguardando confirmação"
+
+Observação 2:
+online=True
+
+Resultado:
+network_online=True
+runtime_mode=ONLINE
+reason="Conectividade externa disponível"
+```
+
+---
+
+## Recuperação antes da confirmação
+
+Se a rede retornar ao estado confirmado antes que o threshold seja atingido, a mudança pendente é cancelada.
+
+Exemplo:
+
+```text
+ONLINE
+  │
+  ├── OFFLINE observado
+  │      ▼
+  │   DEGRADED
+  │
+  └── ONLINE observado novamente
+         ▼
+      ONLINE
+```
+
+Nesse caso o sistema não confirma `OFFLINE`.
+
+---
+
+## Oscilação
+
+Mudanças alternadas reiniciam o processo de confirmação quando necessário.
+
+Isso impede que observações antigas sejam acumuladas incorretamente através de uma oscilação.
+
+---
+
 # Connectivity Monitor
 
-A `v0.2.2` introduz o `ConnectivityMonitor`.
+A `v0.2.2` introduziu o `ConnectivityMonitor`.
 
-Sua responsabilidade é transformar verificações pontuais em monitoramento periódico controlado.
+A `v0.2.3` estende sua responsabilidade integrando o `ConnectivityRuntimeEvaluator`.
 
 O componente recebe explicitamente:
 
@@ -507,9 +836,49 @@ ConnectivityManager
 RuntimeStateController
 EventBus
 HealthStatus
+initial_network_online
 poll interval
+confirmation threshold
 logger
 ```
+
+---
+
+## Invariant de inicialização
+
+O monitor só pode ser criado quando:
+
+```text
+initial_network_online=True
+```
+
+for consistente com:
+
+```text
+runtime inicial ONLINE
+```
+
+e:
+
+```text
+initial_network_online=False
+```
+
+for consistente com:
+
+```text
+runtime inicial OFFLINE
+```
+
+Combinações inconsistentes são rejeitadas com:
+
+```text
+ValueError
+```
+
+O monitor também não aceita `DEGRADED` como seu estado confirmado inicial.
+
+`DEGRADED` é alcançado posteriormente pelo evaluator a partir de uma observação divergente.
 
 ---
 
@@ -531,6 +900,50 @@ threading.RLock
 ```
 
 Nenhuma dependência externa foi adicionada para essa funcionalidade.
+
+---
+
+## Serialização de ciclos
+
+A `v0.2.3` adiciona um lock dedicado ao ciclo de monitoramento:
+
+```text
+_cycle_lock
+```
+
+Todo `check_once()` é serializado.
+
+Isso impede que:
+
+```text
+worker thread
+```
+
+e:
+
+```text
+chamada manual de check_once()
+```
+
+executem simultaneamente sobre o evaluator stateful.
+
+O ciclo protegido inclui:
+
+```text
+ConnectivityManager.check()
+        │
+        ▼
+ConnectivityRuntimeEvaluator.evaluate()
+        │
+        ▼
+RuntimeStateController transition
+        │
+        ▼
+HealthStatus update
+        │
+        ▼
+Event publication
+```
 
 ---
 
@@ -608,34 +1021,121 @@ permite observar se a worker associada continua viva.
 
 ---
 
-# Detecção de transições
+# Semântica das transições de conectividade
 
-Cada ciclo de monitoramento executa:
-
-```text
-ConnectivityManager.check()
-        │
-        ▼
-ConnectivityStatus
-```
-
-O modo desejado é derivado diretamente:
+A `v0.2.3` separa:
 
 ```text
-online=True  → ONLINE
-online=False → OFFLINE
+mudança na observação bruta da rede
 ```
 
-A atualização é realizada através de uma transição condicional atômica no `RuntimeStateController`.
+de:
+
+```text
+mudança no modo de runtime
+```
+
+Essas duas dimensões possuem eventos independentes.
 
 ---
 
-## Estado inalterado
+## Eventos `NETWORK_*`
 
-Se o estado observado for igual ao estado atual:
+Os eventos:
 
 ```text
-nenhuma transição
+NETWORK_ONLINE
+NETWORK_OFFLINE
+```
+
+representam **mudanças na observação bruta da conectividade**.
+
+Eles não representam confirmação de runtime.
+
+---
+
+## Evento `RUNTIME_MODE_CHANGED`
+
+O evento:
+
+```text
+RUNTIME_MODE_CHANGED
+```
+
+representa uma mudança efetiva no estado autoritativo de runtime.
+
+Ele pode representar:
+
+```text
+ONLINE → DEGRADED
+DEGRADED → OFFLINE
+OFFLINE → DEGRADED
+DEGRADED → ONLINE
+```
+
+---
+
+## Exemplo ONLINE → OFFLINE
+
+Estado inicial:
+
+```text
+ONLINE
+```
+
+Primeira observação `False`:
+
+```text
+NETWORK_OFFLINE
+RUNTIME_MODE_CHANGED(DEGRADED)
+```
+
+Segunda observação `False`:
+
+```text
+RUNTIME_MODE_CHANGED(OFFLINE)
+```
+
+Não existe um segundo:
+
+```text
+NETWORK_OFFLINE
+```
+
+porque a observação bruta não mudou novamente.
+
+---
+
+## Exemplo OFFLINE → ONLINE
+
+Primeira observação `True`:
+
+```text
+NETWORK_ONLINE
+RUNTIME_MODE_CHANGED(DEGRADED)
+```
+
+Segunda observação `True`:
+
+```text
+RUNTIME_MODE_CHANGED(ONLINE)
+```
+
+Novamente, não existe um segundo:
+
+```text
+NETWORK_ONLINE
+```
+
+na confirmação.
+
+---
+
+## Estado bruto estável
+
+Se nenhuma dimensão mudar:
+
+```text
 nenhum NETWORK_*
 nenhum RUNTIME_MODE_CHANGED
 ```
@@ -645,29 +1145,7 @@ Isso evita:
 * event flooding;
 * timestamps artificiais;
 * side effects repetidos;
-* atualizações sem mudança real de estado.
-
----
-
-## Mudança efetiva
-
-Quando existe mudança:
-
-```text
-ConnectivityStatus
-        │
-        ▼
-RuntimeStateController
-        │
-        ▼
-HealthStatus
-        │
-        ▼
-NETWORK_ONLINE / NETWORK_OFFLINE
-        │
-        ▼
-RUNTIME_MODE_CHANGED
-```
+* atualizações sem mudança real.
 
 ---
 
@@ -697,7 +1175,7 @@ para proteger seu estado interno.
 
 Leituras individuais de:
 
-```python
+```text
 mode
 reason
 changed_at
@@ -733,20 +1211,41 @@ changed_at
 
 ---
 
+## Matriz de transições
+
+A matriz atual permite:
+
+```text
+OFFLINE
+  ├── ONLINE
+  └── DEGRADED
+
+ONLINE
+  ├── OFFLINE
+  └── DEGRADED
+
+DEGRADED
+  ├── ONLINE
+  └── OFFLINE
+```
+
+As transições diretas:
+
+```text
+ONLINE ↔ OFFLINE
+```
+
+continuam legais no `RuntimeStateController` para preservar compatibilidade e permitir outros consumidores.
+
+Entretanto, a política implementada pelo `ConnectivityRuntimeEvaluator` e pelo `ConnectivityMonitor` utiliza `DEGRADED` como estado intermediário durante mudanças automáticas de conectividade.
+
+---
+
 ## `transition()`
 
 Preserva o contrato histórico da `v0.2.1`.
 
-Uma transição válida:
-
-```python
-controller.transition(
-    RuntimeMode.ONLINE,
-    "Conectividade externa disponível",
-)
-```
-
-retorna:
+Uma transição válida retorna:
 
 ```text
 True
@@ -767,8 +1266,6 @@ ValueError
 ---
 
 ## `transition_if_changed()`
-
-A `v0.2.2` adiciona transições condicionais.
 
 Se o estado já for igual ao desejado:
 
@@ -823,18 +1320,6 @@ reason
 changed_at
 ```
 
-Isso elimina uma janela de corrida entre:
-
-```text
-alterar estado
-        │
-        ▼
-liberar lock
-        │
-        ▼
-ler snapshot
-```
-
 ---
 
 # Runtime Modes
@@ -851,7 +1336,7 @@ DEGRADED
 
 ## ONLINE
 
-Representa conectividade externa disponível.
+Representa conectividade externa confirmada como disponível.
 
 Não significa:
 
@@ -865,7 +1350,7 @@ Não significa:
 
 ## OFFLINE
 
-Representa indisponibilidade externa ou operação offline forçada.
+Representa conectividade externa confirmada como indisponível ou operação offline forçada.
 
 O Nexus Core foi projetado para preservar sua capacidade local mesmo nesse estado.
 
@@ -873,21 +1358,29 @@ O Nexus Core foi projetado para preservar sua capacidade local mesmo nesse estad
 
 ## DEGRADED
 
-Existe atualmente no modelo de domínio.
+Na `v0.2.3`, `DEGRADED` possui uma semântica operacional específica:
 
-Entretanto:
+> existe uma mudança de conectividade observada que ainda aguarda confirmação suficiente para substituir o estado estável anterior.
 
-```text
-DEGRADED
-```
-
-ainda **não possui determinação automática**.
-
-A implementação dessa lógica está planejada para:
+Exemplos:
 
 ```text
-v0.2.3
+network_online=False
+runtime_mode=DEGRADED
 ```
+
+pode representar uma perda de conectividade ainda não confirmada.
+
+Enquanto:
+
+```text
+network_online=True
+runtime_mode=DEGRADED
+```
+
+pode representar uma recuperação ainda não confirmada.
+
+`DEGRADED` não implica disponibilidade parcial de serviços.
 
 ---
 
@@ -951,6 +1444,8 @@ A fonte autoritativa continua sendo:
 RuntimeStateController
 ```
 
+O monitor não utiliza o `HealthStatus` como fonte para decidir sua política de conectividade.
+
 ---
 
 ## Atualização atômica
@@ -992,8 +1487,6 @@ network_online
 runtime_mode
 runtime_reason
 ```
-
-O entrypoint principal utiliza esse snapshot para evitar leituras concorrentes incoerentes.
 
 ---
 
@@ -1047,34 +1540,63 @@ SYSTEM_START
 
 O evento inicial `RUNTIME_MODE_CHANGED` representa o estabelecimento inicial do estado de runtime.
 
-Esse contrato já existia na `v0.2.1` e foi preservado.
+Esse contrato histórico foi preservado.
+
+O estado inicial automático é sempre:
+
+```text
+ONLINE
+```
+
+ou:
+
+```text
+OFFLINE
+```
+
+`DEGRADED` é produzido posteriormente pelo monitor quando uma nova observação diverge do estado confirmado.
 
 ---
 
-# Semântica de monitoramento — v0.2.2
+# Semântica de monitoramento — v0.2.3
 
-Após a inicialização, o monitor somente publica novos eventos quando ocorre uma mudança efetiva.
-
-Exemplo:
+Exemplo completo:
 
 ```text
 Inicialização
-OFFLINE
-  ├── NETWORK_OFFLINE
-  └── RUNTIME_MODE_CHANGED(OFFLINE)
-
-Primeiro polling
-OFFLINE
-  └── nenhum evento
-
-Polling posterior
 ONLINE
   ├── NETWORK_ONLINE
   └── RUNTIME_MODE_CHANGED(ONLINE)
 
-Polling seguinte
+Polling estável
 ONLINE
   └── nenhum evento
+
+Primeira perda observada
+network_online=False
+runtime=DEGRADED
+  ├── NETWORK_OFFLINE
+  └── RUNTIME_MODE_CHANGED(DEGRADED)
+
+Segunda perda consecutiva
+network_online=False
+runtime=OFFLINE
+  └── RUNTIME_MODE_CHANGED(OFFLINE)
+
+Polling estável
+OFFLINE
+  └── nenhum evento
+
+Primeira recuperação observada
+network_online=True
+runtime=DEGRADED
+  ├── NETWORK_ONLINE
+  └── RUNTIME_MODE_CHANGED(DEGRADED)
+
+Segunda recuperação consecutiva
+network_online=True
+runtime=ONLINE
+  └── RUNTIME_MODE_CHANGED(ONLINE)
 ```
 
 Isso preserva:
@@ -1082,7 +1604,9 @@ Isso preserva:
 * determinismo;
 * auditabilidade;
 * baixo ruído;
-* ausência de event flooding.
+* ausência de event flooding;
+* separação entre observação e interpretação;
+* resistência a flapping simples.
 
 ---
 
@@ -1090,9 +1614,7 @@ Isso preserva:
 
 O `EventBus` preserva o comportamento de propagação de exceções de subscribers.
 
-Entretanto, a `v0.2.2` endurece o fluxo de eventos de transição.
-
-Se um subscriber de:
+Se um evento de rede e um evento de runtime precisarem ser publicados no mesmo ciclo e um subscriber de:
 
 ```text
 NETWORK_ONLINE
@@ -1110,9 +1632,7 @@ falhar, o monitor ainda tenta publicar:
 RUNTIME_MODE_CHANGED
 ```
 
-para a mesma transição.
-
-A falha do primeiro evento continua visível ao chamador de:
+A falha original continua visível ao chamador de:
 
 ```python
 check_once()
@@ -1309,7 +1829,7 @@ Possíveis evoluções futuras:
 * polkit;
 * namespaces adicionais.
 
-Essa dívida não foi misturada à `v0.2.2`, porque constitui uma mudança independente de infraestrutura e segurança.
+Essa dívida não foi misturada à `v0.2.3`, porque constitui uma mudança independente de infraestrutura e segurança.
 
 ---
 
@@ -1322,7 +1842,7 @@ Exemplo conceitual:
 ```text
 ╔══════════════════════════════════════════════╗
 ║                   N E X U S                  ║
-║                    v0.2.2                    ║
+║                    v0.2.3                    ║
 ╠══════════════════════════════════════════════╣
 ║ Core                              ✓ ONLINE   ║
 ║ Configuration                     ✓ READY    ║
@@ -1343,7 +1863,7 @@ Exemplo conceitual:
 
 A interface atual é textual.
 
-Atualização dinâmica de UI não faz parte do escopo da `v0.2.2`.
+Atualização dinâmica de UI não faz parte do escopo da `v0.2.3`.
 
 ---
 
@@ -1363,10 +1883,10 @@ Execução:
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Baseline da `v0.2.2`:
+Baseline da `v0.2.3`:
 
 ```text
-134 passed
+151 passed
 ```
 
 ---
@@ -1380,6 +1900,7 @@ A suíte cobre, entre outros:
 * runtime modes;
 * transições válidas;
 * transições inválidas;
+* transições envolvendo `DEGRADED`;
 * estado autoritativo;
 * snapshots;
 * imutabilidade;
@@ -1388,9 +1909,19 @@ A suíte cobre, entre outros:
 * health status;
 * health snapshots;
 * connectivity manager;
+* connectivity runtime evaluator;
+* threshold inválido;
+* threshold configurável;
+* threshold maior que dois;
+* perda de conectividade;
+* recuperação de conectividade;
+* cancelamento de mudança pendente;
+* oscilação;
+* distinção entre `network_changed` e confirmação de runtime;
 * monitoramento contínuo;
-* transições offline → online;
-* transições online → offline;
+* `ONLINE → DEGRADED → OFFLINE`;
+* `OFFLINE → DEGRADED → ONLINE`;
+* separação entre eventos de rede e runtime;
 * ausência de eventos em estado estável;
 * intervalo inválido;
 * worker thread;
@@ -1403,13 +1934,17 @@ A suíte cobre, entre outros:
 * sobrevivência da worker após exceções;
 * falha de subscriber;
 * continuidade da worker após falha de subscriber;
+* serialização de chamadas concorrentes de `check_once()`;
+* consistência entre runtime inicial e rede inicial;
+* independência entre HealthStatus e inicialização do evaluator;
 * monitor desabilitado em forced offline;
 * lifecycle da aplicação;
 * `initialize()` one-shot;
 * `shutdown()` idempotente;
 * ordem monitor stop → system stop;
 * shutdown em `finally`;
-* uso de runtime snapshot no entrypoint.
+* uso de runtime snapshot no entrypoint;
+* regressão completa.
 
 ---
 
@@ -1423,20 +1958,15 @@ monitor.check_once()
 
 sem depender de polling real.
 
-Testes que precisam verificar comportamento da worker utilizam primitivas de sincronização como:
+O `ConnectivityRuntimeEvaluator` também pode ser exercitado isoladamente através de sequências determinísticas de valores booleanos.
 
-```text
-threading.Event
-threading.Barrier
-```
-
-em vez de depender exclusivamente de sleeps arbitrários.
+Testes que precisam verificar comportamento concorrente utilizam primitivas de sincronização explícitas.
 
 ---
 
 # Dependências
 
-O runtime Python da `v0.2.2` não exige pacotes externos obrigatórios.
+O runtime Python da `v0.2.3` não exige pacotes externos obrigatórios.
 
 Arquivo:
 
@@ -1448,7 +1978,7 @@ deve refletir:
 
 ```text
 # Nexus Core runtime dependencies
-# No external Python packages are required at v0.2.2.
+# No external Python packages are required at v0.2.3.
 ```
 
 Para desenvolvimento:
@@ -1464,9 +1994,10 @@ inclui:
 pytest==9.1.1
 ```
 
-A `v0.2.2` utiliza apenas biblioteca padrão para sua nova funcionalidade de concorrência:
+A `v0.2.3` utiliza apenas biblioteca padrão para a nova funcionalidade:
 
 ```text
+dataclasses
 threading
 logging
 ```
@@ -1489,6 +2020,7 @@ Nexus Core/
 │   │   ├── application.py
 │   │   ├── connectivity.py
 │   │   ├── connectivity_monitor.py
+│   │   ├── connectivity_runtime_evaluator.py
 │   │   ├── logger.py
 │   │   ├── runtime.py
 │   │   └── runtime_state.py
@@ -1512,9 +2044,11 @@ Nexus Core/
 │   ├── test_application_connectivity_monitor.py
 │   ├── test_application_runtime.py
 │   ├── test_connectivity_monitor.py
+│   ├── test_connectivity_runtime_evaluator.py
 │   ├── test_core.py
 │   ├── test_health.py
 │   ├── test_main.py
+│   ├── test_runtime.py
 │   └── test_runtime_state.py
 │
 ├── README.md
@@ -1637,11 +2171,9 @@ Baseline histórico:
 
 ---
 
-# v0.2.2 — Continuous Connectivity Monitoring
+## v0.2.2 — Continuous Connectivity Monitoring
 
-A `v0.2.2` introduz monitoramento contínuo e controlado da conectividade externa.
-
-Entregue:
+Introduziu:
 
 * `ConnectivityMonitor`;
 * worker `Nexus-ConnectivityMonitor`;
@@ -1649,9 +2181,8 @@ Entregue:
 * intervalo configurável;
 * intervalo padrão de `30.0` segundos;
 * nenhuma worker em forced offline;
-* detecção `ONLINE ↔ OFFLINE`;
-* ausência de eventos em estado estável;
-* transições atômicas;
+* detecção contínua de conectividade;
+* transições condicionais atômicas;
 * `RuntimeTransitionResult`;
 * `RuntimeStateSnapshot`;
 * `HealthRuntimeSnapshot`;
@@ -1660,16 +2191,14 @@ Entregue:
 * `threading.Event`;
 * shutdown responsivo;
 * timeout de stop;
-* lifecycle da aplicação endurecido;
+* lifecycle endurecido;
 * `initialize()` one-shot;
 * `shutdown()` idempotente;
 * shutdown garantido no entrypoint;
-* proteção contra falhas inesperadas da worker;
-* tentativa independente de eventos de transição;
-* continuidade da worker após falha de subscriber;
-* regressão completa.
+* isolamento de falhas da worker;
+* continuidade após falha de subscriber.
 
-Baseline:
+Baseline histórico:
 
 ```text
 134 tests passing
@@ -1677,37 +2206,101 @@ Baseline:
 
 ---
 
-## Princípios de engenharia da v0.2.2
+# v0.2.3 — Automatic DEGRADED Runtime Detection
 
-A implementação preserva:
+A `v0.2.3` introduz uma política determinística de confirmação de mudanças de conectividade e ativa automaticamente o estado `DEGRADED`.
+
+Entregue:
+
+* `ConnectivityRuntimeEvaluator`;
+* `ConnectivityRuntimeEvaluation`;
+* `DEGRADED` automático;
+* confirmação simétrica de perda e recuperação;
+* threshold configurável;
+* threshold padrão `2`;
+* rejeição de threshold menor que `2`;
+* suporte determinístico a thresholds maiores;
+* cancelamento de mudança pendente;
+* reset após oscilação;
+* separação entre rede bruta e runtime estabilizado;
+* `network_changed`;
+* `ONLINE → DEGRADED → OFFLINE`;
+* `OFFLINE → DEGRADED → ONLINE`;
+* eventos `NETWORK_*` ligados a mudanças da observação bruta;
+* `RUNTIME_MODE_CHANGED` ligado a mudanças do runtime;
+* nenhuma duplicação de `NETWORK_*` na confirmação;
+* integração explícita do evaluator ao monitor;
+* estado bruto inicial passado explicitamente;
+* invariant entre rede inicial e runtime inicial;
+* rejeição de `DEGRADED` como estado confirmado inicial do monitor;
+* `HealthStatus` preservado como projeção;
+* serialização integral de `check_once()`;
+* proteção contra chamadas concorrentes;
+* matriz de transições do `RuntimeStateController` expandida;
+* propagação de `connectivity_confirmation_threshold` por `Settings`;
+* forced offline preservado;
+* sem dependências externas adicionais;
+* regressão completa.
+
+Baseline:
+
+```text
+151 tests passing
+```
+
+---
+
+## Princípios de engenharia da v0.2.3
 
 ### Local First
 
-O funcionamento local não depende da disponibilidade da Internet.
+A conectividade externa continua não sendo requisito para a operação estrutural local.
 
 ### Security First
 
-Conectividade não altera as fronteiras de autorização.
+Mudanças de conectividade não concedem autoridade adicional a ferramentas ou modelos futuros.
+
+### Separação de responsabilidades
+
+Aquisição, avaliação, estado autoritativo, observabilidade e publicação de eventos permanecem separados.
 
 ### Determinismo
 
-Transições podem ser testadas por `check_once()` sem aguardar polling.
+O evaluator pode ser testado sem rede real, sleeps ou threads.
 
 ### Observabilidade
 
-O estado de runtime possui representação autoritativa e projeção de health.
+O Nexus diferencia explicitamente:
 
-### Isolamento de falhas
+```text
+network_online
+```
 
-Exceções inesperadas de ciclos não encerram permanentemente a worker.
+de:
 
-### Lifecycle explícito
+```text
+runtime_mode
+```
 
-A worker possui inicialização e shutdown controlados.
+### Resistência a flapping
+
+Uma única observação divergente não substitui imediatamente o estado estável confirmado.
+
+### Concorrência controlada
+
+`check_once()` é serializado para impedir corrupção do estado interno do evaluator.
 
 ### Scope control
 
-Nenhuma funcionalidade de LLM, memória, voz, visão ou automação foi misturada nesta release.
+A release não inventa sinais que o sistema ainda não possui.
+
+`DEGRADED` não foi associado artificialmente a:
+
+* latência;
+* providers;
+* APIs;
+* LLMs;
+* serviços HTTP.
 
 ---
 
@@ -1728,12 +2321,10 @@ Cada versão deve adicionar uma responsabilidade pequena, clara e testável.
 Entregue:
 
 * polling contínuo de conectividade;
-* transições `ONLINE ↔ OFFLINE`;
 * worker dedicada;
 * lifecycle controlado;
 * snapshots consistentes;
 * health sincronizado;
-* eventos somente em transições;
 * isolamento de falhas;
 * shutdown determinístico;
 * 134 testes passando.
@@ -1742,23 +2333,27 @@ Entregue:
 
 ### v0.2.3 — Automatic DEGRADED Runtime Detection
 
-**Status: próxima versão planejada**
+**Status: concluída**
 
-Objetivo:
+Entregue:
 
-* definir formalmente as condições de `DEGRADED`;
-* distinguir conectividade de disponibilidade parcial;
-* preservar `RuntimeStateController` como fonte autoritativa;
-* integrar o novo estado ao EventBus;
-* definir razões explícitas para degradação;
-* manter comportamento local-first;
-* adicionar observabilidade;
-* adicionar testes determinísticos;
-* evitar heurísticas implícitas.
+* definição operacional de `DEGRADED`;
+* `ConnectivityRuntimeEvaluator`;
+* confirmação configurável de conectividade;
+* threshold padrão `2`;
+* transições com estado intermediário;
+* separação entre observação bruta e runtime;
+* eventos independentes de rede e runtime;
+* tratamento determinístico de recuperação e oscilação;
+* serialização de ciclos;
+* invariants de inicialização;
+* 151 testes passando.
 
 ---
 
 ### v0.2.4 — Environment & Runtime Configuration
+
+**Status: próxima versão planejada**
 
 Planejado:
 
@@ -2060,6 +2655,12 @@ README
 REQUIREMENTS
     │
     ▼
+VERSION
+    │
+    ▼
+SMOKE TEST
+    │
+    ▼
 GIT REVIEW
     │
     ▼
@@ -2104,12 +2705,13 @@ checkpoint: Nexus Core v0.1.8 terminal sandbox
 release: Nexus Core v0.1.9 health check
 feat: Nexus Core v0.2.0 Implement Connectivity and Runtime Modes
 feat: Nexus Core v0.2.1 Implement Runtime State Controller
+feat: Nexus Core v0.2.2 Implement Continuous Connectivity Monitoring
 ```
 
 Commit planejado para a release atual:
 
 ```text
-feat: Nexus Core v0.2.2 Implement Continuous Connectivity Monitoring
+feat: Nexus Core v0.2.3 Implement Automatic DEGRADED Runtime Detection
 ```
 
 Cada release possui sua própria tag.
@@ -2120,6 +2722,7 @@ Exemplos:
 v0.2.0
 v0.2.1
 v0.2.2
+v0.2.3
 ```
 
 ---
@@ -2139,9 +2742,12 @@ Limitações e regras atuais:
 * o terminal utiliza sandbox Docker;
 * pertencimento ao grupo `docker` representa dívida técnica de segurança;
 * `ONLINE` não significa autorização;
-* `DEGRADED` ainda não possui determinação automática;
+* `DEGRADED` representa somente conectividade em confirmação;
+* `DEGRADED` não representa saúde de providers;
 * `latency_ms` ainda não é medido ativamente;
-* o monitor atual cobre apenas conectividade `ONLINE ↔ OFFLINE`;
+* latência não participa da política de `DEGRADED`;
+* o monitor atual observa conectividade externa booleana;
+* não existem probes de serviços individuais;
 * memória persistente ainda não está implementada;
 * Knowledge Base ainda não está implementada;
 * modelo local ainda não está integrado;
@@ -2316,13 +2922,14 @@ LLM directly executes arbitrary host commands
 
 ---
 
-# Escopo da v0.2.2
+# Escopo da v0.2.3
 
-A `v0.2.2` é deliberadamente uma release de infraestrutura.
+A `v0.2.3` é deliberadamente uma release de infraestrutura de runtime.
 
 Ela **não** introduz:
 
 * modelo local;
+* provider abstraction;
 * Agent;
 * Planner;
 * memória;
@@ -2335,11 +2942,16 @@ Ela **não** introduz:
 * desktop automation;
 * GUI;
 * geração de imagens;
-* geração de vídeos.
+* geração de vídeos;
+* probes de providers;
+* service health;
+* degradação baseada em latência;
+* avaliação HTTP de serviços;
+* política de disponibilidade de modelos.
 
 Ela introduz uma capacidade menor e fundamental:
 
-> manter o estado de conectividade atualizado continuamente de forma testável, thread-safe e controlada.
+> interpretar mudanças de conectividade de forma estabilizada, utilizando `DEGRADED` durante o período de confirmação antes de assumir um novo estado `ONLINE` ou `OFFLINE`.
 
 Esse modelo incremental reduz complexidade e facilita auditoria.
 
@@ -2350,22 +2962,16 @@ Esse modelo incremental reduz complexidade e facilita auditoria.
 A próxima release planejada é:
 
 ```text
-v0.2.3 — Automatic DEGRADED Runtime Detection
+v0.2.4 — Environment & Runtime Configuration
 ```
 
-A implementação deverá começar somente após o fechamento completo da `v0.2.2`:
+Objetivo:
 
-```text
-README
-requirements
-version
-tests
-Git review
-commit
-tag
-push
-remote verification
-```
+* externalizar configuração de runtime de forma controlada;
+* introduzir perfis de ambiente;
+* validar parâmetros;
+* permitir overrides explícitos;
+* preparar a infraestrutura para providers e modelos futuros.
 
 ---
 
@@ -2380,13 +2986,13 @@ A licença do projeto será definida posteriormente.
 ```text
 Nexus Core
 ────────────────────────────────────────────────
-Stable Version:       v0.2.2
-Next Development:     v0.2.3
+Stable Version:       v0.2.3
+Next Development:     v0.2.4
 Runtime:              Python 3.12
 Database:             SQLite
 Sandbox:              Docker
 Testing:              pytest
-Tests:                134 passed
+Tests:                151 passed
 Development Status:   ACTIVE
 ────────────────────────────────────────────────
 ```
