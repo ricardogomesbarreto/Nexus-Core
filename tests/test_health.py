@@ -22,6 +22,7 @@ def test_health_offline_is_still_ready():
         security_gate=True,
         tool_registry=True,
         terminal_sandbox=True,
+        local_model_layer=True,
         network_online=False,
         runtime_mode=RuntimeMode.OFFLINE,
     )

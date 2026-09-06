@@ -38,6 +38,7 @@ class HealthStatus:
     security_gate: bool = False
     tool_registry: bool = False
     terminal_sandbox: bool = False
+    local_model_layer: bool = False
 
     network_online: bool = False
     runtime_mode: RuntimeMode = RuntimeMode.OFFLINE
@@ -70,6 +71,7 @@ class HealthStatus:
                 self.security_gate,
                 self.tool_registry,
                 self.terminal_sandbox,
+                self.local_model_layer,
             ]
         )
 

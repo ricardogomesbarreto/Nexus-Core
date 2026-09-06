@@ -90,6 +90,15 @@ def main():
             )
         )
 
+        print(
+            status_line(
+                "Local Model Layer",
+                "✓ READY"
+                if health.local_model_layer
+                else "✗ ERROR",
+            )
+        )
+
         print("╠" + "═" * WIDTH + "╣")
 
         print(

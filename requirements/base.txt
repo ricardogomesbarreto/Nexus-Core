@@ -1,2 +1,5 @@
 # Nexus Core runtime dependencies
-# No external Python packages are required at v0.2.4.
+# No external Python packages are required at v0.3.0.
+#
+# Local inference requires Ollama as an external system runtime.
+# Ollama is not a Python package dependency of Nexus Core.

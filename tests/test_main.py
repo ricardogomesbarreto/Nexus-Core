@@ -13,6 +13,7 @@ class FakeHealth:
     security_gate = True
     tool_registry = True
     terminal_sandbox = True
+    local_model_layer = True
 
     network_online = False
     runtime_mode = RuntimeMode.OFFLINE
@@ -113,6 +114,7 @@ def test_main_uses_runtime_snapshot_for_runtime_fields(
         security_gate = True
         tool_registry = True
         terminal_sandbox = True
+        local_model_layer = True
 
         @property
         def ready(self):
@@ -159,3 +161,34 @@ def test_main_uses_runtime_snapshot_for_runtime_fields(
         "runtime_snapshot",
         "shutdown",
     ]
+
+
+
+def test_main_reports_local_model_layer_status(
+    monkeypatch,
+    capsys,
+):
+    class FakeApplication:
+        def initialize(self):
+            pass
+
+        def status(self):
+            return FakeHealth()
+
+        def shutdown(self):
+            pass
+
+    monkeypatch.setattr(
+        nexus_main,
+        "NexusApplication",
+        FakeApplication,
+    )
+
+    nexus_main.main()
+
+    output = capsys.readouterr().out
+
+    assert nexus_main.status_line(
+        "Local Model Layer",
+        "✓ READY",
+    ) in output

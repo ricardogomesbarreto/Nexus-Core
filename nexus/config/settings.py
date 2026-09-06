@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+from nexus.config.local_endpoint import (
+    normalize_local_http_origin,
+)
+
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -21,7 +26,7 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.2.4"
+    version: str = "0.3.0"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT
@@ -36,6 +41,10 @@ class Settings:
 
     connectivity_monitor_interval: float = 30.0
     connectivity_confirmation_threshold: int = 2
+
+    local_model_name: str = "qwen3:1.7b"
+    local_model_base_url: str = "http://127.0.0.1:11434"
+    local_model_timeout: float = 120.0
 
 
 def _parse_bool(
@@ -125,11 +134,60 @@ def load_settings(
                 "deve ser maior ou igual a 2"
             )
 
+    local_model_name = defaults.local_model_name
+    if "NEXUS_LOCAL_MODEL_NAME" in source:
+        local_model_name = source[
+            "NEXUS_LOCAL_MODEL_NAME"
+        ].strip()
+
+        if not local_model_name:
+            raise ConfigurationError(
+                "NEXUS_LOCAL_MODEL_NAME não pode ser vazio"
+            )
+
+    local_model_base_url = defaults.local_model_base_url
+    if "NEXUS_LOCAL_MODEL_BASE_URL" in source:
+        try:
+            local_model_base_url = (
+                normalize_local_http_origin(
+                    source[
+                        "NEXUS_LOCAL_MODEL_BASE_URL"
+                    ]
+                )
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_LOCAL_MODEL_BASE_URL inválida"
+            ) from exc
+
+    local_model_timeout = defaults.local_model_timeout
+    if "NEXUS_LOCAL_MODEL_TIMEOUT" in source:
+        try:
+            local_model_timeout = float(
+                source["NEXUS_LOCAL_MODEL_TIMEOUT"]
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_LOCAL_MODEL_TIMEOUT deve ser um número"
+            ) from exc
+
+        if (
+            not math.isfinite(local_model_timeout)
+            or local_model_timeout <= 0
+        ):
+            raise ConfigurationError(
+                "NEXUS_LOCAL_MODEL_TIMEOUT deve ser "
+                "finito e maior que zero"
+            )
+
     return Settings(
         node_name=node_name,
         offline_mode=offline_mode,
         connectivity_monitor_interval=monitor_interval,
         connectivity_confirmation_threshold=confirmation_threshold,
+        local_model_name=local_model_name,
+        local_model_base_url=local_model_base_url,
+        local_model_timeout=local_model_timeout,
     )
 
 
