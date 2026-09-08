@@ -42,21 +42,21 @@ def test_health_ready_with_local_model_layer():
     assert health.ready is True
 
 
-def test_application_initializes_local_model_layer_without_building_client(
+def test_application_initializes_local_model_layer_without_building_router(
     monkeypatch,
 ):
     calls = []
 
-    def fake_build_local_model_client(settings):
+    def fake_build_model_router(settings):
         calls.append(settings)
         raise AssertionError(
-            "initialize() não deve construir o client local"
+            "initialize() não deve construir o ModelRouter"
         )
 
     monkeypatch.setattr(
         application_module,
-        "build_local_model_client",
-        fake_build_local_model_client,
+        "build_model_router",
+        fake_build_model_router,
     )
 
     app = NexusApplication()
@@ -68,6 +68,6 @@ def test_application_initializes_local_model_layer_without_building_client(
 
         assert app.health.local_model_layer is True
         assert calls == []
-        assert app._local_model_client is None
+        assert app._model_router is None
     finally:
         app.shutdown()

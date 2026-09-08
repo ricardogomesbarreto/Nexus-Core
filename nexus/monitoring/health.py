@@ -52,6 +52,24 @@ class HealthStatus:
     )
 
     @property
+    def model_layer(self) -> bool:
+        """
+        Estado provider-agnostic da Model Layer.
+
+        Mantém compatibilidade com local_model_layer,
+        introduzido na v0.3.0, sem criar estado duplicado.
+        """
+
+        return self.local_model_layer
+
+    @model_layer.setter
+    def model_layer(
+        self,
+        value: bool,
+    ) -> None:
+        self.local_model_layer = value
+
+    @property
     def ready(self) -> bool:
         """
         Indica se todos os componentes essenciais

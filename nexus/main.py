@@ -92,9 +92,9 @@ def main():
 
         print(
             status_line(
-                "Local Model Layer",
+                "Model Layer",
                 "✓ READY"
-                if health.local_model_layer
+                if health.model_layer
                 else "✗ ERROR",
             )
         )

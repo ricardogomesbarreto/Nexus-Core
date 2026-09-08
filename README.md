@@ -1,306 +1,363 @@
 # Nexus Core
 
-Assistente pessoal de inteligência artificial **local-first, multimodal, modular, seguro e orientado a agentes**.
+Assistente pessoal de inteligência artificial **local-first, modular, seguro, multimodal e orientado a agentes**, desenvolvido incrementalmente sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão estável atual:** `v0.3.0 — Local Model Layer`
-> **Próxima versão planejada:** `v0.3.1 — Provider Abstraction & Model Routing`
-> **Status:** Development
-> **Test baseline:** `338 passed`
+> **Release atual:** `v0.3.1 — Provider Abstraction & Model Routing`
+> **Última release publicada:** `v0.3.1 — Provider Abstraction & Model Routing`
+> **Próximo marco planejado:** `v0.3.2 — Controlled Agent & Tool Calling`
+> **Status da v0.3.1:** release concluída e validada
+> **Test baseline:** `493 passed`
+> **Primary Platform:** Linux
+> **Local Model Runtime:** Ollama
+> **Reference Model:** `qwen3:1.7b`
 
 ---
 
-## Visão geral
+# Visão geral
 
-O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local, preservando privacidade, controle operacional, segurança e independência de serviços externos.
+O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local.
 
-O projeto é desenvolvido incrementalmente.
+O projeto busca preservar:
 
-Antes de entregar memória persistente, voz, visão, automação de desktop, agentes ou interfaces multimodais, o Nexus Core estabelece primeiro uma fundação sólida de:
-
+* privacidade;
+* controle operacional;
 * segurança;
-* autorização;
-* execução controlada;
-* runtime;
-* observabilidade;
-* conectividade;
-* configuração;
-* lifecycle;
+* auditabilidade;
+* independência de serviços externos;
+* funcionamento local sempre que tecnicamente possível;
+* modularidade;
+* portabilidade;
+* substituibilidade de componentes;
 * testabilidade;
-* governança;
-* rastreabilidade;
-* isolamento entre inteligência e autoridade operacional.
+* evolução incremental;
+* comportamento previsível;
+* compatibilidade controlada.
 
-A `v0.3.0` representa a primeira integração formal de um modelo de linguagem local à arquitetura.
-
-O objetivo de longo prazo é construir um assistente capaz de oferecer:
-
-* conversação por texto e voz;
-* operação offline e online;
-* modelos de IA locais;
-* integração opcional com provedores online;
-* memória persistente;
-* Knowledge Base;
-* visão computacional;
-* interpretação de tela;
-* automação controlada do desktop;
-* desenvolvimento de software assistido;
-* leitura e análise de arquivos;
-* pesquisa web;
-* geração multimídia;
-* arquitetura orientada a agentes;
-* integração com Arduino e ESP32;
-* comunicação com dispositivos externos;
-* arquitetura distribuída entre computadores e dispositivos;
-* interface gráfica multimodal.
-
-O Nexus Core **não** é projetado como um LLM com acesso irrestrito ao computador.
+O Nexus Core não é projetado como um LLM com acesso irrestrito ao computador.
 
 A arquitetura estabelece fronteiras explícitas entre:
 
 ```text
 INTELIGÊNCIA
+     │
+     ▼
 DECISÃO
+     │
+     ▼
 AUTORIZAÇÃO
+     │
+     ▼
 EXECUÇÃO
 ```
 
-A presença de um modelo local não altera esse princípio.
+Um modelo pode interpretar informações e propor uma ação.
+
+Isso não significa que o modelo possua autoridade para executá-la.
+
+---
+
+# Objetivo de longo prazo
+
+O Nexus Core é projetado para evoluir para um assistente capaz de oferecer, de forma integrada:
+
+* conversação por texto;
+* conversação por voz;
+* operação offline e online;
+* modelos de IA locais;
+* roteamento entre modelos;
+* memória persistente;
+* Knowledge Base;
+* leitura de arquivos;
+* análise de documentos;
+* visão computacional;
+* interpretação de imagens;
+* interpretação de tela;
+* pesquisa web;
+* desenvolvimento de software assistido;
+* automação controlada do desktop;
+* geração de documentos;
+* geração multimídia;
+* integração com dispositivos externos;
+* integração com Arduino;
+* integração com ESP32;
+* arquitetura distribuída entre computadores e dispositivos;
+* interface gráfica multimodal.
+
+Essas capacidades não são consideradas implementadas apenas por existirem no roadmap.
+
+Cada release deve adicionar uma responsabilidade pequena, explícita, testável e arquiteturalmente revisável.
 
 ---
 
 # Princípios de engenharia
 
-O desenvolvimento do Nexus Core segue princípios estruturais que devem permanecer válidos durante toda a evolução do projeto.
+O desenvolvimento do Nexus Core segue princípios que devem continuar válidos durante toda a evolução do projeto.
 
-* **Open Source**
 * **Local First**
 * **Security First**
 * **Privacy First**
+* **Open Source**
+* **Free Core**
 * **Least Privilege**
 * **Defense in Depth**
+* **Fail-safe Defaults**
 * **Modularidade**
 * **Testabilidade**
 * **Observabilidade**
 * **Auditabilidade**
 * **Determinismo quando aplicável**
+* **Contratos explícitos**
+* **Separação de responsabilidades**
 * **Isolamento de falhas**
-* **Contratos explícitos entre componentes**
-* **Evolução incremental**
 * **Compatibilidade controlada**
 * **Regressão automatizada**
-* **Separação de responsabilidades**
-* **Fail-safe defaults**
 * **Configuração explícita**
-* **Scope control**
+* **Scope Control**
+* **Evolução incremental**
+* **Portabilidade**
+* **Substituibilidade de componentes**
 
-Segurança não é tratada como uma funcionalidade adicionada posteriormente.
+Segurança não é tratada como funcionalidade adicionada posteriormente.
 
-Ela faz parte da fundação arquitetural do Nexus Core.
+Ela faz parte da fundação arquitetural.
+
+---
+
+# Open Source, gratuito e sem quotas comerciais artificiais
+
+O Nexus Core é concebido com a intenção de ser totalmente open source.
+
+O core não deve depender estruturalmente de:
+
+* assinatura obrigatória;
+* créditos;
+* saldo comercial de tokens;
+* billing obrigatório;
+* API proprietária obrigatória;
+* conta externa obrigatória;
+* vendor lock-in;
+* quota comercial artificial.
+
+O produto também não deve introduzir limites comerciais como:
+
+```text
+N perguntas por dia
+N mensagens por mês
+N imagens por usuário
+saldo de créditos
+tokens comerciais
+limite por assinatura
+```
+
+Limites técnicos continuam existindo.
+
+Exemplos:
+
+* RAM disponível;
+* armazenamento;
+* capacidade de CPU;
+* tamanho da context window;
+* tempo de inferência;
+* tamanho de arquivo;
+* limites de segurança;
+* recursos disponíveis no dispositivo.
+
+Esses limites devem ser tratados tecnicamente através de mecanismos como:
+
+* chunking;
+* filas;
+* paginação;
+* indexação;
+* compressão de contexto;
+* memória persistente;
+* cache local;
+* gestão de armazenamento;
+* processamento incremental.
+
+O objetivo é:
+
+> **nenhuma quota comercial artificial imposta pelo Nexus Core.**
+
+---
+
+# Critérios para tecnologias externas
+
+Uma tecnologia candidata ao Nexus deve ser avaliada considerando:
+
+* disponibilidade do código-fonte;
+* licença;
+* possibilidade de uso gratuito;
+* execução local quando aplicável;
+* suporte a Linux;
+* ausência de assinatura obrigatória;
+* ausência de API obrigatória;
+* ausência de lock-in estrutural;
+* comunidade ativa;
+* manutenção ativa;
+* auditabilidade;
+* automatização;
+* possibilidade de substituição.
+
+Model weights devem ser avaliados separadamente.
+
+Um modelo disponível gratuitamente não é automaticamente open source.
+
+A licença dos pesos e o model card devem ser auditados antes de distribuição pública ou integração definitiva.
 
 ---
 
 # Estado atual
 
-A versão `v0.3.0` introduz a primeira **Local Model Layer** formal do Nexus Core.
+A `v0.3.1` evolui a Local Model Layer introduzida na `v0.3.0`.
 
-A release estabelece:
-
-* contrato tipado e imutável para requisições de modelo;
-* contrato tipado e imutável para respostas;
-* validação explícita de entradas;
-* `LocalModelClient`;
-* composição separada do transporte;
-* integração controlada com Ollama;
-* timeout configurável;
-* erros explícitos de transporte;
-* erros explícitos de protocolo;
-* parsing e validação da resposta do backend;
-* execução não-streaming;
-* endpoint restrito a HTTP loopback;
-* composição lazy no `NexusApplication`;
-* ausência de inferência durante startup;
-* ausência de carregamento de modelo durante os testes unitários;
-* health estrutural da Local Model Layer;
-* configuração por variáveis de ambiente;
-* testes determinísticos independentes de um LLM real.
-
-O modelo técnico de referência da release é:
+A principal mudança é a separação entre:
 
 ```text
-qwen3:1.7b
+contrato genérico de modelo
+
+e
+
+implementação concreta Ollama
 ```
 
-O backend local de referência é:
+O fluxo principal passa a ser:
 
 ```text
+NexusApplication
+        │
+        ▼
+ModelRouter
+        │
+        ▼
+ModelProvider
+        │
+        ▼
+OllamaProvider
+        │
+        ▼
+OllamaTransport
+        │
+        ▼
 Ollama
-```
-
-O endpoint padrão é:
-
-```text
-http://127.0.0.1:11434
-```
-
-A Local Model Layer não possui acesso direto a:
-
-```text
-SecurityGate
-ToolExecutor
-TerminalSandboxTool
-filesystem tools
-shell
-host operating system
-```
-
-A `v0.3.0` introduz **inteligência local**, não autoridade operacional para o modelo.
-
----
-
-## Runtime e conectividade preservados
-
-A semântica de conectividade consolidada nas releases `v0.2.x` permanece preservada.
-
-O Nexus Core distingue:
-
-```text
-observação bruta da rede
         │
         ▼
-network_online
-
-interpretação estabilizada do runtime
-        │
-        ▼
-runtime_mode
+Local Model
 ```
 
-Uma única mudança observada na conectividade não altera imediatamente o runtime entre `ONLINE` e `OFFLINE`.
-
-Com o threshold padrão:
+A `v0.3.1` registra apenas:
 
 ```text
-connectivity_confirmation_threshold = 2
+provider_id = "ollama"
 ```
 
-uma observação divergente coloca temporariamente o runtime em:
+na composição de produção.
 
-```text
-DEGRADED
-```
+A abstração permite evolução futura sem introduzir nesta release:
 
-até que a mudança seja confirmada ou cancelada por recuperação.
-
-Exemplo:
-
-```text
-ONLINE
-  │
-  │ primeira observação OFFLINE
-  ▼
-DEGRADED
-  │
-  │ segunda observação OFFLINE consecutiva
-  ▼
-OFFLINE
-```
-
-E simetricamente:
-
-```text
-OFFLINE
-  │
-  │ primeira observação ONLINE
-  ▼
-DEGRADED
-  │
-  │ segunda observação ONLINE consecutiva
-  ▼
-ONLINE
-```
-
-`DEGRADED` significa:
-
-> uma mudança ou instabilidade de conectividade externa foi observada, mas ainda não foi confirmada como novo estado estável.
-
-Ele **não** significa:
-
-* falha do Ollama;
-* indisponibilidade do modelo;
-* indisponibilidade parcial de provider;
-* degradação de serviço HTTP específico;
-* latência elevada;
-* perda parcial de capacidades de IA.
-
-Health de backend/modelo e runtime connectivity permanecem dimensões distintas.
+* provider online;
+* API paga;
+* credenciais;
+* fallback;
+* balanceamento;
+* heurísticas;
+* seleção por IA;
+* descoberta dinâmica.
 
 ---
 
-# Capacidades implementadas
+# Entregas da v0.3.1
 
-Atualmente o projeto possui:
+A `v0.3.1 — Provider Abstraction & Model Routing` introduz:
 
-* Núcleo da aplicação
-* Configuração tipada e imutável
-* Environment configuration loader
-* Allowlist de configuração externa
-* Parsing e validação de configuração
-* Fail-fast para configuração inválida
-* Logging estruturado
-* Banco de dados SQLite
-* EventBus
-* Catálogo de eventos
-* Health Status
-* Health Check
-* Connectivity Manager
-* Connectivity Runtime Evaluator
-* Connectivity Monitor
-* Runtime Mode
-* Runtime State Controller
-* Runtime snapshots
-* Health runtime snapshots
-* Estados `ONLINE`, `OFFLINE` e `DEGRADED`
-* Detecção automática de conectividade instável
-* Confirmação configurável de mudanças de conectividade
-* Arquitetura modular de ferramentas
-* Tool Registry
-* Tool Executor
-* Security Gate
-* Política de risco
-* Permissões por ferramenta
-* Segurança de caminhos
-* Audit Log
-* Ferramentas seguras de filesystem
-* Terminal Sandbox isolado com Docker
-* Painel de status
-* Lifecycle controlado da aplicação
-* `LocalModelRequest`
-* `LocalModelResponse`
-* `LocalModelClient`
-* `OllamaTransport`
-* Endpoint local restrito a loopback
-* Timeout explícito da comunicação com o modelo
-* Erros explícitos de transporte
-* Erros explícitos de protocolo
-* Composição lazy da Local Model Layer
-* Health estrutural da Local Model Layer
-* Modelo local técnico de referência `qwen3:1.7b`
-* Suíte automatizada de testes
+* `ModelError`;
+* `ModelValidationError`;
+* `ModelProtocolError`;
+* `ModelProviderError`;
+* `ModelProviderUnavailableError`;
+* `ModelProviderTimeoutError`;
+* `ModelRequest`;
+* `ModelResponse`;
+* `ModelProvider`;
+* `OllamaProvider`;
+* `ModelRouter`;
+* `ModelRoutingError`;
+* erros específicos de routing;
+* `build_model_router()`;
+* composição provider-agnostic;
+* normalização de erros de provider;
+* runtime validation no boundary do router;
+* provider padrão explícito;
+* seleção explícita por `provider_id`;
+* `model_layer` como API genérica de health;
+* label genérico `Model Layer`;
+* compatibilidade controlada com a API `LocalModel*` da `v0.3.0`;
+* preservação da composição lazy;
+* preservação do comportamento local-first;
+* preservação da independência entre Model Layer e conectividade externa;
+* preservação da separação entre Model Layer e Tool System;
+* 493 testes automatizados passando.
 
 ---
 
-## Baseline atual
+# O que a v0.3.1 não implementa
+
+A release deliberadamente **não** implementa:
+
+* providers cloud;
+* OpenAI provider;
+* Anthropic provider;
+* Gemini provider;
+* APIs pagas;
+* API keys;
+* credenciais;
+* fallback automático;
+* retry inteligente;
+* model discovery;
+* provider discovery;
+* provider availability probes;
+* seleção baseada em custo;
+* seleção baseada em latência;
+* seleção aleatória;
+* load balancing;
+* model registry dinâmico;
+* streaming;
+* vision models;
+* audio models;
+* Agent;
+* Planner;
+* tool calling pelo modelo;
+* memória persistente;
+* Knowledge Base;
+* self-update;
+* dependency repair;
+* automatic environment bootstrap.
+
+Essas capacidades devem ser introduzidas por releases próprias.
+
+---
+
+# Baseline atual
 
 ```text
-Version:       v0.3.0
-Tests:         338 passed
-Runtime:       Python 3.12
-Database:      SQLite
-Sandbox:       Docker
-Local Model:   Ollama + qwen3:1.7b
-Branch model:  main
-Status:        DEVELOPMENT
+Release Target:       v0.3.1
+Capability:           Provider Abstraction & Model Routing
+Tests:                493 passed
+Primary Platform:     Linux
+Runtime Baseline:     Python 3.12
+Database:             SQLite
+Sandbox:              Docker
+Local Model Runtime:  Ollama
+Reference Model:      qwen3:1.7b
+Model Provider:       OllamaProvider
+Model Router:         ModelRouter
+Development Status:   ACTIVE
 ```
+
+O baseline funcional é:
+
+> **Linux systems with constrained compute resources; no dependency on dedicated GPU.**
+
+GPU pode melhorar desempenho, mas não é requisito estrutural da arquitetura atual.
 
 ---
 
@@ -323,218 +380,74 @@ NEXUS CORE
 │   │
 │   └── Settings(frozen=True)
 │
-└── NexusApplication
+├── NexusApplication
+│   │
+│   ├── Logger
+│   ├── Database
+│   ├── EventBus
+│   ├── ConnectivityManager
+│   ├── ConnectivityRuntimeEvaluator
+│   ├── ConnectivityMonitor
+│   ├── RuntimeStateController
+│   ├── HealthStatus
+│   ├── ModelRouter
+│   ├── SecurityGate
+│   ├── ToolRegistry
+│   └── ToolExecutor
+│
+├── Model Layer
+│   │
+│   ├── ModelRequest
+│   ├── ModelResponse
+│   ├── ModelProvider
+│   ├── ModelRouter
+│   ├── OllamaProvider
+│   ├── OllamaTransport
+│   ├── build_model_router()
+│   │
+│   └── Compatibility Layer
+│       ├── LocalModelRequest
+│       ├── LocalModelResponse
+│       ├── LocalModelValidationError
+│       ├── LocalModelProtocolError
+│       ├── LocalModelClient
+│       └── build_local_model_client()
+│
+├── Security Layer
+│   │
+│   ├── SecurityGate
+│   ├── SecurityPolicy
+│   ├── PathSecurity
+│   ├── ToolPermissionPolicy
+│   ├── AuditLogger
+│   └── RiskLevel
+│
+└── Tool System
     │
-    ├── Logger
-    │
-    ├── Database
-    │   └── SQLite
-    │
-    ├── EventBus
-    │   └── NexusEvent
-    │
-    ├── ConnectivityManager
-    │   └── Point-in-time connectivity check
-    │
-    ├── ConnectivityRuntimeEvaluator
-    │   ├── Raw connectivity interpretation
-    │   ├── Confirmation threshold
-    │   ├── DEGRADED detection
-    │   ├── Oscillation handling
-    │   └── Deterministic state machine
-    │
-    ├── ConnectivityMonitor
-    │   └── Nexus-ConnectivityMonitor
-    │       ├── Periodic polling
-    │       ├── Serialized monitoring cycles
-    │       ├── Runtime evaluation
-    │       ├── Raw network change detection
-    │       ├── Failure containment
-    │       └── Graceful shutdown
-    │
-    ├── RuntimeStateController
-    │   ├── Authoritative runtime state
-    │   ├── Atomic transitions
-    │   └── Immutable snapshots
-    │
-    ├── HealthStatus
-    │   ├── Runtime observability projection
-    │   └── Local Model Layer readiness
-    │
-    ├── Local Model Layer
-    │   │
-    │   ├── LocalModelRequest
-    │   ├── LocalModelResponse
-    │   │
-    │   ├── LocalModelClient
-    │   │   ├── request validation
-    │   │   ├── payload construction
-    │   │   ├── non-stream contract
-    │   │   └── response validation
-    │   │
-    │   ├── OllamaTransport
-    │   │   ├── HTTP POST /api/chat
-    │   │   ├── timeout
-    │   │   ├── JSON encode/decode
-    │   │   └── explicit transport errors
-    │   │
-    │   ├── build_local_model_client()
-    │   │
-    │   └── Lazy application composition
-    │
-    ├── SecurityGate
-    │   ├── Risk Policy
-    │   ├── Tool Permissions
-    │   ├── Path Security
-    │   └── Audit Log
-    │
-    └── Tool System
-        ├── NexusTool
-        ├── ToolResult
-        ├── ToolRegistry
-        ├── ToolExecutor
-        ├── Filesystem Tools
-        └── TerminalSandboxTool
-            └── Docker
-```
-
-A Local Model Layer e o Tool System permanecem separados.
-
-Na `v0.3.0` não existe:
-
-```text
-Local Model
-    │
-    ▼
-ToolExecutor
-```
-
-nem:
-
-```text
-Local Model
-    │
-    ▼
-SecurityGate
-```
-
-Tool calling será introduzido somente em uma release posterior, depois da abstração formal de providers e routing.
-
----
-
-# Local Model Layer
-
-A `v0.3.0` estabelece uma fronteira explícita entre o Nexus Core e um modelo de linguagem executado localmente.
-
-Fluxo:
-
-```text
-LocalModelRequest
-        │
-        ▼
-LocalModelClient
-        │
-        ▼
-OllamaTransport
-        │
-        ▼
-HTTP loopback
-        │
-        ▼
-Ollama
-        │
-        ▼
-Local model
-        │
-        ▼
-Ollama response
-        │
-        ▼
-validation
-        │
-        ▼
-LocalModelResponse
+    ├── NexusTool
+    ├── ToolResult
+    ├── ToolRegistry
+    ├── ToolExecutor
+    ├── ListDirectoryTool
+    ├── ReadFileTool
+    ├── SystemInfoTool
+    └── TerminalSandboxTool
+        └── Docker
 ```
 
 ---
 
-## Modelo técnico de referência
+# Model Layer
 
-O baseline técnico da release é:
+A Model Layer representa a fronteira entre o Nexus Core e sistemas de inferência.
 
-```text
-qwen3:1.7b
-```
-
-O modelo é utilizado como referência de desenvolvimento da primeira camada local.
-
-Essa escolha **não** representa ainda:
-
-* roteamento de modelos;
-* seleção dinâmica;
-* fallback;
-* provider abstraction;
-* política automática baseada em hardware;
-* model registry.
-
-Essas responsabilidades pertencem a releases posteriores.
+Na `v0.3.1`, os contratos principais são provider-agnostic.
 
 ---
 
-## Backend local
+## `ModelRequest`
 
-A implementação inicial utiliza:
-
-```text
-Ollama
-```
-
-Ollama é tratado como um serviço local externo ao processo Python do Nexus Core.
-
-O Nexus:
-
-* não inicia o daemon Ollama;
-* não encerra o daemon Ollama;
-* não instala modelos automaticamente;
-* não carrega modelos durante `NexusApplication.initialize()`;
-* não executa probe de inferência durante startup;
-* não assume ownership do lifecycle do serviço Ollama.
-
----
-
-## Instalação do modelo de referência
-
-Com Ollama instalado:
-
-```bash
-ollama pull qwen3:1.7b
-```
-
-Para verificar modelos disponíveis:
-
-```bash
-ollama list
-```
-
-Para verificar modelos atualmente carregados:
-
-```bash
-ollama ps
-```
-
-O Nexus utiliza por padrão a API local do Ollama em:
-
-```text
-http://127.0.0.1:11434
-```
-
----
-
-# `LocalModelRequest`
-
-`LocalModelRequest` representa o contrato tipado de entrada.
-
-A estrutura é imutável.
+`ModelRequest` é um dataclass imutável.
 
 Campos:
 
@@ -555,67 +468,23 @@ context_length = 2048
 think = False
 ```
 
----
+### `prompt`
 
-## `prompt`
+Deve ser uma `str` não vazia.
 
-Deve ser:
+Strings compostas apenas por whitespace são rejeitadas.
 
-```text
-str não vazia
-```
+### `system_prompt`
 
-Valores compostos apenas por whitespace são rejeitados.
+Pode ser `None` ou `str` não vazia.
 
-Tipos diferentes de `str` também são rejeitados.
+### `temperature`
 
----
+Deve ser um número finito maior ou igual a zero.
 
-## `system_prompt`
+`bool` não é tratado como número válido.
 
-Pode ser:
-
-```text
-None
-```
-
-ou:
-
-```text
-str não vazia
-```
-
-Quando presente, é enviada antes da mensagem do usuário.
-
----
-
-## `temperature`
-
-Deve ser:
-
-```text
-número
-finito
->= 0
-```
-
-`bool` não é aceito como número válido neste contrato.
-
-São rejeitados, entre outros:
-
-```text
-True
-False
-None
-"0.5"
-NaN
-Infinity
-valor negativo
-```
-
----
-
-## `context_length`
+### `context_length`
 
 Deve ser:
 
@@ -623,11 +492,7 @@ Deve ser:
 int >= 1
 ```
 
-`bool`, `float`, `str` e `None` são rejeitados.
-
----
-
-## `think`
+### `think`
 
 Deve ser:
 
@@ -635,17 +500,11 @@ Deve ser:
 bool
 ```
 
-O default técnico da `v0.3.0` é:
-
-```text
-False
-```
-
 ---
 
-# `LocalModelResponse`
+# `ModelResponse`
 
-O contrato de saída normalizado contém:
+Campos:
 
 ```text
 content
@@ -655,164 +514,160 @@ prompt_tokens
 output_tokens
 ```
 
-A estrutura também é imutável.
+Regras principais:
+
+```text
+content        -> str não vazia
+model          -> str não vazia
+done           -> bool
+prompt_tokens  -> int >= 0
+output_tokens  -> int >= 0
+```
+
+Para a integração não-streaming atual:
+
+```text
+done != True
+```
+
+representa protocolo incompleto.
 
 ---
 
-## `content`
+# `ModelProvider`
 
-Deve ser uma string não vazia.
+`ModelProvider` é um `typing.Protocol` estrutural e `runtime_checkable`.
+
+Contrato conceitual:
+
+```python
+@property
+def provider_id(self) -> str:
+    ...
+
+def generate(
+    self,
+    request: ModelRequest,
+) -> ModelResponse:
+    ...
+```
+
+A abstração define o que o Nexus espera de um provider.
+
+Ela não determina:
+
+* transporte;
+* protocolo externo;
+* modelo;
+* hardware;
+* mecanismo de inferência.
 
 ---
 
-## `model`
+# `ModelRouter`
 
-Deve identificar o modelo retornado pelo backend através de uma string não vazia.
-
----
-
-## `done`
-
-Deve ser um booleano.
-
-A `v0.3.0` envia obrigatoriamente:
-
-```text
-stream = False
-```
-
-Portanto:
-
-```text
-done = False
-```
-
-é considerado incompatível com o contrato esperado de uma resposta final não-streaming.
-
-Nesse cenário o Nexus gera:
-
-```text
-LocalModelProtocolError
-```
-
----
-
-## Token counts
-
-Os campos:
-
-```text
-prompt_tokens
-output_tokens
-```
-
-devem ser:
-
-```text
-int >= 0
-```
-
-Tipos incorretos são rejeitados.
-
----
-
-# `LocalModelClient`
-
-`LocalModelClient` coordena o contrato de alto nível da Local Model Layer.
+`ModelRouter` é responsável por resolver providers de maneira determinística.
 
 Responsabilidades:
 
-* validar o tipo da requisição;
-* construir mensagens;
-* incluir system prompt quando existente;
-* adicionar mensagem do usuário;
-* aplicar o nome do modelo configurado;
-* aplicar `temperature`;
-* aplicar `context_length`;
-* aplicar `think`;
-* desabilitar streaming;
-* aplicar timeout;
-* delegar I/O ao transporte;
-* validar a estrutura da resposta;
-* produzir `LocalModelResponse`.
-
-O client não executa HTTP diretamente.
-
-Essa responsabilidade pertence ao transporte.
-
----
-
-## Validação da requisição no boundary
-
-`generate()` aceita:
+* registrar providers;
+* validar contrato estrutural;
+* rejeitar provider inválido;
+* rejeitar IDs duplicados;
+* validar o provider padrão;
+* resolver provider explicitamente;
+* utilizar provider default;
+* validar `ModelRequest`;
+* validar `ModelResponse`.
 
 ```text
-LocalModelRequest
-```
-
-Valores arbitrários não atravessam a fronteira.
-
-Exemplos rejeitados:
-
-```text
-None
-str
-dict
-object arbitrário
-```
-
-Esses casos geram:
-
-```text
-LocalModelValidationError
-```
-
-em vez de vazar erros internos como:
-
-```text
-AttributeError
+ModelRequest
+     │
+     ▼
+ModelRouter
+     │
+     ├── provider_id explícito
+     │
+     └── default_provider_id
+             │
+             ▼
+       ModelProvider
 ```
 
 ---
 
-## Payload para Ollama
+## Política do router
 
-Conceitualmente:
-
-```json
-{
-  "model": "qwen3:1.7b",
-  "messages": [
-    {
-      "role": "user",
-      "content": "..."
-    }
-  ],
-  "stream": false,
-  "think": false,
-  "options": {
-    "num_ctx": 2048,
-    "temperature": 0.0
-  }
-}
-```
-
-Quando existe `system_prompt`:
+O router atual não realiza:
 
 ```text
-system
-  │
-  ▼
-user
+fallback
+retry policy
+provider discovery
+model discovery
+availability probing
+load balancing
+cost routing
+latency routing
+random selection
+AI-based selection
 ```
 
-A ordem é preservada.
+Essa simplicidade é intencional.
+
+O routing deve permanecer previsível e auditável.
 
 ---
 
-# Ollama Transport
+# `OllamaProvider`
 
-`OllamaTransport` implementa a comunicação HTTP concreta da `v0.3.0`.
+`OllamaProvider` é a implementação concreta utilizada na `v0.3.1`.
+
+Identificador:
+
+```text
+ollama
+```
+
+Responsabilidades:
+
+```text
+ModelRequest
+     │
+     ▼
+Ollama payload
+     │
+     ▼
+OllamaTransport
+     │
+     ▼
+raw Ollama response
+     │
+     ▼
+protocol validation
+     │
+     ▼
+ModelResponse
+```
+
+O provider conhece:
+
+* semântica da API Ollama;
+* mensagens;
+* `num_ctx`;
+* `temperature`;
+* `think`;
+* estrutura da resposta;
+* conclusão não-streaming;
+* mapeamento de erros.
+
+O provider não implementa HTTP diretamente.
+
+---
+
+# `OllamaTransport`
+
+`OllamaTransport` é responsável pela comunicação HTTP concreta.
 
 Endpoint:
 
@@ -820,111 +675,284 @@ Endpoint:
 POST /api/chat
 ```
 
-A implementação utiliza biblioteca padrão do Python.
+Responsabilidades:
 
-Componentes utilizados incluem:
+* requisição HTTP;
+* JSON encode;
+* JSON decode;
+* timeout;
+* erros de conexão;
+* erros HTTP;
+* JSON inválido.
+
+A fronteira permanece:
 
 ```text
-urllib.request
-urllib.error
-json
+HTTP / urllib
+     │
+     ▼
+OllamaTransport
 ```
 
-A release não adiciona SDK Python do Ollama como dependência.
-
----
-
-## Erros de transporte
-
-A hierarquia atual inclui:
+e não:
 
 ```text
-OllamaTransportError
-├── OllamaUnavailableError
-├── OllamaTimeoutError
-├── OllamaHTTPError
-└── OllamaInvalidJSONError
-```
+ModelRouter → HTTP
 
----
+ModelProvider → HTTP
 
-## `OllamaUnavailableError`
-
-Representa indisponibilidade de conexão com o backend local.
-
----
-
-## `OllamaTimeoutError`
-
-Representa timeout na comunicação.
-
-O timeout default da Local Model Layer é:
-
-```text
-120.0 segundos
+NexusApplication → HTTP Ollama
 ```
 
 ---
 
-## `OllamaHTTPError`
-
-Representa uma resposta HTTP de erro.
-
-O status HTTP é preservado para diagnóstico.
-
----
-
-## `OllamaInvalidJSONError`
-
-Representa uma resposta que não pode ser interpretada como JSON válido.
-
-A validação semântica do objeto JSON pertence ao `LocalModelClient`.
-
----
-
-# Erros do contrato de modelo
-
-Além dos erros de transporte, a Local Model Layer possui erros próprios.
+# Taxonomia de erros da Model Layer
 
 ```text
+ModelError
+│
+├── ModelValidationError
+│
+├── ModelProtocolError
+│
+├── ModelProviderError
+│   ├── ModelProviderUnavailableError
+│   └── ModelProviderTimeoutError
+│
+└── ModelRoutingError
+    ├── InvalidModelProviderError
+    ├── InvalidModelProviderIdError
+    ├── UnknownModelProviderError
+    └── DuplicateModelProviderError
+```
+
+`ModelValidationError` preserva compatibilidade com `ValueError`.
+
+Erros de protocolo, provider e routing preservam semântica compatível com `RuntimeError` quando definida pelo contrato.
+
+---
+
+# Normalização de erros Ollama
+
+```text
+OllamaUnavailableError
+        │
+        ▼
+ModelProviderUnavailableError
+```
+
+```text
+OllamaTimeoutError
+        │
+        ▼
+ModelProviderTimeoutError
+```
+
+```text
+OllamaHTTPError
+        │
+        ▼
+ModelProviderError
+```
+
+```text
+OllamaInvalidJSONError
+        │
+        ▼
+ModelProtocolError
+```
+
+A causa original é preservada por exception chaining.
+
+---
+
+# Compatibilidade com v0.3.0
+
+A `v0.3.1` preserva:
+
+```text
+LocalModelRequest
+LocalModelResponse
 LocalModelValidationError
 LocalModelProtocolError
+LocalModelClient
+build_local_model_client()
+```
+
+Aliases:
+
+```text
+LocalModelRequest is ModelRequest
+
+LocalModelResponse is ModelResponse
+
+LocalModelValidationError is ModelValidationError
+
+LocalModelProtocolError is ModelProtocolError
 ```
 
 ---
 
-## `LocalModelValidationError`
+## `LocalModelClient`
 
-Representa dados inválidos fornecidos ao contrato local.
+`LocalModelClient` permanece como facade de compatibilidade.
 
-Exemplos:
+Novo código deve preferir:
 
-* prompt vazio;
-* tipo inválido;
-* temperature inválida;
-* context length inválido;
-* token count inválido;
-* resposta tipada inválida.
+```text
+ModelRouter
+ModelProvider
+ModelRequest
+ModelResponse
+```
+
+O facade delega a semântica Ollama ao:
+
+```text
+OllamaProvider
+```
+
+e preserva os atributos históricos:
+
+```text
+model
+transport
+timeout
+```
 
 ---
 
-## `LocalModelProtocolError`
+## Compatibilidade de erros do client legado
 
-Representa uma resposta do backend incompatível com o protocolo esperado pelo client.
+Na `v0.3.0`, erros originados no transporte podiam escapar diretamente pelo `LocalModelClient`.
 
-Exemplos:
+A `v0.3.1` preserva esse comportamento no facade legado.
 
-* root da resposta não é mapping;
-* campo obrigatório ausente;
-* `message` inválido;
-* conteúdo estruturalmente inválido;
-* `done=False` em uma requisição não-streaming.
+```text
+NOVO CAMINHO
+
+ModelRouter
+   → OllamaProvider
+   → erros Model*
+```
+
+```text
+CAMINHO LEGADO
+
+LocalModelClient
+   → OllamaProvider
+   → recupera OllamaTransportError original
+   → preserva superfície v0.3.0
+```
 
 ---
 
-# Endpoint local e segurança de origem
+# Factory da Model Layer
 
-A Local Model Layer da `v0.3.0` é deliberadamente restrita a um backend HTTP local.
+Factory principal:
+
+```python
+build_model_router(settings)
+```
+
+Composição:
+
+```text
+OllamaTransport
+      │
+      ▼
+OllamaProvider
+      │
+      ▼
+ModelRouter
+```
+
+Produção:
+
+```text
+providers = [OllamaProvider]
+default_provider_id = "ollama"
+```
+
+A criação da composição não realiza inferência.
+
+---
+
+# Composição lazy
+
+```text
+NexusApplication()
+       │
+       ├── _model_router = None
+       │
+       └── nenhum contato com Ollama
+```
+
+No primeiro acesso:
+
+```text
+app.model_router
+       │
+       ▼
+build_model_router(settings)
+       │
+       ▼
+ModelRouter
+```
+
+O backend só é utilizado quando uma geração é solicitada.
+
+---
+
+# Compatibilidade `local_model_client` no Application
+
+`NexusApplication` mantém:
+
+```python
+app.local_model_client
+```
+
+como propriedade de compatibilidade.
+
+Na `v0.3.1`, ela resolve o provider Ollama através do router.
+
+Não existe uma segunda composição paralela de Model Layer.
+
+---
+
+# Modelo técnico de referência
+
+```text
+qwen3:1.7b
+```
+
+É o baseline técnico da camada local atual.
+
+A licença dos pesos deve ser auditada separadamente da futura licença do Nexus Core.
+
+---
+
+# Backend local
+
+```text
+Ollama
+```
+
+O Nexus Core atualmente:
+
+* não instala Ollama;
+* não inicia o daemon;
+* não encerra o daemon;
+* não instala modelos automaticamente;
+* não executa model discovery;
+* não carrega modelo no startup;
+* não executa inferência no startup;
+* não executa probe automático de provider;
+* não assume ownership do lifecycle do serviço.
+
+---
+
+# Endpoint local
 
 Default:
 
@@ -932,377 +960,115 @@ Default:
 http://127.0.0.1:11434
 ```
 
-A validação pertence a:
-
-```text
-nexus.config.local_endpoint
-```
-
-e não ao pacote `security`.
-
-Essa decisão evita introduzir uma dependência arquitetural:
-
-```text
-config
-  │
-  ▼
-security
-```
-
-apenas para validar uma origem de configuração.
-
----
-
-## Origens permitidas
-
-São aceitas origens HTTP em loopback.
-
-Exemplos:
-
-```text
-http://127.0.0.1:11434
-http://127.0.0.1:11434/
-http://localhost:11434
-http://[::1]:11434
-```
-
-Whitespace externo é normalizado.
-
-A barra final simples também é normalizada.
-
----
-
-## Origens rejeitadas
+A configuração permite somente origem HTTP loopback.
 
 São rejeitados:
 
-```text
-https://127.0.0.1:11434
-http://example.com:11434
-http://192.168.1.10:11434
-http://10.0.0.25:11434
-ftp://127.0.0.1:11434
-```
-
-Também são rejeitados endpoints contendo:
-
-* username;
-* password;
-* custom path;
-* query string;
+* HTTPS;
+* hosts externos;
+* hosts LAN;
+* credenciais;
+* custom paths;
+* query;
 * fragment;
-* hostname externo;
-* endereço LAN não-loopback;
 * porta inválida.
 
 ---
 
-## Por que somente loopback?
+# Health da Model Layer
 
-A Local Model Layer da `v0.3.0` deve permanecer local.
-
-Uma variável de ambiente não pode transformar silenciosamente:
-
-```text
-Local Model Layer
-```
-
-em:
-
-```text
-Remote Provider Layer
-```
-
-Provider abstraction e providers online pertencem à `v0.3.1`.
-
----
-
-# Factory da Local Model Layer
-
-A composição concreta é centralizada em:
+API principal:
 
 ```python
-build_local_model_client(settings)
+health.model_layer
 ```
 
-Fluxo:
-
-```text
-Settings
-   │
-   ▼
-build_local_model_client()
-   │
-   ├── OllamaTransport(
-   │       base_url=settings.local_model_base_url
-   │   )
-   │
-   └── LocalModelClient(
-           model=settings.local_model_name
-           timeout=settings.local_model_timeout
-       )
-```
-
-Isso evita espalhar detalhes de composição pela aplicação.
-
----
-
-# Composição lazy
-
-`NexusApplication` não instancia o client de modelo no construtor.
-
-Também não instancia o client durante:
+O campo histórico:
 
 ```python
-app.initialize()
+health.local_model_layer
 ```
 
-O campo interno começa como:
-
-```text
-_local_model_client = None
-```
-
-O client é criado somente quando:
-
-```python
-app.local_model_client
-```
-
-é acessado pela primeira vez.
-
-Depois disso, a instância é reutilizada.
-
-Fluxo:
-
-```text
-NexusApplication
-        │
-        │ first property access
-        ▼
-local_model_client
-        │
-        ▼
-build_local_model_client(settings)
-        │
-        ├── OllamaTransport
-        └── LocalModelClient
-```
+é preservado para compatibilidade sobre o mesmo estado.
 
 ---
 
-## Razão para composição lazy
-
-O modelo de referência utiliza memória significativa quando carregado.
-
-A aplicação não deve consumir esse recurso apenas por iniciar o Nexus.
-
-Portanto:
+## Semântica
 
 ```text
-NexusApplication()
+Model Layer ✓ READY
 ```
 
-não carrega modelo.
+significa readiness estrutural da camada de software.
 
-```text
-app.initialize()
-```
+Não significa:
 
-não carrega modelo.
-
-```text
-app.local_model_client
-```
-
-constrói apenas client e transporte.
-
-Somente:
-
-```python
-client.generate(...)
-```
-
-executa comunicação com Ollama e pode causar o carregamento real do modelo.
+* Ollama liveness;
+* modelo instalado;
+* modelo carregado;
+* inferência bem-sucedida;
+* provider saudável.
 
 ---
 
-# Health da Local Model Layer
+# Painel de status
 
-`HealthStatus` possui:
-
-```text
-local_model_layer
-```
-
-O valor começa em:
+O label atual é:
 
 ```text
-False
+Model Layer
 ```
 
-Durante a inicialização bem-sucedida da aplicação, a camada é marcada como estruturalmente pronta:
+Exemplo conceitual:
 
 ```text
-local_model_layer = True
+╔══════════════════════════════════════════════╗
+║                  N E X U S                   ║
+║                    v0.3.1                    ║
+╠══════════════════════════════════════════════╣
+║ Core              ✓ ONLINE                  ║
+║ Configuration     ✓ READY                   ║
+║ Database          ✓ READY                   ║
+║ Logger            ✓ READY                   ║
+║ EventBus          ✓ READY                   ║
+║ SecurityGate      ✓ READY                   ║
+║ ToolRegistry      ✓ READY                   ║
+║ Terminal Sandbox  ✓ READY                   ║
+║ Model Layer       ✓ READY                   ║
+╠══════════════════════════════════════════════╣
+║ Health Monitor    ✓ READY                   ║
+╠══════════════════════════════════════════════╣
+║ Node              ...                       ║
+║ Network           ...                       ║
+║ Mode              ...                       ║
+╚══════════════════════════════════════════════╝
 ```
-
-Isso não causa:
-
-* conexão com Ollama;
-* carregamento do modelo;
-* inferência;
-* probe HTTP.
-
----
-
-## Semântica de readiness
-
-O painel utiliza:
-
-```text
-Local Model Layer    ✓ READY
-```
-
-Isso significa:
-
-> a camada de software do Nexus necessária para utilizar um modelo local foi integrada e configurada corretamente.
-
-Não significa:
-
-```text
-Ollama está ativo
-```
-
-Não significa:
-
-```text
-qwen3:1.7b está instalado
-```
-
-Não significa:
-
-```text
-modelo está carregado
-```
-
-Não significa:
-
-```text
-inferência foi validada agora
-```
-
-Não significa:
-
-```text
-backend está saudável
-```
-
-Essa distinção é deliberada.
-
----
-
-# Local Model Layer e offline mode
-
-`offline_mode` controla o relacionamento do runtime com **conectividade externa**.
-
-Ollama utiliza loopback.
-
-Portanto:
-
-```text
-offline_mode = True
-```
-
-não desabilita a Local Model Layer.
-
-Isso preserva o princípio:
-
-```text
-LOCAL FIRST
-```
-
-O assistente deve poder utilizar inteligência local mesmo quando a Internet está indisponível ou quando o runtime está explicitamente em forced offline.
 
 ---
 
 # Configuração
 
-A `v0.2.4` estabeleceu o boundary formal entre o ambiente do processo e a configuração utilizada pelo Nexus Core.
+Configuração principal:
 
-A `v0.3.0` preserva esse contrato e adiciona somente os parâmetros necessários à Local Model Layer.
+```python
+Settings(frozen=True)
+```
 
-Fluxo:
+Defaults relevantes:
 
 ```text
-Environment
-    │
-    ▼
-load_settings()
-    │
-    ├── parsing tipado
-    ├── normalização
-    ├── validação
-    ├── defaults seguros
-    └── overrides permitidos
-    │
-    ▼
-Settings(frozen=True)
-    │
-    ▼
-settings = load_settings()
-    │
-    ▼
-Nexus Core
+node_name                              NEXUS-NODE-01
+offline_mode                           True
+connectivity_monitor_interval          30.0
+connectivity_confirmation_threshold    2
+local_model_name                       qwen3:1.7b
+local_model_base_url                   http://127.0.0.1:11434
+local_model_timeout                    120.0
 ```
-
-A estrutura permanece:
-
-```python
-@dataclass(frozen=True)
-class Settings:
-    ...
-```
-
-`Settings` representa um snapshot tipado e imutável de configuração.
 
 ---
 
-# Defaults de configuração
-
-Parâmetros operacionais principais:
-
-```python
-node_name: str = "NEXUS-NODE-01"
-
-offline_mode: bool = True
-
-connectivity_monitor_interval: float = 30.0
-
-connectivity_confirmation_threshold: int = 2
-
-local_model_name: str = "qwen3:1.7b"
-
-local_model_base_url: str = "http://127.0.0.1:11434"
-
-local_model_timeout: float = 120.0
-```
-
-Os defaults permanecem centralizados em `Settings`.
-
-`load_settings()` deriva seus defaults de:
-
-```python
-Settings()
-```
-
-em vez de manter uma segunda tabela independente.
-
----
-
-# Variáveis de ambiente suportadas
-
-A allowlist atual é:
+# Variáveis de ambiente
 
 ```text
 NEXUS_NODE_NAME
@@ -1314,1258 +1080,395 @@ NEXUS_LOCAL_MODEL_BASE_URL
 NEXUS_LOCAL_MODEL_TIMEOUT
 ```
 
-Variáveis `NEXUS_*` desconhecidas não são automaticamente convertidas em configuração.
-
 ---
 
-# `NEXUS_NODE_NAME`
+# Configurações deliberadamente ausentes na v0.3.1
 
-Default:
-
-```text
-NEXUS-NODE-01
-```
-
-Exemplo:
-
-```bash
-export NEXUS_NODE_NAME="NEXUS-DESKTOP-01"
-```
-
-Whitespace externo é removido.
-
-Valores vazios são rejeitados com:
+Não existe:
 
 ```text
-ConfigurationError
+NEXUS_MODEL_PROVIDER
+NEXUS_PROVIDER_FALLBACK
+NEXUS_OPENAI_API_KEY
+NEXUS_ANTHROPIC_API_KEY
+NEXUS_GEMINI_API_KEY
+```
+
+Existe apenas um provider de produção:
+
+```text
+ollama
 ```
 
 ---
 
-# `NEXUS_OFFLINE_MODE`
+# Runtime e conectividade
 
-Default:
-
-```text
-true
-```
-
-Valores aceitos:
-
-```text
-true
-false
-```
-
-O parsing é:
-
-* case-insensitive;
-* normalizado por whitespace;
-* estrito.
-
-São rejeitados:
-
-```text
-yes
-1
-enabled
-on
-```
-
----
-
-# `NEXUS_CONNECTIVITY_MONITOR_INTERVAL`
-
-Default:
-
-```text
-30.0
-```
-
-Deve ser:
-
-```text
-float
-finito
-> 0
-```
-
-São rejeitados:
-
-```text
-0
--1
-nan
-inf
--inf
-valor não numérico
-```
-
----
-
-# `NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD`
-
-Default:
-
-```text
-2
-```
-
-Deve ser:
-
-```text
-integer >= 2
-```
-
-São rejeitados:
-
-```text
-0
-1
--1
-2.5
-abc
-```
-
----
-
-# `NEXUS_LOCAL_MODEL_NAME`
-
-Default:
-
-```text
-qwen3:1.7b
-```
-
-Exemplo:
-
-```bash
-export NEXUS_LOCAL_MODEL_NAME="qwen3:1.7b"
-```
-
-O valor é normalizado por whitespace.
-
-Strings vazias são rejeitadas.
-
-A `v0.3.0` não valida a existência do modelo durante carregamento de configuração.
-
-A existência real do modelo é responsabilidade do backend Ollama.
-
----
-
-# `NEXUS_LOCAL_MODEL_BASE_URL`
-
-Default:
-
-```text
-http://127.0.0.1:11434
-```
-
-Exemplo:
-
-```bash
-export NEXUS_LOCAL_MODEL_BASE_URL="http://127.0.0.1:11434"
-```
-
-A URL passa pela política local de origem.
-
-Endpoints remotos são rejeitados com:
-
-```text
-ConfigurationError
-```
-
----
-
-# `NEXUS_LOCAL_MODEL_TIMEOUT`
-
-Default:
-
-```text
-120.0
-```
-
-Representa o timeout em segundos utilizado pelo `LocalModelClient`.
-
-Deve ser:
-
-```text
-float
-finito
-> 0
-```
-
-São rejeitados:
-
-```text
-0
--1
-nan
-inf
--inf
-valor não numérico
-```
-
----
-
-# Campos não configuráveis por ambiente
-
-Os seguintes campos estruturais continuam protegidos:
-
-```text
-app_name
-version
-project_root
-data_dir
-logs_dir
-database_dir
-database_file
-```
-
-Portanto variáveis como:
-
-```text
-NEXUS_APP_NAME
-NEXUS_VERSION
-NEXUS_PROJECT_ROOT
-NEXUS_DATA_DIR
-NEXUS_LOGS_DIR
-NEXUS_DATABASE_DIR
-NEXUS_DATABASE_FILE
-```
-
-não alteram esses valores.
-
----
-
-# `ConfigurationError`
-
-Configurações ambientais inválidas produzem:
-
-```python
-ConfigurationError
-```
-
-A exceção deriva de:
-
-```python
-ValueError
-```
-
-Objetivos:
-
-* distinguir falhas de configuração externa;
-* evitar fallback silencioso;
-* facilitar diagnóstico;
-* preservar fail-fast;
-* impedir valores inválidos no runtime.
-
----
-
-# Fail-fast
-
-Configuração inválida não é substituída silenciosamente por defaults.
-
-```text
-Environment
-    │
-    ▼
-load_settings()
-    │
-    ├── válido
-    │     │
-    │     ▼
-    │   Settings
-    │
-    └── inválido
-          │
-          ▼
-   ConfigurationError
-          │
-          ▼
-    startup interrompido
-```
-
----
-
-# Configuração determinística para testes
-
-Para obter exclusivamente defaults:
-
-```python
-load_settings({})
-```
-
-Isso evita dependência acidental de:
-
-```text
-shell
-CI
-systemd environment
-container environment
-user session
-```
-
----
-
-# Singleton global
-
-O módulo mantém:
-
-```python
-settings = load_settings()
-```
-
-O ambiente é avaliado na importação do módulo.
-
-Mudanças posteriores em `os.environ` não causam reload automático.
-
-A arquitetura atual não possui configuração dinâmica.
-
----
-
-# Perfis de ambiente
-
-Não existem perfis formais como:
-
-```text
-development
-production
-staging
-testing
-```
-
-Perfis somente deverão ser introduzidos quando houver comportamento operacional real que justifique a abstração.
-
----
-
-# `.env`
-
-O Nexus Core não carrega automaticamente:
-
-```text
-.env
-```
-
-e não depende de:
-
-```text
-python-dotenv
-```
-
-A configuração permanece baseada diretamente no ambiente do processo.
-
----
-
-# Segurança da configuração
-
-Configuração externa não representa autoridade operacional.
-
-Ela não pode:
-
-* contornar `SecurityGate`;
-* registrar ferramentas arbitrárias;
-* conceder permissões;
-* alterar paths estruturais;
-* alterar a versão;
-* executar comandos;
-* conceder acesso direto ao host;
-* transformar a Local Model Layer em provider remoto.
-
----
-
-# `offline_mode = True`
-
-Força o runtime para:
-
-```text
-OFFLINE
-```
-
-independentemente da disponibilidade real da Internet.
-
-Nesse modo:
-
-* nenhuma verificação externa periódica é iniciada;
-* nenhum `ConnectivityMonitor` é criado;
-* `connectivity_monitor` permanece `None`;
-* não existe polling externo em background;
-* não existe detecção automática de `DEGRADED`;
-* o comportamento de conectividade é determinístico;
-* recursos locais continuam disponíveis;
-* a Local Model Layer continua utilizável.
-
-Esse permanece sendo o default seguro.
-
----
-
-# `offline_mode = False`
-
-Permite que o Nexus:
-
-1. verifique conectividade externa;
-2. determine `ONLINE` ou `OFFLINE`;
-3. estabeleça o estado inicial;
-4. publique os eventos iniciais;
-5. inicie o monitor de conectividade;
-6. detecte mudanças brutas da rede;
-7. coloque o runtime em `DEGRADED` durante confirmação;
-8. confirme automaticamente `ONLINE` ou `OFFLINE`.
-
-Exemplo:
-
-```bash
-NEXUS_OFFLINE_MODE=false \
-PYTHONPATH="$PWD" \
-python -m nexus.main
-```
-
----
-
-# Fluxo de conectividade e runtime
+Fluxo:
 
 ```text
 ConnectivityManager
-        │
-        ▼
-ConnectivityStatus
-        │
-        │ raw online: bool
-        ▼
+       │
+       ▼
+network_online
+       │
+       ▼
 ConnectivityRuntimeEvaluator
-        │
-        │ target mode
-        ▼
+       │
+       ▼
+ONLINE / OFFLINE / DEGRADED
+       │
+       ▼
 RuntimeStateController
-        │
-        ├──────────────► EventBus
-        │
-        ▼
-HealthStatus
 ```
 
-Responsabilidades:
+Estados:
 
 ```text
-ConnectivityManager
-    → observa conectividade
-
-ConnectivityRuntimeEvaluator
-    → interpreta sequência de observações
-
-RuntimeStateController
-    → mantém estado autoritativo
-
-HealthStatus
-    → projeta estado para observabilidade
-
-EventBus
-    → comunica mudanças
-```
-
----
-
-# Runtime State Controller
-
-`RuntimeStateController` é a fonte autoritativa do estado operacional.
-
-Mantém:
-
-```text
-mode
-reason
-changed_at
-```
-
-O componente utiliza:
-
-```python
-threading.RLock
-```
-
-para proteger o estado interno.
-
----
-
-## Snapshot
-
-```python
-controller.snapshot()
-```
-
-retorna um:
-
-```text
-RuntimeStateSnapshot
-```
-
-imutável.
-
----
-
-## Matriz de transições
-
-```text
-OFFLINE
-  ├── ONLINE
-  └── DEGRADED
-
 ONLINE
-  ├── OFFLINE
-  └── DEGRADED
-
+OFFLINE
 DEGRADED
-  ├── ONLINE
-  └── OFFLINE
-```
-
-Transições diretas entre:
-
-```text
-ONLINE ↔ OFFLINE
-```
-
-continuam permitidas pelo controlador.
-
-A política automática de conectividade utiliza `DEGRADED` como estado intermediário.
-
----
-
-# Connectivity Runtime Evaluator
-
-`ConnectivityRuntimeEvaluator` transforma observações brutas em modo alvo.
-
-O evaluator:
-
-* não executa I/O;
-* não cria threads;
-* não utiliza `EventBus`;
-* não atualiza diretamente `HealthStatus`;
-* não modifica diretamente o `RuntimeStateController`.
-
-Cada avaliação retorna:
-
-```text
-ConnectivityRuntimeEvaluation
-```
-
-com:
-
-```text
-target_mode
-reason
-network_online
-network_changed
 ```
 
 ---
 
-# Connectivity Monitor
+# Semântica de DEGRADED
 
-O monitor utiliza uma worker dedicada:
-
-```text
-Name:    Nexus-ConnectivityMonitor
-Daemon:  True
-```
-
-Primitivas:
-
-```text
-threading.Thread
-threading.Event
-threading.RLock
-```
-
-`check_once()` é serializado.
-
-O ciclo protegido envolve:
-
-```text
-ConnectivityManager.check()
-        │
-        ▼
-ConnectivityRuntimeEvaluator.evaluate()
-        │
-        ▼
-RuntimeStateController transition
-        │
-        ▼
-HealthStatus update
-        │
-        ▼
-Event publication
-```
-
----
-
-## Shutdown da worker
-
-O loop utiliza:
-
-```python
-stop_event.wait(interval)
-```
-
-permitindo interrupção responsiva.
-
-`stop()`:
-
-1. sinaliza o stop event;
-2. aguarda a thread com `join()`;
-3. respeita timeout;
-4. gera `TimeoutError` se a worker não terminar.
-
----
-
-# Semântica dos eventos de conectividade
-
-Os eventos:
-
-```text
-NETWORK_ONLINE
-NETWORK_OFFLINE
-```
-
-representam mudança na **observação bruta**.
-
-O evento:
-
-```text
-RUNTIME_MODE_CHANGED
-```
-
-representa alteração do estado autoritativo.
-
-Exemplo:
+Com threshold default `2`:
 
 ```text
 ONLINE
-  │
-  │ observação OFFLINE
-  ▼
-NETWORK_OFFLINE
-RUNTIME_MODE_CHANGED(DEGRADED)
-  │
-  │ confirmação OFFLINE
-  ▼
-RUNTIME_MODE_CHANGED(OFFLINE)
+   │
+   │ primeira observação OFFLINE
+   ▼
+DEGRADED
+   │
+   │ segunda observação OFFLINE
+   ▼
+OFFLINE
 ```
 
-O segundo ciclo não publica outro `NETWORK_OFFLINE` porque a observação bruta não mudou novamente.
+e:
+
+```text
+OFFLINE
+   │
+   │ primeira observação ONLINE
+   ▼
+DEGRADED
+   │
+   │ segunda observação ONLINE
+   ▼
+ONLINE
+```
+
+`DEGRADED` não representa automaticamente falha da Model Layer.
 
 ---
 
-# Health Status
+# Event Architecture
 
-`HealthStatus` representa saúde estrutural e observabilidade.
-
-Campos relevantes incluem:
+O Nexus possui:
 
 ```text
-core
-configuration
-database
-logger
-event_bus
-security_gate
-tool_registry
-terminal_sandbox
-local_model_layer
-network_online
-runtime_mode
-runtime_reason
+NexusEvent
+EventBus
+EventType
 ```
+
+O EventBus suporta:
+
+* subscribe;
+* unsubscribe;
+* publish;
+* clear;
+* contagem de handlers;
+* sincronização interna.
+
+O catálogo contém tipos para capacidades atuais e futuras.
+
+A existência de um tipo de evento não implica implementação da funcionalidade correspondente.
 
 ---
 
-## Readiness
+# Database
 
-```python
-health.ready
+Runtime atual:
+
+```text
+SQLite
 ```
 
-representa disponibilidade estrutural dos componentes locais necessários.
+Tabela estrutural:
 
-Conectividade externa não determina readiness.
+```text
+system_events
+```
 
-A Local Model Layer participa da readiness estrutural.
+Campos:
 
-Isso não deve ser confundido com liveness do Ollama.
+```text
+id
+event_type
+message
+created_at
+```
+
+O database atual não representa a futura Persistent Memory.
 
 ---
 
-## Runtime snapshot
+# Logging
 
-```python
-health.runtime_snapshot()
-```
+Logging principal:
 
-retorna:
+* console;
+* arquivo;
+* biblioteca padrão;
+* formato estruturado.
 
-```text
-HealthRuntimeSnapshot
-```
-
-com:
-
-```text
-network_online
-runtime_mode
-runtime_reason
-```
+O security audit log é separado.
 
 ---
 
-# NexusApplication
+# Security Architecture
 
-`NexusApplication` coordena o ciclo de vida dos principais componentes.
-
-A configuração global é carregada através de:
+Princípio:
 
 ```text
-Environment
-    │
-    ▼
-load_settings()
-    │
-    ▼
-settings
+Modelo propõe.
+
+SecurityGate autoriza.
+
+ToolExecutor executa.
 ```
 
-Durante a inicialização a aplicação estabelece, entre outros:
-
-1. logging;
-2. banco SQLite;
-3. `EventBus`;
-4. `SecurityGate`;
-5. `ToolRegistry`;
-6. ferramentas;
-7. `ToolExecutor`;
-8. `ConnectivityManager`;
-9. runtime state;
-10. health;
-11. eventos de inicialização;
-12. monitor de conectividade quando aplicável;
-13. readiness estrutural da Local Model Layer.
-
-A inicialização **não** instancia o model client e não executa inferência.
-
----
-
-## Contrato de inicialização
-
-`initialize()` possui semântica:
+Arquitetura planejada:
 
 ```text
-one-shot
-```
-
-Uma segunda chamada após sucesso gera:
-
-```text
-RuntimeError
-```
-
-Isso evita duplicação de:
-
-* side effects;
-* eventos;
-* workers;
-* componentes;
-* recursos.
-
----
-
-## Contrato de shutdown
-
-`shutdown()` é idempotente.
-
-Quando existe monitor ativo:
-
-```text
-ConnectivityMonitor.stop()
-        │
-        ▼
-SYSTEM_STOP
-        │
-        ▼
-Database.close()
-        │
-        ▼
-shutdown concluído
-```
-
-Ollama não é encerrado porque é um serviço externo ao lifecycle da aplicação.
-
----
-
-# Fluxo de autoridade
-
-Uma regra fundamental é que inteligência não equivale a autoridade.
-
-Arquitetura futura:
-
-```text
-MODEL
-  │
-  ▼
-PLANNER / AGENT
-  │
-  ▼
-TOOL REGISTRY
-  │
-  ▼
-TOOL EXECUTOR
-  │
-  ▼
-SECURITY GATE
-  │
-  ├── autorizado
-  │      │
-  │      ▼
-  │    TOOL
-  │
-  │      ▼
-  │  EXECUÇÃO CONTROLADA
-  │
-  └── negado
-         │
-         ▼
-       BLOQUEIO
-```
-
-A `v0.3.0` termina antes do Planner/Agent.
-
-Atualmente:
-
-```text
-Local Model
-    │
-    ▼
-Text Response
+Model Layer
+     │
+     ▼
+Agent / Planner
+     │
+     ▼
+ToolRegistry
+     │
+     ▼
+ToolExecutor
+     │
+     ▼
+SecurityGate
+     │
+     ▼
+Tool
 ```
 
 ---
 
-# Security Gate
+# SecurityGate
 
-`SecurityGate` é a principal fronteira de autorização operacional.
+Uma `SecurityRequest` possui:
 
-Ferramentas não devem executar ações sensíveis apenas porque:
+```text
+action
+description
+risk_level
+data
+path
+tool_name
+```
 
-* o LLM pediu;
-* um arquivo pediu;
-* uma página web pediu;
-* um PDF pediu;
-* uma imagem contém instruções;
-* uma mensagem externa contém instruções.
+Avaliação:
 
-Conteúdo externo é **não confiável**.
+1. tool registration;
+2. tool permission;
+3. path policy;
+4. risk policy;
+5. audit.
+
+Decisões:
+
+```text
+ALLOW
+CONFIRM
+DENY
+```
 
 ---
 
-# Prompt Injection
+# Path Security
 
-Prompt injection não representa autoridade.
+A política protege diretórios críticos como:
 
-Conteúdo proveniente de:
+```text
+/boot
+/etc
+/bin
+/sbin
+/usr
+/var
+/root
+/sys
+/proc
+/dev
+/run
+/lib
+/lib64
+/opt
+/srv
+/snap
+```
 
-* web;
-* PDFs;
-* documentos;
-* imagens;
-* mensagens;
-* memória futura;
-* arquivos;
-* resultados de ferramentas;
+e áreas sensíveis do usuário:
 
-é tratado como dado.
+```text
+~/.ssh
+~/.gnupg
+~/.aws
+~/.docker
+~/.kube
+~/.config
+~/.local/share/keyrings
+```
 
-Não como autorização.
+---
+
+# Audit Log
+
+Registra:
+
+```text
+timestamp
+tool_name
+action
+risk_level
+decision
+reason
+path
+outcome
+```
+
+Outcomes de execução:
+
+```text
+SUCCESS
+ERROR
+EXCEPTION
+```
 
 ---
 
 # Tool Architecture
 
 ```text
-Future Model Layer
-        │
-        ▼
-Planner / Agent
-        │
-        ▼
-ToolRegistry
-        │
-        ▼
-ToolExecutor
-        │
-        ▼
-SecurityGate
-        │
-        ▼
-Tool
+NexusTool
+    │
+    ├── name
+    ├── description
+    ├── risk_level
+    └── execute()
 ```
 
-Na `v0.3.0`, a Local Model Layer ainda não está conectada a essa cadeia.
-
----
-
-# Tool Registry
-
-Responsável por registrar e localizar ferramentas.
-
-Conhecer o nome de uma ferramenta não concede permissão para utilizá-la.
-
----
-
-# Tool Executor
-
-Coordena:
+Ferramentas implementadas:
 
 ```text
-intenção
-autorização
-execução
-resultado
+ListDirectoryTool
+ReadFileTool
+SystemInfoTool
+TerminalSandboxTool
 ```
-
-Ele deve respeitar decisões do `SecurityGate`.
-
----
-
-# Filesystem Security
-
-Operações de filesystem passam por validações explícitas.
-
-Objetivos:
-
-* impedir traversal;
-* restringir áreas permitidas;
-* validar caminhos;
-* impedir acesso acidental a regiões sensíveis;
-* preservar least privilege.
 
 ---
 
 # Terminal Sandbox
 
-O terminal controlado utiliza Docker.
+O `TerminalSandboxTool` executa comandos em Docker.
+
+Configuração atual inclui:
 
 ```text
-command
-  │
-  ▼
+image: ubuntu:24.04
+network: none
+root filesystem: read-only
+/tmp: tmpfs
+memory: 256 MiB
+CPU: 0.5
+PIDs: 64
+no-new-privileges
+capabilities: dropped
+user: 1000:1000
+timeout: 30 seconds
+output limit: 64 KiB
+```
+
+Workspace opcional é montado:
+
+```text
+/workspace
+```
+
+como read-only.
+
+---
+
+# Dívida de segurança antes da v0.3.2
+
+Hoje, o `ToolExecutor` identifica paths de segurança principalmente através de:
+
+```python
+kwargs.get("path")
+```
+
+Isso não representa todos os recursos sensíveis.
+
+Exemplo:
+
+```text
+TerminalSandboxTool.workspace
+```
+
+A futura integração Agent → Tools exige uma mediação genérica de recursos.
+
+Direção:
+
+```text
+Tool
+   │
+   ├── declara recursos sensíveis
+   ▼
 ToolExecutor
-  │
-  ▼
+   │
+   ▼
 SecurityGate
-  │
-  ▼
-TerminalSandboxTool
-  │
-  ▼
-Docker
+   │
+   ▼
+PathSecurity / policies
 ```
 
-A sandbox reduz exposição direta do host.
+Essa correção é blocker para a `v0.3.2`.
 
 ---
 
-## Dívida de segurança do Docker
+# Prompt Injection
 
-Pertencimento ao grupo:
+Conteúdo de:
 
-```text
-docker
-```
+* web;
+* PDFs;
+* documentos;
+* imagens;
+* arquivos;
+* páginas;
+* mensagens externas;
 
-pode equivaler a autoridade root em diversos cenários.
-
-Essa é uma dívida técnica conhecida.
-
-Possíveis evoluções:
-
-```text
-Podman rootless
-Docker rootless
-helper privilegiado isolado
-AppArmor
-polkit
-namespaces adicionais
-```
-
-A questão permanece separada da Local Model Layer.
-
----
-
-# Painel de status
-
-O entrypoint apresenta status textual.
-
-Exemplo conceitual da `v0.3.0`:
+deve ser considerado:
 
 ```text
-╔══════════════════════════════════════════════╗
-║                   N E X U S                  ║
-║                    v0.3.0                    ║
-╠══════════════════════════════════════════════╣
-║ Core                              ✓ ONLINE   ║
-║ Configuration                     ✓ READY    ║
-║ Database                          ✓ READY    ║
-║ Logger                            ✓ READY    ║
-║ EventBus                          ✓ READY    ║
-║ SecurityGate                      ✓ READY    ║
-║ ToolRegistry                      ✓ READY    ║
-║ Terminal Sandbox                  ✓ READY    ║
-║ Local Model Layer                 ✓ READY    ║
-╠══════════════════════════════════════════════╣
-║ Health Monitor                    ✓ READY    ║
-╠══════════════════════════════════════════════╣
-║ Node                         NEXUS-NODE-01    ║
-║ Network                           ✗ OFFLINE  ║
-║ Mode                               OFFLINE   ║
-╚══════════════════════════════════════════════╝
+UNTRUSTED DATA
 ```
 
-`Local Model Layer ✓ READY` representa readiness estrutural da camada.
-
-Não representa liveness do backend.
-
----
-
-# Testes
-
-Testes automatizados são parte obrigatória do processo de engenharia.
-
-Framework:
-
-```text
-pytest
-```
-
-Execução padrão:
-
-```bash
-PYTHONPATH="$PWD" pytest -q
-```
-
-Baseline validado da `v0.3.0`:
-
-```text
-338 passed
-```
-
----
-
-## Determinismo da suíte
-
-A suíte completa foi executada verificando também:
-
-```bash
-ollama ps
-```
-
-antes e depois dos testes.
-
-Resultado esperado e observado:
-
-```text
-nenhum modelo carregado
-```
-
-antes e depois.
-
-Portanto os testes automatizados da arquitetura não dependem de:
-
-* inferência real;
-* modelo carregado;
-* resposta de Ollama;
-* rede externa;
-* disponibilidade de GPU.
-
-Isso mantém a suíte rápida e determinística.
-
----
-
-## Cobertura da Local Model Layer
-
-A suíte cobre, entre outros:
-
-* contrato de `LocalModelRequest`;
-* contrato de `LocalModelResponse`;
-* imutabilidade;
-* prompt inválido;
-* system prompt inválido;
-* temperature inválida;
-* rejeição de `bool` como temperature;
-* context length inválido;
-* rejeição de tipos incorretos;
-* token counts inválidos;
-* `LocalModelClient`;
-* validação runtime do tipo da requisição;
-* payload;
-* mensagens;
-* system prompt;
-* timeout;
-* model name;
-* parsing de resposta;
-* resposta malformada;
-* resposta incompleta;
-* rejeição de `done=False`;
-* protocolo não-streaming;
-* `OllamaTransport`;
-* HTTP POST;
-* timeout;
-* backend indisponível;
-* HTTP error;
-* JSON inválido;
-* settings do modelo;
-* environment overrides;
-* endpoint local;
-* loopback IPv4;
-* localhost;
-* loopback IPv6;
-* rejeição de hosts externos;
-* rejeição de LAN;
-* rejeição de credentials;
-* rejeição de paths;
-* rejeição de query;
-* rejeição de fragment;
-* factory;
-* lazy composition;
-* cache do local model client;
-* ausência de model client no startup;
-* health estrutural;
-* painel de status.
-
----
-
-## Cobertura geral
-
-A suíte também cobre:
-
-* inicialização;
-* shutdown;
-* runtime modes;
-* transições válidas;
-* transições inválidas;
-* `DEGRADED`;
-* snapshots;
-* concorrência;
-* competing writers;
-* health;
-* connectivity manager;
-* connectivity runtime evaluator;
-* thresholds;
-* perda de conectividade;
-* recuperação;
-* oscilação;
-* monitoramento contínuo;
-* eventos de rede;
-* eventos de runtime;
-* ausência de event flooding;
-* lifecycle de worker;
-* stop timeout;
-* subscriber failures;
-* filesystem security;
-* tool architecture;
-* terminal sandbox;
-* environment configuration;
-* defaults;
-* fail-fast;
-* regressão completa.
-
----
-
-# Smoke tests reais
-
-Os testes unitários não dependem de Ollama real.
-
-Separadamente, a Local Model Layer foi validada com smoke tests reais.
-
-Caminho básico:
-
-```text
-LocalModelRequest
-        │
-        ▼
-LocalModelClient
-        │
-        ▼
-OllamaTransport
-        │
-        ▼
-Ollama
-        │
-        ▼
-qwen3:1.7b
-        │
-        ▼
-LocalModelResponse
-```
-
-Também foi validada a composição:
-
-```text
-load_settings()
-        │
-        ▼
-Settings
-        │
-        ▼
-build_local_model_client()
-        │
-        ▼
-LocalModelClient
-        │
-        ▼
-OllamaTransport
-        │
-        ▼
-qwen3:1.7b
-```
-
-Esses smokes são separados da suíte determinística.
-
----
-
-# Baseline de hardware do modelo
-
-O ambiente principal de desenvolvimento utiliza hardware de baixo consumo com memória limitada.
-
-O modelo:
-
-```text
-qwen3:1.7b
-```
-
-foi selecionado como baseline técnico inicial por oferecer operação local viável nesse ambiente.
-
-A execução de referência atual ocorre em:
-
-```text
-CPU
-```
-
-A aceleração GPU não é requisito da `v0.3.0`.
-
-Suporte e otimização de hardware permanecem assuntos independentes da arquitetura do contrato de modelo.
-
----
-
-# Uso de memória
-
-Carregar um LLM local pode aumentar significativamente o consumo de RAM e swap.
-
-Por esse motivo:
-
-* startup não carrega modelo;
-* health não executa inferência;
-* testes unitários não carregam modelo;
-* composição do client é lazy.
-
-A aplicação deve preservar a capacidade de iniciar e operar sua infraestrutura sem exigir que um LLM permaneça residente em memória.
+Ação proposta por conteúdo externo não equivale a autorização.
 
 ---
 
@@ -2573,212 +1476,687 @@ A aplicação deve preservar a capacidade de iniciar e operar sua infraestrutura
 
 ## Runtime Python
 
-A `v0.3.0` continua sem exigir pacotes Python externos obrigatórios no runtime.
+A `v0.3.1` não adiciona dependência Python externa obrigatória ao runtime principal.
 
-`requirements/base.txt` deve refletir:
-
-```text
-# Nexus Core runtime dependencies
-# No external Python packages are required at v0.3.0.
-```
-
-A Local Model Layer utiliza componentes da biblioteca padrão, incluindo:
-
-```text
-dataclasses
-collections.abc
-json
-math
-urllib
-ipaddress
-pathlib
-```
+`requirements/base.txt` permanece sem pacotes externos.
 
 ---
 
 ## Desenvolvimento
 
-`requirements/dev.txt` inclui o tooling de desenvolvimento, incluindo:
-
 ```text
-pytest
+pytest==9.1.1
+```
+
+Instalação:
+
+```bash
+python -m pip install -r requirements/dev.txt
 ```
 
 ---
 
-## Dependência externa para inferência local
+## Dependências externas por capacidade
 
-Embora não exista SDK Python obrigatório, inferência real exige:
+Inferência:
 
 ```text
 Ollama
 ```
 
-e um modelo instalado, por padrão:
+Terminal sandbox:
 
 ```text
-qwen3:1.7b
+Docker
 ```
 
-Portanto existe uma distinção importante:
+---
+
+# Instalação
+
+Baseline:
 
 ```text
-Python package dependency
-        ≠
-external local runtime dependency
+Linux
+Python 3.12
+Git
 ```
 
-Ollama é uma dependência do ambiente de inferência, não uma dependência Python do Nexus Core.
+Desenvolvimento:
+
+```text
+pytest
+```
+
+Inferência:
+
+```text
+Ollama
+```
+
+Sandbox:
+
+```text
+Docker
+```
+
+GPU dedicada não é requisito arquitetural.
+
+---
+
+# Ambiente virtual
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements/dev.txt
+```
+
+---
+
+# Ollama
+
+Modelo baseline:
+
+```bash
+ollama pull qwen3:1.7b
+```
+
+Comandos úteis:
+
+```bash
+ollama list
+ollama ps
+ollama run qwen3:1.7b
+```
+
+---
+
+# Executando o Nexus
+
+```bash
+PYTHONPATH="$PWD" python -m nexus.main
+```
+
+---
+
+# Exemplo de ModelRouter
+
+```python
+from nexus.config.settings import settings
+from nexus.models.contracts import ModelRequest
+from nexus.models.model_factory import build_model_router
+
+
+router = build_model_router(settings)
+
+response = router.generate(
+    ModelRequest(
+        prompt="Olá, Nexus.",
+    )
+)
+
+print(response.content)
+```
+
+---
+
+# Testes
+
+Comando oficial:
+
+```bash
+PYTHONPATH="$PWD" pytest -q
+```
+
+Baseline atual:
+
+```text
+493 passed
+```
+
+Coleta:
+
+```text
+493 tests collected
+```
+
+---
+
+# Estratégia de testes
+
+A suíte prioriza:
+
+* determinismo;
+* isolamento;
+* fake transports;
+* fake providers;
+* ausência de inferência real;
+* validação de contratos;
+* regressão;
+* compatibilidade;
+* lifecycle;
+* concurrency;
+* segurança;
+* boundaries arquiteturais.
 
 ---
 
 # Estrutura do projeto
 
-Estrutura conceitual da `v0.3.0`:
-
 ```text
-Nexus Core/
+Nexus-Core/
 │
-├── nexus/
-│   │
-│   ├── config/
-│   │   ├── __init__.py
-│   │   ├── local_endpoint.py
-│   │   └── settings.py
-│   │
-│   ├── core/
-│   │   ├── application.py
-│   │   ├── connectivity.py
-│   │   ├── connectivity_monitor.py
-│   │   ├── connectivity_runtime_evaluator.py
-│   │   ├── logger.py
-│   │   ├── runtime.py
-│   │   └── runtime_state.py
-│   │
-│   ├── database/
-│   │
-│   ├── events/
-│   │
-│   ├── models/
-│   │   ├── local_model.py
-│   │   ├── local_model_factory.py
-│   │   └── ollama_transport.py
-│   │
-│   ├── monitoring/
-│   │   └── health.py
-│   │
-│   ├── security/
-│   │
-│   ├── tools/
-│   │
-│   └── main.py
+├── README.md
 │
 ├── requirements/
 │   ├── base.txt
 │   └── dev.txt
 │
-├── tests/
-│   ├── test_application_connectivity_monitor.py
-│   ├── test_application_local_model.py
-│   ├── test_application_local_model_health.py
-│   ├── test_application_runtime.py
-│   ├── test_connectivity.py
-│   ├── test_connectivity_monitor.py
-│   ├── test_connectivity_runtime_evaluator.py
-│   ├── test_core.py
-│   ├── test_health.py
-│   ├── test_local_endpoint.py
-│   ├── test_local_model_client.py
-│   ├── test_local_model_contract.py
-│   ├── test_local_model_factory.py
-│   ├── test_local_model_settings.py
-│   ├── test_main.py
-│   ├── test_ollama_transport.py
-│   ├── test_runtime.py
-│   ├── test_runtime_state.py
-│   └── test_settings_environment.py
+├── scripts/
 │
-├── README.md
-└── ...
+├── nexus/
+│   │
+│   ├── brains/
+│   ├── config/
+│   ├── context/
+│   ├── core/
+│   ├── database/
+│   ├── events/
+│   ├── knowledge/
+│   ├── memory/
+│   │
+│   ├── models/
+│   │   ├── contracts.py
+│   │   ├── local_model.py
+│   │   ├── local_model_factory.py
+│   │   ├── model_factory.py
+│   │   ├── ollama_provider.py
+│   │   ├── ollama_transport.py
+│   │   ├── provider.py
+│   │   └── router.py
+│   │
+│   ├── monitoring/
+│   ├── security/
+│   ├── tools/
+│   └── main.py
+│
+└── tests/
 ```
 
-A árvore destaca componentes arquiteturais relevantes e não necessariamente todos os arquivos auxiliares.
+Diretórios de scaffolding não representam capacidades concluídas.
 
 ---
 
 # Histórico de releases
 
+O histórico abaixo documenta a evolução incremental da arquitetura.
+
+Cada release adiciona uma nova responsabilidade sem antecipar artificialmente capacidades das etapas seguintes.
+
+---
+
 ## v0.1.0 — Foundation
 
-Fundação inicial.
+### Objetivo
 
-Entregou:
+Criar a primeira fundação executável do Nexus Core.
 
-* estrutura do projeto;
-* configuração;
+### Entregue
+
+* estrutura inicial do projeto;
+* package `nexus`;
+* organização modular inicial;
+* configuração central;
 * logging;
-* banco de dados;
-* arquitetura inicial.
+* database local;
+* SQLite;
+* arquitetura inicial da aplicação;
+* diretórios de dados e logs;
+* primeira separação entre infraestrutura e futuras capacidades de IA.
+
+### Impacto arquitetural
+
+A release estabeleceu a base sobre a qual os demais subsistemas passaram a ser adicionados.
+
+Antes de agentes, modelos, memória ou automação, o projeto recebeu uma infraestrutura mínima capaz de:
+
+```text
+configurar
+inicializar
+registrar
+persistir
+encerrar
+```
+
+### Limites
+
+Ainda não existiam:
+
+* EventBus formal;
+* SecurityGate;
+* Tool System;
+* runtime connectivity;
+* modelos;
+* Agent;
+* memória.
 
 ---
 
 ## v0.1.1 — Infrastructure Core
 
-Expansão da infraestrutura central.
+### Objetivo
+
+Consolidar a infraestrutura central criada na fundação.
+
+### Entregue
+
+* evolução do núcleo da aplicação;
+* composição mais clara dos componentes de infraestrutura;
+* lifecycle centralizado;
+* endurecimento de logging e database;
+* preparação para módulos desacoplados;
+* separação progressiva de responsabilidades.
+
+### Impacto arquitetural
+
+A aplicação passou a ter uma base mais adequada para receber componentes independentes sem transformar o entrypoint em um monólito.
+
+A direção passou a ser:
+
+```text
+NexusApplication
+      │
+      ├── Infrastructure Component A
+      ├── Infrastructure Component B
+      └── Future Components
+```
+
+### Limites
+
+A release continuava focada em infraestrutura.
+
+Ainda não introduzia autorização, tools ou inteligência.
 
 ---
 
 ## v0.1.2 — Event Architecture
 
-Introdução do modelo de eventos internos.
+### Objetivo
+
+Criar uma arquitetura interna de comunicação desacoplada por eventos.
+
+### Entregue
+
+* `NexusEvent`;
+* `EventBus`;
+* catálogo de tipos de evento;
+* subscribe;
+* unsubscribe;
+* publish;
+* múltiplos handlers;
+* desacoplamento entre produtores e consumidores;
+* timestamps de evento;
+* preparação para eventos de sistema, segurança, rede, tarefas e futuras capacidades.
+
+### Impacto arquitetural
+
+Componentes passaram a poder se comunicar sem referência direta entre si.
+
+```text
+Producer
+   │
+   ▼
+EventBus
+   │
+   ├── Handler A
+   ├── Handler B
+   └── Handler C
+```
+
+Isso criou uma base importante para lifecycle, conectividade e observabilidade.
+
+### Limites
+
+A presença de eventos como voice, vision ou memory no catálogo não significava implementação dessas capacidades.
 
 ---
 
 ## v0.1.3 — Security Gate
 
-Introdução da fronteira central de autorização.
+### Objetivo
+
+Criar a primeira fronteira central de autorização do Nexus Core.
+
+### Entregue
+
+* `SecurityGate`;
+* `SecurityRequest`;
+* `SecurityResult`;
+* decisões explícitas de segurança;
+* risk-based evaluation;
+* separação entre solicitação e autorização;
+* base para políticas de acesso;
+* princípio de fail-safe authorization.
+
+### Impacto arquitetural
+
+Foi estabelecida a regra:
+
+```text
+operação potencialmente sensível
+        │
+        ▼
+SecurityGate
+        │
+        ├── ALLOW
+        ├── CONFIRM
+        └── DENY
+```
+
+A partir dessa versão, autoridade operacional deixou de ser tratada como consequência implícita de uma chamada de função.
+
+### Limites
+
+Ainda faltavam:
+
+* arquitetura formal de tools;
+* path security;
+* permissões específicas por ferramenta;
+* audit log completo.
 
 ---
 
 ## v0.1.4 — Tool Architecture
 
-Estruturação do sistema de ferramentas.
+### Objetivo
+
+Criar uma camada formal para capacidades executáveis.
+
+### Entregue
+
+* `NexusTool`;
+* `ToolResult`;
+* `ToolRegistry`;
+* `ToolExecutor`;
+* nomes e descrições de tools;
+* níveis de risco;
+* registro explícito;
+* lookup de ferramentas;
+* execução controlada;
+* integração inicial com o `SecurityGate`;
+* rejeição de tool desconhecida.
+
+### Impacto arquitetural
+
+Foi criada a separação:
+
+```text
+Tool Definition
+      │
+      ▼
+ToolRegistry
+      │
+      ▼
+ToolExecutor
+      │
+      ▼
+SecurityGate
+      │
+      ▼
+Execution
+```
+
+Essa arquitetura se tornaria posteriormente a base para tool calling controlado.
+
+### Limites
+
+Modelos ainda não participavam da cadeia.
 
 ---
 
 ## v0.1.5 — Path Security
 
-Validação de caminhos e proteção de filesystem.
+### Objetivo
+
+Evitar que operações de filesystem fossem autorizadas apenas pelo nome da tool.
+
+### Entregue
+
+* `PathSecurity`;
+* resolução explícita de paths;
+* delimitação de área autorizada;
+* proteção de diretórios críticos do sistema;
+* proteção de áreas sensíveis do usuário;
+* rejeição de paths fora da região permitida;
+* prevenção de acesso direto a caminhos protegidos.
+
+### Impacto arquitetural
+
+A autorização passou a considerar:
+
+```text
+ação
+tool
+risco
+path
+```
+
+em vez de apenas:
+
+```text
+ação
+```
+
+Isso reduziu a superfície de acesso acidental ou indevido ao host.
+
+### Limites
+
+A mediação ainda depende do recurso ser corretamente representado no `SecurityRequest`.
+
+Essa limitação é relevante para o hardening futuro antes da `v0.3.2`.
 
 ---
 
 ## v0.1.6 — Tool Permissions + Audit Log
 
-Permissões explícitas por ferramenta e auditoria.
+### Objetivo
+
+Adicionar governança explícita por ferramenta e rastreabilidade.
+
+### Entregue
+
+* `ToolPermissionPolicy`;
+* registro individual de tools;
+* maximum risk por ferramenta;
+* rejeição de tools não registradas;
+* `AuditLogger`;
+* registros de decisão;
+* timestamps UTC;
+* razão da decisão;
+* tool name;
+* action;
+* risk level;
+* path quando aplicável;
+* base para rastreamento de execução.
+
+### Impacto arquitetural
+
+O SecurityGate passou a combinar:
+
+```text
+Tool Permission
+       +
+Path Security
+       +
+Risk Policy
+       +
+Audit
+```
+
+Essa versão estabeleceu auditabilidade como requisito de arquitetura, e não apenas debugging.
 
 ---
 
 ## v0.1.7 — Secure File Tools
 
-Ferramentas seguras de filesystem integradas ao modelo de segurança.
+### Objetivo
+
+Introduzir as primeiras ferramentas reais de filesystem sob a arquitetura de segurança.
+
+### Entregue
+
+* `ListDirectoryTool`;
+* `ReadFileTool`;
+* integração das file tools ao Tool System;
+* leitura de arquivos de texto;
+* validação de existência;
+* validação de tipo;
+* tratamento de permission errors;
+* tratamento de filesystem errors;
+* limite de tamanho para leitura;
+* rejeição de conteúdo não UTF-8;
+* mediação de path pelo fluxo de segurança.
+
+### Impacto arquitetural
+
+Pela primeira vez, a cadeia:
+
+```text
+ToolRegistry
+      │
+      ▼
+ToolExecutor
+      │
+      ▼
+SecurityGate
+      │
+      ▼
+PathSecurity
+      │
+      ▼
+Filesystem Tool
+```
+
+passou a operar sobre recursos reais.
+
+### Limites
+
+As ferramentas eram deliberadamente restritas.
+
+Não existia shell livre ou automação de desktop.
 
 ---
 
 ## v0.1.8 — Terminal Sandbox
 
-Execução controlada de terminal em Docker.
+### Objetivo
+
+Adicionar execução de comandos sem conceder shell irrestrito no host.
+
+### Entregue
+
+* `TerminalSandboxTool`;
+* execução dentro de Docker;
+* isolamento do host;
+* ausência de rede no container;
+* root filesystem read-only;
+* `/tmp` temporário;
+* limites de recursos;
+* limite de processos;
+* timeout;
+* captura controlada de stdout/stderr;
+* limite de output;
+* remoção do container após execução;
+* risk level superior às file tools;
+* integração com o modelo de autorização.
+
+### Impacto arquitetural
+
+O projeto passou a separar:
+
+```text
+comando solicitado
+
+de
+
+execução direta no host
+```
+
+A direção passou a ser:
+
+```text
+Command
+   │
+   ▼
+SecurityGate
+   │
+   ▼
+TerminalSandboxTool
+   │
+   ▼
+Docker
+```
+
+### Limites
+
+O sandbox não representa autorização automática.
+
+A política default continua tratando operações `MEDIUM` como dependentes de confirmação.
 
 ---
 
 ## v0.1.9 — Health Check & Application Status
 
-Health checks e status operacional.
+### Objetivo
+
+Tornar o estado estrutural da aplicação observável.
+
+### Entregue
+
+* `HealthStatus`;
+* readiness estrutural;
+* status dos principais componentes;
+* painel textual;
+* lifecycle de status;
+* integração de health com `NexusApplication`;
+* shutdown garantido pelo entrypoint;
+* visualização operacional do estado do core.
+
+### Impacto arquitetural
+
+O projeto ganhou uma projeção explícita de estado:
+
+```text
+Core
+Configuration
+Database
+Logger
+EventBus
+SecurityGate
+ToolRegistry
+Terminal Sandbox
+Health Monitor
+```
+
+Essa camada posteriormente passou a incorporar runtime connectivity e Model Layer.
+
+---
+
+# Série v0.2.x — Runtime e conectividade
+
+A série `v0.2.x` transformou conectividade em um subsistema formal de runtime.
 
 ---
 
 ## v0.2.0 — Connectivity & Runtime Modes
 
-Introduziu:
+### Objetivo
+
+Introduzir observação de conectividade externa e modos formais de execução.
+
+### Entregue
 
 * `ConnectivityManager`;
 * `ConnectivityStatus`;
@@ -2788,9 +2166,26 @@ Introduziu:
 * `DEGRADED`;
 * `offline_mode`;
 * eventos de conectividade;
-* determinação inicial do runtime.
+* determinação inicial do runtime;
+* separação inicial entre execução local e disponibilidade externa.
 
-Baseline histórico:
+### Impacto arquitetural
+
+Foi criada a distinção:
+
+```text
+Nexus running
+```
+
+não implica:
+
+```text
+Internet available
+```
+
+A aplicação passou a possuir semântica explícita de operação online e offline.
+
+### Baseline histórico
 
 ```text
 87 tests passing
@@ -2800,17 +2195,40 @@ Baseline histórico:
 
 ## v0.2.1 — Runtime State Controller
 
-Introduziu:
+### Objetivo
+
+Substituir estado de runtime disperso por uma fonte autoritativa.
+
+### Entregue
 
 * `RuntimeStateController`;
 * estado centralizado;
+* `mode`;
 * `reason`;
 * `changed_at`;
 * transições formais;
+* validação de transições;
 * integração com a aplicação;
-* preservação dos eventos iniciais.
+* preservação dos eventos iniciais;
+* base para snapshots e concorrência futura.
 
-Baseline histórico:
+### Impacto arquitetural
+
+O runtime passou a seguir:
+
+```text
+Observation
+     │
+     ▼
+RuntimeStateController
+     │
+     ▼
+Authoritative Runtime State
+```
+
+Em vez de múltiplos componentes manterem interpretações independentes do estado.
+
+### Baseline histórico
 
 ```text
 97 tests passing
@@ -2820,11 +2238,15 @@ Baseline histórico:
 
 ## v0.2.2 — Continuous Connectivity Monitoring
 
-Introduziu:
+### Objetivo
+
+Transformar conectividade de uma verificação pontual em monitoramento contínuo.
+
+### Entregue
 
 * `ConnectivityMonitor`;
 * worker `Nexus-ConnectivityMonitor`;
-* polling;
+* polling periódico;
 * intervalo configurável;
 * snapshots;
 * sincronização de health;
@@ -2832,9 +2254,28 @@ Introduziu:
 * stop event;
 * shutdown responsivo;
 * lifecycle endurecido;
-* isolamento de falhas.
+* isolamento de falhas;
+* monitor independente do fluxo principal da aplicação.
 
-Baseline histórico:
+### Impacto arquitetural
+
+A conectividade passou de:
+
+```text
+startup check
+```
+
+para:
+
+```text
+startup check
+      +
+continuous observation
+```
+
+O monitor passou a alimentar o runtime sem bloquear a aplicação principal.
+
+### Baseline histórico
 
 ```text
 134 tests passing
@@ -2844,22 +2285,63 @@ Baseline histórico:
 
 ## v0.2.3 — Automatic DEGRADED Runtime Detection
 
-Introduziu:
+### Objetivo
+
+Evitar mudanças de estado instáveis causadas por uma única observação divergente.
+
+### Entregue
 
 * `ConnectivityRuntimeEvaluator`;
 * `ConnectivityRuntimeEvaluation`;
 * `DEGRADED` automático;
 * confirmação simétrica;
-* threshold configurável;
+* confirmation threshold;
 * threshold default `2`;
 * cancelamento de mudança pendente;
 * tratamento de oscilação;
 * separação de rede e runtime;
 * eventos independentes;
 * serialização de ciclos;
-* invariants de inicialização.
+* invariants de inicialização;
+* interpretação determinística da conectividade.
 
-Baseline histórico:
+### Impacto arquitetural
+
+Foi estabelecido o modelo:
+
+```text
+raw observation
+      │
+      ▼
+runtime interpretation
+      │
+      ▼
+stable state
+```
+
+Uma única divergência passa temporariamente por:
+
+```text
+DEGRADED
+```
+
+antes de alterar o estado estável.
+
+### Exemplo
+
+```text
+ONLINE
+   │
+   │ 1ª observação OFFLINE
+   ▼
+DEGRADED
+   │
+   │ 2ª observação OFFLINE
+   ▼
+OFFLINE
+```
+
+### Baseline histórico
 
 ```text
 151 tests passing
@@ -2869,7 +2351,11 @@ Baseline histórico:
 
 ## v0.2.4 — Environment & Runtime Configuration
 
-Introduziu:
+### Objetivo
+
+Transformar configuração em um boundary formal, validado e determinístico.
+
+### Entregue
 
 * `ConfigurationError`;
 * `load_settings()`;
@@ -2884,16 +2370,36 @@ Introduziu:
 * validação;
 * fail-fast;
 * proteção de paths;
-* proteção de versão;
+* proteção de version;
 * proteção de app name;
 * testes determinísticos;
 * nenhuma dependência Python adicional;
-* nenhum `.env`;
+* nenhum `.env` automático;
 * nenhum `python-dotenv`;
 * nenhum perfil artificial;
 * nenhum reload dinâmico.
 
-Baseline histórico:
+### Impacto arquitetural
+
+Configuração deixou de ser estado global mutável informal e passou a seguir:
+
+```text
+Environment
+     │
+     ▼
+parse
+     │
+     ▼
+normalize
+     │
+     ▼
+validate
+     │
+     ▼
+Settings(frozen=True)
+```
+
+### Baseline histórico
 
 ```text
 184 tests passing
@@ -2901,11 +2407,19 @@ Baseline histórico:
 
 ---
 
-# v0.3.0 — Local Model Layer
+# Série v0.3.x — Inteligência e Model Layer
 
-A `v0.3.0` introduz a primeira camada formal de inteligência artificial local.
+A série `v0.3.x` introduz inteligência local sem romper a fronteira entre inteligência e autoridade operacional.
 
-Entregue:
+---
+
+## v0.3.0 — Local Model Layer
+
+### Objetivo
+
+Introduzir a primeira integração formal de um modelo de linguagem local ao Nexus Core.
+
+### Entregue
 
 * `LocalModelRequest`;
 * `LocalModelResponse`;
@@ -2931,7 +2445,7 @@ Entregue:
 * `OllamaTimeoutError`;
 * `OllamaHTTPError`;
 * `OllamaInvalidJSONError`;
-* `/api/chat`;
+* integração com `/api/chat`;
 * JSON pela biblioteca padrão;
 * endpoint HTTP local;
 * política loopback-only;
@@ -2939,7 +2453,8 @@ Entregue:
 * bloqueio de LAN;
 * bloqueio de credentials;
 * bloqueio de custom paths;
-* bloqueio de query e fragments;
+* bloqueio de query;
+* bloqueio de fragments;
 * `NEXUS_LOCAL_MODEL_NAME`;
 * `NEXUS_LOCAL_MODEL_BASE_URL`;
 * `NEXUS_LOCAL_MODEL_TIMEOUT`;
@@ -2951,46 +2466,51 @@ Entregue:
 * operação compatível com forced offline;
 * nenhuma inferência durante startup;
 * nenhuma inferência na suíte unitária;
-* smokes reais separados;
+* smoke tests reais separados;
 * modelo técnico de referência `qwen3:1.7b`;
 * backend técnico de referência Ollama;
-* nenhuma autoridade direta sobre ferramentas;
+* nenhuma autoridade direta sobre tools;
 * nenhuma dependência Python externa adicional;
 * regressão arquitetural completa.
 
-Baseline:
+### Arquitetura da release
 
 ```text
-338 tests passing
+LocalModelRequest
+        │
+        ▼
+LocalModelClient
+        │
+        ▼
+OllamaTransport
+        │
+        ▼
+HTTP loopback
+        │
+        ▼
+Ollama
+        │
+        ▼
+Local Model
 ```
 
----
+### Princípios consolidados
 
-## Princípios de engenharia da v0.3.0
+#### Local First
 
-### Local First
+Inferência através de backend local.
 
-A inteligência introduzida pela release opera através de um backend local em loopback.
+#### Contract First
 
----
+Entrada e saída possuem contratos formais.
 
-### Contract First
+#### Runtime Validation
 
-Entrada e saída do modelo possuem contratos explícitos.
+Type hints não são a única defesa.
 
----
+#### Fail Explicitly
 
-### Runtime validation
-
-Type hints não são tratados como única defesa.
-
-Boundaries públicos validam dados em runtime.
-
----
-
-### Fail explicitly
-
-Falhas são classificadas entre:
+Falhas são diferenciadas entre:
 
 ```text
 validation
@@ -2998,51 +2518,27 @@ protocol
 transport
 ```
 
----
-
-### Resource discipline
+#### Resource Discipline
 
 Startup não carrega o modelo.
 
----
+#### Test Determinism
 
-### Test determinism
+A suíte unitária não depende de LLM real.
 
-A suíte não depende de inferência real.
+#### Separation of Concerns
 
----
+`LocalModelClient` não implementa HTTP.
 
-### Separation of concerns
+`OllamaTransport` não define semântica do contrato de alto nível.
 
-```text
-LocalModelClient
-```
+#### Security First
 
-não implementa transporte HTTP diretamente.
+O modelo não recebe acesso às tools.
 
-```text
-OllamaTransport
-```
+### Limites deliberados
 
-não decide semântica do contrato de modelo.
-
----
-
-### Local endpoint policy
-
-A configuração da Local Model Layer não pode ser usada para apontar silenciosamente para um provider remoto.
-
----
-
-### Security First
-
-O modelo não recebe acesso a ferramentas.
-
----
-
-### Scope control
-
-A release não introduz:
+A `v0.3.0` não introduziu:
 
 * streaming;
 * provider abstraction;
@@ -3057,96 +2553,337 @@ A release não introduz:
 * vision;
 * desktop automation.
 
+### Baseline histórico
+
+```text
+338 tests passing
+```
+
+---
+
+## v0.3.1 — Provider Abstraction & Model Routing
+
+### Status
+
+```text
+IMPLEMENTATION COMPLETE
+RELEASED
+```
+
+### Objetivo
+
+Remover o acoplamento conceitual entre a Model Layer e uma implementação concreta de provider sem adicionar cloud providers ou routing heurístico.
+
+### Entregue
+
+#### Contratos genéricos
+
+* `ModelRequest`;
+* `ModelResponse`;
+* `ModelError`;
+* `ModelValidationError`;
+* `ModelProtocolError`;
+* `ModelProviderError`;
+* `ModelProviderUnavailableError`;
+* `ModelProviderTimeoutError`.
+
+#### Provider abstraction
+
+* `ModelProvider`;
+* `typing.Protocol`;
+* `runtime_checkable`;
+* `provider_id`;
+* contrato estrutural `generate()`.
+
+#### Ollama provider
+
+* `OllamaProvider`;
+* conversão `ModelRequest → Ollama payload`;
+* conversão `Ollama response → ModelResponse`;
+* protocolo não-streaming;
+* validação de resposta;
+* normalização de transport errors.
+
+#### Model routing
+
+* `ModelRouter`;
+* provider registry;
+* default provider;
+* provider selection explícita;
+* validação do provider;
+* duplicate provider rejection;
+* unknown provider rejection;
+* request boundary validation;
+* response boundary validation.
+
+#### Routing errors
+
+* `ModelRoutingError`;
+* `InvalidModelProviderError`;
+* `InvalidModelProviderIdError`;
+* `UnknownModelProviderError`;
+* `DuplicateModelProviderError`.
+
+Toda a família de routing passa a pertencer à hierarquia:
+
+```text
+ModelError
+```
+
+#### Factory
+
+* `build_model_router()`;
+* composição `OllamaTransport → OllamaProvider → ModelRouter`;
+* nenhuma conexão com backend durante construção.
+
+#### NexusApplication
+
+* `_model_router`;
+* propriedade lazy `model_router`;
+* única composição de provider;
+* nenhum backend contact durante construção;
+* nenhum backend contact obrigatório durante `initialize()`.
+
+#### Health
+
+API principal:
+
+```text
+model_layer
+```
+
+Compatibilidade:
+
+```text
+local_model_layer
+```
+
+ambas representando o mesmo backing state.
+
+#### UI
+
+Label atualizado:
+
+```text
+Model Layer
+```
+
+#### Compatibilidade v0.3.0
+
+Preservados:
+
+* `LocalModelRequest`;
+* `LocalModelResponse`;
+* `LocalModelValidationError`;
+* `LocalModelProtocolError`;
+* `LocalModelClient`;
+* `build_local_model_client()`.
+
+#### Compatibilidade de erros
+
+O caminho genérico utiliza erros `Model*`.
+
+O facade legado preserva os transport errors da `v0.3.0`.
+
+```text
+NEW
+
+ModelRouter
+   → OllamaProvider
+   → Model* errors
+```
+
+```text
+LEGACY
+
+LocalModelClient
+   → OllamaProvider
+   → original OllamaTransportError
+```
+
+#### Arquitetura
+
+```text
+NexusApplication
+        │
+        ▼
+ModelRouter
+        │
+        ▼
+ModelProvider
+        │
+        ▼
+OllamaProvider
+        │
+        ▼
+OllamaTransport
+        │
+        ▼
+Ollama
+```
+
+### Provider de produção
+
+Somente:
+
+```text
+ollama
+```
+
+### Não implementado
+
+A release deliberadamente não adiciona:
+
+* online provider;
+* cloud API;
+* credenciais;
+* fallback;
+* availability probes;
+* provider discovery;
+* model discovery;
+* load balancing;
+* cost routing;
+* latency routing;
+* AI routing;
+* streaming;
+* Agent;
+* Planner;
+* tool calling.
+
+### Segurança
+
+A Model Layer continua sem dependência de:
+
+```text
+SecurityGate
+ToolRegistry
+ToolExecutor
+TerminalSandboxTool
+filesystem tools
+```
+
+Isso preserva:
+
+```text
+intelligence != authority
+```
+
+### Baseline validado
+
+```text
+493 tests passing
+493 tests collected
+```
+
 ---
 
 # Roadmap
 
 O roadmap é evolutivo.
 
-Cada versão deve adicionar uma responsabilidade pequena, clara e testável.
-
----
-
-# Inteligência artificial
-
-## v0.3.0 — Local Model Layer
-
-**Status: concluída**
-
-Entregue:
-
-* contrato local;
-* client;
-* Ollama transport;
-* endpoint local seguro;
-* timeout;
-* errors;
-* lazy composition;
-* health estrutural;
-* settings;
-* modelo baseline;
-* testes determinísticos;
-* smokes reais;
-* 338 testes passando.
-
----
-
-## v0.3.1 — Provider Abstraction & Model Routing
-
-**Status: próxima versão planejada**
-
-Objetivos planejados:
-
-* interface comum de providers;
-* abstração do provider local;
-* provider online opcional;
-* model routing;
-* política de seleção;
-* disponibilidade;
-* fallback controlado;
-* proteção de credenciais;
-* separação entre provider capability e runtime connectivity;
-* manutenção da preferência local-first.
-
-Arquitetura conceitual:
-
-```text
-Task / Model Request
-        │
-        ▼
-Model Router
-        │
-        ├── Local Provider
-        │
-        └── Online Provider
-```
+Cada release deve adicionar uma responsabilidade pequena, clara e verificável.
 
 ---
 
 ## v0.3.2 — Controlled Agent & Tool Calling
 
-Planejado:
+Objetivo:
+
+introduzir o primeiro Agent/Planner controlado.
+
+Arquitetura alvo:
 
 ```text
-Model
-  │
-  ▼
-Planner / Agent
-  │
-  ▼
+Model Layer
+      │
+      ▼
+Agent / Planner
+      │
+      ▼
 ToolRegistry
-  │
-  ▼
+      │
+      ▼
 ToolExecutor
-  │
-  ▼
+      │
+      ▼
 SecurityGate
-  │
-  ▼
+      │
+      ▼
 Tool
 ```
 
-O LLM nunca deverá receber acesso direto ao shell ou ao sistema operacional.
+Pré-requisito obrigatório:
+
+* corrigir mediação genérica de recursos;
+* remover dependência de segurança baseada apenas em `kwargs["path"]`;
+* mediar `TerminalSandboxTool.workspace`;
+* validar defaults implícitos de paths;
+* impedir bypass de `PathSecurity`.
+
+---
+
+# Confiabilidade, bootstrap e updates
+
+Sequência planejada:
+
+```text
+Environment Detection
+        │
+        ▼
+Dependency Doctor
+        │
+        ▼
+Bootstrap / Preflight
+        │
+        ▼
+Update Manager
+        │
+        ▼
+Self-Recovery
+```
+
+Estados desejados de diagnóstico:
+
+```text
+OK
+MISSING
+OUTDATED
+INCOMPATIBLE
+DEGRADED
+ERROR
+```
+
+Updates não devem executar cegamente:
+
+```text
+sudo apt upgrade
+root escalation
+arbitrary package mutation
+```
+
+Fluxo desejado:
+
+```text
+Detect
+  │
+  ▼
+Compare Compatibility
+  │
+  ▼
+Plan
+  │
+  ▼
+Update Authorized Component
+  │
+  ▼
+Integrity Check
+  │
+  ▼
+Smoke
+  │
+  ├── Accept
+  └── Rollback / Degraded
+```
 
 ---
 
@@ -3156,13 +2893,12 @@ O LLM nunca deverá receber acesso direto ao shell ou ao sistema operacional.
 
 Planejado:
 
-* modelo formal de memória;
+* storage;
+* schemas;
 * persistência;
 * recuperação;
-* proveniência;
-* expiração;
-* remoção;
-* limites de autoridade.
+* lifecycle;
+* observabilidade.
 
 ---
 
@@ -3170,13 +2906,11 @@ Planejado:
 
 Planejado:
 
-* ingestão controlada;
+* ingestão;
 * indexação;
-* recuperação;
-* metadados;
-* proveniência;
-* tratamento de documentos como conteúdo não confiável;
-* mitigação de prompt injection.
+* retrieval;
+* documentos;
+* integração com memória.
 
 ---
 
@@ -3186,18 +2920,10 @@ Planejado:
 
 Planejado:
 
-* Speech-to-Text;
-* Text-to-Speech;
-* Wake Word;
-* Voice Activity Detection;
-* pipeline de interação por voz.
-
-Tecnologias candidatas:
-
 ```text
-whisper.cpp
-openWakeWord
-Piper
+speech-to-text
+wake word
+text-to-speech
 ```
 
 ---
@@ -3208,12 +2934,11 @@ Piper
 
 Planejado:
 
-* Computer Vision;
-* captura de tela;
-* interpretação de tela;
-* contexto visual;
-* análise multimodal;
-* câmera.
+* imagens;
+* câmera;
+* screen capture;
+* screen understanding;
+* visão multimodal.
 
 ---
 
@@ -3223,12 +2948,11 @@ Planejado:
 
 Planejado:
 
-* automação controlada;
-* ações governadas;
-* autorização baseada em risco;
-* observabilidade;
-* rollback quando aplicável;
-* integração com Agent/Planner.
+* interação com desktop;
+* ações controladas;
+* autorização;
+* sandboxing;
+* observabilidade.
 
 ---
 
@@ -3238,22 +2962,20 @@ Planejado:
 
 Planejado:
 
+* nodes;
 * Arduino;
 * ESP32;
-* sensores;
-* comunicação local;
-* múltiplos nodes;
-* descoberta;
-* autenticação entre nodes;
+* dispositivos;
+* comunicação entre máquinas;
 * arquitetura distribuída.
 
-Firmware embarcado seguirá preferencialmente:
+Para microcontroladores:
 
 ```text
 C / C++
 ```
 
-em vez de MicroPython.
+é a direção preferencial.
 
 ---
 
@@ -3263,118 +2985,241 @@ em vez de MicroPython.
 
 Planejado:
 
-* GUI;
+* desktop UI;
 * chat;
 * voz;
-* contexto visual;
-* status operacional;
-* experiência multimodal;
-* UI circular futurista.
+* visão;
+* status;
+* integração de dispositivos.
 
-Tecnologia candidata:
+---
+
+# v1.0 — Production Baseline
+
+Objetivo:
+
+* instalação reproduzível;
+* segurança validada;
+* recovery;
+* documentação;
+* observabilidade;
+* interfaces estáveis;
+* portabilidade;
+* capacidades locais úteis.
+
+---
+
+# Tecnologias atuais
 
 ```text
-PySide6
+Primary Platform:     Linux
+Runtime:              Python 3.12
+Database:             SQLite
+Tests:                pytest
+Sandbox:              Docker
+Local Model Runtime:  Ollama
+Reference Model:      qwen3:1.7b
+Version Control:      Git
+Remote:               GitHub
 ```
 
 ---
 
-# v1.0.0 — Production Baseline
+# Tecnologias candidatas futuras
 
-A versão `1.0.0` somente deverá ser considerada quando existir um baseline operacional com:
+```text
+whisper.cpp
+openWakeWord
+Piper
+ComfyUI
+PySide6
+AppArmor
+polkit
+systemd
+Podman rootless
+Docker rootless
+```
 
-* arquitetura madura;
-* segurança revisada;
-* testes abrangentes;
-* documentação consistente;
-* observabilidade;
-* gestão de configuração;
-* atualização segura;
-* modelos locais;
-* memória controlada;
-* ferramentas governadas;
-* lifecycle confiável;
-* comportamento offline funcional.
+A presença na lista não representa decisão definitiva.
+
+---
+
+# Filosofia Local First
+
+O Nexus Core deve continuar útil quando:
+
+```text
+Internet unavailable
+```
+
+Capacidades locais devem continuar locais quando isso for tecnicamente razoável.
+
+---
+
+# Privacidade
+
+Princípios:
+
+* processamento local quando viável;
+* dados locais por default;
+* nenhuma telemetria obrigatória;
+* nenhuma API cloud obrigatória;
+* nenhum envio silencioso de conteúdo;
+* credenciais fora do código;
+* integrações externas futuras explícitas e substituíveis.
+
+---
+
+# Observabilidade
+
+O Nexus utiliza:
+
+* logging;
+* health;
+* runtime state;
+* snapshots;
+* EventBus;
+* security audit;
+* erros explícitos.
+
+---
+
+# Fronteira entre inteligência e execução
+
+Na `v0.3.1`:
+
+```text
+ModelRouter
+     │
+     ▼
+ModelProvider
+```
+
+não está conectado a:
+
+```text
+ToolExecutor
+SecurityGate
+TerminalSandboxTool
+Filesystem Tools
+```
+
+Essa separação é deliberada.
+
+---
+
+# Limitações atuais
+
+Ainda não existem:
+
+* Agent;
+* Planner;
+* tool calling por LLM;
+* memória persistente;
+* Knowledge Base;
+* voz;
+* visão;
+* GUI;
+* desktop automation;
+* provider discovery;
+* model discovery;
+* provider health probes;
+* fallback;
+* streaming;
+* cloud providers;
+* dependency doctor;
+* bootstrap automático;
+* update manager;
+* self-recovery;
+* distributed nodes;
+* device integration.
+
+---
+
+# Requirements e portabilidade
+
+O projeto não deve ser documentado para uma máquina específica.
+
+Baseline:
+
+> **Linux systems with constrained compute resources; no dependency on dedicated GPU.**
+
+Diagnósticos futuros devem detectar genericamente:
+
+* sistema operacional;
+* distribuição;
+* CPU architecture;
+* recursos;
+* Python;
+* dependências;
+* Ollama;
+* modelos;
+* Docker;
+* database;
+* paths;
+* permissions;
+* configuração;
+* serviços.
 
 ---
 
 # Critérios de qualidade para releases
 
-Cada release deve possuir:
-
-* escopo explícito;
-* responsabilidades definidas;
-* implementação mínima coerente;
-* testes unitários;
-* testes de integração;
-* regressão completa;
-* revisão arquitetural;
-* documentação atualizada;
-* dependências revisadas;
-* versão atualizada;
-* smoke test;
-* revisão Git;
-* commit versionado;
-* tag;
-* push do commit;
-* push da tag;
-* verificação remota.
-
-Fluxo oficial:
+Uma release só deve ser fechada quando houver consistência entre:
 
 ```text
-PLANEJAMENTO
-    │
-    ▼
-IMPLEMENTAÇÃO
-    │
-    ▼
-TESTES
-    │
-    ▼
-REGRESSÃO COMPLETA
-    │
-    ▼
-REVISÃO ARQUITETURAL
-    │
-    ▼
-README
-    │
-    ▼
-REQUIREMENTS
-    │
-    ▼
-VERSION
-    │
-    ▼
-SMOKE TEST
-    │
-    ▼
-GIT REVIEW
-    │
-    ▼
-COMMIT
-    │
-    ▼
-TAG
-    │
-    ▼
-PUSH
-    │
-    ▼
-VERIFICAÇÃO REMOTA
-```
-
-Nenhuma release deve ser considerada concluída enquanto existirem inconsistências conhecidas entre:
-
-```text
-implementação
-testes
-arquitetura
-documentação
+implementation
+tests
+architecture
+documentation
 requirements
 roadmap
+version
 Git
+tag
+remote
+```
+
+Fluxo:
+
+```text
+planning
+   │
+   ▼
+implementation
+   │
+   ▼
+tests
+   │
+   ▼
+architecture review
+   │
+   ▼
+README
+   │
+   ▼
+requirements
+   │
+   ▼
+version
+   │
+   ▼
+smoke
+   │
+   ▼
+Git verification
+   │
+   ▼
+versioned commit
+   │
+   ▼
+annotated tag
+   │
+   ▼
+push
+   │
+   ▼
+remote verification
 ```
 
 ---
@@ -3390,18 +3235,16 @@ Formato:
 Exemplos:
 
 ```text
-checkpoint: Nexus Core v0.1.8 terminal sandbox
-release: Nexus Core v0.1.9 health check
 feat: Nexus Core v0.2.0 Implement Connectivity and Runtime Modes
+
 feat: Nexus Core v0.2.1 Implement Runtime State Controller
+
 feat: Nexus Core v0.2.2 Implement Continuous Connectivity Monitoring
+
 feat: Nexus Core v0.2.3 Implement Automatic DEGRADED Runtime Detection
+
 feat: Nexus Core v0.2.4 Implement Environment and Runtime Configuration
-```
 
-Commit de release da `v0.3.0`:
-
-```text
 feat: Nexus Core v0.3.0 Implement Local Model Layer
 ```
 
@@ -3409,7 +3252,9 @@ feat: Nexus Core v0.3.0 Implement Local Model Layer
 
 # Tags
 
-Cada release possui uma tag própria.
+Releases versionadas utilizam tags Git.
+
+Exemplos:
 
 ```text
 v0.2.0
@@ -3420,403 +3265,75 @@ v0.2.4
 v0.3.0
 ```
 
-Mensagem da tag da `v0.3.0`:
-
-```text
-release: Nexus Core v0.3.0 Local Model Layer
-```
+A `v0.3.1` receberá sua tag somente no fechamento efetivo da release.
 
 ---
 
-# Segurança e limitações atuais
-
-A `v0.3.0` possui uma Local Model Layer funcional, mas o projeto permanece em desenvolvimento.
-
-Limitações atuais:
-
-* não existe provider abstraction;
-* não existe model router;
-* não existem providers online integrados;
-* não existe streaming da Local Model Layer;
-* não existe Agent;
-* não existe Planner;
-* não existe tool calling pelo LLM;
-* o modelo não possui acesso direto ao sistema operacional;
-* o modelo não possui acesso ao `SecurityGate`;
-* o modelo não possui acesso ao `ToolExecutor`;
-* o modelo não possui acesso ao terminal;
-* o modelo não possui acesso direto ao filesystem;
-* health da Local Model Layer não representa Ollama liveness;
-* não existe probe automático de Ollama no startup;
-* não existe model discovery automático;
-* não existe fallback de modelo;
-* não existe seleção automática de modelo;
-* Ollama é um serviço externo;
-* o Nexus não administra o lifecycle do daemon Ollama;
-* ferramentas continuam passando pelo `SecurityGate`;
-* conteúdo externo permanece não confiável;
-* prompt injection não representa autoridade;
-* terminal continua em sandbox Docker;
-* grupo `docker` permanece dívida de segurança;
-* `ONLINE` não representa autorização;
-* `DEGRADED` continua restrito à semântica de conectividade;
-* `DEGRADED` não representa saúde de modelos;
-* `latency_ms` de connectivity ainda não determina degradação;
-* não existem probes de providers;
-* não existe reload dinâmico de configuração;
-* não existem profiles formais;
-* `.env` não é carregado automaticamente;
-* memória persistente ainda não está implementada;
-* Knowledge Base ainda não está implementada;
-* voz ainda não está implementada;
-* visão ainda não está implementada;
-* automação de desktop ainda não está implementada;
-* interface gráfica ainda não está implementada.
-
-A documentação distingue deliberadamente:
-
-```text
-IMPLEMENTADO
-```
-
-de:
-
-```text
-PLANEJADO
-```
-
----
-
-# Escopo da v0.3.0
-
-A release introduz:
-
-```text
-Local Model Layer
-```
-
-Ela não introduz:
-
-```text
-Provider Abstraction
-Model Router
-Online Providers
-Agent
-Planner
-Tool Calling
-Persistent Memory
-Knowledge Base
-Voice
-Vision
-Desktop Automation
-GUI
-```
-
-Seu boundary termina em:
-
-```text
-LocalModelResponse
-```
-
-A próxima responsabilidade arquitetural começa somente na `v0.3.1`.
-
----
-
-# Tecnologias atuais
-
-Baseline:
-
-```text
-Primary Platform:    Linux
-Runtime:             Python 3.12
-Database:            SQLite
-Tests:               pytest
-Sandbox:             Docker
-Local Model Runtime: Ollama
-Reference Model:     qwen3:1.7b
-Version Control:     Git
-Remote:              GitHub
-```
-
----
-
-# Tecnologias candidatas futuras
-
-Dependendo da evolução:
-
-```text
-Hermes Agent
-whisper.cpp
-openWakeWord
-Piper
-ComfyUI
-PySide6
-AppArmor
-polkit
-systemd
-Podman rootless
-Docker rootless
-```
-
-Ollama deixa de ser apenas uma tecnologia candidata na `v0.3.0` e passa a ser o backend local de referência da Local Model Layer.
-
-Tecnologias futuras não representam compromisso definitivo antes da revisão arquitetural correspondente.
-
----
-
-# Filosofia Local First
-
-O Nexus Core deve continuar útil quando:
-
-```text
-Internet unavailable
-```
-
-O sistema não deve depender estruturalmente de:
-
-* APIs externas;
-* contas cloud;
-* conectividade constante;
-* serviços remotos obrigatórios.
-
-A `v0.3.0` reforça esse objetivo ao introduzir inteligência local real.
-
-Fluxo local:
-
-```text
-Application
-    │
-    ▼
-Local Model Layer
-    │
-    ▼
-127.0.0.1
-    │
-    ▼
-Ollama
-    │
-    ▼
-Local Model
-```
-
-Serviços online poderão complementar o Nexus.
-
-Eles não devem substituir sua fundação local.
-
----
-
-# Privacidade
-
-O objetivo de longo prazo é manter localmente, sempre que possível:
-
-* processamento;
-* contexto;
-* memória;
-* voz;
-* conhecimento;
-* documentos;
-* automações;
-* preferências.
-
-A `v0.3.0` mantém a primeira comunicação de modelo restrita a loopback.
-
-Integrações online futuras deverão ser:
-
-* opcionais;
-* explícitas;
-* governadas;
-* observáveis;
-* limitadas ao necessário.
-
-Credenciais futuras exigirão tratamento específico.
-
----
-
-# Observabilidade
-
-O Nexus Core deverá manter rastreabilidade de:
-
-* lifecycle;
-* runtime;
-* conectividade;
-* configuração;
-* ferramentas;
-* autorizações;
-* falhas;
-* mudanças de estado;
-* modelos;
-* providers futuros;
-* memória futura;
-* operações futuras de agentes.
-
-Observabilidade não deve implicar coleta indiscriminada de conteúdo sensível.
-
----
-
-# Governança de ferramentas
-
-Nenhuma ferramenta recebe autoridade apenas por estar registrada.
-
-```text
-Tool requested
-      │
-      ▼
-ToolRegistry
-      │
-      ▼
-ToolExecutor
-      │
-      ▼
-SecurityGate
-      │
-      ├── ALLOW
-      │     │
-      │     ▼
-      │   EXECUTE
-      │
-      └── DENY
-            │
-            ▼
-          BLOCK
-```
-
-A Local Model Layer não altera essa cadeia.
-
----
-
-# Fronteira entre inteligência e execução
-
-O princípio arquitetural é:
-
-```text
-LLM proposes
-System decides
-Security authorizes
-Tool executes
-```
-
-Nunca:
-
-```text
-LLM directly executes arbitrary host commands
-```
-
-Na `v0.3.0` o boundary é ainda mais restrito:
-
-```text
-LLM responds
-```
-
-Não existe tool calling.
-
----
-
-# Exemplo de arquitetura futura
-
-```text
-User
- │
- ▼
-Model Layer
- │
- ▼
-Planner
- │
- ▼
-Tool Request
- │
- ▼
-ToolRegistry
- │
- ▼
-ToolExecutor
- │
- ▼
-SecurityGate
- │
- ├── DENY ─────► blocked
- │
- └── ALLOW
-       │
-       ▼
-      Tool
-       │
-       ▼
- Controlled Execution
-```
-
-Essa arquitetura é futura e não deve ser confundida com a funcionalidade entregue na `v0.3.0`.
-
----
-
-# Próximo passo
-
-A próxima release planejada é:
-
-```text
-v0.3.1 — Provider Abstraction & Model Routing
-```
-
-Objetivo:
-
-* separar a Local Model Layer da implementação concreta do provider;
-* criar contratos formais de provider;
-* preparar providers adicionais;
-* introduzir model routing controlado;
-* preservar local-first;
-* tratar disponibilidade;
-* definir fallback;
-* manter credenciais fora das abstrações atuais de configuração operacional;
-* não introduzir ainda autoridade direta do modelo sobre ferramentas.
-
-Arquitetura conceitual:
-
-```text
-Model Request
-     │
-     ▼
-Model Router
-     │
-     ├── Local Provider
-     │
-     └── Online Provider
-```
-
-Tool calling permanece reservado para:
-
-```text
-v0.3.2 — Controlled Agent & Tool Calling
-```
+# Política de desenvolvimento
+
+Mudanças devem respeitar:
+
+* uma capacidade pequena por release;
+* testes antes do fechamento;
+* nenhuma mudança silenciosa de arquitetura;
+* nenhuma ampliação acidental de escopo;
+* nenhuma dependência proprietária obrigatória;
+* nenhuma alteração retroativa de release já publicada sem patch deliberado;
+* compatibilidade quando contratos públicos são preservados.
 
 ---
 
 # Licença
 
-A licença do projeto será definida posteriormente.
+O Nexus Core é desenvolvido com a intenção de ser totalmente open source.
+
+Enquanto não existir um arquivo formal:
+
+```text
+LICENSE
+```
+
+uma licença open-source específica ainda não foi formalmente atribuída ao código.
+
+Antes da distribuição pública, deve ser escolhida e adicionada uma licença adequada.
+
+Licenças de:
+
+* Ollama;
+* Docker;
+* bibliotecas;
+* ferramentas;
+* model weights;
+
+devem ser consideradas separadamente.
 
 ---
 
 # Status
 
 ```text
-Nexus Core
-──────────────────────────────────────────────────────
-Stable Version:       v0.3.0
-Current Capability:   Local Model Layer
-Next Development:     v0.3.1
-Runtime:              Python 3.12
-Database:             SQLite
-Sandbox:              Docker
-Local Model Runtime:  Ollama
-Reference Model:      qwen3:1.7b
-Testing:              pytest
-Tests:                338 passed
-Development Status:   ACTIVE
-──────────────────────────────────────────────────────
+────────────────────────────────────────────────────────
+Project:               Nexus Core
+Release Target:        v0.3.1
+Release Name:          Provider Abstraction & Model Routing
+Published Stable:      v0.3.1
+Implementation:        COMPLETE
+Release Preparation:   COMPLETE
+Tests:                 493 passed
+Primary Platform:      Linux
+Runtime Baseline:      Python 3.12
+Database:              SQLite
+Sandbox:               Docker
+Model Runtime:         Ollama
+Reference Model:       qwen3:1.7b
+Production Provider:   ollama
+Agent / Tool Calling:  NOT IMPLEMENTED
+Development Status:    ACTIVE
+────────────────────────────────────────────────────────
 ```
 
 ---
 
 **Nexus Core**
 
-Assistente pessoal de inteligência artificial **local-first**.
+Assistente pessoal de inteligência artificial **local-first**, construído sobre segurança, modularidade, controle operacional e evolução incremental.

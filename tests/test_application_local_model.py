@@ -4,40 +4,61 @@ from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
 
 
-class FakeLocalModelClient:
-    pass
+class FakeOllamaProvider:
+    provider_id = "ollama"
 
 
-def test_application_does_not_build_local_model_client_on_construction(
+class FakeModelRouter:
+    def __init__(self):
+        self.provider = FakeOllamaProvider()
+        self.resolve_calls = []
+
+    def resolve(self, provider_id):
+        self.resolve_calls.append(provider_id)
+
+        if provider_id != "ollama":
+            raise AssertionError(
+                f"unexpected provider_id: {provider_id}"
+            )
+
+        return self.provider
+
+
+def test_legacy_local_model_client_remains_lazy(
     monkeypatch,
 ):
     calls = []
+    fake_router = FakeModelRouter()
 
-    def fake_build_local_model_client(settings):
+    def fake_build_model_router(settings):
         calls.append(settings)
-        return FakeLocalModelClient()
+        return fake_router
 
     monkeypatch.setattr(
         application_module,
-        "build_local_model_client",
-        fake_build_local_model_client,
-        raising=False,
+        "build_model_router",
+        fake_build_model_router,
     )
 
     app = NexusApplication()
 
     try:
         assert calls == []
+
+        client = app.local_model_client
+
+        assert client is fake_router.provider
+        assert len(calls) == 1
     finally:
         app.database.close()
 
 
-def test_application_builds_local_model_client_lazily(
+def test_legacy_local_model_client_uses_configured_settings(
     monkeypatch,
 ):
     configured_settings = load_settings({})
-    fake_client = FakeLocalModelClient()
     calls = []
+    fake_router = FakeModelRouter()
 
     monkeypatch.setattr(
         application_module,
@@ -45,15 +66,14 @@ def test_application_builds_local_model_client_lazily(
         configured_settings,
     )
 
-    def fake_build_local_model_client(settings):
+    def fake_build_model_router(settings):
         calls.append(settings)
-        return fake_client
+        return fake_router
 
     monkeypatch.setattr(
         application_module,
-        "build_local_model_client",
-        fake_build_local_model_client,
-        raising=False,
+        "build_model_router",
+        fake_build_model_router,
     )
 
     app = NexusApplication()
@@ -61,27 +81,29 @@ def test_application_builds_local_model_client_lazily(
     try:
         client = app.local_model_client
 
-        assert client is fake_client
+        assert client is fake_router.provider
         assert calls == [configured_settings]
+        assert fake_router.resolve_calls == [
+            "ollama"
+        ]
     finally:
         app.database.close()
 
 
-def test_application_caches_local_model_client(
+def test_legacy_local_model_client_shares_cached_router(
     monkeypatch,
 ):
-    fake_client = FakeLocalModelClient()
     calls = []
+    fake_router = FakeModelRouter()
 
-    def fake_build_local_model_client(settings):
+    def fake_build_model_router(settings):
         calls.append(settings)
-        return fake_client
+        return fake_router
 
     monkeypatch.setattr(
         application_module,
-        "build_local_model_client",
-        fake_build_local_model_client,
-        raising=False,
+        "build_model_router",
+        fake_build_model_router,
     )
 
     app = NexusApplication()
@@ -90,8 +112,8 @@ def test_application_caches_local_model_client(
         first = app.local_model_client
         second = app.local_model_client
 
-        assert first is fake_client
-        assert second is fake_client
+        assert first is fake_router.provider
+        assert second is fake_router.provider
         assert first is second
         assert len(calls) == 1
     finally:

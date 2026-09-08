@@ -7,8 +7,8 @@ from nexus.core.runtime_state import RuntimeStateController
 from nexus.database.database import Database
 from nexus.events import EventBus, EventType
 from nexus.monitoring.health import HealthStatus
-from nexus.models.local_model_factory import (
-    build_local_model_client,
+from nexus.models.model_factory import (
+    build_model_router,
 )
 from nexus.security import SecurityGate
 from nexus.tools import (
@@ -51,21 +51,27 @@ class NexusApplication:
 
         self.runtime_state = RuntimeStateController()
 
-        self._local_model_client = None
+        self._model_router = None
 
         self._initialized = False
         self._shutdown_complete = False
 
     @property
-    def local_model_client(self):
-        if self._local_model_client is None:
-            self._local_model_client = (
-                build_local_model_client(
+    def model_router(self):
+        if self._model_router is None:
+            self._model_router = (
+                build_model_router(
                     settings
                 )
             )
 
-        return self._local_model_client
+        return self._model_router
+
+    @property
+    def local_model_client(self):
+        return self.model_router.resolve(
+            "ollama"
+        )
 
     def initialize(self):
         if self._initialized:
@@ -81,7 +87,7 @@ class NexusApplication:
         self.health.event_bus = True
         self.health.security_gate = True
         self.health.tool_registry = True
-        self.health.local_model_layer = True
+        self.health.model_layer = True
 
         self.database.initialize()
         self.health.database = True
