@@ -3527,7 +3527,7 @@ A próxima responsabilidade arquitetural começa somente na `v0.3.1`.
 Baseline:
 
 ```text
-Operating System:    Ubuntu 24.04 LTS
+Primary Platform:    Linux
 Runtime:             Python 3.12
 Database:            SQLite
 Tests:               pytest
