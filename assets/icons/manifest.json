@@ -1,0 +1,49 @@
+{
+  "name": "Nexus Line — Core",
+  "family": "Nexus Line",
+  "product": "Nexus Core",
+  "version": "1.0.0",
+  "grid": 24,
+  "strokeWidth": 1.75,
+  "strokeLinecap": "round",
+  "strokeLinejoin": "round",
+  "colorMode": "currentColor",
+  "palette": {
+    "primary": "#722F37",
+    "accent": "#A86B76",
+    "canvas": "#F7F2F3"
+  },
+  "sprite": "nexus-core-icons.svg",
+  "categories": {
+    "intelligence": [
+      "core",
+      "agent",
+      "model",
+      "router",
+      "memory",
+      "knowledge"
+    ],
+    "interaction": [
+      "voice",
+      "vision",
+      "connectivity"
+    ],
+    "operations": [
+      "runtime",
+      "tools",
+      "terminal",
+      "events",
+      "settings",
+      "health"
+    ],
+    "trust": [
+      "security",
+      "offline",
+      "audit"
+    ],
+    "infrastructure": [
+      "database",
+      "node"
+    ]
+  }
+}

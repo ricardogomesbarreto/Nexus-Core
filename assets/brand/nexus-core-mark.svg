@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Nexus Core</title>
+  <desc id="desc">Marca Nexus em vinho com núcleo local conectado</desc>
+  <defs>
+    <linearGradient id="wine" x1="36" y1="32" x2="220" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9C5663"/>
+      <stop offset=".48" stop-color="#722F37"/>
+      <stop offset="1" stop-color="#43171E"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="72" y1="40" x2="184" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E5BEC4"/>
+      <stop offset="1" stop-color="#A86B76"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#wine)" d="M128 18 226 75l-36 21-62-36-62 36-36-21 98-57Z"/>
+  <path fill="url(#wine)" d="m226 75-36 21v64l36 21V75Z"/>
+  <path fill="url(#wine)" d="m226 181-98 57-98-57 36-21 62 36 62-36 36 21Z"/>
+  <path fill="url(#wine)" d="M30 75v106l36-21V96L30 75Z"/>
+  <circle cx="128" cy="128" r="21" fill="none" stroke="url(#glow)" stroke-width="8"/>
+  <circle cx="128" cy="128" r="5" fill="#722F37"/>
+  <path d="M128 107V91M149 128h16M128 149v16M107 128H91" fill="none" stroke="#722F37" stroke-width="7" stroke-linecap="round"/>
+</svg>

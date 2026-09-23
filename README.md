@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/brand/nexus-core-mark.svg" alt="Nexus Core" width="180"></p>
+
 # Nexus Core
 
 Assistente pessoal de inteligência artificial **local-first, modular, seguro, multimodal e orientado a agentes**, desenvolvido incrementalmente sobre fronteiras explícitas entre inteligência, autorização e execução.
@@ -10,6 +12,8 @@ Assistente pessoal de inteligência artificial **local-first, modular, seguro, m
 > **Primary Platform:** Linux
 > **Local Model Runtime:** Ollama
 > **Reference Model:** `qwen3:1.7b`
+>
+> [Identidade Nexus Line](docs/ICONOGRAFIA.md) · 20 ícones autorais para IA local, operação e segurança
 
 ---
 
