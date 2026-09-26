@@ -2,6 +2,16 @@
 
 O Nexus Core adota a família visual **Nexus Line** com uma extensão própria para inteligência artificial local, controle operacional e segurança. Estes ativos preparam a futura interface nativa sem antecipar funcionalidades ainda não implementadas.
 
+## Identidade da aplicação
+
+- **Desktop Application:** Native
+- **Web Application:** No
+- **Primary Platform:** Linux
+- **Primary Visual Identity:** Wine Red
+- **Primary Color:** `#722F37`
+
+O Nexus Core é projetado como aplicação desktop nativa. O uso de HTML no `README.md` existe exclusivamente para renderização da documentação no GitHub e não define uma arquitetura de aplicação web.
+
 ## Contrato visual
 
 | Propriedade | Padrão |
@@ -27,27 +37,27 @@ O sprite [`assets/icons/nexus-core-icons.svg`](../assets/icons/nexus-core-icons.
 
 O catálogo legível por ferramentas está em [`assets/icons/manifest.json`](../assets/icons/manifest.json). A marca vetorial está em [`assets/brand/nexus-core-mark.svg`](../assets/brand/nexus-core-mark.svg).
 
-## Uso futuro em uma interface SVG
+## Desktop Visual Identity Foundation
 
-```html
-<svg class="nexus-icon" aria-hidden="true">
-  <use href="/assets/icons/nexus-core-icons.svg#icon-agent"></use>
-</svg>
-```
+A fundação visual desktop adiciona os seguintes assets:
 
-```css
-.nexus-icon {
-  width: 24px;
-  height: 24px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-```
+- [`assets/brand/nexus-core-logo.png`](../assets/brand/nexus-core-logo.png) — logotipo horizontal oficial com transparência;
+- [`assets/icons/nexus-core.svg`](../assets/icons/nexus-core.svg) — application icon;
+- [`assets/icons/nexus-core-symbolic.svg`](../assets/icons/nexus-core-symbolic.svg) — symbolic icon;
+- [`assets/icons/desktop-manifest.json`](../assets/icons/desktop-manifest.json) — catálogo dos ícones desktop;
+- [`assets/icons/ui/`](../assets/icons/ui/) — conjunto essencial de 18 ícones para a futura interface nativa.
 
-Controles apenas visuais devem receber nome acessível no botão. Situações críticas não podem depender apenas de cor ou ícone.
+Os 18 ícones UI são: `add`, `attention`, `back`, `close`, `confirm`, `credentials`, `delete`, `edit`, `forward`, `history`, `menu`, `notifications`, `overview`, `profile`, `protected-access`, `refresh`, `search` e `system`.
+
+## Uso futuro na interface desktop nativa
+
+Os arquivos SVG são assets vetoriais locais destinados à futura camada gráfica desktop nativa do Nexus Core.
+
+A camada de interface deverá carregar e renderizar esses assets diretamente por meio do toolkit gráfico adotado para o desktop, sem navegador, servidor web, Electron, React ou framework web.
+
+A iconografia deve preservar proporção, legibilidade, significado semântico e consistência visual em diferentes escalas de interface.
+
+Controles apenas visuais devem receber identificação acessível. Situações críticas não podem depender apenas de cor ou ícone.
 
 ## Coerência entre produtos
 

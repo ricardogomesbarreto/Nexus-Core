@@ -1,0 +1,103 @@
+{
+  "name": "Nexus Core Desktop Icons",
+  "platform": "desktop-native",
+  "web_application": false,
+  "format": "SVG",
+  "source_grid": "24x24",
+  "stroke_width": 1.75,
+  "primary_color": "#722F37",
+  "application_icon": "nexus-core.svg",
+  "symbolic_icon": "nexus-core-symbolic.svg",
+  "icons": [
+    {
+      "id": "add",
+      "label": "Adicionar",
+      "path": "ui/add.svg"
+    },
+    {
+      "id": "attention",
+      "label": "Atenção",
+      "path": "ui/attention.svg"
+    },
+    {
+      "id": "back",
+      "label": "Voltar",
+      "path": "ui/back.svg"
+    },
+    {
+      "id": "close",
+      "label": "Fechar",
+      "path": "ui/close.svg"
+    },
+    {
+      "id": "confirm",
+      "label": "Confirmar",
+      "path": "ui/confirm.svg"
+    },
+    {
+      "id": "credentials",
+      "label": "Credenciais",
+      "path": "ui/credentials.svg"
+    },
+    {
+      "id": "delete",
+      "label": "Excluir",
+      "path": "ui/delete.svg"
+    },
+    {
+      "id": "edit",
+      "label": "Editar",
+      "path": "ui/edit.svg"
+    },
+    {
+      "id": "forward",
+      "label": "Avançar",
+      "path": "ui/forward.svg"
+    },
+    {
+      "id": "history",
+      "label": "Histórico e horário",
+      "path": "ui/history.svg"
+    },
+    {
+      "id": "menu",
+      "label": "Menu",
+      "path": "ui/menu.svg"
+    },
+    {
+      "id": "notifications",
+      "label": "Notificações",
+      "path": "ui/notifications.svg"
+    },
+    {
+      "id": "overview",
+      "label": "Visão geral",
+      "path": "ui/overview.svg"
+    },
+    {
+      "id": "profile",
+      "label": "Perfil",
+      "path": "ui/profile.svg"
+    },
+    {
+      "id": "protected-access",
+      "label": "Acesso protegido",
+      "path": "ui/protected-access.svg"
+    },
+    {
+      "id": "refresh",
+      "label": "Atualizar",
+      "path": "ui/refresh.svg"
+    },
+    {
+      "id": "search",
+      "label": "Pesquisar",
+      "path": "ui/search.svg"
+    },
+    {
+      "id": "system",
+      "label": "Sistema",
+      "path": "ui/system.svg"
+    }
+  ]
+}

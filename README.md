@@ -1,19 +1,29 @@
-<p align="center"><img src="assets/brand/nexus-core-mark.svg" alt="Nexus Core" width="180"></p>
+<p align="center">
+  <img
+    src="assets/brand/nexus-core-logo.png"
+    alt="Nexus Core"
+    width="980"
+  >
+</p>
 
 # Nexus Core
 
 Assistente pessoal de inteligência artificial **local-first, modular, seguro, multimodal e orientado a agentes**, desenvolvido incrementalmente sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Release atual:** `v0.3.1 — Provider Abstraction & Model Routing`
-> **Última release publicada:** `v0.3.1 — Provider Abstraction & Model Routing`
-> **Próximo marco planejado:** `v0.3.2 — Controlled Agent & Tool Calling`
-> **Status da v0.3.1:** release concluída e validada
-> **Test baseline:** `493 passed`
+> **Release atual:** `v0.3.1.1 — Desktop Visual Identity Foundation`
+> **Última release publicada:** `v0.3.1.1 — Desktop Visual Identity Foundation`
+> **Próximo marco planejado:** `v0.3.2 — Security Resource Mediation`
+> **Status da v0.3.1.1:** implementação concluída e validada
+> **Test baseline:** `497 passed`
 > **Primary Platform:** Linux
 > **Local Model Runtime:** Ollama
 > **Reference Model:** `qwen3:1.7b`
+> **Desktop Application:** Native
+> **Web Application:** No
+> **Primary Visual Identity:** Wine Red
+> **Primary Color:** `#722F37`
 >
-> [Identidade Nexus Line](docs/ICONOGRAFIA.md) · 20 ícones autorais para IA local, operação e segurança
+> [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
 
 ---
 
@@ -2789,40 +2799,87 @@ Cada release deve adicionar uma responsabilidade pequena, clara e verificável.
 
 ---
 
-## v0.3.2 — Controlled Agent & Tool Calling
+## v0.3.2 — Security Resource Mediation
 
 Objetivo:
 
-introduzir o primeiro Agent/Planner controlado.
+introduzir mediação genérica de recursos sensíveis antes da criação do primeiro Agent/Planner.
+
+Escopo planejado:
+
+* permitir que ferramentas declarem explicitamente os recursos sensíveis que utilizam;
+* remover a dependência de segurança baseada apenas em `kwargs["path"]`;
+* mediar `TerminalSandboxTool.workspace`;
+* validar defaults implícitos de paths;
+* impedir bypass de `PathSecurity`;
+* preservar `SecurityGate` como fronteira obrigatória antes da execução.
+
+---
+
+## v0.3.3 — Explicit Confirmation & Authorization
+
+Objetivo:
+
+implementar o fluxo explícito de autorização humana para decisões `CONFIRM`.
+
+Escopo planejado:
+
+* distinguir `ALLOW`, `CONFIRM` e `DENY` de ponta a ponta;
+* impedir execução enquanto uma confirmação necessária estiver pendente;
+* registrar decisões de autorização de forma auditável;
+* manter autorização separada da lógica do modelo.
+
+---
+
+## v0.3.4 — Structured Tool Contracts
+
+Objetivo:
+
+formalizar contratos estruturados para ferramentas antes da integração com agentes.
+
+Escopo planejado:
+
+* definir entradas declaradas e validáveis;
+* declarar recursos sensíveis explicitamente;
+* declarar requisitos de permissão;
+* estruturar resultados e erros;
+* manter contratos auditáveis e independentes do modelo.
+
+---
+
+## v0.3.5 — Controlled Agent & Tool Calling
+
+Objetivo:
+
+introduzir o primeiro Agent/Planner controlado sobre as fronteiras de segurança já estabelecidas.
 
 Arquitetura alvo:
 
 ```text
 Model Layer
-      │
-      ▼
+     │
+     ▼
 Agent / Planner
-      │
-      ▼
+     │
+     ▼
 ToolRegistry
-      │
-      ▼
+     │
+     ▼
 ToolExecutor
-      │
-      ▼
+     │
+     ▼
 SecurityGate
-      │
-      ▼
+     │
+     ▼
 Tool
 ```
 
-Pré-requisito obrigatório:
+Pré-requisitos obrigatórios:
 
-* corrigir mediação genérica de recursos;
-* remover dependência de segurança baseada apenas em `kwargs["path"]`;
-* mediar `TerminalSandboxTool.workspace`;
-* validar defaults implícitos de paths;
-* impedir bypass de `PathSecurity`.
+* `v0.3.2 — Security Resource Mediation`;
+* `v0.3.3 — Explicit Confirmation & Authorization`;
+* `v0.3.4 — Structured Tool Contracts`;
+* nenhuma execução direta `ModelProvider → Tool`.
 
 ---
 
@@ -3267,9 +3324,12 @@ v0.2.2
 v0.2.3
 v0.2.4
 v0.3.0
+v0.3.1
 ```
 
-A `v0.3.1` receberá sua tag somente no fechamento efetivo da release.
+A `v0.3.1` foi fechada com tag anotada.
+
+A `v0.3.1.1` receberá sua tag somente após validação completa e fechamento efetivo da release.
 
 ---
 
@@ -3318,12 +3378,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.1
-Release Name:          Provider Abstraction & Model Routing
-Published Stable:      v0.3.1
+Release Target:        v0.3.1.1
+Release Name:          Desktop Visual Identity Foundation
+Published Stable:      v0.3.1.1
 Implementation:        COMPLETE
 Release Preparation:   COMPLETE
-Tests:                 493 passed
+Tests:                 497 passed
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              SQLite
