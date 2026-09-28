@@ -1,7 +1,7 @@
 import math
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -34,8 +34,16 @@ class Settings:
     data_dir: Path = PROJECT_ROOT / "data"
     logs_dir: Path = PROJECT_ROOT / "logs"
 
-    database_dir: Path = PROJECT_ROOT / "data" / "database"
-    database_file: Path = PROJECT_ROOT / "data" / "database" / "nexus.db"
+    database_provider: str = "postgresql"
+    database_host: str = "127.0.0.1"
+    database_port: int = 5432
+    database_name: str = "nexus"
+    database_user: str = "nexus"
+    database_password: str | None = field(
+        default=None,
+        repr=False,
+    )
+    database_connect_timeout: float = 5.0
 
     offline_mode: bool = True
 
@@ -134,6 +142,103 @@ def load_settings(
                 "deve ser maior ou igual a 2"
             )
 
+    database_provider = defaults.database_provider
+    if "NEXUS_DATABASE_PROVIDER" in source:
+        database_provider = source[
+            "NEXUS_DATABASE_PROVIDER"
+        ].strip().lower()
+
+        if database_provider != "postgresql":
+            raise ConfigurationError(
+                "NEXUS_DATABASE_PROVIDER deve ser 'postgresql'"
+            )
+
+    database_host = defaults.database_host
+    if "NEXUS_DATABASE_HOST" in source:
+        database_host = source[
+            "NEXUS_DATABASE_HOST"
+        ].strip().lower()
+
+        if database_host not in {
+            "127.0.0.1",
+            "localhost",
+            "::1",
+        }:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_HOST deve apontar para loopback local"
+            )
+
+    database_port = defaults.database_port
+    if "NEXUS_DATABASE_PORT" in source:
+        try:
+            database_port = int(
+                source["NEXUS_DATABASE_PORT"]
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_PORT deve ser um inteiro"
+            ) from exc
+
+        if not 1 <= database_port <= 65535:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_PORT deve estar entre 1 e 65535"
+            )
+
+    database_name = defaults.database_name
+    if "NEXUS_DATABASE_NAME" in source:
+        database_name = source[
+            "NEXUS_DATABASE_NAME"
+        ].strip()
+
+        if not database_name:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_NAME não pode ser vazio"
+            )
+
+    database_user = defaults.database_user
+    if "NEXUS_DATABASE_USER" in source:
+        database_user = source[
+            "NEXUS_DATABASE_USER"
+        ].strip()
+
+        if not database_user:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_USER não pode ser vazio"
+            )
+
+    database_password = defaults.database_password
+    if "NEXUS_DATABASE_PASSWORD" in source:
+        database_password = source[
+            "NEXUS_DATABASE_PASSWORD"
+        ]
+
+        if not database_password.strip():
+            raise ConfigurationError(
+                "NEXUS_DATABASE_PASSWORD não pode ser vazio"
+            )
+
+    database_connect_timeout = (
+        defaults.database_connect_timeout
+    )
+    if "NEXUS_DATABASE_CONNECT_TIMEOUT" in source:
+        try:
+            database_connect_timeout = float(
+                source["NEXUS_DATABASE_CONNECT_TIMEOUT"]
+            )
+        except ValueError as exc:
+            raise ConfigurationError(
+                "NEXUS_DATABASE_CONNECT_TIMEOUT deve ser um número"
+            ) from exc
+
+        if (
+            not math.isfinite(database_connect_timeout)
+            or database_connect_timeout <= 0
+        ):
+            raise ConfigurationError(
+                "NEXUS_DATABASE_CONNECT_TIMEOUT "
+                "deve ser finito e maior que zero"
+            )
+
     local_model_name = defaults.local_model_name
     if "NEXUS_LOCAL_MODEL_NAME" in source:
         local_model_name = source[
@@ -182,6 +287,13 @@ def load_settings(
 
     return Settings(
         node_name=node_name,
+        database_provider=database_provider,
+        database_host=database_host,
+        database_port=database_port,
+        database_name=database_name,
+        database_user=database_user,
+        database_password=database_password,
+        database_connect_timeout=database_connect_timeout,
         offline_mode=offline_mode,
         connectivity_monitor_interval=monitor_interval,
         connectivity_confirmation_threshold=confirmation_threshold,

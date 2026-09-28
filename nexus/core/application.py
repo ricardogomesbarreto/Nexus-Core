@@ -23,10 +23,13 @@ class NexusApplication:
     Aplicação principal do Nexus Core.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        database: Database,
+    ):
         self.logger = setup_logger()
 
-        self.database = Database()
+        self.database = database
 
         self.event_bus = EventBus()
 

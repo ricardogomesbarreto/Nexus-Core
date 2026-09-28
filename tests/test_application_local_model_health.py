@@ -1,6 +1,7 @@
 import nexus.core.application as application_module
 
 from nexus.core.application import NexusApplication
+from tests.fakes import FakeDatabase
 from nexus.monitoring.health import HealthStatus
 
 
@@ -59,7 +60,9 @@ def test_application_initializes_local_model_layer_without_building_router(
         fake_build_model_router,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         assert app.health.local_model_layer is False

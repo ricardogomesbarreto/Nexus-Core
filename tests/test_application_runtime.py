@@ -1,11 +1,14 @@
 from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
 from nexus.core.connectivity import ConnectivityManager
+from tests.fakes import FakeDatabase
 from nexus.core.runtime import RuntimeMode
 from nexus.events import EventType
 
 def test_application_has_connectivity_manager():
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         assert app.connectivity_manager is not None
@@ -20,7 +23,9 @@ def test_offline_mode_configuration():
 
 
 def test_default_runtime_is_offline():
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         assert app.health.runtime_mode == RuntimeMode.OFFLINE
@@ -34,7 +39,9 @@ def test_application_initialize_forced_offline(monkeypatch):
         load_settings({}),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -71,7 +78,9 @@ def test_application_initialize_online(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -107,7 +116,9 @@ def test_application_initialize_online_events(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -158,7 +169,9 @@ def test_application_initialize_offline_events(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -203,7 +216,9 @@ def test_application_initialize_forced_offline_events(monkeypatch):
         FakeSettings(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -242,7 +257,9 @@ def test_application_forced_offline_event_data(monkeypatch):
         FakeSettings(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -290,7 +307,9 @@ def test_application_runtime_health_consistency(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -332,7 +351,9 @@ def test_application_offline_health_consistency(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -373,7 +394,9 @@ def test_application_online_event_data(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -420,7 +443,9 @@ def test_application_offline_event_data(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -467,7 +492,9 @@ def test_application_runtime_mode_changed_online_data(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -516,7 +543,9 @@ def test_application_runtime_mode_changed_offline_data(monkeypatch):
         lambda self: FakeStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(

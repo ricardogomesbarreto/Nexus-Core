@@ -54,7 +54,7 @@ def test_main_uses_generic_model_layer_status(
 
     monkeypatch.setattr(
         main_module,
-        "NexusApplication",
+        "build_application",
         lambda: app,
     )
 

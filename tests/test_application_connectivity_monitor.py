@@ -2,6 +2,7 @@ import pytest
 
 from nexus.core.application import NexusApplication
 from nexus.core.connectivity import ConnectivityManager
+from tests.fakes import FakeDatabase
 from nexus.core.runtime import RuntimeMode
 from nexus.events import EventType
 
@@ -19,7 +20,9 @@ class OfflineStatus:
 
 
 def test_application_connectivity_monitor_is_none_before_initialize():
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         assert app.connectivity_monitor is None
@@ -42,7 +45,9 @@ def test_application_forced_offline_does_not_start_connectivity_monitor(
         FakeSettings(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -73,7 +78,9 @@ def test_application_online_starts_connectivity_monitor(
         lambda self: OnlineStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -106,7 +113,9 @@ def test_application_initial_offline_starts_connectivity_monitor(
         lambda self: OfflineStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -142,7 +151,9 @@ def test_application_monitor_detects_offline_to_online_transition(
         ]
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     monkeypatch.setattr(
         app.connectivity_manager,
@@ -262,7 +273,9 @@ def test_application_monitor_detects_online_to_offline_transition(
         ]
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     monkeypatch.setattr(
         app.connectivity_manager,
@@ -380,7 +393,9 @@ def test_application_shutdown_stops_monitor_before_system_stop(
         lambda self: OnlineStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     lifecycle = []
 
     app.initialize()
@@ -430,7 +445,9 @@ def test_application_shutdown_does_not_complete_if_monitor_stop_times_out(
         lambda self: OnlineStatus(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     lifecycle = []
 
     app.initialize()
@@ -492,7 +509,9 @@ def test_application_rejects_repeated_initialize(
         FakeSettings(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         app.initialize()
@@ -523,7 +542,9 @@ def test_application_shutdown_is_idempotent(
         FakeSettings(),
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     events = []
 
     app.event_bus.subscribe(
@@ -564,7 +585,9 @@ def test_application_passes_connectivity_confirmation_threshold(
         ]
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     monkeypatch.setattr(
         app.connectivity_manager,

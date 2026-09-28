@@ -1,5 +1,7 @@
 from nexus.config.settings import settings
 from nexus.core.application import NexusApplication
+from nexus.database.database import Database
+from nexus.database.factory import build_database_provider
 
 
 WIDTH = 46
@@ -9,12 +11,21 @@ def status_line(label, status):
     return f"║ {label:<17} {status:<25}║"
 
 
-def main():
-    app = NexusApplication()
+def build_application() -> NexusApplication:
+    provider = build_database_provider(settings)
+    database = Database(provider)
 
-    app.initialize()
+    return NexusApplication(
+        database=database,
+    )
+
+
+def main():
+    app = build_application()
 
     try:
+        app.initialize()
+
         health = app.status()
         runtime_snapshot = health.runtime_snapshot()
 

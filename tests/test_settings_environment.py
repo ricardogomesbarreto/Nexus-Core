@@ -201,7 +201,7 @@ def test_load_settings_rejects_invalid_confirmation_threshold_syntax(
         )
 
 
-def test_load_settings_ignores_unsupported_environment_overrides():
+def test_load_settings_rejects_legacy_sqlite_configuration_surface():
     settings = load_settings(
         {
             "NEXUS_APP_NAME": "Compromised Nexus",
@@ -219,11 +219,13 @@ def test_load_settings_ignores_unsupported_environment_overrides():
     assert settings.project_root == PROJECT_ROOT
     assert settings.data_dir == PROJECT_ROOT / "data"
     assert settings.logs_dir == PROJECT_ROOT / "logs"
-    assert settings.database_dir == PROJECT_ROOT / "data" / "database"
-    assert (
-        settings.database_file
-        == PROJECT_ROOT / "data" / "database" / "nexus.db"
-    )
+
+    assert not hasattr(settings, "database_dir")
+    assert not hasattr(settings, "database_file")
+
+    assert settings.database_provider == "postgresql"
+    assert settings.database_host == "127.0.0.1"
+    assert settings.database_name == "nexus"
 
 
 def test_load_settings_reads_process_environment_when_source_is_omitted(
@@ -340,3 +342,132 @@ def test_settings_singleton_fails_fast_on_invalid_process_environment():
         in result.stderr
     )
     assert "ConfigurationError" in result.stderr
+
+
+def test_database_defaults_are_postgresql_local():
+    settings = load_settings({})
+
+    assert settings.database_provider == "postgresql"
+    assert settings.database_host == "127.0.0.1"
+    assert settings.database_port == 5432
+    assert settings.database_name == "nexus"
+    assert settings.database_user == "nexus"
+    assert settings.database_password is None
+    assert settings.database_connect_timeout == 5.0
+
+
+def test_load_settings_reads_postgresql_environment():
+    password = "database-test-secret"
+
+    settings = load_settings(
+        {
+            "NEXUS_DATABASE_PROVIDER": "postgresql",
+            "NEXUS_DATABASE_HOST": "127.0.0.1",
+            "NEXUS_DATABASE_PORT": "5433",
+            "NEXUS_DATABASE_NAME": "nexus_test",
+            "NEXUS_DATABASE_USER": "nexus_app",
+            "NEXUS_DATABASE_PASSWORD": password,
+            "NEXUS_DATABASE_CONNECT_TIMEOUT": "7.5",
+        }
+    )
+
+    assert settings.database_provider == "postgresql"
+    assert settings.database_host == "127.0.0.1"
+    assert settings.database_port == 5433
+    assert settings.database_name == "nexus_test"
+    assert settings.database_user == "nexus_app"
+    assert settings.database_password == password
+    assert settings.database_connect_timeout == 7.5
+
+    assert password not in repr(settings)
+
+
+def test_load_settings_rejects_unsupported_database_provider():
+    with pytest.raises(
+        ConfigurationError,
+        match="NEXUS_DATABASE_PROVIDER",
+    ):
+        load_settings(
+            {
+                "NEXUS_DATABASE_PROVIDER": "mysql",
+            }
+        )
+
+
+def test_load_settings_rejects_remote_database_host():
+    with pytest.raises(
+        ConfigurationError,
+        match="NEXUS_DATABASE_HOST",
+    ):
+        load_settings(
+            {
+                "NEXUS_DATABASE_HOST": "database.example.com",
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "abc",
+        "0",
+        "65536",
+        "2.5",
+    ],
+)
+def test_load_settings_rejects_invalid_database_port(value):
+    with pytest.raises(
+        ConfigurationError,
+        match="NEXUS_DATABASE_PORT",
+    ):
+        load_settings(
+            {
+                "NEXUS_DATABASE_PORT": value,
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "environment_name",
+    [
+        "NEXUS_DATABASE_NAME",
+        "NEXUS_DATABASE_USER",
+        "NEXUS_DATABASE_PASSWORD",
+    ],
+)
+def test_load_settings_rejects_empty_database_values(
+    environment_name,
+):
+    with pytest.raises(
+        ConfigurationError,
+        match=environment_name,
+    ):
+        load_settings(
+            {
+                environment_name: "",
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "abc",
+        "0",
+        "-1",
+        "nan",
+        "inf",
+    ],
+)
+def test_load_settings_rejects_invalid_database_connect_timeout(
+    value,
+):
+    with pytest.raises(
+        ConfigurationError,
+        match="NEXUS_DATABASE_CONNECT_TIMEOUT",
+    ):
+        load_settings(
+            {
+                "NEXUS_DATABASE_CONNECT_TIMEOUT": value,
+            }
+        )

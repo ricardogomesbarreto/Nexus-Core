@@ -1,5 +1,6 @@
 from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
+from tests.fakes import FakeDatabase
 
 
 def test_settings():
@@ -12,7 +13,9 @@ def test_settings():
 
 
 def test_application_initialization():
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     app.initialize()
 

@@ -2,6 +2,7 @@ import nexus.core.application as application_module
 
 from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
+from tests.fakes import FakeDatabase
 
 
 class HealthWriteProbe:
@@ -68,7 +69,9 @@ def test_application_initializes_generic_model_layer(
         configured_settings,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
     probe = HealthWriteProbe()
     app.health = probe
 

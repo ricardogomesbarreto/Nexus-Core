@@ -1,48 +1,45 @@
-import sqlite3
-
-from nexus.config.settings import settings
+from nexus.database.contracts import DatabaseProvider
+from nexus.database.errors import DatabaseConnectionError
 
 
 class Database:
     """
-    Gerenciador do banco de dados local do Nexus.
+    Serviço de database do Nexus Core.
+
+    O serviço depende exclusivamente do contrato DatabaseProvider
+    e não conhece drivers, conexões ou SQL específicos.
     """
 
-    def __init__(self):
-        settings.database_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(
+        self,
+        provider: DatabaseProvider,
+    ):
+        self._provider = provider
 
-        self.connection = sqlite3.connect(
-            settings.database_file
-        )
+    @property
+    def provider_id(self) -> str:
+        return self._provider.provider_id
 
-    def initialize(self):
-        cursor = self.connection.cursor()
+    def initialize(self) -> None:
+        self._provider.initialize()
 
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS system_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                event_type TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        if not self._provider.healthcheck():
+            raise DatabaseConnectionError(
+                "Database provider falhou no healthcheck de inicialização"
             )
-            """
+
+    def healthcheck(self) -> bool:
+        return self._provider.healthcheck()
+
+    def add_event(
+        self,
+        event_type: str,
+        message: str,
+    ) -> None:
+        self._provider.add_event(
+            event_type,
+            message,
         )
 
-        self.connection.commit()
-
-    def add_event(self, event_type: str, message: str):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            INSERT INTO system_events (event_type, message)
-            VALUES (?, ?)
-            """,
-            (event_type, message),
-        )
-
-        self.connection.commit()
-
-    def close(self):
-        self.connection.close()
+    def close(self) -> None:
+        self._provider.close()

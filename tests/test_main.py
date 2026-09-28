@@ -47,8 +47,8 @@ def test_main_always_shuts_down_after_success(monkeypatch):
 
     monkeypatch.setattr(
         nexus_main,
-        "NexusApplication",
-        FakeApplication,
+        "build_application",
+        lambda: FakeApplication(),
     )
 
     nexus_main.main()
@@ -78,8 +78,8 @@ def test_main_shuts_down_when_runtime_fails_after_initialize(
 
     monkeypatch.setattr(
         nexus_main,
-        "NexusApplication",
-        FakeApplication,
+        "build_application",
+        lambda: FakeApplication(),
     )
 
     with pytest.raises(
@@ -149,8 +149,8 @@ def test_main_uses_runtime_snapshot_for_runtime_fields(
 
     monkeypatch.setattr(
         nexus_main,
-        "NexusApplication",
-        FakeApplication,
+        "build_application",
+        lambda: FakeApplication(),
     )
 
     nexus_main.main()
@@ -180,8 +180,8 @@ def test_main_reports_model_layer_status(
 
     monkeypatch.setattr(
         nexus_main,
-        "NexusApplication",
-        FakeApplication,
+        "build_application",
+        lambda: FakeApplication(),
     )
 
     nexus_main.main()
@@ -192,3 +192,72 @@ def test_main_reports_model_layer_status(
         "Model Layer",
         "✓ READY",
     ) in output
+
+
+def test_main_shuts_down_when_initialize_fails(
+    monkeypatch,
+):
+    lifecycle = []
+
+    class FakeApplication:
+        def initialize(self):
+            lifecycle.append("initialize")
+            raise RuntimeError(
+                "simulated initialize failure"
+            )
+
+        def status(self):
+            raise AssertionError(
+                "status() não deve ser chamado"
+            )
+
+        def shutdown(self):
+            lifecycle.append("shutdown")
+
+    monkeypatch.setattr(
+        nexus_main,
+        "build_application",
+        lambda: FakeApplication(),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="simulated initialize failure",
+    ):
+        nexus_main.main()
+
+    assert lifecycle == [
+        "initialize",
+        "shutdown",
+    ]
+
+
+def test_main_shuts_down_when_initialize_fails(monkeypatch):
+    lifecycle = []
+
+    class FakeApplication:
+        def initialize(self):
+            lifecycle.append("initialize")
+            raise RuntimeError(
+                "simulated initialize failure"
+            )
+
+        def shutdown(self):
+            lifecycle.append("shutdown")
+
+    monkeypatch.setattr(
+        nexus_main,
+        "build_application",
+        lambda: FakeApplication(),
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="simulated initialize failure",
+    ):
+        nexus_main.main()
+
+    assert lifecycle == [
+        "initialize",
+        "shutdown",
+    ]

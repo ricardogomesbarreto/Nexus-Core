@@ -2,6 +2,7 @@ import nexus.core.application as application_module
 
 from nexus.config.settings import load_settings
 from nexus.core.application import NexusApplication
+from tests.fakes import FakeDatabase
 
 
 class FakeOllamaProvider:
@@ -40,7 +41,9 @@ def test_application_does_not_build_model_router_on_construction(
         raising=False,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         assert calls == []
@@ -73,7 +76,9 @@ def test_application_builds_model_router_lazily(
         raising=False,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         router = app.model_router
@@ -101,7 +106,9 @@ def test_application_caches_model_router(
         raising=False,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         first = app.model_router
@@ -142,7 +149,9 @@ def test_legacy_local_model_client_uses_registered_ollama_provider(
         raising=False,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         client = app.local_model_client
@@ -170,7 +179,9 @@ def test_legacy_and_new_model_access_share_same_composition(
         raising=False,
     )
 
-    app = NexusApplication()
+    app = NexusApplication(
+        database=FakeDatabase(),
+    )
 
     try:
         router = app.model_router
