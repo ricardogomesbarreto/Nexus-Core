@@ -215,7 +215,7 @@ def test_load_settings_rejects_legacy_sqlite_configuration_surface():
     )
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.1.1"
+    assert settings.version == "0.3.1.2"
     assert settings.project_root == PROJECT_ROOT
     assert settings.data_dir == PROJECT_ROOT / "data"
     assert settings.logs_dir == PROJECT_ROOT / "logs"
