@@ -10,8 +10,8 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento no `main`:** `v0.3.2 — Security Resource Mediation`
-> **Última tag publicada:** `v0.3.1.3`
+> **Versão atual:** `v0.3.2 — Security Resource Mediation`
+> **Última tag publicada:** `v0.3.2`
 > **Próximo marco planejado:** `v0.3.3 — Explicit Confirmation & Authorization`
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT
 > **Interface atual:** terminal local; interface gráfica nativa planejada
@@ -231,9 +231,8 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
 (`v0.3.1.1`), a fundação PostgreSQL (`v0.3.1.2`) e correções de configuração
-(`v0.3.1.3`). A `v0.3.2` introduz a mediação explícita de caminhos do host
-antes de executar ferramentas. A tag `v0.3.1.3` permanece no snapshot
-anterior e a nova versão está no ramo `main`.
+(`v0.3.1.3`). A release `v0.3.2` introduz a mediação explícita de caminhos do
+host antes de executar ferramentas. Cada tag preserva o snapshot da sua versão.
 
 O PostgreSQL local é o único provider de banco configurado para produção.
 A aplicação exige `NEXUS_DATABASE_PASSWORD` no processo de composição,
@@ -2864,7 +2863,7 @@ existente não foi reescrita.
 
 ## v0.3.2 — Security Resource Mediation
 
-Implementada no `main`: declaração explícita dos caminhos sensíveis
+Release concluída: declaração explícita dos caminhos sensíveis
 por ferramenta, avaliação de todos pelo `SecurityGate`, mediação de
 `TerminalSandboxTool.workspace` e do default de `ListDirectoryTool`,
 negação de declarações ausentes ou inválidas, auditoria de todos os
@@ -3393,8 +3392,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2` e `v0.3.1.3` já existem.
-A implementação `v0.3.2` está no `main` e ainda não possui tag.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3` e `v0.3.2` já existem.
 
 ---
 
@@ -3439,9 +3437,9 @@ devem ser consideradas separadamente.
 Project:               Nexus Core
 Release Target:        v0.3.2
 Release Name:          Security Resource Mediation
-Latest Git Tag:        v0.3.1.3
-Implementation:        COMPLETE ON MAIN
-Release Preparation:   VALIDATED WITHOUT DOCKER INTEGRATION
+Latest Git Tag:        v0.3.2
+Implementation:        RELEASED
+Release Validation:    PASSED EXCEPT DOCKER INTEGRATION (SKIPPED)
 Tests:                 539 passed, 7 skipped (Docker unavailable)
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
