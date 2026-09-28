@@ -10,11 +10,11 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular, seguro, multimodal e orientado a agentes**, desenvolvido incrementalmente sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Release atual:** `v0.3.1.1 — Desktop Visual Identity Foundation`
-> **Última release publicada:** `v0.3.1.1 — Desktop Visual Identity Foundation`
+> **Release atual:** `v0.3.1.3 — Release Configuration Corrections`
+> **Última tag publicada:** `v0.3.1.3`
 > **Próximo marco planejado:** `v0.3.2 — Security Resource Mediation`
-> **Status da v0.3.1.1:** implementação concluída e validada
-> **Test baseline:** `497 passed`
+> **Status:** correções de versão e documentação no ramo `main` após a tag `v0.3.1.3`
+> **Testes nesta revisão:** 537 coletados; 530 passaram neste ambiente e 7 exigem Docker
 > **Primary Platform:** Linux
 > **Local Model Runtime:** Ollama
 > **Reference Model:** `qwen3:1.7b`
@@ -222,6 +222,17 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
+A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
+(`v0.3.1.1`), a fundação PostgreSQL (`v0.3.1.2`) e correções de configuração
+(`v0.3.1.3`). A tag `v0.3.1.3` foi criada antes desta correção do README e
+do número exibido em `Settings.version`; por isso a tag representa o
+snapshot anterior e o ramo `main` contém a revisão documental posterior.
+
+O PostgreSQL local é o único provider de banco configurado para produção.
+A aplicação exige `NEXUS_DATABASE_PASSWORD` no processo de composição,
+conecta no `initialize()`, cria `system_events` e fecha a conexão no
+`shutdown()`. O banco não é memória persistente do assistente.
+
 A `v0.3.1` evolui a Local Model Layer introduzida na `v0.3.0`.
 
 A principal mudança é a separação entre:
@@ -353,12 +364,12 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.1
-Capability:           Provider Abstraction & Model Routing
-Tests:                493 passed
+Release Target:       v0.3.1.3
+Capability:           Model routing, desktop identity, PostgreSQL foundation
+Tests:                537 collected; 530 passed locally, 7 require Docker
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
-Database:             SQLite
+Database:             PostgreSQL (loopback)
 Sandbox:              Docker
 Local Model Runtime:  Ollama
 Reference Model:      qwen3:1.7b
@@ -1210,7 +1221,7 @@ A existência de um tipo de evento não implica implementação da funcionalidad
 Runtime atual:
 
 ```text
-SQLite
+PostgreSQL local (Psycopg 3)
 ```
 
 Tabela estrutural:
@@ -1229,6 +1240,26 @@ created_at
 ```
 
 O database atual não representa a futura Persistent Memory.
+
+O provider é construído sem I/O; a conexão e a criação da tabela ocorrem
+durante `initialize()`. Um PostgreSQL acessível no loopback, um usuário e
+um banco já criados são pré-requisitos para executar `nexus.main`.
+
+Configuração por ambiente:
+
+| Variável | Padrão | Regra |
+| --- | --- | --- |
+| `NEXUS_DATABASE_PROVIDER` | `postgresql` | Único provider suportado |
+| `NEXUS_DATABASE_HOST` | `127.0.0.1` | Somente `127.0.0.1`, `localhost` ou `::1` |
+| `NEXUS_DATABASE_PORT` | `5432` | Porta de 1 a 65535 |
+| `NEXUS_DATABASE_NAME` | `nexus` | Nome não vazio |
+| `NEXUS_DATABASE_USER` | `nexus` | Usuário não vazio |
+| `NEXUS_DATABASE_PASSWORD` | sem valor | Obrigatória ao compor a aplicação; não é registrada em logs |
+| `NEXUS_DATABASE_CONNECT_TIMEOUT` | `5.0` | Segundos, número finito maior que zero |
+
+Guarde a senha fora do repositório e forneça-a ao processo antes da execução.
+Os antigos overrides `NEXUS_DATABASE_DIR` e `NEXUS_DATABASE_FILE` não
+selecionam um banco SQLite.
 
 ---
 
@@ -1308,6 +1339,13 @@ ALLOW
 CONFIRM
 DENY
 ```
+
+Limite atual: o `ToolExecutor` repassa à política de caminhos somente
+`kwargs["path"]`. O `workspace` do terminal e defaults implícitos de
+ferramentas ainda não recebem mediação equivalente. Portanto, a política
+de recursos sensíveis não está completa; essa é a entrega planejada para
+`v0.3.2`. Uma decisão `CONFIRM` bloqueia a execução nesta fase, sem fluxo
+de confirmação humana (planejado para `v0.3.3`).
 
 ---
 
@@ -1534,6 +1572,7 @@ Baseline:
 Linux
 Python 3.12
 Git
+PostgreSQL local
 ```
 
 Desenvolvimento:
@@ -1589,6 +1628,9 @@ ollama run qwen3:1.7b
 
 # Executando o Nexus
 
+`NEXUS_DATABASE_PASSWORD` deve estar definido e o PostgreSQL local deve
+aceitar a conexão com o banco e o usuário configurados.
+
 ```bash
 PYTHONPATH="$PWD" python -m nexus.main
 ```
@@ -1624,17 +1666,21 @@ Comando oficial:
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Baseline atual:
+Verificação nesta revisão (ambiente sem Docker, com HOME de teste):
 
 ```text
-493 passed
+530 passed; 7 testes de integração do sandbox requerem Docker
 ```
 
 Coleta:
 
 ```text
-493 tests collected
+537 tests collected
 ```
+
+Para executar os testes de integração do sandbox, instale e disponibilize
+o daemon Docker. Uma execução sem Docker pode selecionar os demais testes
+com `pytest -q -k 'not terminal_sandbox'`.
 
 ---
 
@@ -2791,6 +2837,30 @@ intelligence != authority
 
 ---
 
+## v0.3.1.1 — Desktop Visual Identity Foundation
+
+Marca e iconografia desktop nativa Nexus Line em Wine Red (`#722F37`),
+manifesto de 18 ícones e testes de integridade dos SVGs e do logotipo.
+A identidade é um conjunto de assets; ainda não há interface gráfica.
+
+## v0.3.1.2 — PostgreSQL Database Provider Foundation
+
+Introduz `DatabaseProvider`, `PostgreSQLProvider`, a factory de composição,
+configuração validada via ambiente e Psycopg 3. O serviço conecta durante a
+inicialização, mantém `system_events` e fecha no encerramento. O antigo
+provider SQLite não faz parte da composição atual. Testes usam providers
+falsos quando não requerem o servidor PostgreSQL.
+
+## v0.3.1.3 — Release Configuration Corrections
+
+O commit etiquetado como `v0.3.1.3` corrigiu regressões dos testes de
+configuração, mas ainda exibia `0.3.1.2` em `Settings.version` e mantinha
+o README em `v0.3.1.1`. Esta revisão posterior no `main` alinha a versão
+exibida, os testes e a documentação à implementação efetiva. A tag
+existente não foi reescrita.
+
+---
+
 # Roadmap
 
 O roadmap é evolutivo.
@@ -3075,7 +3145,7 @@ Objetivo:
 ```text
 Primary Platform:     Linux
 Runtime:              Python 3.12
-Database:             SQLite
+Database:             PostgreSQL (local, Psycopg 3)
 Tests:                pytest
 Sandbox:              Docker
 Local Model Runtime:  Ollama
@@ -3329,7 +3399,9 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-A `v0.3.1.1` receberá sua tag somente após validação completa e fechamento efetivo da release.
+As tags `v0.3.1.1`, `v0.3.1.2` e `v0.3.1.3` já existem. A correção
+documental posterior à tag `v0.3.1.3` reside no ramo `main`; não se
+reescreve uma tag já publicada.
 
 ---
 
@@ -3378,15 +3450,15 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.1.1
-Release Name:          Desktop Visual Identity Foundation
-Published Stable:      v0.3.1.1
-Implementation:        COMPLETE
-Release Preparation:   COMPLETE
-Tests:                 497 passed
+Release Target:        v0.3.1.3
+Release Name:          Release Configuration Corrections
+Latest Git Tag:        v0.3.1.3 (snapshot anterior à revisão do main)
+Implementation:        COMPLETE ON MAIN
+Release Preparation:   DOCUMENTATION AND VERSION ALIGNED ON MAIN
+Tests:                 537 collected; 530 passed, 7 need Docker here
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
-Database:              SQLite
+Database:              PostgreSQL (loopback, Psycopg 3)
 Sandbox:               Docker
 Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b
