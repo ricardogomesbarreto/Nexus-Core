@@ -18,20 +18,20 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.2 — Security Resource Mediation`
-> **Última tag publicada:** `v0.3.2`
-> **Próximo marco planejado:** `v0.3.3 — Explicit Confirmation & Authorization`
-> **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT
-> **Interface atual:** terminal local; interface gráfica nativa planejada
-> **Banco único:** PostgreSQL local
-> **Validação:** `539 passed, 7 skipped` (integrações Docker indisponíveis aqui)
-> **Primary Platform:** Linux
-> **Local Model Runtime:** Ollama
-> **Reference Model:** `qwen3:1.7b`
-> **Desktop Application:** Native
-> **Web Application:** No
-> **Primary Visual Identity:** Wine Red
-> **Primary Color:** `#722F37`
+> **Versão atual:** `v0.3.2 — Security Resource Mediation`<br>
+> **Última tag publicada:** `v0.3.2`<br>
+> **Próximo marco planejado:** `v0.3.3 — Explicit Confirmation & Authorization`<br>
+> **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
+> **Interface atual:** terminal local; interface gráfica nativa planejada<br>
+> **Banco único:** PostgreSQL local<br>
+> **Validação:** `539 passed, 7 skipped` (integrações Docker indisponíveis aqui)<br>
+> **Primary Platform:** Linux<br>
+> **Local Model Runtime:** Ollama<br>
+> **Reference Model:** `qwen3:1.7b`<br>
+> **Desktop Application:** Native<br>
+> **Web Application:** No<br>
+> **Primary Visual Identity:** Wine Red<br>
+> **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
 
