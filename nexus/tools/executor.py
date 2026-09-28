@@ -2,6 +2,7 @@ from nexus.security import (
     PermissionDecision,
     SecurityGate,
     SecurityRequest,
+    SensitiveResource,
 )
 
 from nexus.tools.base import ToolResult
@@ -64,7 +65,27 @@ class ToolExecutor:
                 ),
             )
 
-        path = kwargs.get("path")
+        try:
+            resources = tool.sensitive_resources(**kwargs)
+            if not isinstance(resources, tuple) or any(
+                not isinstance(resource, SensitiveResource)
+                for resource in resources
+            ):
+                raise ValueError("Declaração de recursos inválida")
+        except Exception:
+            reason = "Recursos sensíveis não declarados ou inválidos."
+            self.security_gate.audit_logger.record(
+                tool_name=tool.name,
+                action=tool.name,
+                risk_level=tool.risk_level.name,
+                decision=PermissionDecision.DENY.value,
+                reason=reason,
+            )
+            return ToolResult(
+                success=False,
+                tool_name=tool_name,
+                error=reason,
+            )
 
         # 2. Criar solicitação de segurança
         request = SecurityRequest(
@@ -73,8 +94,10 @@ class ToolExecutor:
             risk_level=tool.risk_level,
             data=kwargs,
             tool_name=tool.name,
-            path=path,
+            resources=resources,
         )
+
+        audit_path = self.security_gate.audit_path(request)
 
         # 3. Security Gate
         security_result = (
@@ -118,7 +141,7 @@ class ToolExecutor:
                 action=tool.name,
                 outcome=outcome,
                 reason=reason,
-                path=path,
+                path=audit_path,
             )
 
             return result
@@ -130,7 +153,7 @@ class ToolExecutor:
                 action=tool.name,
                 outcome="EXCEPTION",
                 reason=str(exc),
-                path=path,
+                path=audit_path,
             )
 
             return ToolResult(

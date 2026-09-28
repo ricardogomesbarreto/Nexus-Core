@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from nexus.security.audit import AuditLogger
@@ -6,6 +7,7 @@ from nexus.security.permissions import PermissionDecision
 from nexus.security.paths import PathSecurity
 from nexus.security.policies import SecurityPolicy
 from nexus.security.risk import RiskLevel
+from nexus.security.resources import SensitiveResource
 from nexus.security.tool_permissions import ToolPermissionPolicy
 
 
@@ -22,6 +24,7 @@ class SecurityRequest:
     data: Any = None
     path: str | None = None
     tool_name: str | None = None
+    resources: tuple[SensitiveResource, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -100,24 +103,46 @@ class SecurityGate:
         # 2. Verificação do caminho
         # -------------------------------------------------
 
-        if request.path is not None:
+        if not isinstance(request.resources, tuple) or any(
+            not isinstance(resource, SensitiveResource)
+            for resource in request.resources
+        ):
+            return self._deny(
+                request,
+                "Declaração de recursos sensíveis inválida.",
+            )
 
-            if self.path_security.is_protected(
-                request.path
-            ):
+        paths: list[str | Path] = [
+            resource.path for resource in request.resources
+        ]
+        if request.path is not None:
+            paths.append(request.path)
+
+        for path in paths:
+            if not isinstance(path, (str, Path)) or not str(path).strip():
                 return self._deny(
                     request,
-                    "Caminho protegido pela política "
-                    "de segurança.",
+                    "Caminho de recurso sensível inválido.",
                 )
 
-            if not self.path_security.is_allowed(
-                request.path
-            ):
+            try:
+                if self.path_security.is_protected(path):
+                    return self._deny(
+                        request,
+                        "Caminho protegido pela política "
+                        "de segurança.",
+                    )
+
+                if not self.path_security.is_allowed(path):
+                    return self._deny(
+                        request,
+                        "Caminho fora da área autorizada "
+                        "do Nexus.",
+                    )
+            except (OSError, RuntimeError, ValueError):
                 return self._deny(
                     request,
-                    "Caminho fora da área autorizada "
-                    "do Nexus.",
+                    "Não foi possível validar o caminho.",
                 )
 
         # -------------------------------------------------
@@ -187,5 +212,20 @@ class SecurityGate:
             risk_level=request.risk_level.name,
             decision=result.decision.value,
             reason=result.reason,
-            path=request.path,
+            path=self.audit_path(request),
         )
+
+    @staticmethod
+    def audit_path(request: SecurityRequest) -> str | None:
+        paths = [
+            str(resource.path)
+            for resource in request.resources
+            if isinstance(resource, SensitiveResource)
+        ] if isinstance(request.resources, tuple) else []
+        if request.path is not None:
+            paths.append(str(request.path))
+
+        # Cada operação de auditoria ocupa exatamente uma linha.
+        return "; ".join(dict.fromkeys(paths)).replace(
+            "\n", "\\n"
+        ).replace("\r", "\\r").replace("|", "\\|") or None

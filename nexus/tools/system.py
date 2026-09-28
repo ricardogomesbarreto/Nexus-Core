@@ -18,6 +18,9 @@ class SystemInfoTool(NexusTool):
 
     risk_level = RiskLevel.SAFE
 
+    def sensitive_resources(self, **kwargs) -> tuple:
+        return ()
+
     def execute(self, **kwargs) -> ToolResult:
 
         information = {

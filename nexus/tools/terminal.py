@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from nexus.security import RiskLevel
+from nexus.security import RiskLevel, SensitiveResource
 from nexus.tools.base import NexusTool, ToolResult
 
 
@@ -36,6 +36,15 @@ class TerminalSandboxTool(NexusTool):
 
     TIMEOUT_SECONDS = 30
     MAX_OUTPUT_SIZE = 64 * 1024
+
+    def sensitive_resources(
+        self,
+        **kwargs,
+    ) -> tuple[SensitiveResource, ...]:
+        workspace = kwargs.get("workspace")
+        if workspace is None:
+            return ()
+        return (SensitiveResource("workspace", workspace),)
 
     def execute(
         self,

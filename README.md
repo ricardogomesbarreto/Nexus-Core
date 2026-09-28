@@ -8,13 +8,15 @@
 
 # Nexus Core
 
-Assistente pessoal de inteligência artificial **local-first, modular, seguro, multimodal e orientado a agentes**, desenvolvido incrementalmente sobre fronteiras explícitas entre inteligência, autorização e execução.
+Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Release atual:** `v0.3.1.3 — Release Configuration Corrections`
+> **Versão em desenvolvimento no `main`:** `v0.3.2 — Security Resource Mediation`
 > **Última tag publicada:** `v0.3.1.3`
-> **Próximo marco planejado:** `v0.3.2 — Security Resource Mediation`
-> **Status:** correções de versão e documentação no ramo `main` após a tag `v0.3.1.3`
-> **Testes nesta revisão:** 537 coletados; 530 passaram neste ambiente e 7 exigem Docker
+> **Próximo marco planejado:** `v0.3.3 — Explicit Confirmation & Authorization`
+> **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT
+> **Interface atual:** terminal local; interface gráfica nativa planejada
+> **Banco único:** PostgreSQL local
+> **Validação:** `539 passed, 7 skipped` (integrações Docker indisponíveis aqui)
 > **Primary Platform:** Linux
 > **Local Model Runtime:** Ollama
 > **Reference Model:** `qwen3:1.7b`
@@ -30,6 +32,11 @@ Assistente pessoal de inteligência artificial **local-first, modular, seguro, m
 # Visão geral
 
 O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local.
+
+O programa roda como processo nativo no Linux. A distribuição atual oferece
+o comando `nexus-core` no ambiente Python do usuário. Os assets da futura
+interface gráfica já existem, mas uma janela gráfica ainda não foi implementada.
+Não há aplicação ou servidor web na arquitetura do produto.
 
 O projeto busca preservar:
 
@@ -224,9 +231,9 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
 (`v0.3.1.1`), a fundação PostgreSQL (`v0.3.1.2`) e correções de configuração
-(`v0.3.1.3`). A tag `v0.3.1.3` foi criada antes desta correção do README e
-do número exibido em `Settings.version`; por isso a tag representa o
-snapshot anterior e o ramo `main` contém a revisão documental posterior.
+(`v0.3.1.3`). A `v0.3.2` introduz a mediação explícita de caminhos do host
+antes de executar ferramentas. A tag `v0.3.1.3` permanece no snapshot
+anterior e a nova versão está no ramo `main`.
 
 O PostgreSQL local é o único provider de banco configurado para produção.
 A aplicação exige `NEXUS_DATABASE_PASSWORD` no processo de composição,
@@ -364,9 +371,9 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.1.3
-Capability:           Model routing, desktop identity, PostgreSQL foundation
-Tests:                537 collected; 530 passed locally, 7 require Docker
+Release Target:       v0.3.2
+Capability:           Security resource mediation
+Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
 Database:             PostgreSQL (loopback)
@@ -1258,8 +1265,6 @@ Configuração por ambiente:
 | `NEXUS_DATABASE_CONNECT_TIMEOUT` | `5.0` | Segundos, número finito maior que zero |
 
 Guarde a senha fora do repositório e forneça-a ao processo antes da execução.
-Os antigos overrides `NEXUS_DATABASE_DIR` e `NEXUS_DATABASE_FILE` não
-selecionam um banco SQLite.
 
 ---
 
@@ -1320,15 +1325,16 @@ action
 description
 risk_level
 data
-path
 tool_name
+resources
+path (compatibilidade para chamadas diretas antigas)
 ```
 
 Avaliação:
 
 1. tool registration;
 2. tool permission;
-3. path policy;
+3. validação de cada recurso declarado pela ferramenta;
 4. risk policy;
 5. audit.
 
@@ -1340,12 +1346,13 @@ CONFIRM
 DENY
 ```
 
-Limite atual: o `ToolExecutor` repassa à política de caminhos somente
-`kwargs["path"]`. O `workspace` do terminal e defaults implícitos de
-ferramentas ainda não recebem mediação equivalente. Portanto, a política
-de recursos sensíveis não está completa; essa é a entrega planejada para
-`v0.3.2`. Uma decisão `CONFIRM` bloqueia a execução nesta fase, sem fluxo
-de confirmação humana (planejado para `v0.3.3`).
+Cada ferramenta interna declara `sensitive_resources(**kwargs)`: caminhos
+de arquivo, diretório e workspace são avaliados antes de `execute()`.
+Declarações ausentes ou inválidas são negadas e auditadas. A decisão
+`CONFIRM` ainda bloqueia a execução sem fluxo de confirmação humana,
+planejado para `v0.3.3`. O código de ferramentas internas é confiável;
+uma ferramenta externa que declare falsamente seus recursos exige revisão
+antes de ser registrada.
 
 ---
 
@@ -1464,30 +1471,14 @@ como read-only.
 
 ---
 
-# Dívida de segurança antes da v0.3.2
+# Mediação de recursos da v0.3.2
 
-Hoje, o `ToolExecutor` identifica paths de segurança principalmente através de:
-
-```python
-kwargs.get("path")
-```
-
-Isso não representa todos os recursos sensíveis.
-
-Exemplo:
-
-```text
-TerminalSandboxTool.workspace
-```
-
-A futura integração Agent → Tools exige uma mediação genérica de recursos.
-
-Direção:
+Fluxo implementado para as ferramentas internas:
 
 ```text
 Tool
    │
-   ├── declara recursos sensíveis
+   ├── declara caminhos do host usados nesta chamada
    ▼
 ToolExecutor
    │
@@ -1498,7 +1489,12 @@ SecurityGate
 PathSecurity / policies
 ```
 
-Essa correção é blocker para a `v0.3.2`.
+`ListDirectoryTool` declara inclusive o default `.`;
+`ReadFileTool` declara o arquivo; `TerminalSandboxTool` declara o
+`workspace` quando fornecido; `SystemInfoTool` declara explicitamente
+nenhum caminho. Um symlink que resolve para fora da área permitida é negado.
+As chamadas devem entrar por `ToolExecutor`; invocar diretamente
+`tool.execute()` é uso interno fora da fronteira de autorização.
 
 ---
 
@@ -1603,7 +1599,7 @@ GPU dedicada não é requisito arquitetural.
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements/dev.txt
+python -m pip install -e '.[dev]'
 ```
 
 ---
@@ -1632,8 +1628,13 @@ ollama run qwen3:1.7b
 aceitar a conexão com o banco e o usuário configurados.
 
 ```bash
-PYTHONPATH="$PWD" python -m nexus.main
+nexus-core
 ```
+
+O entrypoint `python -m nexus.main` também está disponível a partir da
+raiz do projeto. O comando usa o PostgreSQL local configurado e termina
+com erro explícito quando ele não está disponível. Esta versão oferece
+uma interface de terminal, não uma janela gráfica.
 
 ---
 
@@ -1669,18 +1670,18 @@ PYTHONPATH="$PWD" pytest -q
 Verificação nesta revisão (ambiente sem Docker, com HOME de teste):
 
 ```text
-530 passed; 7 testes de integração do sandbox requerem Docker
+539 passed; 7 skipped (integração real com Docker)
 ```
 
 Coleta:
 
 ```text
-537 tests collected
+546 tests collected
 ```
 
-Para executar os testes de integração do sandbox, instale e disponibilize
-o daemon Docker. Uma execução sem Docker pode selecionar os demais testes
-com `pytest -q -k 'not terminal_sandbox'`.
+Os sete testes que executam containers são ignorados automaticamente
+quando o daemon Docker não está disponível. Em um Linux com Docker
+operacional, o mesmo comando também verifica o isolamento real.
 
 ---
 
@@ -1771,7 +1772,7 @@ Criar a primeira fundação executável do Nexus Core.
 * configuração central;
 * logging;
 * database local;
-* SQLite;
+* persistência local de eventos;
 * arquitetura inicial da aplicação;
 * diretórios de dados e logs;
 * primeira separação entre infraestrutura e futuras capacidades de IA.
@@ -2015,7 +2016,8 @@ Isso reduziu a superfície de acesso acidental ou indevido ao host.
 
 A mediação ainda depende do recurso ser corretamente representado no `SecurityRequest`.
 
-Essa limitação é relevante para o hardening futuro antes da `v0.3.2`.
+Na `v0.3.2`, as ferramentas internas passaram a declarar os recursos
+usados em cada chamada, e o executor nega declarações ausentes.
 
 ---
 
@@ -2847,9 +2849,8 @@ A identidade é um conjunto de assets; ainda não há interface gráfica.
 
 Introduz `DatabaseProvider`, `PostgreSQLProvider`, a factory de composição,
 configuração validada via ambiente e Psycopg 3. O serviço conecta durante a
-inicialização, mantém `system_events` e fecha no encerramento. O antigo
-provider SQLite não faz parte da composição atual. Testes usam providers
-falsos quando não requerem o servidor PostgreSQL.
+inicialização, mantém `system_events` e fecha no encerramento. Testes
+usam providers falsos quando não requerem o servidor PostgreSQL.
 
 ## v0.3.1.3 — Release Configuration Corrections
 
@@ -2861,28 +2862,21 @@ existente não foi reescrita.
 
 ---
 
-# Roadmap
+## v0.3.2 — Security Resource Mediation
 
-O roadmap é evolutivo.
-
-Cada release deve adicionar uma responsabilidade pequena, clara e verificável.
+Implementada no `main`: declaração explícita dos caminhos sensíveis
+por ferramenta, avaliação de todos pelo `SecurityGate`, mediação de
+`TerminalSandboxTool.workspace` e do default de `ListDirectoryTool`,
+negação de declarações ausentes ou inválidas, auditoria de todos os
+caminhos e testes de escape por symlink. A Model Layer ainda não chama
+ferramentas.
 
 ---
 
-## v0.3.2 — Security Resource Mediation
+# Roadmap
 
-Objetivo:
-
-introduzir mediação genérica de recursos sensíveis antes da criação do primeiro Agent/Planner.
-
-Escopo planejado:
-
-* permitir que ferramentas declarem explicitamente os recursos sensíveis que utilizam;
-* remover a dependência de segurança baseada apenas em `kwargs["path"]`;
-* mediar `TerminalSandboxTool.workspace`;
-* validar defaults implícitos de paths;
-* impedir bypass de `PathSecurity`;
-* preservar `SecurityGate` como fronteira obrigatória antes da execução.
+O roadmap é evolutivo. Cada release adiciona uma responsabilidade
+pequena, clara e verificável.
 
 ---
 
@@ -3399,9 +3393,8 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2` e `v0.3.1.3` já existem. A correção
-documental posterior à tag `v0.3.1.3` reside no ramo `main`; não se
-reescreve uma tag já publicada.
+As tags `v0.3.1.1`, `v0.3.1.2` e `v0.3.1.3` já existem.
+A implementação `v0.3.2` está no `main` e ainda não possui tag.
 
 ---
 
@@ -3421,17 +3414,11 @@ Mudanças devem respeitar:
 
 # Licença
 
-O Nexus Core é desenvolvido com a intenção de ser totalmente open source.
-
-Enquanto não existir um arquivo formal:
-
-```text
-LICENSE
-```
-
-uma licença open-source específica ainda não foi formalmente atribuída ao código.
-
-Antes da distribuição pública, deve ser escolhida e adicionada uma licença adequada.
+O código-fonte e a documentação do Nexus Core são licenciados sob
+[MIT](LICENSE). A licença permite uso, modificação e redistribuição,
+mantendo o aviso de copyright. A disponibilização pública do repositório
+depende da visibilidade configurada no GitHub; uma licença, por si só,
+não altera a visibilidade.
 
 Licenças de:
 
@@ -3450,15 +3437,17 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.1.3
-Release Name:          Release Configuration Corrections
-Latest Git Tag:        v0.3.1.3 (snapshot anterior à revisão do main)
+Release Target:        v0.3.2
+Release Name:          Security Resource Mediation
+Latest Git Tag:        v0.3.1.3
 Implementation:        COMPLETE ON MAIN
-Release Preparation:   DOCUMENTATION AND VERSION ALIGNED ON MAIN
-Tests:                 537 collected; 530 passed, 7 need Docker here
+Release Preparation:   VALIDATED WITHOUT DOCKER INTEGRATION
+Tests:                 539 passed, 7 skipped (Docker unavailable)
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)
+License:               MIT
+Linux Entry Point:     nexus-core
 Sandbox:               Docker
 Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b

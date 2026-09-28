@@ -19,6 +19,10 @@ from nexus.security.risk import (
     RiskLevel,
 )
 
+from nexus.security.resources import (
+    SensitiveResource,
+)
+
 from nexus.security.security_gate import (
     SecurityGate,
     SecurityRequest,
@@ -37,6 +41,7 @@ __all__ = [
     "PathSecurity",
     "SecurityPolicy",
     "RiskLevel",
+    "SensitiveResource",
     "SecurityGate",
     "SecurityRequest",
     "SecurityResult",

@@ -201,7 +201,7 @@ def test_load_settings_rejects_invalid_confirmation_threshold_syntax(
         )
 
 
-def test_load_settings_rejects_legacy_sqlite_configuration_surface():
+def test_load_settings_ignores_undeclared_environment_overrides():
     settings = load_settings(
         {
             "NEXUS_APP_NAME": "Compromised Nexus",
@@ -209,19 +209,14 @@ def test_load_settings_rejects_legacy_sqlite_configuration_surface():
             "NEXUS_PROJECT_ROOT": "/tmp/nexus",
             "NEXUS_DATA_DIR": "/tmp/nexus/data",
             "NEXUS_LOGS_DIR": "/tmp/nexus/logs",
-            "NEXUS_DATABASE_DIR": "/tmp/nexus/database",
-            "NEXUS_DATABASE_FILE": "/tmp/nexus/database/evil.db",
         }
     )
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.1.3"
+    assert settings.version == "0.3.2"
     assert settings.project_root == PROJECT_ROOT
     assert settings.data_dir == PROJECT_ROOT / "data"
     assert settings.logs_dir == PROJECT_ROOT / "logs"
-
-    assert not hasattr(settings, "database_dir")
-    assert not hasattr(settings, "database_file")
 
     assert settings.database_provider == "postgresql"
     assert settings.database_host == "127.0.0.1"

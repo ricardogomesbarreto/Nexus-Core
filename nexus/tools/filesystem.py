@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from nexus.security import RiskLevel
+from nexus.security import RiskLevel, SensitiveResource
 from nexus.tools.base import NexusTool, ToolResult
 
 
@@ -17,6 +17,14 @@ class ListDirectoryTool(NexusTool):
     )
 
     risk_level = RiskLevel.SAFE
+
+    def sensitive_resources(
+        self,
+        **kwargs,
+    ) -> tuple[SensitiveResource, ...]:
+        return (
+            SensitiveResource("directory", kwargs.get("path", ".")),
+        )
 
     def execute(
         self,
@@ -100,6 +108,14 @@ class ReadFileTool(NexusTool):
     risk_level = RiskLevel.SAFE
 
     MAX_FILE_SIZE = 1024 * 1024
+
+    def sensitive_resources(
+        self,
+        **kwargs,
+    ) -> tuple[SensitiveResource, ...]:
+        return (
+            SensitiveResource("file", kwargs["path"]),
+        )
 
     def execute(
         self,

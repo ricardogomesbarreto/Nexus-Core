@@ -1,3 +1,5 @@
+import argparse
+
 from nexus.config.settings import settings
 from nexus.core.application import NexusApplication
 from nexus.database.database import Database
@@ -149,5 +151,19 @@ def main():
         app.shutdown()
 
 
-if __name__ == "__main__":
+def cli(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="nexus-core",
+        description="Nexus Core — assistente local para Linux",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"Nexus Core {settings.version}",
+    )
+    parser.parse_args(argv)
     main()
+
+
+if __name__ == "__main__":
+    cli()

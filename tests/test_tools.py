@@ -1,4 +1,8 @@
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from nexus.security import (
     AuditLogger,
@@ -47,6 +51,26 @@ def create_executor(log_path=None):
 
 def create_sandbox():
     return TerminalSandboxTool()
+
+
+@pytest.fixture(scope="module")
+def docker_runtime():
+    if shutil.which("docker") is None:
+        pytest.skip("Docker não está instalado neste ambiente")
+
+    try:
+        status = subprocess.run(
+            ["docker", "info", "--format", "{{.ServerVersion}}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        pytest.skip("Daemon Docker indisponível")
+
+    if status.returncode != 0:
+        pytest.skip("Daemon Docker indisponível")
 
 
 # =========================================================
@@ -469,7 +493,7 @@ def test_terminal_sandbox_exists():
     assert tool.risk_level == RiskLevel.MEDIUM
 
 
-def test_terminal_sandbox_executes_command():
+def test_terminal_sandbox_executes_command(docker_runtime):
     tool = create_sandbox()
 
     result = tool.execute(
@@ -490,7 +514,7 @@ def test_terminal_sandbox_executes_command():
     assert result.data["exit_code"] == 0
 
 
-def test_terminal_sandbox_runs_as_non_root():
+def test_terminal_sandbox_runs_as_non_root(docker_runtime):
     tool = create_sandbox()
 
     result = tool.execute(
@@ -502,7 +526,7 @@ def test_terminal_sandbox_runs_as_non_root():
     assert "uid=0" not in result.data["stdout"]
 
 
-def test_terminal_sandbox_network_is_disabled():
+def test_terminal_sandbox_network_is_disabled(docker_runtime):
     tool = create_sandbox()
 
     result = tool.execute(
@@ -524,7 +548,7 @@ def test_terminal_sandbox_network_is_disabled():
     )
 
 
-def test_terminal_sandbox_root_filesystem_is_read_only():
+def test_terminal_sandbox_root_filesystem_is_read_only(docker_runtime):
     tool = create_sandbox()
 
     result = tool.execute(
@@ -539,7 +563,7 @@ def test_terminal_sandbox_root_filesystem_is_read_only():
     )
 
 
-def test_terminal_sandbox_tmp_is_writable():
+def test_terminal_sandbox_tmp_is_writable(docker_runtime):
     tool = create_sandbox()
 
     result = tool.execute(
@@ -618,6 +642,7 @@ def test_terminal_sandbox_workspace_must_be_directory(
 
 def test_terminal_sandbox_workspace_is_read_only(
     tmp_path,
+    docker_runtime,
 ):
     workspace = (
         tmp_path / "workspace"
@@ -642,6 +667,7 @@ def test_terminal_sandbox_workspace_is_read_only(
 
 def test_terminal_sandbox_workspace_is_mounted(
     tmp_path,
+    docker_runtime,
 ):
     workspace = (
         tmp_path / "workspace"
