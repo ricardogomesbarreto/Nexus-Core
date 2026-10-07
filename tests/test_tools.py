@@ -208,9 +208,7 @@ def test_read_directory_as_file():
 
     result = executor.execute(
         "read_file",
-        path=str(
-            Path.home() / "Nexus Core"
-        ),
+        path=str(Path.home()),
     )
 
     assert not result.success
