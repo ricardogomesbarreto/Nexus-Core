@@ -225,7 +225,4 @@ class SecurityGate:
         if request.path is not None:
             paths.append(str(request.path))
 
-        # Cada operação de auditoria ocupa exatamente uma linha.
-        return "; ".join(dict.fromkeys(paths)).replace(
-            "\n", "\\n"
-        ).replace("\r", "\\r").replace("|", "\\|") or None
+        return "; ".join(dict.fromkeys(paths)) or None

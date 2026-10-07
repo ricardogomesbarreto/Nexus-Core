@@ -213,14 +213,25 @@ def test_load_settings_ignores_undeclared_environment_overrides():
     )
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.2"
+    assert settings.version == "0.3.3"
     assert settings.project_root == PROJECT_ROOT
-    assert settings.data_dir == PROJECT_ROOT / "data"
-    assert settings.logs_dir == PROJECT_ROOT / "logs"
+    assert settings.data_dir.name == "nexus-core"
+    assert settings.logs_dir.name == "logs"
+    assert settings.logs_dir.parent.name == "nexus-core"
 
     assert settings.database_provider == "postgresql"
     assert settings.database_host == "127.0.0.1"
     assert settings.database_name == "nexus"
+
+
+def test_user_data_and_logs_follow_xdg_directories(monkeypatch, tmp_path):
+    from nexus.config.settings import Settings
+
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+    configured = Settings()
+    assert configured.data_dir == tmp_path / "data" / "nexus-core"
+    assert configured.logs_dir == tmp_path / "state" / "nexus-core" / "logs"
 
 
 def test_load_settings_reads_process_environment_when_source_is_omitted(

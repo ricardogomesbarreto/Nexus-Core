@@ -1,9 +1,11 @@
 import argparse
+import sys
 
 from nexus.config.settings import settings
 from nexus.core.application import NexusApplication
 from nexus.database.database import Database
 from nexus.database.factory import build_database_provider
+from nexus.security import ConsoleConfirmation
 
 
 WIDTH = 46
@@ -19,10 +21,14 @@ def build_application() -> NexusApplication:
 
     return NexusApplication(
         database=database,
+        confirmation_handler=ConsoleConfirmation(),
     )
 
 
-def main():
+def main(
+    sandbox_command: str | None = None,
+    workspace: str | None = None,
+):
     app = build_application()
 
     try:
@@ -147,6 +153,23 @@ def main():
         print("╚" + "═" * WIDTH + "╝")
         print()
 
+        if sandbox_command is not None:
+            result = app.tool_executor.execute(
+                "terminal_sandbox",
+                command=sandbox_command,
+                workspace=workspace,
+            )
+            if result.data:
+                if result.data.get("stdout"):
+                    print(result.data["stdout"], end="")
+                if result.data.get("stderr"):
+                    print(result.data["stderr"], end="", file=sys.stderr)
+            if not result.success:
+                print(result.error, file=sys.stderr)
+                return 1
+
+        return 0
+
     finally:
         app.shutdown()
 
@@ -161,8 +184,22 @@ def cli(argv: list[str] | None = None) -> None:
         action="version",
         version=f"Nexus Core {settings.version}",
     )
-    parser.parse_args(argv)
-    main()
+    parser.add_argument(
+        "--sandbox-command",
+        metavar="COMMAND",
+        help="executa um comando isolado após confirmação humana",
+    )
+    parser.add_argument(
+        "--workspace",
+        help="diretório local montado como somente leitura no sandbox",
+    )
+    args = parser.parse_args(argv)
+    if args.workspace is not None and args.sandbox_command is None:
+        parser.error("--workspace exige --sandbox-command")
+
+    result = main(args.sandbox_command, args.workspace)
+    if result:
+        raise SystemExit(result)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import pytest
+from nexus.tools import ToolResult
 
 import nexus.main as nexus_main
 from nexus.core.runtime import RuntimeMode
@@ -58,6 +59,43 @@ def test_main_always_shuts_down_after_success(monkeypatch):
         "status",
         "shutdown",
     ]
+
+
+def test_cli_sandbox_command_uses_executor_and_shuts_down(monkeypatch, capsys):
+    calls = []
+
+    class FakeExecutor:
+        def execute(self, name, **kwargs):
+            calls.append((name, kwargs))
+            return ToolResult(True, name, data={"stdout": "OK\n", "stderr": ""})
+
+    class FakeApplication:
+        tool_executor = FakeExecutor()
+
+        def initialize(self):
+            calls.append("initialize")
+
+        def status(self):
+            return FakeHealth()
+
+        def shutdown(self):
+            calls.append("shutdown")
+
+    monkeypatch.setattr(nexus_main, "build_application", FakeApplication)
+    assert nexus_main.main("echo OK", "/workspace") == 0
+    assert calls == [
+        "initialize",
+        ("terminal_sandbox", {"command": "echo OK", "workspace": "/workspace"}),
+        "shutdown",
+    ]
+    assert capsys.readouterr().out.endswith("OK\n")
+
+
+def test_cli_rejects_workspace_without_command(capsys):
+    with pytest.raises(SystemExit) as exc:
+        nexus_main.cli(["--workspace", "/tmp"])
+    assert exc.value.code == 2
+    assert "--workspace exige --sandbox-command" in capsys.readouterr().err
 
 
 def test_main_shuts_down_when_runtime_fails_after_initialize(

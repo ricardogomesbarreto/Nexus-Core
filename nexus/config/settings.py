@@ -13,6 +13,26 @@ from nexus.config.local_endpoint import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _user_directory(variable: str, fallback: Path) -> Path:
+    configured = os.environ.get(variable)
+    root = Path(configured) if configured else fallback
+    if not root.is_absolute():
+        root = fallback
+    return root / "nexus-core"
+
+
+def _data_directory() -> Path:
+    return _user_directory(
+        "XDG_DATA_HOME", Path.home() / ".local" / "share"
+    )
+
+
+def _logs_directory() -> Path:
+    return _user_directory(
+        "XDG_STATE_HOME", Path.home() / ".local" / "state"
+    ) / "logs"
+
+
 class ConfigurationError(ValueError):
     """
     Erro de configuração externa inválida.
@@ -26,13 +46,13 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.3.2"
+    version: str = "0.3.3"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT
 
-    data_dir: Path = PROJECT_ROOT / "data"
-    logs_dir: Path = PROJECT_ROOT / "logs"
+    data_dir: Path = field(default_factory=_data_directory)
+    logs_dir: Path = field(default_factory=_logs_directory)
 
     database_provider: str = "postgresql"
     database_host: str = "127.0.0.1"

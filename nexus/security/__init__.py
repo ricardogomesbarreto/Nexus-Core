@@ -3,6 +3,11 @@ from nexus.security.audit import (
     AuditLogger,
 )
 
+from nexus.security.confirmation import (
+    ConfirmationHandler,
+    ConsoleConfirmation,
+)
+
 from nexus.security.permissions import (
     PermissionDecision,
 )
@@ -37,6 +42,8 @@ from nexus.security.tool_permissions import (
 __all__ = [
     "AuditEntry",
     "AuditLogger",
+    "ConfirmationHandler",
+    "ConsoleConfirmation",
     "PermissionDecision",
     "PathSecurity",
     "SecurityPolicy",

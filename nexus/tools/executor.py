@@ -1,4 +1,5 @@
 from nexus.security import (
+    ConfirmationHandler,
     PermissionDecision,
     SecurityGate,
     SecurityRequest,
@@ -19,12 +20,14 @@ class ToolExecutor:
         self,
         registry: ToolRegistry,
         security_gate: SecurityGate | None = None,
+        confirmation_handler: ConfirmationHandler | None = None,
     ):
         self.registry = registry
 
         self.security_gate = (
             security_gate or SecurityGate()
         )
+        self.confirmation_handler = confirmation_handler
 
         self._register_tools_permissions()
 
@@ -106,10 +109,60 @@ class ToolExecutor:
             )
         )
 
-        if (
-            security_result.decision
-            != PermissionDecision.ALLOW
-        ):
+        if security_result.decision == PermissionDecision.CONFIRM:
+            if self.confirmation_handler is None:
+                self._audit_confirmation(request, "UNAVAILABLE")
+                return ToolResult(
+                    success=False,
+                    tool_name=tool_name,
+                    error=security_result.reason,
+                )
+
+            try:
+                approved = self.confirmation_handler.confirm(request)
+            except Exception:
+                self._audit_confirmation(request, "ERROR")
+                return ToolResult(
+                    success=False,
+                    tool_name=tool_name,
+                    error="Não foi possível obter confirmação do usuário.",
+                )
+
+            if approved is not True:
+                self._audit_confirmation(request, "REJECTED")
+                return ToolResult(
+                    success=False,
+                    tool_name=tool_name,
+                    error="Operação não autorizada pelo usuário.",
+                )
+
+            # A autorização vale somente para esta chamada. Revalida os
+            # recursos e a política após o tempo gasto na confirmação.
+            try:
+                current_resources = tool.sensitive_resources(**kwargs)
+            except Exception:
+                current_resources = None
+
+            if current_resources != resources:
+                self._audit_confirmation(request, "INVALIDATED")
+                return ToolResult(
+                    success=False,
+                    tool_name=tool_name,
+                    error="Recursos alterados durante a confirmação.",
+                )
+
+            rechecked = self.security_gate.evaluate(request)
+            if rechecked.decision != PermissionDecision.CONFIRM:
+                self._audit_confirmation(request, "INVALIDATED")
+                return ToolResult(
+                    success=False,
+                    tool_name=tool_name,
+                    error="Autorização invalidada pela política de segurança.",
+                )
+
+            self._audit_confirmation(request, "APPROVED")
+
+        elif security_result.decision != PermissionDecision.ALLOW:
             return ToolResult(
                 success=False,
                 tool_name=tool_name,
@@ -161,3 +214,18 @@ class ToolExecutor:
                 tool_name=tool_name,
                 error=str(exc),
             )
+
+    def _audit_confirmation(
+        self,
+        request: SecurityRequest,
+        outcome: str,
+    ) -> None:
+        self.security_gate.audit_logger.record(
+            tool_name=request.tool_name or "unknown",
+            action=request.action,
+            risk_level=request.risk_level.name,
+            decision=PermissionDecision.CONFIRM.value,
+            reason="Resultado da confirmação humana.",
+            path=self.security_gate.audit_path(request),
+            outcome=outcome,
+        )

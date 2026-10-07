@@ -1,4 +1,5 @@
 import nexus.main as main_module
+from nexus.security import ConsoleConfirmation
 
 
 def test_build_application_composes_database_stack(monkeypatch):
@@ -26,7 +27,8 @@ def test_build_application_composes_database_stack(monkeypatch):
         )
         return database
 
-    def fake_application(*, database):
+    def fake_application(*, database, confirmation_handler):
+        assert isinstance(confirmation_handler, ConsoleConfirmation)
         calls.append(
             ("application", database)
         )

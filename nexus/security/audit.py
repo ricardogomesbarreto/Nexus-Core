@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import RLock
 
+from nexus.config.settings import settings
+
 
 @dataclass(frozen=True)
 class AuditEntry:
@@ -32,12 +34,7 @@ class AuditLogger:
         log_path: str | Path | None = None,
     ):
         if log_path is None:
-            log_path = (
-                Path.home()
-                / "Nexus Core"
-                / "logs"
-                / "security.log"
-            )
+            log_path = settings.logs_dir / "security.log"
 
         self.log_path = Path(log_path).expanduser().resolve()
 
@@ -107,17 +104,22 @@ class AuditLogger:
     def _format_entry(
         entry: AuditEntry,
     ) -> str:
-
-        path = entry.path or "-"
-        outcome = entry.outcome or "-"
+        def safe(value: str | None) -> str:
+            return (
+                str(value if value is not None else "-")
+                .replace("\\", "\\\\")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n")
+                .replace("|", "\\|")
+            )
 
         return (
             f"{entry.timestamp.isoformat()} | "
-            f"TOOL={entry.tool_name} | "
-            f"ACTION={entry.action} | "
-            f"RISK={entry.risk_level} | "
-            f"DECISION={entry.decision} | "
-            f"OUTCOME={outcome} | "
-            f"PATH={path} | "
-            f"REASON={entry.reason}"
+            f"TOOL={safe(entry.tool_name)} | "
+            f"ACTION={safe(entry.action)} | "
+            f"RISK={safe(entry.risk_level)} | "
+            f"DECISION={safe(entry.decision)} | "
+            f"OUTCOME={safe(entry.outcome)} | "
+            f"PATH={safe(entry.path)} | "
+            f"REASON={safe(entry.reason)}"
         )

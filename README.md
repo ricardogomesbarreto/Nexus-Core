@@ -10,21 +10,22 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.2" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.2-722F37">
+  <img alt="Versão v0.3.3" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.3-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
+  <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.2 — Security Resource Mediation`<br>
-> **Última tag publicada:** `v0.3.2`<br>
-> **Próximo marco planejado:** `v0.3.3 — Explicit Confirmation & Authorization`<br>
+> **Versão atual:** `v0.3.3 — Explicit Confirmation & Authorization`<br>
+> **Última tag publicada:** `v0.3.3`<br>
+> **Próximo marco planejado:** `v0.3.4 — Structured Tool Contracts`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** terminal local; interface gráfica nativa planejada<br>
 > **Banco único:** PostgreSQL local<br>
-> **Validação:** `539 passed, 7 skipped` (integrações Docker indisponíveis aqui)<br>
+> **Validação local:** `549 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -42,7 +43,9 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local.
 
 O programa roda como processo nativo no Linux. A distribuição atual oferece
-o comando `nexus-core` no ambiente Python do usuário. Os assets da futura
+o comando `nexus-core` no ambiente Python do usuário. A opção
+`--sandbox-command` exige confirmação no terminal para cada execução isolada.
+Os assets da futura
 interface gráfica já existem, mas uma janela gráfica ainda não foi implementada.
 Não há aplicação ou servidor web na arquitetura do produto.
 
@@ -378,8 +381,8 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.2
-Capability:           Security resource mediation
+Release Target:       v0.3.3
+Capability:           Explicit human confirmation
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
@@ -1356,8 +1359,10 @@ DENY
 Cada ferramenta interna declara `sensitive_resources(**kwargs)`: caminhos
 de arquivo, diretório e workspace são avaliados antes de `execute()`.
 Declarações ausentes ou inválidas são negadas e auditadas. A decisão
-`CONFIRM` ainda bloqueia a execução sem fluxo de confirmação humana,
-planejado para `v0.3.3`. O código de ferramentas internas é confiável;
+`CONFIRM` exige uma resposta humana explícita antes de executar. Uma recusa,
+ausência de terminal ou falha na confirmação bloqueia a chamada; a política
+e os recursos são revalidados após a resposta. A decisão e o resultado da
+execução ficam no log de auditoria. O código de ferramentas internas é confiável;
 uma ferramenta externa que declare falsamente seus recursos exige revisão
 antes de ser registrada.
 
@@ -1643,6 +1648,20 @@ raiz do projeto. O comando usa o PostgreSQL local configurado e termina
 com erro explícito quando ele não está disponível. Esta versão oferece
 uma interface de terminal, não uma janela gráfica.
 
+Para executar um comando no sandbox Docker, com aprovação presencial no
+terminal e workspace opcional montado somente para leitura:
+
+```bash
+nexus-core --sandbox-command 'pwd' --workspace "$PWD"
+```
+
+O prompt mostra o comando e os recursos. Somente a resposta literal `sim`
+autoriza aquela chamada; sem terminal interativo a operação é negada. O
+PostgreSQL local deve estar disponível antes de iniciar a aplicação. Dados
+e logs ficam no diretório do usuário conforme `XDG_DATA_HOME` e
+`XDG_STATE_HOME` (padrões `~/.local/share/nexus-core` e
+`~/.local/state/nexus-core/logs`).
+
 ---
 
 # Exemplo de ModelRouter
@@ -1674,21 +1693,24 @@ Comando oficial:
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Verificação nesta revisão (ambiente sem Docker, com HOME de teste):
+Verificação nesta revisão (ambiente sem Docker e PostgreSQL de teste):
 
 ```text
-539 passed; 7 skipped (integração real com Docker)
+549 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
 ```
 
 Coleta:
 
 ```text
-546 tests collected
+557 tests collected
 ```
 
 Os sete testes que executam containers são ignorados automaticamente
 quando o daemon Docker não está disponível. Em um Linux com Docker
-operacional, o mesmo comando também verifica o isolamento real.
+operacional, o mesmo comando também verifica o isolamento real. O teste
+PostgreSQL real é executado quando `NEXUS_TEST_POSTGRES_PASSWORD` está
+definido para o banco descartável `nexus_test` no loopback. A CI configura
+esse serviço e executa a suíte em Linux com Docker.
 
 ---
 
@@ -2880,25 +2902,24 @@ ferramentas.
 
 ---
 
+## v0.3.3 — Explicit Confirmation & Authorization
+
+O `ToolExecutor` trata `CONFIRM` como uma autorização individual: solicita
+decisão por um handler separado da Model Layer, registra aprovação ou recusa
+e reavalia recursos e política após a resposta. Sem handler, sem terminal
+visível, diante de erro ou de qualquer resposta diferente de `sim`, a
+execução é negada. `DENY` nunca apresenta pedido de confirmação.
+
+O comando Linux `nexus-core --sandbox-command` expõe o fluxo para o sandbox
+Docker. Os logs e dados locais seguem os diretórios XDG do usuário. A CI
+verifica Python 3.12, PostgreSQL real e a suíte Docker no Linux.
+
+---
+
 # Roadmap
 
 O roadmap é evolutivo. Cada release adiciona uma responsabilidade
 pequena, clara e verificável.
-
----
-
-## v0.3.3 — Explicit Confirmation & Authorization
-
-Objetivo:
-
-implementar o fluxo explícito de autorização humana para decisões `CONFIRM`.
-
-Escopo planejado:
-
-* distinguir `ALLOW`, `CONFIRM` e `DENY` de ponta a ponta;
-* impedir execução enquanto uma confirmação necessária estiver pendente;
-* registrar decisões de autorização de forma auditável;
-* manter autorização separada da lógica do modelo.
 
 ---
 
@@ -3400,7 +3421,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3` e `v0.3.2` já existem.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2` e `v0.3.3` já existem.
 
 ---
 
@@ -3443,12 +3464,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.2
-Release Name:          Security Resource Mediation
-Latest Git Tag:        v0.3.2
+Release Target:        v0.3.3
+Release Name:          Explicit Confirmation & Authorization
+Latest Git Tag:        v0.3.3
 Implementation:        RELEASED
-Release Validation:    PASSED EXCEPT DOCKER INTEGRATION (SKIPPED)
-Tests:                 539 passed, 7 skipped (Docker unavailable)
+Release Validation:    LOCAL PASS; CI CHECKS REAL POSTGRESQL AND DOCKER
+Tests:                 549 passed, 8 skipped locally
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)

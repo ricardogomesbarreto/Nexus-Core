@@ -10,7 +10,7 @@ from nexus.monitoring.health import HealthStatus
 from nexus.models.model_factory import (
     build_model_router,
 )
-from nexus.security import SecurityGate
+from nexus.security import ConfirmationHandler, SecurityGate
 from nexus.tools import (
     TerminalSandboxTool,
     ToolExecutor,
@@ -26,6 +26,7 @@ class NexusApplication:
     def __init__(
         self,
         database: Database,
+        confirmation_handler: ConfirmationHandler | None = None,
     ):
         self.logger = setup_logger()
 
@@ -44,6 +45,7 @@ class NexusApplication:
         self.tool_executor = ToolExecutor(
             registry=self.tool_registry,
             security_gate=self.security_gate,
+            confirmation_handler=confirmation_handler,
         )
 
         self.connectivity_manager = ConnectivityManager()
