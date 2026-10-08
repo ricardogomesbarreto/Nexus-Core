@@ -10,13 +10,21 @@ from nexus.security import (
     SecurityRequest,
     SensitiveResource,
 )
-from nexus.tools import NexusTool, ToolExecutor, ToolRegistry, ToolResult
+from nexus.tools import (
+    FieldSpec, NexusTool, ResourceSpec, ToolContract, ToolExecutor,
+    ToolRegistry, ToolResult, ValueKind,
+)
 
 
 class ConfirmTool(NexusTool):
     name = "confirmation_test"
     description = "Executa operação de teste"
     risk_level = RiskLevel.MEDIUM
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("path", ValueKind.STRING, required=False),),
+        resources=(ResourceSpec("path", "path"),),
+    )
 
     def __init__(self):
         self.calls = 0
@@ -27,12 +35,17 @@ class ConfirmTool(NexusTool):
 
     def execute(self, **kwargs):
         self.calls += 1
-        return ToolResult(True, self.name, data=kwargs)
+        return ToolResult(True, self.name)
 
 
 class HighRiskTool(ConfirmTool):
     name = "high_risk_test"
     risk_level = RiskLevel.HIGH
+    contract = ToolContract(
+        name=name, description=ConfirmTool.description, permission=risk_level,
+        inputs=ConfirmTool.contract.inputs,
+        resources=ConfirmTool.contract.resources,
+    )
 
 
 class FakeConfirmation:

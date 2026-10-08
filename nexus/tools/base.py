@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from nexus.security import RiskLevel, SensitiveResource
+from nexus.tools.contracts import ToolContract
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,19 @@ class ToolResult:
     tool_name: str
     data: Any = None
     error: str | None = None
+    error_code: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        """Retorno estável para clientes sem expor exceções internas."""
+        return {
+            "success": self.success,
+            "tool_name": self.tool_name,
+            "data": self.data,
+            "error": (
+                {"code": self.error_code or "TOOL_ERROR", "message": self.error}
+                if not self.success else None
+            ),
+        }
 
 
 class NexusTool(ABC):
@@ -25,6 +39,7 @@ class NexusTool(ABC):
     name: str = ""
     description: str = ""
     risk_level: RiskLevel = RiskLevel.SAFE
+    contract: ToolContract | None = None
 
     def sensitive_resources(
         self,

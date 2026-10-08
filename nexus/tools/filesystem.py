@@ -2,6 +2,7 @@ from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
 from nexus.tools.base import NexusTool, ToolResult
+from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKind
 
 
 class ListDirectoryTool(NexusTool):
@@ -17,6 +18,29 @@ class ListDirectoryTool(NexusTool):
     )
 
     risk_level = RiskLevel.SAFE
+
+    contract = ToolContract(
+        name=name,
+        description=description,
+        permission=risk_level,
+        inputs=(
+            FieldSpec(
+                "path", ValueKind.STRING,
+                required=False, default=".", nonempty=True,
+            ),
+        ),
+        resources=(ResourceSpec("directory", "path"),),
+        outputs=(
+            FieldSpec("path", ValueKind.STRING),
+            FieldSpec(
+                "items", ValueKind.ARRAY,
+                item_fields=(
+                    FieldSpec("name", ValueKind.STRING),
+                    FieldSpec("type", ValueKind.STRING),
+                ),
+            ),
+        ),
+    )
 
     def sensitive_resources(
         self,
@@ -106,6 +130,19 @@ class ReadFileTool(NexusTool):
     )
 
     risk_level = RiskLevel.SAFE
+
+    contract = ToolContract(
+        name=name,
+        description=description,
+        permission=risk_level,
+        inputs=(FieldSpec("path", ValueKind.STRING, nonempty=True),),
+        resources=(ResourceSpec("file", "path"),),
+        outputs=(
+            FieldSpec("path", ValueKind.STRING),
+            FieldSpec("size", ValueKind.INTEGER),
+            FieldSpec("content", ValueKind.STRING),
+        ),
+    )
 
     MAX_FILE_SIZE = 1024 * 1024
 

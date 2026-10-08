@@ -3,6 +3,7 @@ from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
 from nexus.tools.base import NexusTool, ToolResult
+from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKind
 
 
 class TerminalSandboxTool(NexusTool):
@@ -27,6 +28,27 @@ class TerminalSandboxTool(NexusTool):
     )
 
     risk_level = RiskLevel.MEDIUM
+
+    contract = ToolContract(
+        name=name,
+        description=description,
+        permission=risk_level,
+        inputs=(
+            FieldSpec("command", ValueKind.STRING, nonempty=True),
+            FieldSpec(
+                "workspace", ValueKind.STRING,
+                required=False, nullable=True, default=None, nonempty=True,
+            ),
+        ),
+        resources=(ResourceSpec("workspace", "workspace"),),
+        outputs=(
+            FieldSpec("command", ValueKind.STRING),
+            FieldSpec("exit_code", ValueKind.INTEGER),
+            FieldSpec("stdout", ValueKind.STRING),
+            FieldSpec("stderr", ValueKind.STRING),
+            FieldSpec("workspace", ValueKind.STRING, nullable=True),
+        ),
+    )
 
     IMAGE = "ubuntu:24.04"
 

@@ -213,7 +213,7 @@ def test_load_settings_ignores_undeclared_environment_overrides():
     )
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.3"
+    assert settings.version == "0.3.4"
     assert settings.project_root == PROJECT_ROOT
     assert settings.data_dir.name == "nexus-core"
     assert settings.logs_dir.name == "logs"

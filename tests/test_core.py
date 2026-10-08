@@ -7,7 +7,7 @@ def test_settings():
     settings = load_settings({})
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.3"
+    assert settings.version == "0.3.4"
     assert settings.connectivity_monitor_interval == 30.0
     assert settings.connectivity_confirmation_threshold == 2
 

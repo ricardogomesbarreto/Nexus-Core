@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.3" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.3-722F37">
+  <img alt="Versão v0.3.4" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.4-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,13 +19,13 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.3 — Explicit Confirmation & Authorization`<br>
-> **Última tag publicada:** `v0.3.3`<br>
-> **Próximo marco planejado:** `v0.3.4 — Structured Tool Contracts`<br>
+> **Versão atual:** `v0.3.4 — Structured Tool Contracts`<br>
+> **Última tag publicada:** `v0.3.4`<br>
+> **Próximo marco planejado:** `v0.3.5 — Controlled Agent & Tool Calling`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** terminal local; interface gráfica nativa planejada<br>
 > **Banco único:** PostgreSQL local<br>
-> **Validação local:** `549 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
+> **Validação local:** `566 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -381,8 +381,8 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.3
-Capability:           Explicit human confirmation
+Release Target:       v0.3.4
+Capability:           Structured Tool Contracts
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
@@ -1358,6 +1358,8 @@ DENY
 
 Cada ferramenta interna declara `sensitive_resources(**kwargs)`: caminhos
 de arquivo, diretório e workspace são avaliados antes de `execute()`.
+Na `v0.3.4`, o contrato de cada ferramenta também vincula cada recurso à
+entrada que o origina; recursos omitidos ou divergentes bloqueiam a chamada.
 Declarações ausentes ou inválidas são negadas e auditadas. A decisão
 `CONFIRM` exige uma resposta humana explícita antes de executar. Uma recusa,
 ausência de terminal ou falha na confirmação bloqueia a chamada; a política
@@ -1438,8 +1440,19 @@ NexusTool
     ├── name
     ├── description
     ├── risk_level
+    ├── contract: entradas, recursos, permissão e saídas
     └── execute()
 ```
+
+O `ToolRegistry` exige um `ToolContract` coerente com o nome, a descrição e
+o risco da ferramenta. `registry.contracts()` expõe os contratos em uma
+estrutura JSON compatível com integrações futuras. `ToolExecutor` valida os
+argumentos antes de declarar recursos e consultar o `SecurityGate`; campos
+extras, valores de tipo errado e recursos divergentes são negados e auditados.
+Depois de `execute()`, o retorno é conferido contra as saídas declaradas.
+`ToolResult.as_dict()` produz `success`, `tool_name`, `data` e um erro com
+`code` e `message` quando a chamada falha. Nenhum modelo executa ferramentas
+diretamente nesta versão.
 
 Ferramentas implementadas:
 
@@ -1696,13 +1709,13 @@ PYTHONPATH="$PWD" pytest -q
 Verificação nesta revisão (ambiente sem Docker e PostgreSQL de teste):
 
 ```text
-549 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
+566 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
 ```
 
 Coleta:
 
 ```text
-557 tests collected
+574 tests collected
 ```
 
 Os sete testes que executam containers são ignorados automaticamente
@@ -2916,26 +2929,26 @@ verifica Python 3.12, PostgreSQL real e a suíte Docker no Linux.
 
 ---
 
+## v0.3.4 — Structured Tool Contracts
+
+Cada ferramenta interna declara um contrato imutável com entradas tipadas,
+valores padrão, recursos vinculados às entradas, nível de permissão e saídas.
+O registro recusa contratos ausentes ou incoerentes. Antes da autorização, o
+executor valida os parâmetros e compara os caminhos declarados com os caminhos
+esperados; depois da execução, valida nome, estado e dados do resultado.
+Rejeições e retornos inválidos são auditados com códigos de erro estáveis.
+
+Os contratos podem ser inspecionados por `ToolRegistry.contracts()` e
+serializados em JSON. A interface de terminal, a confirmação humana e o
+PostgreSQL local continuam sendo os componentes de execução desta versão.
+O Agent/Planner permanece para `v0.3.5`.
+
+---
+
 # Roadmap
 
 O roadmap é evolutivo. Cada release adiciona uma responsabilidade
 pequena, clara e verificável.
-
----
-
-## v0.3.4 — Structured Tool Contracts
-
-Objetivo:
-
-formalizar contratos estruturados para ferramentas antes da integração com agentes.
-
-Escopo planejado:
-
-* definir entradas declaradas e validáveis;
-* declarar recursos sensíveis explicitamente;
-* declarar requisitos de permissão;
-* estruturar resultados e erros;
-* manter contratos auditáveis e independentes do modelo.
 
 ---
 
@@ -3421,7 +3434,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2` e `v0.3.3` já existem.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3` e `v0.3.4` já existem.
 
 ---
 
@@ -3464,12 +3477,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.3
-Release Name:          Explicit Confirmation & Authorization
-Latest Git Tag:        v0.3.3
+Release Target:        v0.3.4
+Release Name:          Structured Tool Contracts
+Latest Git Tag:        v0.3.4
 Implementation:        RELEASED
 Release Validation:    LOCAL PASS; CI CHECKS REAL POSTGRESQL AND DOCKER
-Tests:                 549 passed, 8 skipped locally
+Tests:                 566 passed, 8 skipped locally
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)

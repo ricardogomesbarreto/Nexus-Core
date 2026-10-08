@@ -10,12 +10,16 @@ from nexus.security import (
     SensitiveResource,
 )
 from nexus.tools import (
+    FieldSpec,
     ListDirectoryTool,
     NexusTool,
+    ResourceSpec,
     TerminalSandboxTool,
+    ToolContract,
     ToolExecutor,
     ToolRegistry,
     ToolResult,
+    ValueKind,
 )
 
 
@@ -80,7 +84,6 @@ def test_terminal_workspace_is_checked_before_docker(tmp_path, monkeypatch):
         "terminal_sandbox",
         command="pwd",
         workspace="/etc",
-        path=str(home),
     )
 
     assert not result.success
@@ -115,6 +118,11 @@ class UndeclaredTool(NexusTool):
     name = "undeclared"
     description = "Não declara recursos"
     risk_level = RiskLevel.SAFE
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("path", ValueKind.STRING),),
+        resources=(ResourceSpec("path", "path"),),
+    )
 
     def execute(self, **kwargs):
         raise AssertionError("Ferramenta não deve executar")
@@ -136,6 +144,17 @@ class MultiResourceTool(NexusTool):
     name = "multi_resource"
     description = "Dois caminhos"
     risk_level = RiskLevel.SAFE
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(
+            FieldSpec("source", ValueKind.STRING),
+            FieldSpec("destination", ValueKind.STRING),
+        ),
+        resources=(
+            ResourceSpec("input", "source"),
+            ResourceSpec("output", "destination"),
+        ),
+    )
 
     def sensitive_resources(self, **kwargs):
         return (
@@ -169,4 +188,4 @@ def test_invalid_resource_path_fails_closed(tmp_path):
     result = executor.execute("list_directory", path="")
 
     assert not result.success
-    assert "inválidos" in result.error
+    assert result.error_code == "INVALID_INPUT"
