@@ -1,3 +1,4 @@
+import os
 import subprocess
 from pathlib import Path
 
@@ -108,10 +109,16 @@ def test_terminal_workspace_allowed_and_read_only(tmp_path, monkeypatch):
 
     assert result.success
     assert len(commands) == 1
-    assert any(
-        f"src={home},dst=/workspace,readonly" in argument
-        for argument in commands[0]
-    )
+    sources = [
+        value.split("src=", 1)[1].split(",", 1)[0]
+        for value in commands[0] if "src=" in value
+    ]
+    assert len(sources) == 1
+    assert sources[0].startswith("/proc/")
+    assert "fd/" in sources[0]
+    # The descriptor must be open during subprocess invocation, not just
+    # revalidated by a mutable host pathname.
+    assert any("dst=/workspace,readonly" in value for value in commands[0])
 
 
 class UndeclaredTool(NexusTool):
