@@ -304,6 +304,9 @@ class DesktopWindow:
         )
 
     def _poll(self) -> None:
+        # Prune completed workers on every GUI tick; otherwise a long-running
+        # voice conversation would retain every prior thread indefinitely.
+        self._workers_running()
         self.confirmation.process(self._confirm)
         while True:
             try:
