@@ -68,6 +68,8 @@ class DesktopWindow:
         self._listening = False
         self._voice_active = True
         self._listen_generation = 0
+        self._listen_pending_generations: set[int] = set()
+        self._speak_generation = 0
         self._speaking = False
         self._closing = False
         self._workers: list[Thread] = []
@@ -244,6 +246,8 @@ class DesktopWindow:
         self._cancel_requested = True
         if self._operation_kind == "chat":
             self.session.cancel_current()
+            # Release threads blocked on tool consent immediately.
+            self.confirmation.cancel_pending()
         self.cancel_button.configure(state="disabled")
         self.status.configure(text="Cancelamento solicitado; finalizando operação…")
 
@@ -261,8 +265,10 @@ class DesktopWindow:
         """Speak normal and visual answers through the same local TTS channel."""
         if not self.speech_enabled.get() or not text.strip():
             return False
+        self._speak_generation += 1
+        generation = self._speak_generation
         self._speaking = True
-        self._start_worker(self._speak, text, self.voice_choice.get())
+        self._start_worker(self._speak, text, self.voice_choice.get(), generation)
         return True
 
     def _send(self, event=None, *, advisory_only=False):
@@ -289,7 +295,7 @@ class DesktopWindow:
             self._listen_generation += 1
             self.recognizer.stop()
         if self._speaking:
-            self.speaker.stop()
+            self._stop_speaking()
         self.status.configure(text="Processando localmente…")
         self._start_worker(self._answer, message, advisory_only)
         return "break"
@@ -306,15 +312,18 @@ class DesktopWindow:
 
     def _start_listening(self) -> None:
         if (not self._voice_active or self._busy or self._listening
-                or self._speaking or self._closing):
+                or self._listen_pending_generations or self._speaking or self._closing):
             return
         self._listening = True
         self._listen_generation += 1
         generation = self._listen_generation
+        self._listen_pending_generations.add(generation)
         self.status.configure(text="Ouvindo… diga sua pergunta")
         self._start_worker(self._listen, generation)
 
     def _toggle_listening(self) -> None:
+        if self._closing:
+            return
         self._voice_active = not self._voice_active
         self.mic_button.configure(
             text="Pausar escuta" if self._voice_active else "Retomar escuta"
@@ -348,10 +357,17 @@ class DesktopWindow:
         else:
             self.status.configure(text="Conversa contínua sem palavra de ativação")
 
+    def _stop_speaking(self) -> None:
+        """Invalidate a superseded TTS worker before its completion event."""
+        self._speak_generation += 1
+        self._speaking = False
+        self.speaker.stop()
+
     def _toggle_speech(self) -> None:
         if not self.speech_enabled.get() and self._speaking:
-            self.speaker.stop()
+            self._stop_speaking()
             self.status.configure(text="Leitura em voz desativada")
+            self._start_listening()
 
     def _vision_file(self) -> None:
         self._request_vision("file")
@@ -421,7 +437,7 @@ class DesktopWindow:
             self._listen_generation += 1
             self.recognizer.stop()
         if self._speaking:
-            self.speaker.stop()
+            self._stop_speaking()
         self.status.configure(text="Analisando imagem no Ollama local…")
         self._append("Você", f"[Visão autorizada: {label}] {question}", "user")
         self._start_worker(self._analyze_vision, source, selection, question)
@@ -461,14 +477,20 @@ class DesktopWindow:
         except Exception:
             self._audio_events.put(("listen_error", "Falha ao reconhecer a fala local.", generation))
 
-    def _speak(self, text: str, voice: str) -> None:
+    def _speak(self, text: str, voice: str, generation: int) -> None:
+        # A queued speech worker may start after the user has cancelled
+        # or muted it. Do not start playback from such a stale request.
+        if self._closing or generation != self._speak_generation:
+            return
         try:
             self.speaker.speak(text, voice)
-            self._audio_events.put(("speak_done", "", 0))
+            self._audio_events.put(("speak_done", "", generation))
         except VoiceError as exc:
-            self._audio_events.put(("speak_error", str(exc), 0))
+            self._audio_events.put(("speak_error", str(exc), generation))
         except Exception:
-            self._audio_events.put(("speak_error", "Falha ao reproduzir a voz local.", 0))
+            self._audio_events.put((
+                "speak_error", "Falha ao reproduzir a voz local.", generation
+            ))
 
     @staticmethod
     def _display(value) -> str:
@@ -505,6 +527,9 @@ class DesktopWindow:
             except Empty:
                 break
             if kind in ("transcript", "silence", "listen_error"):
+                if generation not in self._listen_pending_generations:
+                    continue
+                self._listen_pending_generations.discard(generation)
                 self._listening = False
                 if self._closing:
                     continue
@@ -533,7 +558,10 @@ class DesktopWindow:
                         self._send()
                     else:
                         self._start_listening()
-            else:
+            elif kind in ("speak_done", "speak_error"):
+                # A cancelled/disabled older voice must not clobber new TTS.
+                if generation != self._speak_generation:
+                    continue
                 self._speaking = False
                 if not self._closing and not self._busy:
                     if kind == "speak_error" and self.speech_enabled.get():
@@ -604,7 +632,7 @@ class DesktopWindow:
         self.session.close()
         self.confirmation.close()
         self.recognizer.stop()
-        self.speaker.stop()
+        self._stop_speaking()
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
         self.cancel_button.configure(state="disabled")

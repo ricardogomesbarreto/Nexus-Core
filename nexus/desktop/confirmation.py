@@ -55,7 +55,17 @@ class DesktopConfirmation:
             except Exception:
                 approved = False
             with self._lock:
-                pending.approved = approved and not self._closed
+                # Cancellation may happen while a modal dialog is open.
+                # Never re-approve a confirmation already cancelled.
+                if not pending.completed.is_set():
+                    pending.approved = approved and not self._closed
+                    pending.completed.set()
+
+    def cancel_pending(self) -> None:
+        """Reject all pending confirmations without permanently closing the bridge."""
+        with self._lock:
+            for pending in self._pending:
+                pending.approved = False
                 pending.completed.set()
 
     def close(self) -> None:
