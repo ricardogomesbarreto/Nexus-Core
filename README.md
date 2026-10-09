@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.8" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.8-722F37">
+  <img alt="Versão v0.3.9 candidata" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.9--rc-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.8 — Conversa por voz contínua`<br>
+> **Versão em validação:** `v0.3.9 — Expanded Desktop Capabilities & Hardening`<br>
 > **Última tag publicada:** `v0.3.8`<br>
-> **Próximo marco planejado:** `v0.3.9 — Expanded Desktop Capabilities`<br>
+> **Próximo marco após a v0.3.9:** `v0.4.0 — Persistent Memory Foundation`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -38,7 +38,50 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 ---
 
-# Validação da release atual — 09/10/2026
+# v0.3.9 — Hardening e expansão desktop (candidata)
+
+Escopo de implementação nesta linha:
+
+- **Segurança de caminhos**: operações de leitura, listagem e consulta de
+  metadados abrem arquivos e diretórios por descritores ancorados no HOME
+  permitido, com `O_NOFOLLOW` em cada componente. A política é
+  conservadora e recusa links simbólicos mesmo quando apontam para uma
+  área autorizada. Nenhum caminho aberto depende de um novo
+  `Path.resolve()` para efetivar a leitura.
+- **Sandbox Docker**: o workspace autorizado é copiado por descritores
+  para um diretório temporário privado antes do bind mount; o container
+  vê um snapshot em modo somente leitura, nunca o caminho original
+  mutável. O snapshot bloqueia links simbólicos, arquivos especiais,
+  árvores com mais de **512 arquivos** ou **32 MB** e profundidade
+  superior a oito níveis. Esse limite é de segurança, não uma quota
+  comercial. Arquivos novos/modificados após o snapshot não aparecem
+  na execução corrente.
+- **Nova ferramenta**: `file_metadata` consulta tamanho e data de
+  modificação de um arquivo regular autorizado, sem ler seu conteúdo.
+  Usa o mesmo controle de recursos e as mesmas regras da
+  ferramenta `read_file`.
+- **Interface gráfica**: encerramento aguarda a saída dos workers de
+  áudio, reconhecimento e inferência antes de destruir a janela e
+  libera variáveis Tk na thread gráfica. O PNG oficial é exibido no
+  cabeçalho Tk; o sprite SVG permanece disponível para evolução
+  posterior.
+- **CI**: ações compatíveis com Node 24, cancelamento de execuções
+  obsoletas de PR, testes adversariais de troca de symlink e limites
+  de snapshot.
+
+**Status desta documentação:** versão candidata em validação no PR.
+Não declarar estável nem criar a tag `v0.3.9` antes da
+conclusão dos testes automatizados. A última tag publicada permanece
+`v0.3.8`.
+
+**Homologação manual ainda necessária:** escuta e saída de voz com
+microfone/alto-falantes físicos no Linux real (a CI usa fakes no
+microfone). A nova ferramenta não concede acesso arbitrário ao
+filesystem; só pode acessar arquivos regulares autorizados.
+
+---
+
+# Histórico de validação da v0.3.8 — 09/10/2026
 
 A linha publicada é **v0.3.8 — Continuous Local Voice Conversation**. O
 `pyproject.toml`, `Settings.version` e a tag
@@ -70,7 +113,7 @@ e SVG são versionados, mas a janela Tk atual não renderiza o catálogo
 completo de ícones. Não há distribuição desktop empacotada homologada,
 memória de conversa persistente ou automação irrestrita do computador.
 
-**Pendências para revisão sem alterar o escopo da v0.3.8:** investigar os
+**Pendências identificadas na auditoria histórica da v0.3.8:** investigar os
 dois avisos de finalização Tkinter; homologar entrada/saída de voz em
 hardware Linux real; revisar mitigação de condições de corrida em
 caminhos de arquivos entre a checagem de permissão e o acesso efetivo.
@@ -284,7 +327,7 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Estado funcional vigente: `v0.3.8`.** As subseções sobre
+**Histórico até `v0.3.8`; versão candidata `v0.3.9`.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
 dependências atuais da `v0.3.8`. Para as funcionalidades disponíveis,
@@ -431,7 +474,7 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.8
+Release Target:       v0.3.9-rc
 Capability:           Continuous Local Voice Conversation
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
@@ -3148,7 +3191,7 @@ pequena, clara e verificável.
 
 ## v0.3.8 — Continuous Local Voice Conversation
 
-**Marco concluído e publicado.** A próxima versão continua apenas planejada.
+**Marco concluído e publicado.** A evolução v0.3.9 é tratada na seção seguinte.
 
 A escuta automática inicia na janela desktop e termina por pausa ou encerramento
 explícito. A detecção local de fim de fala usa Vosk; a saída usa eSpeak NG com
@@ -3159,10 +3202,12 @@ exibe o motivo da falha. A CI testa o fluxo de conversa e os controles de pausa.
 
 ---
 
-## v0.3.9 — Expanded Desktop Capabilities
+## v0.3.9 — Expanded Desktop Capabilities & Hardening
 
-Próximo marco planejado: ampliar ferramentas desktop com contratos explícitos,
-políticas de autorização e respostas claras sobre resultados e limites.
+Versão candidata: adiciona `file_metadata`, endurece a abertura de caminhos
+contra troca de symlinks e torna o workspace Docker um snapshot privado e
+limitado. A interface Tk exibe a marca local e sincroniza o encerramento dos
+workers. A publicação depende da CI e da revisão final.
 
 ---
 
@@ -3648,11 +3693,11 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.8
-Release Name:          Continuous Local Voice Conversation
-Latest Git Tag:        v0.3.8
-Implementation:        RELEASED
-Release Validation:    CI PASS (625 TESTS; 2 TK WARNINGS); PHYSICAL AUDIO PENDING
+Release Target:        v0.3.9-rc
+Release Name:          Expanded Desktop Capabilities & Hardening
+Latest Git Tag:        v0.3.8 (v0.3.9 not yet tagged)
+Implementation:        RELEASE CANDIDATE (PR)
+Release Validation:    v0.3.9 CI PENDING; v0.3.8 CI PASS
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
