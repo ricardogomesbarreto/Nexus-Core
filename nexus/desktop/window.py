@@ -7,7 +7,7 @@ from queue import Empty, Queue
 from threading import Thread
 
 from nexus.agent import AgentOutcome
-from nexus.config.settings import settings
+from nexus.config.settings import PROJECT_ROOT, settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
@@ -48,7 +48,19 @@ class DesktopWindow:
 
         frame = ttk.Frame(root, padding=18)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="Nexus Core", font=("Sans", 20, "bold")).pack(anchor="w")
+        # Keep visual assets local. Tk can display the bundled transparent PNG
+        # without requiring a browser, SVG runtime or third-party GUI package.
+        self._brand_image = None
+        brand = PROJECT_ROOT / "assets" / "brand" / "nexus-core-logo.png"
+        if brand.is_file():
+            try:
+                self._brand_image = tk.PhotoImage(file=str(brand)).subsample(12, 12)
+            except tk.TclError:
+                self._brand_image = None
+        if self._brand_image is not None:
+            ttk.Label(frame, image=self._brand_image).pack(anchor="w")
+        else:
+            ttk.Label(frame, text="Nexus Core", font=("Sans", 20, "bold")).pack(anchor="w")
         ttk.Label(
             frame,
             text="Conversa local · ações mediadas · PostgreSQL no computador",
@@ -139,6 +151,7 @@ class DesktopWindow:
         """Destroy Tk resources only on the GUI thread, after all workers exit."""
         self.speech_enabled = None
         self.voice_choice = None
+        self._brand_image = None
         self._workers.clear()
         self.app.shutdown()
         self.root.destroy()
