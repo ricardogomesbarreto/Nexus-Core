@@ -12,6 +12,7 @@ from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.wake import extract_utterance
+from nexus.vision import LocalVision, VisionError, VisionInputError
 
 
 class _WidgetBoolean:
@@ -43,7 +44,7 @@ class _WidgetChoice:
 class DesktopWindow:
     def __init__(
         self, root, app, confirmation: DesktopConfirmation,
-        speaker=None, recognizer=None,
+        speaker=None, recognizer=None, vision=None,
     ):
         import tkinter as tk
         from tkinter import messagebox, ttk
@@ -58,6 +59,9 @@ class DesktopWindow:
         self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
+        self._vision_events: Queue[tuple[str, str, str]] = Queue()
+        self.vision = vision
+        self._vision_buttons = []
         self._busy = False
         self._listening = False
         self._voice_active = True
@@ -130,6 +134,19 @@ class DesktopWindow:
         )
         self.wake_toggle.pack(side="left", padx=(12, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
+        vision_controls = ttk.Frame(frame)
+        vision_controls.pack(fill="x", pady=(8, 0))
+        ttk.Label(vision_controls, text="Visão local sob autorização:").pack(side="left", padx=(0, 8))
+        for title, callback in (
+            ("Imagem", self._vision_file),
+            ("Tela", self._vision_screen),
+            ("Câmera", self._vision_camera),
+        ):
+            button = ttk.Button(
+                vision_controls, text=title, command=callback, style="Nexus.TButton",
+            )
+            button.pack(side="left", padx=(0, 6))
+            self._vision_buttons.append(button)
 
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
@@ -191,6 +208,8 @@ class DesktopWindow:
         self.wake_required = None
         self._brand_image = None
         self._workers.clear()
+        self._vision_buttons.clear()
+        self.vision = None
         self.app.shutdown()
         self.root.destroy()
 
@@ -401,6 +420,8 @@ class DesktopWindow:
         self.speaker.stop()
         self.send_button.configure(state="disabled")
         self.mic_button.configure(state="disabled")
+        for button in self._vision_buttons:
+            button.configure(state="disabled")
         if self._busy or self._listening or self._speaking or self._workers_running():
             self.status.configure(text="Encerrando após a solicitação atual…")
         else:
