@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.6.2" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.2-722F37">
+  <img alt="Versão v0.6.3" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.3-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.6.2 — Guided Autonomy & Conversation`<br>
-> **Publicação da v0.6.2:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.6.3 — Conversation Reliability` (melhorias de áudio, disponibilidade e cancelamento)<br>
+> **Versão do código:** `v0.6.3 — Conversation Reliability`<br>
+> **Publicação da v0.6.3:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.7.x — Controlled Desktop Automation` (autorização e sandbox)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,58 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.6.3 — Conversation Reliability
+
+Versão corretiva: **sem mudanças de design**, melhorias de concorrência de
+áudio, cancelamento seguro de autorizações e integridade do repositório.
+
+## Correções técnicas
+
+**Reconhecimento de voz:** cada escuta Vosk utiliza uma geração e um registro
+de captura pendente. Pausar e retomar rapidamente não dispara gravações ALSA
+sobrepostas: uma nova escuta só começa quando a anterior encerra. Eventos
+atrasados de uma geração obsoleta não podem alterar o estado da atual.
+
+**Fala eSpeak NG:** cada reprodução recebe uma geração. Ao silenciar, mudar
+de pedido, cancelar ou fechar, o áudio anterior é invalidado. Um evento
+tardio de término não pode desativar uma reprodução mais recente, reativar
+o microfone prematuramente ou apresentar um erro de voz já cancelada.
+Workers de áudio enfileirados antes do cancelamento recusam iniciar fala.
+
+**Autorização cancelada:** a ação Cancelar recusa imediatamente confirmações
+de ferramentas ainda pendentes. Mesmo uma resposta positiva tardia de um
+diálogo já cancelado não reautoriza a ação. Operações já executadas
+não são revertidas pelo cancelamento cooperativo.
+
+**Imagem, Tela e Câmera:** preservadas as respostas de visão por texto
+e voz feminina ou masculina no Linux, com leitura em voz alta habilitada
+por padrão e opção de silenciamento. As capturas continuam exigindo
+consentimento por análise, sem observação contínua.
+
+## Revisão transversal dos arquivos
+
+Inventário inicial realizado na main v0.6.2: **191 arquivos rastreados**,
+incluindo código, testes, recursos visuais, workflows e documentação.
+A suite adicionou varredura de integridade dos arquivos disponíveis
+no checkout: sintaxe de todos os módulos Python, codificação UTF-8
+de arquivos textuais, parsing de JSON/SVG, verificação de ícones do
+manifesto e consistência do README, versão do pacote e notas de release
+das versões v0.4.0 a v0.6.3.
+
+A CI Linux continua verificando compilação e todos os testes com Python
+3.12, PostgreSQL 16, Docker e Xvfb; os novos testes reproduzem as condições
+de corrida de fala, escuta, cancelamento e confirmação humana.
+Essa verificação **não equivale à inspeção semântica manual linha a linha**
+de cada arquivo e não substitui a homologação física de câmera, microfone,
+áudio e modelo visual Ollama no computador do usuário.
+
+**Limitações:** voz local por turnos, não full-duplex com latência instantânea.
+Cancelamento cooperativo pode aguardar processos ou chamadas em curso e
+não desfaz operações já executadas. Sem serviços pagos, hospedagem ou
+mudanças de interface.
 
 ---
 
@@ -138,6 +190,7 @@ rastreáveis no GitHub:
 | v0.6.0 | Vision & Screen Understanding Foundation | [Notas](docs/RELEASE_NOTES_v0.6.0.md) |
 | v0.6.1 | Vision Desktop Integration | [Notas](docs/RELEASE_NOTES_v0.6.1.md) |
 | v0.6.2 | Guided Autonomy & Conversation | [Notas](docs/RELEASE_NOTES_v0.6.2.md) |
+| v0.6.3 | Conversation Reliability | [Notas](docs/RELEASE_NOTES_v0.6.3.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -740,10 +793,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.6.2`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.6.3`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.6.2`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.6.3`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3748,11 +3801,14 @@ a execução de ferramentas, mesmo quando sugeridas pelo modelo.
 A ação **Cancelar** descarta resultados pendentes, previne novas
 execuções após cancelamento e mantém a janela responsiva.
 
-### v0.6.3 — Conversation Reliability (planejado)
+### v0.6.3 — Conversation Reliability (implementado)
 
-Resiliência e diagnóstico de hardware de áudio, limites e tempos
-de resposta, acessibilidade e interrupção cooperativa em operações
-de longa duração, sem alterar a identidade da interface.
+Isolamento de gerações de Vosk/eSpeak NG, prevenção de escutas ALSA
+sobrepostas, descarte de áudios obsoletos, cancelamento de confirmações
+pendentes e testes de integridade do repositório.
+
+**Próximo marco:** v0.7.x — Controlled Desktop Automation, com
+autorização explícita, segurança e rastreabilidade.
 
 ---
 
@@ -4118,10 +4174,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.6.2
-Release Name:          Guided Autonomy & Conversation
-Release Tag:          v0.6.2 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        SPOKEN VISION + ADVISORY GATE + COOPERATIVE CANCEL; CI GATED
+Release Target:        v0.6.3
+Release Name:          Conversation Reliability
+Release Tag:          v0.6.3 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        AUDIO RACE FIXES + CONFIRMATION CANCEL + FILE AUDIT; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
