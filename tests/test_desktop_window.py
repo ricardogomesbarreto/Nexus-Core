@@ -136,6 +136,13 @@ def test_microphone_turn_uses_same_conversation_path():
         assert "Entendi sua pergunta" in window.transcript.get("1.0", "end")
         assert window._voice_active
         window._close()
+        # Do not destroy the interpreter while voice workers are still
+        # unwinding; the application owns the coordinated shutdown.
+        deadline = time.monotonic() + 5
+        while root.winfo_exists() and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
+        assert not root.winfo_exists()
     finally:
         confirmation.close()
         try:
