@@ -38,6 +38,45 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 ---
 
+# Validação da release atual — 09/10/2026
+
+A linha publicada é **v0.3.8 — Continuous Local Voice Conversation**. O
+`pyproject.toml`, `Settings.version` e a tag
+[`v0.3.8`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.3.8)
+concordam com essa versão. A tag aponta para o commit
+[`1be4958`](https://github.com/ricardogomesbarreto/Nexus-Core/commit/1be495839a145c3c26e2272064d849dcf52f8799);
+correções posteriores apenas de documentação não alteram a tag publicada.
+
+A [CI da release](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/37879650437)
+foi aprovada no Ubuntu com Python 3.12, PostgreSQL 16, Docker e display
+virtual: **625 testes aprovados, nenhum teste falho, dois avisos** de
+`PytestUnraisableExceptionWarning` durante a destruição de objetos
+Tkinter fora do loop da thread principal. O workflow também executou
+`compileall` e verificou `nexus-core --version` (0.3.8).
+Aprovação da CI não equivale a homologação completa em um computador pessoal.
+
+**O que está efetivamente implementado:** janela nativa Tk, conversa de
+texto com histórico efêmero de até seis turnos, Ollama local, uma
+proposta de ferramenta por turno, confirmação individual das operações
+que a exigem, PostgreSQL local obrigatório, sandbox Docker e escuta
+automática opcional por Vosk/ALSA com saída eSpeak NG feminina ou
+masculina. O modo texto permanece utilizável sem os componentes opcionais
+de voz.
+
+**Limitações da evidência:** a CI utiliza fakes para o microfone e a
+escuta contínua; não demonstra funcionamento em um microfone físico,
+modelo Vosk instalado e ambiente desktop de usuário. Os ativos de marca
+e SVG são versionados, mas a janela Tk atual não renderiza o catálogo
+completo de ícones. Não há distribuição desktop empacotada homologada,
+memória de conversa persistente ou automação irrestrita do computador.
+
+**Pendências para revisão sem alterar o escopo da v0.3.8:** investigar os
+dois avisos de finalização Tkinter; homologar entrada/saída de voz em
+hardware Linux real; revisar mitigação de condições de corrida em
+caminhos de arquivos entre a checagem de permissão e o acesso efetivo.
+
+---
+
 # Visão geral
 
 O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local.
@@ -244,6 +283,12 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 ---
 
 # Estado atual
+
+**Estado funcional vigente: `v0.3.8`.** As subseções sobre
+`v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
+**históricos**; não representam, isoladamente, as capacidades ou
+dependências atuais da `v0.3.8`. Para as funcionalidades disponíveis,
+consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
 (`v0.3.1.1`), a fundação PostgreSQL (`v0.3.1.2`) e correções de configuração
@@ -1117,15 +1162,22 @@ local_model_timeout                    120.0
 
 # Variáveis de ambiente
 
-```text
-NEXUS_NODE_NAME
-NEXUS_OFFLINE_MODE
-NEXUS_CONNECTIVITY_MONITOR_INTERVAL
-NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD
-NEXUS_LOCAL_MODEL_NAME
-NEXUS_LOCAL_MODEL_BASE_URL
-NEXUS_LOCAL_MODEL_TIMEOUT
-```
+A configuração vigente de `nexus/config/settings.py` reconhece:
+
+| Grupo | Variáveis |
+|---|---|
+| Núcleo | `NEXUS_NODE_NAME`, `NEXUS_OFFLINE_MODE` |
+| Conectividade | `NEXUS_CONNECTIVITY_MONITOR_INTERVAL`, `NEXUS_CONNECTIVITY_CONFIRMATION_THRESHOLD` |
+| PostgreSQL | `NEXUS_DATABASE_PROVIDER`, `NEXUS_DATABASE_HOST`, `NEXUS_DATABASE_PORT`, `NEXUS_DATABASE_NAME`, `NEXUS_DATABASE_USER`, `NEXUS_DATABASE_PASSWORD`, `NEXUS_DATABASE_CONNECT_TIMEOUT` |
+| Ollama local | `NEXUS_LOCAL_MODEL_NAME`, `NEXUS_LOCAL_MODEL_BASE_URL`, `NEXUS_LOCAL_MODEL_TIMEOUT` |
+| Voz | `NEXUS_VOSK_MODEL_PATH` |
+| Diretórios padrão XDG | `XDG_DATA_HOME`, `XDG_STATE_HOME` |
+
+A senha `NEXUS_DATABASE_PASSWORD` é obrigatória para inicializar a
+aplicação. `NEXUS_DATABASE_PROVIDER` aceita somente `postgresql` e
+o host do banco e a origem HTTP do Ollama são restritos a loopback.
+O modelo de voz deve estar descompactado em um diretório local; o extra
+`.[voice]` instala a biblioteca Python, **não** baixa seus pesos.
 
 ---
 
@@ -1554,39 +1606,31 @@ Ação proposta por conteúdo externo não equivale a autorização.
 
 ## Runtime Python
 
-A `v0.3.1` não adiciona dependência Python externa obrigatória ao runtime principal.
+A versão atual exige **Python >= 3.12** e a dependência de banco
+`psycopg[binary]==3.3.6`, declarada tanto em `pyproject.toml`
+quanto em `requirements/base.txt`. Portanto, a observação histórica
+de que o runtime não possui dependências Python externas **não se aplica
+à v0.3.8**. O aplicativo não utiliza SQLite.
 
-`requirements/base.txt` permanece sem pacotes externos.
+## Desenvolvimento e voz
 
----
-
-## Desenvolvimento
-
-```text
-pytest==9.1.1
-```
-
-Instalação:
-
-```bash
-python -m pip install -r requirements/dev.txt
-```
-
----
+O extra `.[dev]` instala `pytest==9.1.1`; o extra opcional
+`.[voice]` instala `vosk>=0.3.45,<0.4`. O arquivo
+`requirements/dev.txt` referencia `requirements/base.txt` e fixa
+o pytest.
 
 ## Dependências externas por capacidade
 
-Inferência:
-
-```text
-Ollama
-```
-
-Terminal sandbox:
-
-```text
-Docker
-```
+- **PostgreSQL local:** obrigatório para a inicialização; preparar banco,
+  usuário e senha antes de abrir a aplicação.
+- **Ollama e modelo `qwen3:1.7b`:** inferência local, instalados à parte.
+- **Tk / sessão gráfica Linux:** janela desktop; em Debian/Ubuntu,
+  instalar `python3-tk`.
+- **eSpeak NG e ALSA (`arecord`):** saída e captura de áudio locais,
+  utilizados com o modelo Vosk de português previamente baixado.
+- **Docker:** execução opcional de comandos isolados, com aprovação
+  humana, sem rede e com limites de recursos.
+- **Git e pytest:** ferramentas de desenvolvimento e validação.
 
 ---
 
@@ -1771,34 +1815,39 @@ print(response.content)
 
 # Testes
 
-Comando oficial:
+Comando para uma instalação de desenvolvimento:
 
 ```bash
+python -m pip install -e '.[dev,voice]'
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Verificação nesta revisão (ambiente sem áudio, display, Docker e PostgreSQL de teste):
+**Evidência oficial da v0.3.8:** o workflow
+[CI / run 37879650437](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/37879650437),
+executado em 09/10/2026, registrou:
 
 ```text
-608 passed; 13 skipped (2 janela gráfica, 3 síntese real, 7 Docker e 1 PostgreSQL)
+625 passed, 2 warnings in 5.56s
 ```
 
-Coleta:
+Os dois avisos vieram de `tests/test_tools.py`, em casos do
+`terminal_sandbox`, durante a finalização de objetos Tkinter
+(`RuntimeError: main thread is not in main loop` capturado pelo
+pytest como `PytestUnraisableExceptionWarning`). Eles **não**
+representam falhas de teste, mas são uma pendência a investigar.
 
-```text
-621 tests collected
-```
+A CI configura PostgreSQL 16, Docker e `xvfb-run` para testes da
+janela. A saída eSpeak NG é exercitada com o executável real; já a
+captura por microfone e os fluxos Vosk de escuta contínua usam
+substitutos controlados nos testes, não hardware físico. A presença
+dos componentes na CI não certifica compatibilidade com todos os
+equipamentos Linux.
 
-Os sete testes que executam containers são ignorados automaticamente
-quando o daemon Docker não está disponível. Em um Linux com Docker
-operacional, o mesmo comando também verifica o isolamento real. O teste
-PostgreSQL real é executado quando `NEXUS_TEST_POSTGRES_PASSWORD` está
-definido para o banco descartável `nexus_test` no loopback. O teste da janela
-precisa de um display gráfico. A CI configura PostgreSQL, Docker e display
-virtual Linux para executar a suíte completa.
-Os testes de saída de voz geram WAV local com as duas variantes do eSpeak NG;
-microfone e modelo Vosk são testados com fakes por não haver dispositivo físico
-na CI.
+Em sistemas sem Docker, PostgreSQL de testes ou display gráfico,
+alguns testes de integração são pulados conforme os pré-requisitos;
+o total local pode divergir do workflow de referência. Para a
+integração PostgreSQL real de teste, configurar
+`NEXUS_TEST_POSTGRES_PASSWORD` para o banco descartável `nexus_test`.
 
 ---
 
@@ -3099,6 +3148,8 @@ pequena, clara e verificável.
 
 ## v0.3.8 — Continuous Local Voice Conversation
 
+**Marco concluído e publicado.** A próxima versão continua apenas planejada.
+
 A escuta automática inicia na janela desktop e termina por pausa ou encerramento
 explícito. A detecção local de fim de fala usa Vosk; a saída usa eSpeak NG com
 voz feminina ou masculina. O fluxo suspende a captação enquanto responde,
@@ -3601,8 +3652,8 @@ Release Target:        v0.3.8
 Release Name:          Continuous Local Voice Conversation
 Latest Git Tag:        v0.3.8
 Implementation:        RELEASED
-Release Validation:    LOCAL PASS; CI CHECKS POSTGRESQL, DOCKER, TK AND VOICE
-Tests:                 CI LINUX WITH POSTGRESQL, DOCKER AND TK
+Release Validation:    CI PASS (625 TESTS; 2 TK WARNINGS); PHYSICAL AUDIO PENDING
+Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)
