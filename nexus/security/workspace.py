@@ -21,16 +21,21 @@ def snapshot_directory(source_fd: int, destination: Path) -> None:
     A concurrent directory rename does not redirect reads. Symlinks, sockets,
     FIFOs, devices, oversized trees and oversized files are rejected.
     """
-    usage = {"files": 0, "bytes": 0}
+    usage = {"entries": 0, "files": 0, "bytes": 0}
 
     def copy_tree(fd: int, folder: Path, depth: int) -> None:
         if depth > MAX_WORKSPACE_DEPTH:
             raise WorkspaceSnapshotError("Workspace excede a profundidade máxima.")
         with os.scandir(fd) as scan:
-            names = sorted(entry.name for entry in scan)
-        if len(names) + usage["files"] > MAX_WORKSPACE_FILES * 2:
-            raise WorkspaceSnapshotError("Workspace contém itens demais.")
-        for name in names:
+            names = []
+            for entry in scan:
+                names.append(entry.name)
+                if len(names) + usage["entries"] > MAX_WORKSPACE_FILES:
+                    raise WorkspaceSnapshotError("Workspace contém itens demais.")
+        for name in sorted(names):
+            usage["entries"] += 1
+            if usage["entries"] > MAX_WORKSPACE_FILES:
+                raise WorkspaceSnapshotError("Workspace contém itens demais.")
             flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
             child_fd = os.open(name, flags, dir_fd=fd)
             try:
