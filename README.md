@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.9" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.9-722F37">
+  <img alt="Versão v0.4.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.4.0-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.3.9 — Expanded Desktop Capabilities & Hardening`<br>
-> **Publicação da v0.3.9:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco após a v0.3.9:** `v0.4.0 — Persistent Memory Foundation`<br>
+> **Versão do código:** `v0.4.0 — Persistent Memory Foundation`<br>
+> **Publicação da v0.4.0:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.4.1 — Knowledge Base`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -38,6 +38,48 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 ---
 
+# v0.4.0 — Persistent Memory Foundation
+
+A memória persistente é **explícita e opcional**. Mensagens do chat e
+respostas do Ollama **não são salvas automaticamente**. O histórico de
+seis turnos continua temporário; não há recuperação automática durante a conversa.
+
+- **PostgreSQL local:** tabelas `nexus_memories` e `nexus_memory_audit` criadas
+  sob demanda, sem SQLite e sem serviço em nuvem.
+- **Operações:** salvar, listar, pesquisar texto literal case-insensitive, excluir
+  por ID, exclusão total com confirmação e consulta de estatísticas.
+- **Retenção:** padrão de 90 dias, entre 1 e 365; cada memória até 1.200
+  caracteres. Memórias expiradas não aparecem nas consultas e são purgadas
+  na operação seguinte.
+- **Auditoria:** ação, ID, quantidade e horário, **sem texto salvo nem consulta**
+  na tabela de auditoria.
+
+### Comandos explícitos
+
+```bash
+# Modo mais privado: escreva no terminal e forneça pelo stdin:
+nexus-core --memory-add-stdin --memory-days 90
+# Alternativa (o texto pode ficar no histórico do terminal):
+nexus-core --memory-add "Prefiro respostas objetivas" --memory-days 90
+nexus-core --memory-list
+nexus-core --memory-search "respostas"
+nexus-core --memory-status
+nexus-core --memory-delete 1
+nexus-core --memory-clear --memory-confirm
+```
+
+O ID 1 acima é ilustrativo. Os comandos não iniciam o Ollama nem a interface
+desktop. As memórias ficam em **texto claro no PostgreSQL local**. O argumento
+de `--memory-add` pode aparecer no histórico do shell e na lista de processos.
+`--memory-add-stdin` aceita até 1.200 caracteres pela entrada padrão sem
+incluir a frase na linha de comando, mas não criptografa o banco:
+**não armazene senhas, tokens ou outros segredos**. A versão não inclui
+embedding, RAG, sincronização cloud ou memória automática do agente.
+
+A release será etiquetada somente após CI aprovada no commit da `main`;
+testes de microfone e alto-falantes físicos permanecem fora da CI.
+
+---
 # v0.3.9 — Hardening e expansão desktop
 
 Escopo de implementação nesta linha:
@@ -326,10 +368,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.3.9`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.4.0`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.3.8`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.4.0`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -340,7 +382,8 @@ host antes de executar ferramentas. Cada tag preserva o snapshot da sua versão.
 O PostgreSQL local é o único provider de banco configurado para produção.
 A aplicação exige `NEXUS_DATABASE_PASSWORD` no processo de composição,
 conecta no `initialize()`, cria `system_events` e fecha a conexão no
-`shutdown()`. O banco não é memória persistente do assistente.
+`shutdown()`. A tabela `system_events` não representa a memória do assistente; as memórias
+explícitas da v0.4.0 usam `nexus_memories` e `nexus_memory_audit`.
 
 A `v0.3.1` evolui a Local Model Layer introduzida na `v0.3.0`.
 
@@ -3279,14 +3322,10 @@ Smoke
 
 ## v0.4.0 — Persistent Memory Foundation
 
-Planejado:
-
-* storage;
-* schemas;
-* persistência;
-* recuperação;
-* lifecycle;
-* observabilidade.
+**Implementado:** armazenamento explícito no PostgreSQL, listagem e busca
+literal, retenção e expiração, exclusão individual e total, auditoria sem
+conteúdo e comandos CLI. Sem gravação automática do chat ou injeção
+de memórias no prompt do agente nesta fase.
 
 ---
 
@@ -3692,10 +3731,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.9
-Release Name:          Expanded Desktop Capabilities & Hardening
-Release Tag:          v0.3.9 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        CODE COMPLETE; TAG GATED BY MAIN CI
+Release Target:        v0.4.0
+Release Name:          Persistent Memory Foundation
+Release Tag:          v0.4.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        EXPLICIT POSTGRESQL MEMORY; TAG GATED BY MAIN CI
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

@@ -218,6 +218,15 @@ def cli(argv: list[str] | None = None) -> None:
         "--status", action="store_true",
         help="exibe o estado do núcleo no terminal",
     )
+    actions.add_argument("--memory-add", metavar="TEXT", help="salva explicitamente uma memória local")
+    actions.add_argument("--memory-add-stdin", action="store_true", help="salva texto lido da entrada padrão, sem argumento visível")
+    actions.add_argument("--memory-list", action="store_true", help="lista memórias não expiradas")
+    actions.add_argument("--memory-search", metavar="TEXT", help="procura memórias locais")
+    actions.add_argument("--memory-delete", metavar="ID", type=int, help="exclui memória por identificador")
+    actions.add_argument("--memory-clear", action="store_true", help="exclui todas as memórias com confirmação")
+    actions.add_argument("--memory-status", action="store_true", help="resumo sem conteúdo da memória")
+    parser.add_argument("--memory-days", type=int, default=90, help="retenção da nova memória: 1 a 365 dias")
+    parser.add_argument("--memory-confirm", action="store_true", help="confirma exclusão total das memórias")
     parser.add_argument(
         "--workspace",
         help="diretório local montado como somente leitura no sandbox",
@@ -225,6 +234,20 @@ def cli(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.workspace is not None and args.sandbox_command is None:
         parser.error("--workspace exige --sandbox-command")
+    has_memory_action = any((
+        args.memory_add is not None, args.memory_add_stdin, args.memory_list, args.memory_search is not None,
+        args.memory_delete is not None, args.memory_clear, args.memory_status,
+    ))
+    if args.memory_confirm and not args.memory_clear:
+        parser.error("--memory-confirm exige --memory-clear")
+    if not 1 <= args.memory_days <= 365 or (args.memory_days != 90 and args.memory_add is None and not args.memory_add_stdin):
+        parser.error("--memory-days deve ser 1 a 365 e exige --memory-add")
+    if has_memory_action:
+        from nexus.memory.cli import execute_memory_command
+        code = execute_memory_command(args)
+        if code:
+            raise SystemExit(code)
+        return
 
     if args.desktop or (
         args.sandbox_command is None and args.agent_prompt is None and not args.status
