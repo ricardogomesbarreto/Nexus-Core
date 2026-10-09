@@ -2,7 +2,7 @@
 
 This is intentionally *not* unrestricted computer control. One requested
 text insertion per approved ToolExecutor call into an exactly identified,
-currently active X11 window; Wayland/XWayland sessions fail closed.
+explicitly identified X11 window; Wayland/XWayland sessions fail closed.
 """
 import os
 import re
@@ -32,8 +32,11 @@ class X11DesktopBackend:
             raise DesktopAutomationError(
                 "Automação de teclado disponível somente em uma sessão X11."
             )
-        if not os.environ.get("DISPLAY"):
-            raise DesktopAutomationError("Não há display X11 configurado.")
+        display = os.environ.get("DISPLAY", "")
+        if not re.fullmatch(r"(?::|unix:)[0-9]+(?:\.[0-9]+)?", display):
+            raise DesktopAutomationError(
+                "A automação exige uma sessão gráfica X11 local."
+            )
         binary = self._binary if self._binary is not None else shutil.which("xdotool")
         if not binary:
             raise DesktopAutomationError("Instale xdotool para automação X11.")
@@ -96,15 +99,19 @@ class X11DesktopBackend:
         ident = self.validate_id(window_id)
         title = self.validate_title(window_title)
         value = self.validate_text(text)
-        # SecurityGate already obtained explicit user approval; independently
-        # recheck the *same target* after that dialog has closed.
-        current_id, current_title = self.active_window()
-        if (current_id, current_title) != (ident, title):
+        # Approval dialogs often shift focus to Nexus itself. The user instead
+        # explicitly approved an *exact window ID and title*, so revalidate
+        # those after consent without relying on the now-changed active focus.
+        current_title = self.validate_title(
+            self._query("getwindowname", str(ident))
+        )
+        if current_title != title:
             raise DesktopAutomationError(
-                "A janela ativa mudou após a autorização. Nenhum texto digitado."
+                "A janela de destino mudou após a autorização. Nenhum texto digitado."
             )
-        # Fixed window ID prevents a focus change from redirecting keystrokes
-        # to another application. No shell, newline or keyboard shortcuts.
+        # Fixed window ID prevents unrelated focus changes from redirecting
+        # keystrokes. Some X11 apps intentionally ignore XSendEvent typing.
+        # No shell, newline, keyboard shortcut or mouse action.
         cmd = [self._command(), "type", "--window", str(ident),
                "--clearmodifiers", "--delay", "2", "--", value]
         try:
@@ -128,8 +135,9 @@ def desktop_capabilities() -> dict:
     """Read-only readiness report; does not connect to X11 or press keys."""
     return {
         "platform": "Linux X11 only",
-        "session_x11": bool(os.environ.get("DISPLAY"))
-            and not bool(os.environ.get("WAYLAND_DISPLAY"))
+        "session_x11": bool(re.fullmatch(
+            r"(?::|unix:)[0-9]+(?:\.[0-9]+)?", os.environ.get("DISPLAY", "")
+        )) and not bool(os.environ.get("WAYLAND_DISPLAY"))
             and os.environ.get("XDG_SESSION_TYPE", "").lower() != "wayland",
         "xdotool": bool(shutil.which("xdotool")),
         "effects": "read window title or type single approved text",
