@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.9 candidata" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.9--rc-722F37">
+  <img alt="Versão v0.3.9" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.9-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,8 +19,8 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em validação:** `v0.3.9 — Expanded Desktop Capabilities & Hardening`<br>
-> **Última tag publicada:** `v0.3.8`<br>
+> **Versão do código:** `v0.3.9 — Expanded Desktop Capabilities & Hardening`<br>
+> **Publicação da v0.3.9:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Próximo marco após a v0.3.9:** `v0.4.0 — Persistent Memory Foundation`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
@@ -38,7 +38,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 ---
 
-# v0.3.9 — Hardening e expansão desktop (candidata)
+# v0.3.9 — Hardening e expansão desktop
 
 Escopo de implementação nesta linha:
 
@@ -52,7 +52,7 @@ Escopo de implementação nesta linha:
   para um diretório temporário privado antes do bind mount; o container
   vê um snapshot em modo somente leitura, nunca o caminho original
   mutável. O snapshot bloqueia links simbólicos, arquivos especiais,
-  árvores com mais de **512 arquivos** ou **32 MB** e profundidade
+  árvores com mais de **512 entradas (arquivos e diretórios)** ou **32 MB** e profundidade
   superior a oito níveis. Esse limite é de segurança, não uma quota
   comercial. Arquivos novos/modificados após o snapshot não aparecem
   na execução corrente.
@@ -69,10 +69,9 @@ Escopo de implementação nesta linha:
   obsoletas de PR, testes adversariais de troca de symlink e limites
   de snapshot.
 
-**Status desta documentação:** versão candidata em validação no PR.
-Não declarar estável nem criar a tag `v0.3.9` antes da
-conclusão dos testes automatizados. A última tag publicada permanece
-`v0.3.8`.
+**Critério de publicação:** o workflow de release gera a tag anotada
+`v0.3.9` somente após CI bem-sucedida do commit correspondente da `main`.
+Para confirmar a publicação, consulte as [releases oficiais](https://github.com/ricardogomesbarreto/Nexus-Core/releases).
 
 **Homologação manual ainda necessária:** escuta e saída de voz com
 microfone/alto-falantes físicos no Linux real (a CI usa fakes no
@@ -327,7 +326,7 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Histórico até `v0.3.8`; versão candidata `v0.3.9`.** As subseções sobre
+**Versão do código: `v0.3.9`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
 dependências atuais da `v0.3.8`. Para as funcionalidades disponíveis,
@@ -474,7 +473,7 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.9-rc
+Release Target:       v0.3.9
 Capability:           Continuous Local Voice Conversation
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
@@ -3204,7 +3203,7 @@ exibe o motivo da falha. A CI testa o fluxo de conversa e os controles de pausa.
 
 ## v0.3.9 — Expanded Desktop Capabilities & Hardening
 
-Versão candidata: adiciona `file_metadata`, endurece a abertura de caminhos
+Versão v0.3.9: adiciona `file_metadata`, endurece a abertura de caminhos
 contra troca de symlinks e torna o workspace Docker um snapshot privado e
 limitado. A interface Tk exibe a marca local e sincroniza o encerramento dos
 workers. A publicação depende da CI e da revisão final.
@@ -3693,11 +3692,11 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.9-rc
+Release Target:        v0.3.9
 Release Name:          Expanded Desktop Capabilities & Hardening
-Latest Git Tag:        v0.3.8 (v0.3.9 not yet tagged)
-Implementation:        RELEASE CANDIDATE (PR)
-Release Validation:    v0.3.9 CI PENDING; v0.3.8 CI PASS
+Release Tag:          v0.3.9 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        CODE COMPLETE; TAG GATED BY MAIN CI
+Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
