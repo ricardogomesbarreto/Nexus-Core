@@ -478,6 +478,10 @@ class DesktopWindow:
             self._audio_events.put(("listen_error", "Falha ao reconhecer a fala local.", generation))
 
     def _speak(self, text: str, voice: str, generation: int) -> None:
+        # A queued speech worker may start after the user has cancelled
+        # or muted it. Do not start playback from such a stale request.
+        if self._closing or generation != self._speak_generation:
+            return
         try:
             self.speaker.speak(text, voice)
             self._audio_events.put(("speak_done", "", generation))
