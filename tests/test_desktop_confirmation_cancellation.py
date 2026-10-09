@@ -1,4 +1,5 @@
 """Cancellation of pending consent must be a hard authorization denial."""
+import time
 from threading import Event, Thread
 
 from nexus.desktop.confirmation import DesktopConfirmation
@@ -19,10 +20,14 @@ def test_cancel_pending_releases_waiting_worker_and_prevents_late_approval():
     worker.start()
     # Either cancel before or after the queue becomes visible: pending state
     # must be rejected without approval or a 300 second wait.
-    for _ in range(10000):
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
         with bridge._lock:
             if bridge._pending:
                 break
+        time.sleep(0.001)
+    with bridge._lock:
+        assert bridge._pending
     bridge.cancel_pending()
     worker.join(timeout=2)
     assert not worker.is_alive()
