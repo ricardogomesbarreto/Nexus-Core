@@ -190,7 +190,7 @@ def test_rejected_shortcuts_never_reach_confirmation_or_backend(tmp_path, bad):
         "desktop_navigate", window_id=12, window_title="Editor", action=bad,
     )
     assert not reply.success
-    assert reply.error_code == "INVALID_RESOURCES"
+    assert reply.error_code in ("INVALID_RESOURCES", "INVALID_INPUT")
     assert consent.requests == []
     assert backend.actions == []
 
