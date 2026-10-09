@@ -218,6 +218,10 @@ def cli(argv: list[str] | None = None) -> None:
         "--status", action="store_true",
         help="exibe o estado do núcleo no terminal",
     )
+    actions.add_argument(
+        "--voice-check", action="store_true",
+        help="diagnostica dependências locais de voz sem gravar áudio",
+    )
     actions.add_argument("--memory-add", metavar="TEXT", help="salva explicitamente uma memória local")
     actions.add_argument("--memory-add-stdin", action="store_true", help="salva texto lido da entrada padrão, sem argumento visível")
     actions.add_argument("--memory-list", action="store_true", help="lista memórias não expiradas")
@@ -263,6 +267,12 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.voice_check:
+        if has_memory_action or any(knowledge_actions) or args.knowledge_with_memory:
+            parser.error("--voice-check não pode ser combinado com memória ou conhecimento")
+        from nexus.voice.diagnostics import inspect_voice
+        print(json.dumps(inspect_voice(), ensure_ascii=False))
+        return
     if has_memory_action:
         from nexus.memory.cli import execute_memory_command
         code = execute_memory_command(args)

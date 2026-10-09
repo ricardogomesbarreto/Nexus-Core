@@ -11,6 +11,7 @@ from nexus.config.settings import PROJECT_ROOT, settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
+from nexus.voice.wake import extract_utterance
 
 
 class _WidgetBoolean:
@@ -122,6 +123,13 @@ class DesktopWindow:
         self.voice_selector.set("Feminina")
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
+        # Optional activation never changes default continuous listening.
+        self.wake_toggle = ttk.Checkbutton(
+            voice_controls, text='Exigir "Nexus" para ativar',
+            command=self._toggle_wake,
+        )
+        self.wake_toggle.pack(side="left", padx=(12, 0))
+        self.wake_required = _WidgetBoolean(self.wake_toggle)
 
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
@@ -180,6 +188,7 @@ class DesktopWindow:
         """Destroy Tk resources only on the GUI thread, after all workers exit."""
         self.speech_enabled = None
         self.voice_choice = None
+        self.wake_required = None
         self._brand_image = None
         self._workers.clear()
         self.app.shutdown()
@@ -253,6 +262,14 @@ class DesktopWindow:
             return "shutdown"
         return None
 
+    def _toggle_wake(self) -> None:
+        if self._closing:
+            return
+        if self.wake_required.get():
+            self.status.configure(text='Diga "Nexus, ..." antes de cada pergunta')
+        else:
+            self.status.configure(text="Conversa contínua sem palavra de ativação")
+
     def _toggle_speech(self) -> None:
         if not self.speech_enabled.get() and self._speaking:
             self.speaker.stop()
@@ -325,16 +342,20 @@ class DesktopWindow:
                     self.mic_button.configure(text="Retomar escuta")
                     self.status.configure(text=value)
                 elif self._voice_active and not self._busy:
-                    command = self._voice_command(value) if kind == "transcript" else None
+                    utterance = (
+                        extract_utterance(value, require_wake=self.wake_required.get())
+                        if kind == "transcript" else None
+                    )
+                    command = self._voice_command(utterance) if utterance else None
                     if command == "pause":
                         self._toggle_listening()
                         self._append("Você", value, "user")
                         self._append("Nexus Core", "Escuta pausada. Retome pelo botão.", "assistant")
                     elif command == "shutdown":
                         self._close()
-                    elif kind == "transcript":
+                    elif kind == "transcript" and utterance:
                         self.input.delete("1.0", "end")
-                        self.input.insert("1.0", value)
+                        self.input.insert("1.0", utterance)
                         self._send()
                     else:
                         self._start_listening()
