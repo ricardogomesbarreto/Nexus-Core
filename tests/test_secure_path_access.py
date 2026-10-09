@@ -5,7 +5,7 @@ from pathlib import Path
 from nexus.security import (
     AuditLogger, PathSecurity, PermissionDecision, SecurityGate,
 )
-from nexus.tools import ListDirectoryTool, ReadFileTool, ToolExecutor, ToolRegistry
+from nexus.tools import FileMetadataTool, ListDirectoryTool, ReadFileTool, ToolExecutor, ToolRegistry
 
 
 def executor_with_home(tmp_path, tool):
@@ -107,3 +107,29 @@ def test_regular_file_is_read_from_open_descriptor(tmp_path):
     result = executor.execute("read_file", path=str(path))
     assert result.success
     assert result.data["content"] == "allowed"
+
+
+def test_metadata_reads_authorized_inode(tmp_path):
+    executor, home, _ = executor_with_home(tmp_path, FileMetadataTool())
+    path = home / "document.txt"
+    path.write_text("dados", encoding="utf-8")
+    result = executor.execute("file_metadata", path=str(path))
+    assert result.success
+    assert result.data["path"] == str(path)
+    assert result.data["size"] == len("dados".encode("utf-8"))
+    assert isinstance(result.data["modified_epoch"], int)
+
+
+def test_metadata_rejects_file_swapped_after_authorization(tmp_path):
+    executor, home, gate = executor_with_home(tmp_path, FileMetadataTool())
+    path = home / "document.txt"
+    path.write_text("dados")
+    secret = tmp_path / "secret.txt"
+    secret.write_text("private")
+
+    def swap():
+        path.unlink()
+        path.symlink_to(secret)
+
+    swap_after_approval(gate, swap)
+    assert not executor.execute("file_metadata", path=str(path)).success
