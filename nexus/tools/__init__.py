@@ -10,6 +10,7 @@ from nexus.tools.executor import ToolExecutor
 from nexus.tools.filesystem import (
     ListDirectoryTool,
     ReadFileTool,
+    FileMetadataTool,
 )
 from nexus.tools.registry import ToolRegistry
 from nexus.tools.system import SystemInfoTool
@@ -29,5 +30,6 @@ __all__ = [
     "SystemInfoTool",
     "ListDirectoryTool",
     "ReadFileTool",
+    "FileMetadataTool",
     "TerminalSandboxTool",
 ]
