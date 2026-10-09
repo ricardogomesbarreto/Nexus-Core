@@ -175,3 +175,40 @@ class ReadFileTool(NexusTool):
             return ToolResult(False, self.name, error="O caminho não é um arquivo.")
         except OSError as error:
             return ToolResult(False, self.name, error=str(error))
+
+
+class FileMetadataTool(NexusTool):
+    """Read metadata of one authorized regular file without reading its contents."""
+
+    name = "file_metadata"
+    description = "Consulta tamanho e data de modificação de um arquivo autorizado."
+    risk_level = RiskLevel.SAFE
+    path_security = None
+
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("path", ValueKind.STRING, nonempty=True),),
+        resources=(ResourceSpec("file", "path"),),
+        outputs=(
+            FieldSpec("path", ValueKind.STRING),
+            FieldSpec("size", ValueKind.INTEGER),
+            FieldSpec("modified_epoch", ValueKind.INTEGER),
+        ),
+    )
+
+    def sensitive_resources(self, **kwargs) -> tuple[SensitiveResource, ...]:
+        return (SensitiveResource("file", kwargs["path"]),)
+
+    def execute(self, path: str, **kwargs) -> ToolResult:
+        try:
+            policy = self.path_security or PathSecurity()
+            with policy.open_regular_file(path) as (fd, file_path):
+                file_stat = os.fstat(fd)
+                result = {
+                    "path": str(file_path),
+                    "size": file_stat.st_size,
+                    "modified_epoch": int(file_stat.st_mtime),
+                }
+            return ToolResult(True, self.name, data=result)
+        except (PermissionError, OSError) as exc:
+            return ToolResult(False, self.name, error=f"Metadados indisponíveis: {type(exc).__name__}.")
