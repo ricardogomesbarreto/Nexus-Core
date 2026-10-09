@@ -1,95 +1,99 @@
+"""Restrict filesystem access to a trusted home directory without symlink races."""
+
+import os
+import stat
+from contextlib import contextmanager
 from pathlib import Path
 
 
 class PathSecurity:
-    """
-    Controla quais caminhos do sistema o Nexus pode acessar.
-
-    A política é restritiva:
-    o Nexus trabalha dentro do diretório HOME do usuário,
-    mas diretórios críticos do sistema e áreas sensíveis
-    do usuário são protegidos.
-    """
+    """Policy check plus descriptor-anchored Linux access for filesystem tools."""
 
     def __init__(self):
         self.home = Path.home().resolve()
-
         self.protected_paths = [
-            # Diretórios críticos do sistema
-            Path("/boot").resolve(),
-            Path("/etc").resolve(),
-            Path("/bin").resolve(),
-            Path("/sbin").resolve(),
-            Path("/usr").resolve(),
-            Path("/var").resolve(),
-            Path("/root").resolve(),
-            Path("/sys").resolve(),
-            Path("/proc").resolve(),
-            Path("/dev").resolve(),
-            Path("/run").resolve(),
-            Path("/lib").resolve(),
-            Path("/lib64").resolve(),
-            Path("/opt").resolve(),
-            Path("/srv").resolve(),
-            Path("/snap").resolve(),
-
-            # Diretórios sensíveis do usuário
-            self.home / ".ssh",
-            self.home / ".gnupg",
-            self.home / ".aws",
-            self.home / ".docker",
-            self.home / ".kube",
-            self.home / ".config",
-            self.home / ".local" / "share" / "keyrings",
+            *(Path(p).resolve() for p in (
+                "/boot", "/etc", "/bin", "/sbin", "/usr", "/var", "/root",
+                "/sys", "/proc", "/dev", "/run", "/lib", "/lib64",
+                "/opt", "/srv", "/snap",
+            )),
+            *(self.home / p for p in (
+                ".ssh", ".gnupg", ".aws", ".docker", ".kube", ".config",
+                ".local/share/keyrings",
+            )),
         ]
 
     def resolve(self, path: str | Path) -> Path:
-        """
-        Resolve um caminho absoluto de forma segura.
-        """
         return Path(path).expanduser().resolve(strict=False)
 
-    def is_protected(self, path: str | Path) -> bool:
-        """
-        Verifica se o caminho está dentro de uma área protegida.
-        """
-
-        target = self.resolve(path)
-
-        for protected in self.protected_paths:
-            if self._is_inside(target, protected):
-                return True
-
-        return False
-
-    def is_allowed(self, path: str | Path) -> bool:
-        """
-        Verifica se o caminho está dentro da área autorizada
-        e não pertence a uma área protegida.
-        """
-
-        target = self.resolve(path)
-
-        if self.is_protected(target):
-            return False
-
-        return self._is_inside(
-            target,
-            self.home,
-        )
-
     @staticmethod
-    def _is_inside(
-        target: Path,
-        parent: Path,
-    ) -> bool:
-        """
-        Verifica se target está dentro de parent.
-        """
-
+    def _is_inside(target: Path, parent: Path) -> bool:
         try:
             target.relative_to(parent)
             return True
-
         except ValueError:
             return False
+
+    def is_protected(self, path: str | Path) -> bool:
+        target = self.resolve(path)
+        return any(self._is_inside(target, protected) for protected in self.protected_paths)
+
+    def is_allowed(self, path: str | Path) -> bool:
+        target = self.resolve(path)
+        return not self.is_protected(target) and self._is_inside(target, self.home)
+
+    def _components(self, path: str | Path) -> tuple[Path, tuple[str, ...]]:
+        """Lexical validation precedes opening; never follow a symlink at access time."""
+        raw = Path(os.path.abspath(os.path.expanduser(os.fspath(path))))
+        home = self.home
+        try:
+            relative = raw.relative_to(home)
+        except ValueError as exc:
+            raise PermissionError("Caminho fora da área autorizada do Nexus.") from exc
+        if self.is_protected(raw) or not self.is_allowed(raw):
+            raise PermissionError("Caminho protegido ou fora da área autorizada.")
+        return raw, relative.parts
+
+    @contextmanager
+    def open_directory(self, path: str | Path):
+        """Keep every ancestor anchored by an open descriptor (no symlink following)."""
+        raw, components = self._components(path)
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+        current_fd = os.open(self.home, flags)
+        try:
+            for component in components:
+                try:
+                    next_fd = os.open(component, flags, dir_fd=current_fd)
+                except OSError as exc:
+                    if exc.errno in (40, 20):  # ELOOP or ENOTDIR (including symlink)
+                        raise PermissionError("Componentes simbólicos ou inválidos são bloqueados.") from exc
+                    raise
+                os.close(current_fd)
+                current_fd = next_fd
+            yield current_fd, raw
+        finally:
+            os.close(current_fd)
+
+    @contextmanager
+    def open_regular_file(self, path: str | Path):
+        """Pin a regular file inode with O_NOFOLLOW; no second pathname lookup for reads."""
+        raw, _ = self._components(path)
+        if raw == self.home:
+            raise IsADirectoryError("O caminho não é um arquivo regular.")
+        with self.open_directory(raw.parent) as (parent_fd, _):
+            try:
+                fd = os.open(
+                    raw.name,
+                    os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC,
+                    dir_fd=parent_fd,
+                )
+            except OSError as exc:
+                if exc.errno == 40:  # ELOOP
+                    raise PermissionError("Links simbólicos não são permitidos.") from exc
+                raise
+            try:
+                if not stat.S_ISREG(os.fstat(fd).st_mode):
+                    raise IsADirectoryError("O caminho não é um arquivo regular.")
+                yield fd, raw
+            finally:
+                os.close(fd)

@@ -45,6 +45,11 @@ class ToolExecutor:
             if tool is None:
                 continue
 
+            # Built-in filesystem tools use the same policy object that
+            # authorized the request; test/injected home boundaries are honored.
+            if hasattr(tool, "path_security"):
+                tool.path_security = self.security_gate.path_security
+
             self.security_gate.tool_permissions.register(
                 tool.name,
                 tool.contract.permission,

@@ -136,6 +136,22 @@ def test_microphone_turn_uses_same_conversation_path():
         assert "Entendi sua pergunta" in window.transcript.get("1.0", "end")
         assert window._voice_active
         window._close()
+        # Do not destroy the interpreter while voice workers are still
+        # unwinding; the application owns the coordinated shutdown.
+        deadline = time.monotonic() + 5
+        destroyed = False
+        while time.monotonic() < deadline:
+            try:
+                root.update()
+                if not root.winfo_exists():
+                    destroyed = True
+                    break
+            except tk.TclError:
+                # Tk removes its `winfo` command when the root is destroyed.
+                destroyed = True
+                break
+            time.sleep(0.01)
+        assert destroyed
     finally:
         confirmation.close()
         try:

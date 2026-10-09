@@ -1,6 +1,6 @@
 # Nexus Line — Nexus Core
 
-O Nexus Core adota a família visual **Nexus Line** com uma extensão própria para inteligência artificial local, controle operacional e segurança. Estes ativos preparam a futura interface nativa sem antecipar funcionalidades ainda não implementadas.
+O Nexus Core adota a família visual **Nexus Line** com uma extensão própria para inteligência artificial local, controle operacional e segurança. O logotipo PNG já é utilizado no cabeçalho da janela Tk a partir da v0.3.9. Os sprites e ícones SVG permanecem como catálogo para futuras integrações, sem antecipar funcionalidades não implementadas.
 
 ## Identidade da aplicação
 
@@ -49,9 +49,9 @@ A fundação visual desktop adiciona os seguintes assets:
 
 Os 18 ícones UI são: `add`, `attention`, `back`, `close`, `confirm`, `credentials`, `delete`, `edit`, `forward`, `history`, `menu`, `notifications`, `overview`, `profile`, `protected-access`, `refresh`, `search` e `system`.
 
-## Uso futuro na interface desktop nativa
+## Uso atual e futuro na interface desktop nativa
 
-Os arquivos SVG são assets vetoriais locais destinados à futura camada gráfica desktop nativa do Nexus Core.
+A janela Tk atual carrega o logotipo PNG local `assets/brand/nexus-core-logo.png` sem um runtime web. Os arquivos SVG são assets vetoriais locais destinados à integração posterior nos controles da interface desktop nativa.
 
 A camada de interface deverá carregar e renderizar esses assets diretamente por meio do toolkit gráfico adotado para o desktop, sem navegador, servidor web, Electron, React ou framework web.
 

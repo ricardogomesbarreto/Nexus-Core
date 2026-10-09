@@ -15,6 +15,7 @@ from nexus.security import ConfirmationHandler, SecurityGate
 from nexus.tools import (
     ListDirectoryTool,
     ReadFileTool,
+    FileMetadataTool,
     SystemInfoTool,
     TerminalSandboxTool,
     ToolExecutor,
@@ -44,6 +45,7 @@ class NexusApplication:
 
         for tool in (
             SystemInfoTool(), ListDirectoryTool(), ReadFileTool(),
+            FileMetadataTool(),
             TerminalSandboxTool(),
         ):
             self.tool_registry.register(tool)

@@ -1,5 +1,10 @@
+import os
 import subprocess
+from contextlib import ExitStack
 from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from nexus.security.workspace import WorkspaceSnapshotError, snapshot_directory
 
 from nexus.security import RiskLevel, SensitiveResource
 from nexus.tools.base import NexusTool, ToolResult
@@ -49,6 +54,8 @@ class TerminalSandboxTool(NexusTool):
             FieldSpec("workspace", ValueKind.STRING, nullable=True),
         ),
     )
+
+    path_security = None  # injected by ToolExecutor for mediated operations
 
     IMAGE = "ubuntu:24.04"
 
@@ -114,6 +121,48 @@ class TerminalSandboxTool(NexusTool):
                     error="Workspace não é um diretório.",
                 )
 
+        # Pin the workspace inode, then snapshot its contents through dir FDs.
+        # Docker mounts an immutable, bounded staging directory, not a
+        # caller-controlled pathname that could be replaced after approval.
+        with ExitStack() as workspace_stack:
+            workspace_fd = None
+            if workspace_path is not None:
+                try:
+                    if self.path_security is not None:
+                        workspace_fd, _ = workspace_stack.enter_context(
+                            self.path_security.open_directory(workspace_path)
+                        )
+                    else:
+                        workspace_fd = os.open(
+                            workspace_path,
+                            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                        )
+                        workspace_stack.callback(os.close, workspace_fd)
+                except OSError:
+                    return ToolResult(
+                        False, self.name,
+                        error="Workspace não pôde ser aberto com segurança.",
+                    )
+            workspace_mount = None
+            if workspace_fd is not None:
+                stage = workspace_stack.enter_context(
+                    TemporaryDirectory(prefix="nexus-workspace-")
+                )
+                workspace_mount = Path(stage)
+                try:
+                    snapshot_directory(workspace_fd, workspace_mount)
+                except WorkspaceSnapshotError:
+                    return ToolResult(
+                        False, self.name,
+                        error="Workspace não pôde ser copiado com segurança (limite 512 arquivos, 32 MB).",
+                    )
+            return self._run_container(
+                command=command,
+                workspace_path=workspace_path,
+                workspace_mount=workspace_mount,
+            )
+
+    def _run_container(self, *, command, workspace_path, workspace_mount):
         docker_command = [
             "docker",
             "run",
@@ -134,16 +183,16 @@ class TerminalSandboxTool(NexusTool):
             "--cap-drop",
             "ALL",
             "--user",
-            "1000:1000",
+            f"{os.getuid()}:{os.getgid()}" if workspace_mount is not None else "1000:1000",
         ]
 
-        if workspace_path is not None:
+        if workspace_mount is not None:
             docker_command.extend(
                 [
                     "--mount",
                     (
                         "type=bind,"
-                        f"src={workspace_path},"
+                        f"src={workspace_mount},"
                         "dst=/workspace,"
                         "readonly"
                     ),
