@@ -25,12 +25,24 @@ class ChatSession:
         self.agent = agent
         self.history: list[tuple[str, str]] = []
         self._closed = Event()
+        self._cancelled = Event()
         self._lock = Lock()
 
     def close(self) -> None:
         self._closed.set()
+        self._cancelled.set()
 
-    def ask(self, message: str) -> ChatReply:
+    def cancel_current(self) -> None:
+        """Best effort cancellation; blocks later actions, not actions already begun."""
+        self._cancelled.set()
+
+    def prepare_turn(self) -> None:
+        """Called by the UI before a new worker starts, never during a live turn."""
+        if self._closed.is_set():
+            raise RuntimeError("A conversa foi encerrada.")
+        self._cancelled.clear()
+
+    def ask(self, message: str, *, advisory_only: bool = False) -> ChatReply:
         if not isinstance(message, str) or not message.strip():
             raise ValueError("Escreva uma mensagem antes de enviar.")
         if len(message) > self.MAX_MESSAGE:
@@ -46,9 +58,28 @@ class ChatSession:
                 {"historico": context, "mensagem_atual": message},
                 ensure_ascii=False,
             )
-            outcome = self.agent.run(prompt, is_cancelled=self._closed.is_set)
+            cancelled = lambda: self._closed.is_set() or self._cancelled.is_set()
+            if advisory_only:
+                # Independent hard authorization gate: even if the model proposes
+                # a tool despite the prompt, AgentPlanner must refuse execution.
+                prompt = json.dumps({
+                    "modo": "sugestao_sem_ferramentas",
+                    "historico": context,
+                    "mensagem_atual": message,
+                    "diretriz": "Responda com sugestões concretas; não use ferramentas.",
+                }, ensure_ascii=False)
+                outcome = self.agent.run(
+                    prompt, is_cancelled=cancelled, allow_tools=False
+                )
+            else:
+                outcome = self.agent.run(prompt, is_cancelled=cancelled)
+            if cancelled():
+                return ChatReply(
+                    "Solicitação cancelada.",
+                    AgentOutcome(False, error_code="CANCELLED"),
+                )
             reply = self._describe(outcome)
-            if not self._closed.is_set():
+            if not self._closed.is_set() and not self._cancelled.is_set():
                 self.history.append((
                     message[:self.MAX_CONTEXT_ITEM],
                     reply[:self.MAX_CONTEXT_ITEM],
