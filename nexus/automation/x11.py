@@ -183,14 +183,33 @@ class X11DesktopBackend:
 
 
 def desktop_capabilities() -> dict:
-    """Read-only readiness report; does not connect to X11 or press keys."""
+    """Read-only readiness report; does not connect to X11 or press keys.
+
+    The reason is ordered by the same fail-closed checks used by _command.
+    A ready result only describes prerequisites, not a tested target window.
+    """
+    wayland = bool(os.environ.get("WAYLAND_DISPLAY")) or (
+        os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+    )
+    local_display = bool(re.fullmatch(
+        r"(?::|unix:)[0-9]+(?:\.[0-9]+)?", os.environ.get("DISPLAY", "")
+    ))
+    xdotool = bool(shutil.which("xdotool"))
+    session_x11 = local_display and not wayland
+    reason = (
+        "WAYLAND_SESSION" if wayland else
+        "LOCAL_X11_DISPLAY_REQUIRED" if not local_display else
+        "XDOTOOL_MISSING" if not xdotool else "READY"
+    )
     return {
         "platform": "Linux X11 only",
-        "session_x11": bool(re.fullmatch(
-            r"(?::|unix:)[0-9]+(?:\.[0-9]+)?", os.environ.get("DISPLAY", "")
-        )) and not bool(os.environ.get("WAYLAND_DISPLAY"))
-            and os.environ.get("XDG_SESSION_TYPE", "").lower() != "wayland",
-        "xdotool": bool(shutil.which("xdotool")),
+        "session_x11": session_x11,
+        "xdotool": xdotool,
+        "ready": session_x11 and xdotool,
+        "reason": reason,
+        "navigation_actions": list(X11DesktopBackend.NAVIGATION_KEYS),
+        "typing_max_characters": X11DesktopBackend.MAX_TEXT,
+        "confirmation_per_action": True,
         "effects": "read window title, type approved text or send one allowlisted navigation key",
         "camera_access": False,
         "screenshot_access": False,

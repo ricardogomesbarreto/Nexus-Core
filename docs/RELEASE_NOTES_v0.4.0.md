@@ -3,7 +3,7 @@
 ## Entregas
 
 - Memórias persistidas somente por comando explícito; histórico do chat continua efêmero.
-- PostgreSQL local: schema idempotente de memórias e auditoria, sem SQLite.
+- PostgreSQL local: schema idempotente de memórias e auditoria.
 - Salvar, listar, pesquisar texto literal sem diferenciar maiúsculas/minúsculas, excluir por ID, exclusão total com confirmação, expiração e retenção de 1 a 365 dias (padrão de 90).
 - CLI: `--memory-add`, `--memory-add-stdin`, `--memory-list`, `--memory-search`, `--memory-delete`, `--memory-clear --memory-confirm` e `--memory-status`.
 - Limites de 1.200 caracteres por memória e até 100 resultados internos.

@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.7.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.1-722F37">
+  <img alt="Versão v0.7.2" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.2-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.7.1 — Controlled Desktop Navigation`<br>
-> **Publicação da v0.7.1:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.7.2 — Desktop Interaction Safety & Diagnostics` (ainda não implementado)<br>
+> **Versão do código:** `v0.7.2 — Desktop Interaction Safety & Diagnostics`<br>
+> **Publicação da v0.7.2:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.7.3 — Desktop Target Integrity` (ainda não implementado)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,43 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.7.2 — Desktop Interaction Safety & Diagnostics
+
+Esta versão consolida a verificação passiva das condições necessárias
+para interação X11 e reforça a documentação dos limites de autorização.
+O comando `nexus-core --desktop-check` continua sem abrir janela,
+consultar o servidor X11, pressionar teclas ou iniciar PostgreSQL e Ollama.
+Além dos campos anteriores, seu JSON agora informa `ready`, `reason`,
+`navigation_actions`, `typing_max_characters` e
+`confirmation_per_action`. Os motivos estáveis são `READY`,
+`WAYLAND_SESSION`, `LOCAL_X11_DISPLAY_REQUIRED` e `XDOTOOL_MISSING`.
+`ready` indica apenas que a sessão e o executável aparentam estar
+disponíveis: não testa janela, permissão X11, foco nem aceitação das
+teclas pelo aplicativo de destino.
+
+A consulta e as ações continuam limitadas ao Linux X11 local. A digitação
+e a navegação exigem confirmação **por ação**, revalidam o título do ID
+da janela aprovada após o diálogo e registram decisão/execução no
+`SecurityGate`. As quatro ações de navegação e o limite de 300 caracteres
+estão expostos no diagnóstico para facilitar a verificação do contrato.
+O relatório de sucesso do subprocesso comprova a tentativa de envio,
+sem provar efeito na interface. Sessões Wayland, display remoto e ausência
+de `xdotool` são identificados sem tocar no desktop. Os testes cobrem
+essa classificação sem usar o X11 real; compatibilidade física depende
+de homologação no Linux do usuário.
+
+O banco de dados da aplicação permanece **exclusivamente PostgreSQL
+local**. Documentação e testes de rejeição de provedores inválidos foram
+alinhados com essa configuração. Voz local feminina/masculina, escuta
+contínua com pausa, conversa via Ollama e análise visual pontual com
+consentimento mantêm os limites documentados nas versões anteriores.
+
+**Próximo marco planejado:** `v0.7.3 — Desktop Target Integrity`,
+para ampliar a identificação da janela entre consulta e autorização,
+dependendo de validação do comportamento em um desktop X11 real.
 
 ---
 
@@ -121,9 +158,8 @@ testes físicos de desktop, microfone, câmera, alto-falantes
 ou modelo multimodal. Nenhum custo adicional ou serviço
 hospedado foi introduzido.
 
-**Próximo marco planejado:** `v0.7.2 — Desktop Interaction
-Safety & Diagnostics`, focado em robustez da navegação,
-conformidade de permissões e diagnósticos sem efeitos.
+**Marco seguinte:** `v0.7.2 — Desktop Interaction Safety & Diagnostics`
+foi implementado com diagnóstico passivo ampliado. Consulte a seção inicial.
 
 ---
 
@@ -370,7 +406,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.7.1` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.7.2` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -393,6 +429,7 @@ rastreáveis no GitHub:
 | v0.6.3 | Conversation Reliability | [Notas](docs/RELEASE_NOTES_v0.6.3.md) |
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 | v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
+| v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -672,7 +709,7 @@ respostas do Ollama **não são salvas automaticamente**. O histórico de
 seis turnos continua temporário; não há recuperação automática durante a conversa.
 
 - **PostgreSQL local:** tabelas `nexus_memories` e `nexus_memory_audit` criadas
-  sob demanda, sem SQLite e sem serviço em nuvem.
+  sob demanda, com PostgreSQL local e sem serviço em nuvem.
 - **Operações:** salvar, listar, pesquisar texto literal case-insensitive, excluir
   por ID, exclusão total com confirmação e consulta de estatísticas.
 - **Retenção:** padrão de 90 dias, entre 1 e 365; cada memória até 1.200
@@ -995,10 +1032,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.7.1`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.7.2`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.7.1`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.7.2`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -2322,7 +2359,7 @@ A versão atual exige **Python >= 3.12** e a dependência de banco
 `psycopg[binary]==3.3.6`, declarada tanto em `pyproject.toml`
 quanto em `requirements/base.txt`. Portanto, a observação histórica
 de que o runtime não possui dependências Python externas **não se aplica
-à v0.3.8**. O aplicativo não utiliza SQLite.
+à v0.3.8**. O aplicativo utiliza PostgreSQL local.
 
 ## Desenvolvimento e voz
 
@@ -4032,11 +4069,17 @@ humana para cada ação, verificação de ID/título após consentimento,
 sem atalhos livres, shell, macros ou cliques. Testes de segurança e
 diagnósticos executados na CI.
 
-### v0.7.2 — Desktop Interaction Safety & Diagnostics (planejado)
+### v0.7.2 — Desktop Interaction Safety & Diagnostics (implementado)
 
-Ampliação de diagnósticos, segurança dos contratos e confiabilidade
-da interação X11, condicionada à homologação física antes de
-afirmar compatibilidade com aplicativos específicos.
+Diagnóstico passivo com estado de prontidão, motivo de indisponibilidade,
+ações permitidas e limites de digitação/consentimento. Testes cobrem
+as variantes X11 local, Wayland, display remoto e dependência ausente.
+Não afirma compatibilidade física com aplicativos específicos.
+
+### v0.7.3 — Desktop Target Integrity (planejado)
+
+Fortalecer a identificação da janela entre consulta e autorização,
+após homologação da interação em um desktop X11 real.
 
 ---
 
@@ -4388,10 +4431,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.7.1
-Release Name:          Controlled Desktop Navigation
-Release Tag:          v0.7.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        X11 ALLOWLISTED NAVIGATION + PER-ACTION CONSENT; CI GATED
+Release Target:        v0.7.2
+Release Name:          Desktop Interaction Safety & Diagnostics
+Release Tag:          v0.7.2 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        PASSIVE X11 READINESS + ALLOWLISTED ACTIONS; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

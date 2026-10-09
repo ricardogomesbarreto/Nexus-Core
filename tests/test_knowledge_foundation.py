@@ -52,7 +52,7 @@ def test_deletion_rejects_invalid_document_ids(identifier):
 
 def test_requires_local_postgresql_and_credentials():
     with pytest.raises(DatabaseConfigurationError):
-        PostgreSQLKnowledgeBase(Settings(database_provider="sqlite", database_password="x"))
+        PostgreSQLKnowledgeBase(Settings(database_provider="unsupported", database_password="x"))
     with pytest.raises(DatabaseConfigurationError):
         PostgreSQLKnowledgeBase(Settings(database_host="example.org", database_password="x"))
     with pytest.raises(DatabaseConfigurationError):

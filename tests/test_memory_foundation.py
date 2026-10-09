@@ -59,7 +59,7 @@ def test_memory_enforces_postgres_loopback_and_password():
     with pytest.raises(DatabaseConfigurationError):
         PostgreSQLMemoryStore(Settings(database_password="x", database_host="example.com"))
     with pytest.raises(DatabaseConfigurationError):
-        PostgreSQLMemoryStore(Settings(database_password="x", database_provider="sqlite"))
+        PostgreSQLMemoryStore(Settings(database_password="x", database_provider="unsupported"))
 
 
 def test_memory_connection_errors_hide_raw_driver_details(monkeypatch):

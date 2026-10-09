@@ -1,4 +1,4 @@
-"""Explicit, time-limited local memories stored in PostgreSQL, never SQLite.
+"""Explicit, time-limited local memories stored in PostgreSQL.
 
 No chat messages are persisted automatically. Memory audit records contain
 only action metadata and affected counts, not the stored content or queries.

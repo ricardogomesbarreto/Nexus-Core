@@ -202,5 +202,35 @@ def test_capability_check_does_not_open_X11(monkeypatch):
     result = desktop_capabilities()
     assert result["session_x11"] is True
     assert result["xdotool"] is False
+    assert result["ready"] is False
+    assert result["reason"] == "XDOTOOL_MISSING"
+    assert result["navigation_actions"] == [
+        "next_field", "previous_field", "page_up", "page_down",
+    ]
+    assert result["typing_max_characters"] == 300
+    assert result["confirmation_per_action"] is True
     assert result["wayland_supported"] is False
     assert result["camera_access"] is False
+
+
+@pytest.mark.parametrize("environment, binary, expected", [
+    ({"DISPLAY": ":0", "XDG_SESSION_TYPE": "x11"}, "/usr/bin/xdotool", "READY"),
+    ({"DISPLAY": "unix:4.0"}, "/usr/bin/xdotool", "READY"),
+    ({"DISPLAY": ":0", "WAYLAND_DISPLAY": "wayland-0"}, "/usr/bin/xdotool", "WAYLAND_SESSION"),
+    ({"DISPLAY": ":0", "XDG_SESSION_TYPE": "wayland"}, "/usr/bin/xdotool", "WAYLAND_SESSION"),
+    ({"DISPLAY": "host:0"}, "/usr/bin/xdotool", "LOCAL_X11_DISPLAY_REQUIRED"),
+    ({}, "/usr/bin/xdotool", "LOCAL_X11_DISPLAY_REQUIRED"),
+    ({"DISPLAY": ":0"}, None, "XDOTOOL_MISSING"),
+])
+def test_capability_reason_matches_runtime_preconditions(monkeypatch, environment, binary, expected):
+    for key in ("DISPLAY", "WAYLAND_DISPLAY", "XDG_SESSION_TYPE"):
+        monkeypatch.delenv(key, raising=False)
+    for key, value in environment.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr("nexus.automation.x11.shutil.which", lambda _: binary)
+    monkeypatch.setattr("nexus.automation.x11.subprocess.run",
+                        lambda *a, **kw: pytest.fail("No desktop access in diagnostics"))
+    result = desktop_capabilities()
+    assert result["reason"] == expected
+    assert result["ready"] is (expected == "READY")
+    assert result["session_x11"] is (expected in ("READY", "XDOTOOL_MISSING"))

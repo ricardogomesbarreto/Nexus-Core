@@ -66,6 +66,6 @@ def test_release_history_readme_links_and_version_consistency():
     assert f"v{settings.version}" in readme
     assert (PROJECT_ROOT / "docs" /
             f"RELEASE_NOTES_v{settings.version}.md").is_file()
-    for number in ("0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.6.1", "0.6.2", "0.6.3", "0.7.0", "0.7.1"):
+    for number in ("0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.6.1", "0.6.2", "0.6.3", "0.7.0", "0.7.1", "0.7.2"):
         assert f"v{number}" in readme
         assert (PROJECT_ROOT / "docs" / f"RELEASE_NOTES_v{number}.md").is_file()
