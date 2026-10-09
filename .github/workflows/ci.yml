@@ -42,7 +42,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Instalar pacote e dependências de testes
-        run: python -m pip install -e '.[dev,voice]'
+        run: python -m pip install -e '.[dev,voice,vision]'
       - name: Preparar display virtual Linux
         run: |
           sudo apt-get update -qq

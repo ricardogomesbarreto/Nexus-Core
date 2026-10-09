@@ -222,6 +222,18 @@ def cli(argv: list[str] | None = None) -> None:
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
+    actions.add_argument("--vision-check", action="store_true",
+                         help="diagnostica dependências de visão sem capturar nada")
+    actions.add_argument("--vision-image", metavar="PATH",
+                         help="analisa imagem PNG/JPEG/WEBP autorizada no HOME")
+    actions.add_argument("--vision-screen", action="store_true",
+                         help="captura e analisa uma única imagem de tela")
+    actions.add_argument("--vision-camera", type=int, metavar="INDEX",
+                         help="captura um único quadro da câmera 0 a 9")
+    parser.add_argument("--vision-question", metavar="TEXT",
+                        help="pergunta para o modelo visual local")
+    parser.add_argument("--vision-model", default="gemma3:4b",
+                        help="nome do modelo visual Ollama já instalado")
     actions.add_argument("--memory-add", metavar="TEXT", help="salva explicitamente uma memória local")
     actions.add_argument("--memory-add-stdin", action="store_true", help="salva texto lido da entrada padrão, sem argumento visível")
     actions.add_argument("--memory-list", action="store_true", help="lista memórias não expiradas")
@@ -267,6 +279,27 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    vision_actions = (
+        args.vision_check, args.vision_image is not None,
+        args.vision_screen, args.vision_camera is not None,
+    )
+    if any(vision_actions) and (has_memory_action or any(knowledge_actions)
+                                or args.knowledge_with_memory):
+        parser.error("Visão não pode ser combinada com memória ou conhecimento")
+    if not any(vision_actions) and (
+        args.vision_question is not None or args.vision_model != "gemma3:4b"
+    ):
+        parser.error("--vision-question e --vision-model exigem fonte visual")
+    if args.vision_check and (
+        args.vision_question is not None or args.vision_model != "gemma3:4b"
+    ):
+        parser.error("--vision-check não aceita pergunta ou modelo")
+    if any(vision_actions):
+        from nexus.vision.cli import execute_vision
+        code = execute_vision(args)
+        if code:
+            raise SystemExit(code)
+        return
     if args.voice_check:
         if has_memory_action or any(knowledge_actions) or args.knowledge_with_memory:
             parser.error("--voice-check não pode ser combinado com memória ou conhecimento")

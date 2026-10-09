@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.5.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.5.0-722F37">
+  <img alt="Versão v0.6.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.0-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.5.0 — Voice Foundation`<br>
-> **Publicação da v0.5.0:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.6.x — Vision & Screen Understanding`<br>
+> **Versão do código:** `v0.6.0 — Vision & Screen Understanding Foundation`<br>
+> **Publicação da v0.6.0:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.6.1 — Vision Desktop Integration` (captura visual na interface)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,76 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.6.0 — Vision & Screen Understanding Foundation
+
+A visão local está disponível apenas mediante **solicitação explícita pela CLI**.
+Esta versão não abre a câmera automaticamente, não monitora a tela, não
+armazena imagens nem entrega imagens como ações para o Agent. A interface
+Tk aprovada, o modo de voz e a arquitetura PostgreSQL foram preservados.
+
+## Recursos implementados
+
+- **Imagem local:** leitura de arquivos PNG, JPEG e WEBP com validação
+  por descritores de arquivo ancorados no HOME autorizado (`O_NOFOLLOW`).
+  Links simbólicos, caminhos protegidos, arquivos especiais ou externos
+  ao HOME são recusados.
+- **Tela:** captura de **um único quadro**, quando solicitada, utilizando
+  `grim` em sessões Wayland compatíveis ou `import` do ImageMagick em X11.
+  Não funciona automaticamente em todos os compositores ou portais Linux.
+- **Câmera:** captura de **um quadro** de `/dev/video0` a `/dev/video9`
+  por FFmpeg/V4L2. O dispositivo é escolhido por índice numérico
+  explícito e não existe streaming contínuo.
+- **Normalização:** Pillow faz validação e conversão para PNG RGB,
+  descartando metadados EXIF e textuais antes do envio. Máximos:
+  **6 MiB** de entrada e saída, **4.096 px** por dimensão e **8 milhões
+  de pixels**. Captura externa tem tempo limite de **20 segundos**;
+  subprocessos são executados sem shell, com saída temporária anônima.
+- **Compreensão multimodal local:** chamada pontual à API `/api/chat`
+  do Ollama exclusivamente em origem HTTP loopback validada, com imagem
+  codificada em base64 e uma pergunta limitada a **2.000 caracteres**.
+  Modelo visual padrão: `gemma3:4b`, **não instalado automaticamente**.
+  A transcrição/texto da resposta tem limite de **12.000 caracteres**.
+- **Diagnóstico:** `--vision-check` relata presença de dependências
+  sem abrir câmera, capturar tela ou acessar o Ollama.
+
+## Como utilizar
+
+Instale o suporte de visão com `python -m pip install -e '.[vision]'`.
+Tenha um modelo **multimodal** instalado no Ollama local; por exemplo,
+instale `gemma3:4b` separadamente se seu hardware suportar esse modelo.
+O `qwen3:1.7b` utilizado para conversas comuns não é automaticamente
+um modelo multimodal e **não** deve ser usado para análise de imagens.
+
+```bash
+nexus-core --vision-check
+nexus-core --vision-image ~/Imagens/foto.jpg --vision-question "O que aparece?"
+nexus-core --vision-screen --vision-question "Descreva a janela atual"
+nexus-core --vision-camera 0 --vision-question "O que está na câmera?"
+nexus-core --vision-image ~/Imagens/figura.png --vision-model gemma3:4b
+```
+
+**Dependências externas opcionais, gratuitas:** `grim` (Wayland,
+se compatível), ImageMagick `import` (X11), FFmpeg (V4L2). Em desktops
+Linux, permissão de acesso à câmera e à tela depende do ambiente. A
+ausência dessas dependências não impede o funcionamento da conversa
+por texto nem da voz.
+
+**Privacidade e limitações:** capturas e imagens não são persistidas
+pelo NEXUS CORE, mas **a imagem enviada ao Ollama local contém
+os pixels visíveis, incluindo possíveis dados privados**. O runtime
+Ollama é um processo separado, com seus próprios registros e controles.
+Revise a tela/câmera antes da chamada. Não existe pedido automático
+da IA para capturar imagens ou executar ferramentas do sistema após
+a resposta visual. Não há OCR independente, monitoramento contínuo
+ou API de visão disponível para a interface Tk nesta versão.
+
+**Homologação pendente:** câmera e captura de tela em hardware real,
+compatibilidade de Wayland/X11 e um modelo multimodal Ollama
+instalado. A CI valida limites, políticas de acesso e mensagens com
+fakes/mocks, mas não demonstra funcionamento com hardware real.
 
 ---
 
@@ -486,10 +556,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.5.0`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.6.0`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.5.0`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.6.0`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3472,15 +3542,17 @@ Homologação em hardware físico ainda pendente.
 
 # Visão
 
-## v0.6.x — Vision & Screen Understanding
+## v0.6.0 — Vision & Screen Understanding Foundation
 
-Planejado:
+**Implementado:** leitura autorizada de imagens, captura sob comando de um
+único quadro de câmera ou tela, validação/remoção de metadados via Pillow,
+análise multimodal sob demanda no Ollama loopback e diagnóstico local.
+Nenhuma captura automática, OCR, armazenamento ou integração na GUI.
 
-* imagens;
-* câmera;
-* screen capture;
-* screen understanding;
-* visão multimodal.
+### v0.6.1 — Vision Desktop Integration (planejado)
+
+Planejar autorização pontual e visualização de capturas sob controle
+do usuário diretamente na interface desktop, respeitando o visual atual.
 
 ---
 
@@ -3846,10 +3918,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.5.0
-Release Name:          Voice Foundation
-Release Tag:          v0.5.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        OPT-IN WAKE PREFIX + LOCAL VOICE DIAGNOSTICS; CI GATED
+Release Target:        v0.6.0
+Release Name:          Vision & Screen Understanding Foundation
+Release Tag:          v0.6.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        OPT-IN LOCAL VISION / SCREEN / CAMERA; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
