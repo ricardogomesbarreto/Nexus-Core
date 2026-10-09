@@ -15,6 +15,7 @@ class FakeProcess:
     def __init__(self, args, *, audio=b"", **kwargs):
         self.args = args
         self.audio = audio
+        self.stdout = io.BytesIO(audio)
         self.returncode = 0
         self.input = None
         self.terminated = False
@@ -24,6 +25,9 @@ class FakeProcess:
         return self.audio, b""
 
     def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
         return self.returncode
 
     def terminate(self):
@@ -142,6 +146,51 @@ def test_recognizer_rejects_invalid_wav(monkeypatch, tmp_path):
     )
     with pytest.raises(VoiceError, match="Áudio ou transcrição inválidos"):
         LocalRecognizer(model_dir).recognize()
+
+
+def test_continuous_recognizer_returns_at_vosk_speech_endpoint(monkeypatch, tmp_path):
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+
+    class FakeDecoder:
+        def __init__(self, model, rate):
+            assert rate == 16000
+
+        def AcceptWaveform(self, frames):
+            assert frames
+            return True
+
+        def Result(self):
+            return json.dumps({"text": "olá assistente"})
+
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
+        Model=lambda path: object(), KaldiRecognizer=FakeDecoder,
+    ))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
+    processes = []
+
+    def start(args, **kwargs):
+        process = FakeProcess(args, audio=b"\0\0" * 4000)
+        process.returncode = None
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(voice_module.subprocess, "Popen", start)
+    recognizer = LocalRecognizer(model_dir)
+    assert recognizer.recognize_continuous() == "olá assistente"
+    assert processes[0].args[-1] == "raw"
+    assert processes[0].terminated
+
+
+def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(Model=lambda path: object()))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
+    monkeypatch.setattr(voice_module.subprocess, "Popen", lambda *a, **k: pytest.fail(
+        "Microfone aberto após pausa"
+    ))
+    assert LocalRecognizer(model_dir).recognize_continuous(lambda: True) == ""
 
 
 @pytest.mark.parametrize("voice", ("pt-br+f3", "pt-br+m3"))

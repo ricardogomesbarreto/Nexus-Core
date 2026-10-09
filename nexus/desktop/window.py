@@ -1,6 +1,8 @@
 """Janela de conversa nativa para o desktop Linux."""
 
 import sys
+import re
+import unicodedata
 from queue import Empty, Queue
 from threading import Thread
 
@@ -28,9 +30,11 @@ class DesktopWindow:
         self.speaker = speaker if speaker is not None else LocalSpeaker()
         self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
-        self._audio_events: Queue[tuple[str, str]] = Queue()
+        self._audio_events: Queue[tuple[str, str, int]] = Queue()
         self._busy = False
         self._listening = False
+        self._voice_active = True
+        self._listen_generation = 0
         self._speaking = False
         self._closing = False
 
@@ -88,10 +92,14 @@ class DesktopWindow:
         self.status = ttk.Label(controls, text="Pronto para conversar")
         self.status.pack(side="left")
         self.mic_button = ttk.Button(
-            controls, text="Falar (8 s)", command=self._start_listening,
+            controls, text="Pausar escuta", command=self._toggle_listening,
             style="Nexus.TButton",
         )
         self.mic_button.pack(side="right", padx=(8, 0))
+        ttk.Button(
+            controls, text="Desligar assistente", command=self._close,
+            style="Nexus.TButton",
+        ).pack(side="right", padx=(8, 0))
         self.send_button = ttk.Button(
             controls, text="Enviar", command=self._send, style="Nexus.TButton"
         )
@@ -100,12 +108,14 @@ class DesktopWindow:
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
-            "Escolha uma voz ou clique em Falar para usar o microfone. "
+            "A escuta começa automaticamente. Diga 'pare de escutar' ou use "
+            "Pausar escuta; use o botão para retomá-la. "
             "Comandos no sandbox pedem sua autorização antes de executar.",
             "assistant",
         )
         self.input.focus_set()
         root.after(80, self._poll)
+        root.after(120, self._start_listening)
 
     def _append(self, speaker: str, message: str, tag: str) -> None:
         self.transcript.configure(state="normal")
@@ -127,7 +137,9 @@ class DesktopWindow:
         self._append("Você", message, "user")
         self._busy = True
         self.send_button.configure(state="disabled")
-        self.mic_button.configure(state="disabled")
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
         if self._speaking:
             self.speaker.stop()
         self.status.configure(text="Processando localmente…")
@@ -145,36 +157,66 @@ class DesktopWindow:
         self._replies.put(reply)
 
     def _start_listening(self) -> None:
-        if self._busy or self._speaking or self._closing:
+        if (not self._voice_active or self._busy or self._listening
+                or self._speaking or self._closing):
             return
-        self._busy = True
         self._listening = True
-        self.send_button.configure(state="disabled")
-        self.mic_button.configure(state="disabled")
-        self.status.configure(text="Gravando por até 8 segundos…")
-        Thread(target=self._listen, daemon=True).start()
+        self._listen_generation += 1
+        generation = self._listen_generation
+        self.status.configure(text="Ouvindo… diga sua pergunta")
+        Thread(target=self._listen, args=(generation,), daemon=True).start()
+
+    def _toggle_listening(self) -> None:
+        self._voice_active = not self._voice_active
+        self.mic_button.configure(
+            text="Pausar escuta" if self._voice_active else "Retomar escuta"
+        )
+        if self._voice_active:
+            self._start_listening()
+        else:
+            self._listen_generation += 1
+            self.recognizer.stop()
+            self.status.configure(text="Escuta pausada; use Retomar escuta")
+
+    @staticmethod
+    def _voice_command(text: str) -> str | None:
+        normalized = " ".join(unicodedata.normalize("NFKD", text).encode(
+            "ascii", "ignore"
+        ).decode("ascii").lower().split())
+        normalized = re.sub(r"^nexus[,:]?\s+", "", normalized).rstrip(".!?")
+        if normalized in {"pare de escutar", "pare de me escutar", "pause a escuta",
+                          "pausar escuta", "desative o microfone", "desligue o microfone",
+                          "fique em silencio", "pare de ouvir", "pare de me ouvir"}:
+            return "pause"
+        if normalized in {"desligue o assistente", "feche o nexus core"}:
+            return "shutdown"
+        return None
 
     def _toggle_speech(self) -> None:
         if not self.speech_enabled.get() and self._speaking:
             self.speaker.stop()
             self.status.configure(text="Leitura em voz desativada")
 
-    def _listen(self) -> None:
+    def _listen(self, generation: int) -> None:
         try:
-            self._audio_events.put(("transcript", self.recognizer.recognize()))
+            text = self.recognizer.recognize_continuous(
+                lambda: self._closing or self._busy or not self._voice_active
+                or generation != self._listen_generation
+            )
+            self._audio_events.put(("transcript" if text else "silence", text, generation))
         except VoiceError as exc:
-            self._audio_events.put(("listen_error", str(exc)))
+            self._audio_events.put(("listen_error", str(exc), generation))
         except Exception:
-            self._audio_events.put(("listen_error", "Falha ao reconhecer a fala local."))
+            self._audio_events.put(("listen_error", "Falha ao reconhecer a fala local.", generation))
 
     def _speak(self, text: str, voice: str) -> None:
         try:
             self.speaker.speak(text, voice)
-            self._audio_events.put(("speak_done", ""))
+            self._audio_events.put(("speak_done", "", 0))
         except VoiceError as exc:
-            self._audio_events.put(("speak_error", str(exc)))
+            self._audio_events.put(("speak_error", str(exc), 0))
         except Exception:
-            self._audio_events.put(("speak_error", "Falha ao reproduzir a voz local."))
+            self._audio_events.put(("speak_error", "Falha ao reproduzir a voz local.", 0))
 
     @staticmethod
     def _display(value) -> str:
@@ -204,27 +246,40 @@ class DesktopWindow:
         self.confirmation.process(self._confirm)
         while True:
             try:
-                kind, value = self._audio_events.get_nowait()
+                kind, value, generation = self._audio_events.get_nowait()
             except Empty:
                 break
-            if kind in ("transcript", "listen_error"):
+            if kind in ("transcript", "silence", "listen_error"):
                 self._listening = False
-                self._busy = False
-                if not self._closing:
-                    self.send_button.configure(state="normal")
-                    self.mic_button.configure(state="normal")
-                    if kind == "transcript":
+                if self._closing:
+                    continue
+                if generation != self._listen_generation:
+                    self._start_listening()
+                    continue
+                if kind == "listen_error":
+                    self._voice_active = False
+                    self.mic_button.configure(text="Retomar escuta")
+                    self.status.configure(text=value)
+                elif self._voice_active and not self._busy:
+                    command = self._voice_command(value) if kind == "transcript" else None
+                    if command == "pause":
+                        self._toggle_listening()
+                        self._append("Você", value, "user")
+                        self._append("Nexus Core", "Escuta pausada. Retome pelo botão.", "assistant")
+                    elif command == "shutdown":
+                        self._close()
+                    elif kind == "transcript":
                         self.input.delete("1.0", "end")
                         self.input.insert("1.0", value)
                         self._send()
                     else:
-                        self.status.configure(text=value)
+                        self._start_listening()
             else:
                 self._speaking = False
                 if not self._closing and not self._busy:
-                    self.mic_button.configure(state="normal")
                     if kind == "speak_error" and self.speech_enabled.get():
                         self.status.configure(text=value)
+                    self._start_listening()
         while True:
             try:
                 reply = self._replies.get_nowait()
@@ -234,32 +289,35 @@ class DesktopWindow:
             if not self._closing:
                 self._append("Nexus Core", reply.text, "assistant")
                 self.send_button.configure(state="normal")
-                self.status.configure(text="Pronto para conversar")
+                self.status.configure(text="Escuta pausada" if not self._voice_active else "Pronto para conversar")
                 if self.speech_enabled.get() and reply.outcome.success:
                     self._speaking = True
-                    self.mic_button.configure(state="disabled")
                     Thread(
                         target=self._speak,
                         args=(reply.text, self.voice_choice.get()),
                         daemon=True,
                     ).start()
                 elif not self._speaking:
-                    self.mic_button.configure(state="normal")
-        if self._closing and not self._busy:
+                    self._start_listening()
+        if self._closing and not self._busy and not self._listening and not self._speaking:
             self.app.shutdown()
             self.root.destroy()
             return
         self.root.after(80, self._poll)
 
     def _close(self) -> None:
+        if self._closing:
+            return
         self._closing = True
+        self._voice_active = False
+        self._listen_generation += 1
         self.session.close()
         self.confirmation.close()
         self.recognizer.stop()
         self.speaker.stop()
         self.send_button.configure(state="disabled")
         self.mic_button.configure(state="disabled")
-        if self._busy:
+        if self._busy or self._listening or self._speaking:
             self.status.configure(text="Encerrando após a solicitação atual…")
         else:
             self.app.shutdown()

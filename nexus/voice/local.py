@@ -1,4 +1,4 @@
-"""Áudio local: eSpeak NG para saída e Vosk/ALSA para entrada sob demanda."""
+"""Áudio local: eSpeak NG para saída e Vosk/ALSA para conversa contínua."""
 
 import io
 import json
@@ -7,6 +7,7 @@ import subprocess
 import wave
 from pathlib import Path
 from threading import Lock
+from typing import Callable
 
 from nexus.config.settings import settings
 
@@ -33,7 +34,10 @@ class _StoppableProcess:
         with self._lock:
             process = self._process
             if process is not None and process.poll() is None:
-                process.terminate()
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    pass
 
 
 class LocalSpeaker(_StoppableProcess):
@@ -73,10 +77,11 @@ class LocalSpeaker(_StoppableProcess):
 
 
 class LocalRecognizer(_StoppableProcess):
-    """Grava por oito segundos somente após clique e transcreve sem rede."""
+    """Escuta uma fala com detecção de pausa pelo Vosk, sem serviço remoto."""
 
     SAMPLE_RATE = 16000
     DURATION = 8
+    STREAM_LIMIT = 30
 
     def __init__(self, model_path: str | Path | None = None):
         super().__init__()
@@ -149,3 +154,61 @@ class LocalRecognizer(_StoppableProcess):
         if not text:
             raise VoiceError("Não reconheci fala. Tente novamente.")
         return text[:4000]
+
+    def recognize_continuous(self, cancelled: Callable[[], bool] | None = None) -> str:
+        """Retorna uma fala completa, ou vazio após silêncio/cancelamento.
+
+        O processo de captura tem limite de tempo; a janela inicia outra captura
+        após silêncio. O Vosk decide o fim de cada fala pelo intervalo de pausa.
+        """
+        cancelled = cancelled or (lambda: False)
+        model = self._load_model()
+        binary = shutil.which("arecord")
+        if binary is None:
+            raise VoiceError("Instale alsa-utils para usar o microfone.")
+        if cancelled():
+            return ""
+        try:
+            from vosk import KaldiRecognizer
+            decoder = KaldiRecognizer(model, self.SAMPLE_RATE)
+            process = subprocess.Popen(
+                [binary, "-q", "-d", str(self.STREAM_LIMIT), "-f", "S16_LE",
+                 "-r", str(self.SAMPLE_RATE), "-c", "1", "-t", "raw"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            )
+        except OSError as exc:
+            raise VoiceError("Não foi possível iniciar a gravação local.") from exc
+        self._set_process(process)
+        try:
+            if cancelled():
+                return ""
+            while not cancelled():
+                frames = process.stdout.read(8000)
+                if not frames:
+                    break
+                if decoder.AcceptWaveform(frames):
+                    text = json.loads(decoder.Result()).get("text", "")
+                    if isinstance(text, str) and text.strip():
+                        return text.strip()[:4000]
+            if cancelled():
+                return ""
+            if process.wait(timeout=3) != 0:
+                raise VoiceError("Não foi possível capturar áudio do microfone.")
+            text = json.loads(decoder.FinalResult()).get("text", "")
+            return text.strip()[:4000] if isinstance(text, str) else ""
+        except (ValueError, json.JSONDecodeError) as exc:
+            raise VoiceError("Áudio ou transcrição inválidos.") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise VoiceError("A gravação excedeu o tempo limite.") from exc
+        finally:
+            if process.poll() is None:
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=2)
+            self._clear_process(process)
