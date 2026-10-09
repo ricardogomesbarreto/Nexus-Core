@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.6.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.1-722F37">
+  <img alt="Versão v0.6.2" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.2-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.6.1 — Vision Desktop Integration`<br>
-> **Publicação da v0.6.1:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.6.2 — Guided Autonomy & Conversation` (evolução incremental, sem ações não autorizadas)<br>
+> **Versão do código:** `v0.6.2 — Guided Autonomy & Conversation`<br>
+> **Publicação da v0.6.2:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.6.3 — Conversation Reliability` (melhorias de áudio, disponibilidade e cancelamento)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,114 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.6.2 — Guided Autonomy & Conversation
+
+Esta versão fortalece a conversação guiada, **a resposta por voz nas três
+fontes de visão** e o controle humano sobre operações demoradas, sem
+alterar a identidade visual atual da janela Linux.
+
+## O assistente responde por voz às análises de Imagem, Tela e Câmera
+
+Na interface desktop, ao selecionar **Imagem**, **Tela** ou **Câmera**
+e autorizar **aquela única análise**, o assistente:
+
+1. Captura/lê uma imagem autorizada e envia somente ao modelo multimodal
+   do **Ollama local** (dependências `.[vision]` e modelo `gemma3:4b`
+   instalados separadamente).
+2. Mostra a descrição resultante na conversa em texto.
+3. **Lê a resposta em voz alta** usando o **eSpeak NG** na variante
+   escolhida: **Feminina** ou **Masculina**. A opção **Ler respostas
+   em voz alta** já inicia marcada. Isso é validado por testes de
+   interface **separados para Imagem, Tela e Câmera** e seleção de voz.
+4. Retoma a escuta contínua local do Vosk após terminar de falar,
+   se o microfone não tiver sido pausado. A descrição textual pode
+   contextualizar perguntas seguintes sem nova captura automática.
+
+O usuário mantém controle para **desmarcar a leitura em voz alta**;
+assim, as três análises continuam retornando texto, mas **sem som**.
+O eSpeak NG limita cada fala a **2.400 caracteres**; textos maiores
+permanecem disponíveis integralmente no transcript (limite de
+descrição visual: 12.000 caracteres). Nenhuma voz externa paga é usada.
+Se o eSpeak NG ou dispositivo de áudio falhar, o texto permanece
+disponível e a falha pode aparecer na barra de estado.
+
+## Sugestões práticas com autorização explícita para ações
+
+O botão discreto **Sugerir** permite solicitar orientações concretas
+com o contexto efêmero da conversa, sem precisar montar um prompt.
+Essa solicitação usa modo **somente consultivo**: o `AgentPlanner`
+recebe uma proibição explícita de executar ferramentas,
+**independentemente de o modelo propor um `tool_call`**.
+Por isso, sugestões não podem iniciar shell, capturas de tela,
+leitura de arquivos ou outros efeitos colaterais.
+
+Conversas normais continuam respondendo a dúvidas e podendo
+propor uma ferramenta autorizada, limitada a no máximo uma
+proposta por turno e mediada pelo `SecurityGate`, confirmação
+humana e políticas de risco. **Autonomia é orientada e auditável,
+não irrestrita**. Nada funciona como observador contínuo em
+segundo plano, nem captura câmera/tela sem confirmação por ação.
+
+## Cancelamento cooperativo
+
+O botão **Cancelar** fica disponível enquanto uma pergunta, sugestão
+ou análise visual está em processamento. Ao acioná-lo:
+
+- a resposta pendente não é exibida nem lida em voz alta;
+- capturas e análises visuais concluídas depois do cancelamento
+  não acrescentam descrição ao histórico da conversa;
+- o agente verifica cancelamento antes do planejamento e
+  imediatamente antes de qualquer nova execução de ferramenta;
+- as autorizações futuras continuam sendo solicitadas normalmente.
+
+**Limitação:** cancelamento é **cooperativo**, não uma interrupção
+instantânea garantida de todo processo. Não desfaz comandos já
+executados, não reverte operações confirmadas e pode precisar
+aguardar uma chamada Ollama ou captura já iniciada terminar
+para liberar os controles. A interface permanece responsiva.
+
+## Testes e compatibilidade
+
+Testes automatizados verificam a resposta falada por fonte
+(Imagem/Tela/Câmera), voz masculina/feminina, opção de silêncio,
+recusa de consentimento, cancelamento de diálogo e visão,
+sugestão sem ferramentas e regressão da interface Tk sob Xvfb.
+As imagens continuam não sendo armazenadas pelo NEXUS CORE,
+e o PostgreSQL local segue como único banco.
+
+A interação por voz ainda acontece **por turnos** (escuta, processa,
+responde e volta a escutar), não é full-duplex de latência zero.
+Os testes da CI usam equipamentos simulados; a homologação
+de microfone/alto-falantes/câmera e Ollama multimodal real
+precisa ser executada no hardware Linux do usuário.
+
+---
+
+## Histórico de marcos e documentação
+
+O README mantém as seções completas das versões anteriores e as notas
+oficiais abaixo, para que decisões, limitações e evolução permaneçam
+rastreáveis no GitHub:
+
+| Versão | Marco | Documentação |
+| --- | --- | --- |
+| v0.3.7 | Local Voice Conversation | Histórico do README |
+| v0.3.8 | Continuous Local Voice Conversation | Histórico do README |
+| v0.3.9 | Linux Stability & Release | [Release](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.3.9) |
+| v0.4.0 | Persistent Memory Foundation | [Notas](docs/RELEASE_NOTES_v0.4.0.md) |
+| v0.4.1 | Knowledge Base | [Notas](docs/RELEASE_NOTES_v0.4.1.md) |
+| v0.5.0 | Voice Foundation | [Notas](docs/RELEASE_NOTES_v0.5.0.md) |
+| v0.6.0 | Vision & Screen Understanding Foundation | [Notas](docs/RELEASE_NOTES_v0.6.0.md) |
+| v0.6.1 | Vision Desktop Integration | [Notas](docs/RELEASE_NOTES_v0.6.1.md) |
+| v0.6.2 | Guided Autonomy & Conversation | [Notas](docs/RELEASE_NOTES_v0.6.2.md) |
+
+O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
+Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
+para identificar tags oficiais, cada qual condicionada à validação CI
+da versão correspondente.
 
 ---
 
@@ -632,10 +740,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.6.1`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.6.2`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.6.1`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.6.2`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3632,11 +3740,19 @@ consentimento explícitos por captura, análise assíncrona com
 Ollama local e contexto textual efêmero para perguntas subsequentes.
 Nenhuma imagem é persistida ou capturada automaticamente.
 
-### v0.6.2 — Guided Autonomy & Conversation (planejado)
+### v0.6.2 — Guided Autonomy & Conversation (implementado)
 
-Evolução de sugestões contextuais, capacidade de cancelar operações
-de longa duração e diálogo mais fluido, mantendo ações mediadas
-pelo SecurityGate e sem acesso autônomo a dados sensíveis.
+Todas as fontes de visão na GUI respondem com eSpeak NG quando a
+leitura de voz está habilitada. A nova ação **Sugerir** bloqueia
+a execução de ferramentas, mesmo quando sugeridas pelo modelo.
+A ação **Cancelar** descarta resultados pendentes, previne novas
+execuções após cancelamento e mantém a janela responsiva.
+
+### v0.6.3 — Conversation Reliability (planejado)
+
+Resiliência e diagnóstico de hardware de áudio, limites e tempos
+de resposta, acessibilidade e interrupção cooperativa em operações
+de longa duração, sem alterar a identidade da interface.
 
 ---
 
@@ -4002,10 +4118,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.6.1
-Release Name:          Vision Desktop Integration
-Release Tag:          v0.6.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        CONSENT-GATED DESKTOP VISION / TEXT CONTEXT; CI GATED
+Release Target:        v0.6.2
+Release Name:          Guided Autonomy & Conversation
+Release Tag:          v0.6.2 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        SPOKEN VISION + ADVISORY GATE + COOPERATIVE CANCEL; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
