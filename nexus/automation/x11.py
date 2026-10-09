@@ -1,8 +1,7 @@
 """Small, opt-in X11 automation adapter (no shell, clipboard or screenshots).
 
 This is intentionally *not* unrestricted computer control. One requested
-text insertion per approved ToolExecutor call into an exactly identified,
-explicitly identified X11 window; Wayland/XWayland sessions fail closed.
+text insertion per approved ToolExecutor call into an exactly identified X11 window; Wayland/XWayland sessions fail closed.
 """
 import os
 import re

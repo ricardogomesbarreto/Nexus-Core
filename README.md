@@ -54,8 +54,8 @@ uma ação de cada vez**, nunca controle livre do sistema pela IA.
   imprimível de até 300 caracteres** na janela X11 de ID e título
   explicitamente informados. **Não envia Enter**, atalhos, mouse,
   URLs ou comandos de terminal por conta própria.
-- O \`ToolExecutor\` obriga a passagem pelo \`SecurityGate\`.
-  \`desktop_type_text\` tem risco **MEDIUM** e exige confirmação
+- O `ToolExecutor` obriga a passagem pelo `SecurityGate`.
+  `desktop_type_text` tem risco **MEDIUM** e exige confirmação
   humana **a cada execução** com a política padrão; sem confirmação,
   a ferramenta falha sem enviar caracteres.
 - O diálogo da interface Tk exibe a **janela de destino e o texto
@@ -66,28 +66,28 @@ uma ação de cada vez**, nunca controle livre do sistema pela IA.
   contra controles de teclado, limites excessivos, IDs inválidos
   e títulos alterados. O resultado registra **número de caracteres
   cujo envio foi solicitado**, não garante que a aplicação os aceitou.
-- Chamada ao \`xdotool\` como subprocesso Linux com argumentos
+- Chamada ao `xdotool` como subprocesso Linux com argumentos
   delimitados, **sem shell**, tempo limite e erros sanitizados.
   Nenhum serviço remoto, captura de imagens ou acesso contínuo
   foi adicionado à automação.
 
 ## Diagnóstico e operação
 
-Instale gratuitamente o utilitário \`xdotool\` na sessão X11 Linux
+Instale gratuitamente o utilitário `xdotool` na sessão X11 Linux
 conforme sua distribuição. O comando abaixo **somente verifica** a
 presença de dependências e o tipo de sessão; não abre aplicações,
 não interage com janelas, não inicia PostgreSQL nem consulta Ollama:
 
-\`\`\`bash
+```bash
 nexus-core --desktop-check
-\`\`\`
+```
 
 O fluxo pela conversa (texto ou voz local) é:
 
 1. Solicite ao NEXUS CORE: **"Qual é a janela ativa?"**
-   (\`desktop_window_info\` consulta o ID e título).
+   (`desktop_window_info` consulta o ID e título).
 2. Solicite: **"Digite 'Olá!' naquela janela"**. O modelo pode
-   propor a ferramenta \`desktop_type_text\` com o ID/título do
+   propor a ferramenta `desktop_type_text` com o ID/título do
    contexto da conversa, mas não recebe autoridade para executá-la.
 3. A interface mostra uma autorização pontual, incluindo a janela
    e o texto. **Somente após aprovação** o host revalida a janela
@@ -104,7 +104,7 @@ inserido ou operações realizadas.
 
 **Somente X11 local nesta primeira versão.** Sessões Wayland ou
 XWayland e DISPLAY com endereço remoto são recusados. Alguns
-programas X11 ignoram eventos \`XSendEvent\` enviados por ID de
+programas X11 ignoram eventos `XSendEvent` enviados por ID de
 janela; mesmo com saída de comando bem-sucedida, não há garantia
 de que texto tenha aparecido. O usuário precisa conferir o resultado
 na aplicação. A ferramenta não localiza campos específicos nem
@@ -126,7 +126,7 @@ precisam ser homologados no computador Linux** do usuário.
 
 ## Próximo incremento
 
-\`v0.7.1 — Controlled Desktop Navigation\` está **planejado** para
+`v0.7.1 — Controlled Desktop Navigation` está **planejado** para
 estudar um pequeno conjunto de operações navegacionais protegidas
 por consentimento humano, sem alterar o layout existente nem
 liberar execução autônoma de macros.
@@ -274,16 +274,16 @@ precisa ser executada no hardware Linux do usuário.
 
 A documentação de desenvolvimento inicial, mantida integralmente nas
 seções **Histórico de releases** e **Roadmap** deste README, registra:
-\`v0.1.0\`, \`v0.1.1\`, \`v0.1.2\`, \`v0.1.3\`, \`v0.1.4\`,
-\`v0.1.5\`, \`v0.1.6\`, \`v0.1.7\`, \`v0.1.8\`, \`v0.1.9\`;
-\`v0.2.0\`, \`v0.2.1\`, \`v0.2.2\`, \`v0.2.3\`, \`v0.2.4\`;
-\`v0.3.0\`, \`v0.3.1\`, \`v0.3.1.1\`, \`v0.3.1.2\`,
-\`v0.3.1.3\`, \`v0.3.2\`, \`v0.3.3\`, \`v0.3.4\`,
-\`v0.3.5\`, \`v0.3.6\`, \`v0.3.7\`, \`v0.3.8\`, \`v0.3.9\`.
+`v0.1.0`, `v0.1.1`, `v0.1.2`, `v0.1.3`, `v0.1.4`,
+`v0.1.5`, `v0.1.6`, `v0.1.7`, `v0.1.8`, `v0.1.9`;
+`v0.2.0`, `v0.2.1`, `v0.2.2`, `v0.2.3`, `v0.2.4`;
+`v0.3.0`, `v0.3.1`, `v0.3.1.1`, `v0.3.1.2`,
+`v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4`,
+`v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de \`v0.3.9\` até \`v0.7.0\` estão disponíveis
-em \`docs/RELEASE_NOTES_v*.md\`. O histórico **não foi apagado
+As notas dedicadas de `v0.3.9` até `v0.7.0` estão disponíveis
+em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
 
