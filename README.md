@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.4.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.4.0-722F37">
+  <img alt="Versão v0.4.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.4.1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.4.0 — Persistent Memory Foundation`<br>
-> **Publicação da v0.4.0:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.4.1 — Knowledge Base`<br>
+> **Versão do código:** `v0.4.1 — Knowledge Base`<br>
+> **Publicação da v0.4.1:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.5.x — Voice Foundation`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,71 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.4.1 — Knowledge Base
+
+A Knowledge Base é uma **biblioteca local de documentos opt-in**, sem crawling
+da pasta pessoal, sem sincronização em nuvem e sem acesso automático da IA
+aos conteúdos. O PostgreSQL local recebe apenas documentos **importados
+explicitamente** pelo usuário por comando. A identidade visual, o Ollama,
+a interface Tk e a voz existentes não foram redesenhados.
+
+## Capacidades implementadas
+
+- **Ingestão segura:** arquivos `.txt` e `.md` em UTF-8, máximo **256 KiB**
+  por arquivo. A abertura acontece por descritores de arquivo autorizados
+  pelo `PathSecurity` da v0.3.9; links simbólicos, diretórios protegidos,
+  arquivos binários ou especiais e caminhos fora do HOME são recusados.
+- **Indexação PostgreSQL:** tabelas `nexus_knowledge_documents`,
+  `nexus_knowledge_chunks` e `nexus_knowledge_audit`, índice GIN de
+  full-text search com dicionário `simple`, trechos de até **1.000
+  caracteres** e sobreposição de 100 caracteres (até 320 trechos).
+- **Deduplicação:** SHA-256 do texto normalizado; conteúdos repetidos
+  não são reimportados mesmo com nomes/caminhos diferentes.
+- **Retrieval:** busca em chunks por full-text ou substring literal,
+  com queries SQL parametrizadas; respostas exibem IDs de documento
+  e trecho para identificação de origem. A busca é lexical, **não
+  semântica/vetorial**.
+- **Lifecycle:** listagem, exclusão explícita de documento por ID e
+  exclusão automática dos chunks relacionados via chave estrangeira.
+- **Auditoria:** ação, ID, quantidade e horário, sem persistir texto de
+  documentos, consultas ou arquivos na tabela de auditoria.
+- **Integração com memória:** somente em `--knowledge-context` com
+  `--knowledge-with-memory` o programa consulta também a memória
+  da v0.4.0 e apresenta os dois conjuntos de resultados. O material
+  **não é enviado automaticamente ao Ollama**.
+
+## Comandos
+
+```bash
+nexus-core --knowledge-import ~/Documentos/minhas-notas.md
+nexus-core --knowledge-list
+nexus-core --knowledge-search "PostgreSQL"
+nexus-core --knowledge-context "Redes"
+nexus-core --knowledge-context "Redes" --knowledge-with-memory
+nexus-core --knowledge-delete 1
+nexus-core --knowledge-search "Python" --knowledge-limit 10
+```
+
+O ID de exclusão é ilustrativo. Limite de resultados: **1 a 20**.
+`--knowledge-*` usa o PostgreSQL, sem precisar iniciar a interface
+Tk ou o Ollama. Não é necessário reinstalar dependências extras.
+
+**Segurança e privacidade:** os trechos, os nomes e caminhos dos arquivos
+são armazenados em **texto claro no PostgreSQL local**. Não importe
+segredos ou arquivos sensíveis. A cópia no banco continua existindo
+após excluir o arquivo original; use `--knowledge-delete ID` para
+excluí-la. Logs de auditoria preservam apenas metadados de operação.
+Nenhuma proteção do código equivale a criptografia de disco.
+
+**Limitações conscientes:** somente documentos TXT/Markdown, sem PDF,
+DOCX, OCR, varredura de diretórios, embeddings ou RAG autônomo. Os
+resultados são retornados ao terminal com identificação de origem;
+não podem ampliar permissões do agente e não são injetados nos prompts
+sem autorização explícita. A validação em hardware físico de áudio
+permanece separada dos testes de CI.
 
 ---
 
@@ -368,10 +433,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.4.0`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.4.1`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.4.0`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.4.1`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3331,13 +3396,11 @@ de memórias no prompt do agente nesta fase.
 
 ## v0.4.1 — Knowledge Base
 
-Planejado:
-
-* ingestão;
-* indexação;
-* retrieval;
-* documentos;
-* integração com memória.
+**Implementado:** ingestão opt-in de documentos TXT/Markdown até 256 KiB,
+indexação e pesquisa PostgreSQL GIN, deduplicação SHA-256, identificação
+de origem, auditoria sem conteúdo, exclusão em cascata e contexto com memória
+**somente por solicitação explícita**. Não há OCR, embeddings ou injeção
+automática de conteúdo no prompt do Ollama.
 
 ---
 
@@ -3731,10 +3794,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.4.0
-Release Name:          Persistent Memory Foundation
-Release Tag:          v0.4.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        EXPLICIT POSTGRESQL MEMORY; TAG GATED BY MAIN CI
+Release Target:        v0.4.1
+Release Name:          Knowledge Base
+Release Tag:          v0.4.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        LOCAL DOCUMENT KNOWLEDGE BASE; TAG GATED BY MAIN CI
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
