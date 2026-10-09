@@ -9,6 +9,7 @@ import io
 import json
 import os
 import re
+import resource
 import shutil
 import subprocess
 import tempfile
@@ -120,6 +121,15 @@ class LocalVision:
         return self._normalize_image(bytes(data))
 
     @classmethod
+    def _limit_capture_output(cls) -> None:
+        # Linux kernel hard-limit on the child's stdout regular file.
+        # Enforced while the capture runs, not only after it finishes.
+        resource.setrlimit(
+            resource.RLIMIT_FSIZE,
+            (cls.MAX_INPUT_BYTES + 1, cls.MAX_INPUT_BYTES + 1),
+        )
+
+    @classmethod
     def _capture(cls, command: list[str]) -> bytes:
         # No shell; stdout is an anonymous OS temporary file, not a saved screenshot.
         # Bounded subprocess runtime and file size prevent unbounded pipe allocation.
@@ -128,7 +138,7 @@ class LocalVision:
                 result = subprocess.run(
                     command, stdin=subprocess.DEVNULL, stdout=output,
                     stderr=subprocess.DEVNULL, timeout=cls.CAPTURE_TIMEOUT,
-                    check=False,
+                    check=False, preexec_fn=cls._limit_capture_output,
                 )
                 if result.returncode != 0:
                     raise VisionError("Não foi possível capturar imagem local.")
