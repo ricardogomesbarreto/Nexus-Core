@@ -517,6 +517,15 @@ class DesktopWindow:
                 f"Texto a digitar (não envia Enter): "
                 f"{self._display(request.data.get('text', ''))}"
             )
+        if request.tool_name == "desktop_navigate" and isinstance(request.data, dict):
+            # A precise one-shot navigation preview, never a generic shortcut.
+            details.append(
+                f"Janela X11: {self._display(request.data.get('window_title', ''))}"
+                f" (ID {self._display(request.data.get('window_id', ''))})"
+            )
+            details.append(
+                f"Navegação (uma tecla): {self._display(request.data.get('action', ''))}"
+            )
         for resource in request.resources:
             details.append(
                 f"Recurso {self._display(resource.name)}: {self._display(resource.path)}"

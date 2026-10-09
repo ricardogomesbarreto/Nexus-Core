@@ -1,8 +1,8 @@
 """Structured, SecurityGate-mediated desktop actions.
 
-Tool contracts are authoritative. Only desktop_type_text can affect the GUI;
-its MEDIUM risk always requires a fresh human confirmation under default
-policy. No arbitrary mouse positions, key combos, URL visits or commands.
+Tool contracts are authoritative. Desktop navigation and typing can affect
+GUI state, are MEDIUM risk, and require explicit confirmation per action.
+No arbitrary mouse positions, key combos, URL visits or commands.
 """
 from nexus.security import RiskLevel
 from nexus.tools.base import NexusTool, ToolResult
@@ -41,6 +41,52 @@ class DesktopWindowInfoTool(NexusTool):
             return ToolResult(False, self.name, error=str(exc),
                               error_code="X11_UNAVAILABLE")
 
+
+
+class DesktopNavigateTool(NexusTool):
+    """One whitelisted key action to a specific X11 window per approval."""
+
+    name = "desktop_navigate"
+    description = (
+        "Navega na janela X11 identificada com UMA tecla predefinida: "
+        "next_field, previous_field, page_up ou page_down. "
+        "Requer autorização humana por operação; não envia Enter ou atalhos."
+    )
+    risk_level = RiskLevel.MEDIUM
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(
+            FieldSpec("window_id", ValueKind.INTEGER),
+            FieldSpec("window_title", ValueKind.STRING, nonempty=True),
+            FieldSpec("action", ValueKind.STRING, nonempty=True),
+        ),
+        outputs=(
+            FieldSpec("window_id", ValueKind.INTEGER),
+            FieldSpec("action", ValueKind.STRING),
+        ),
+    )
+
+    def __init__(self, backend=None):
+        self.backend = backend if backend is not None else X11DesktopBackend()
+
+    def sensitive_resources(self, **kwargs):
+        X11DesktopBackend.validate_id(kwargs["window_id"])
+        X11DesktopBackend.validate_title(kwargs["window_title"])
+        X11DesktopBackend.validate_navigation(kwargs["action"])
+        return ()
+
+    def execute(self, *, window_id: int, window_title: str, action: str):
+        try:
+            completed = self.backend.navigate(
+                window_id=window_id, window_title=window_title, action=action,
+            )
+            return ToolResult(True, self.name, data={
+                "window_id": window_id, "action": completed,
+            })
+        except DesktopAutomationError as exc:
+            return ToolResult(
+                False, self.name, error=str(exc), error_code="DESKTOP_DENIED"
+            )
 
 class DesktopTypeTextTool(NexusTool):
     name = "desktop_type_text"

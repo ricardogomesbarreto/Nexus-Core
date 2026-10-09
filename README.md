@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.7.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.0-722F37">
+  <img alt="Versão v0.7.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.7.0 — Controlled Desktop Automation Foundation`<br>
-> **Publicação da v0.7.0:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.7.1 — Controlled Desktop Navigation` (expansão prudente, ainda não implementada)<br>
+> **Versão do código:** `v0.7.1 — Controlled Desktop Navigation`<br>
+> **Publicação da v0.7.1:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.7.2 — Desktop Interaction Safety & Diagnostics` (ainda não implementado)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,95 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.7.1 — Controlled Desktop Navigation
+
+Esta versão incorpora **navegação limitada por teclado no desktop X11**,
+preservando integralmente o design da janela Tk, a conversa local,
+a fala feminina/masculina e a resposta em voz às análises autorizadas
+de Imagem, Tela e Câmera.
+
+## Nova ferramenta: desktop_navigate
+
+O assistente pode **propor UMA ação de navegação** na janela X11
+especificamente indicada por `window_id` e `window_title`. São
+permitidas somente estas quatro ações (identificadores técnicos
+estáveis, que também aparecem no diálogo de consentimento):
+
+| Ação permitida | Tecla X11 enviada | Finalidade |
+| --- | --- | --- |
+| `next_field` | `Tab` | Tentar avançar para o próximo campo |
+| `previous_field` | `ISO_Left_Tab` | Tentar retornar ao campo anterior |
+| `page_up` | `Prior` | Tentar mover uma página para cima |
+| `page_down` | `Next` | Tentar mover uma página para baixo |
+
+O comando envia **apenas uma tecla predefinida** por operação.
+Não permite `Enter`, `Escape`, atalhos Ctrl/Alt, cliques,
+coordenadas, texto livre como tecla, repetição, macros ou shell.
+A navegação **não escolhe por conta própria aplicações ou campos**.
+
+## Autorização, segurança e auditoria
+
+A nova ferramenta tem risco **MEDIUM** e passa pelo
+`ToolExecutor` e `SecurityGate`. A política padrão exige
+**confirmação humana por operação**, inclusive quando a proposta
+foi produzida pelo modelo local. Sem autorização a operação não
+é executada. O diálogo mostra a janela (ID e título) e o nome
+exato da ação, antes de solicitar consentimento.
+
+O host usa `xdotool` **sem shell**, com limite de tempo, revalida
+o título do **mesmo ID de janela após a confirmação** e envia uma
+tecla direcionada àquela janela. Um ID inválido, título alterado,
+ação fora da lista, display remoto ou sessão Wayland bloqueia
+a operação. Uma falha do subprocesso não é reportada como sucesso.
+Os registros de autorização e de execução seguem o mecanismo de
+auditoria existente.
+
+A consulta `desktop_window_info` da v0.7.0 permanece como
+forma de obter metadados da janela ativa sem captura de pixels.
+A ação `desktop_type_text` continua restrita a texto curto
+com consentimento específico. O botão **Sugerir** permanece
+consultivo, sem executar ferramentas.
+
+## Como utilizar
+
+1. No desktop **Linux X11 local**, instale `xdotool` e
+   inicie o NEXUS CORE normalmente.
+2. Solicite ao assistente identificar a janela ativa. Depois,
+   peça algo como: **"Avance um campo nessa janela"** ou
+   **"Mova uma página para baixo na janela informada"**.
+3. Confira no diálogo o **ID, título e ação**; só então
+   confirme. Para navegar novamente, é necessário novo pedido
+   e nova confirmação.
+
+Diagnóstico passivo, sem teclado, X11 ativo ou acesso a imagens:
+
+```bash
+nexus-core --desktop-check
+```
+
+## Limites reais e próximos passos
+
+Programas X11 podem ignorar eventos sintéticos `XSendEvent` e
+focar elementos de forma diferente. O resultado indica apenas
+que a tecla foi enviada ao subprocesso, **não comprova a
+navegação na interface do programa**. Não utilize esta função
+em diálogos ou formulários sensíveis antes de homologar o
+comportamento no aplicativo Linux real.
+
+**X11 local apenas**, com `xdotool` opcional. Não há
+automação Wayland, captura contínua, exploração livre da área
+de trabalho ou execução autônoma de sequências. Os testes
+da CI simulam subprocessos e confirmação, sem substituir
+testes físicos de desktop, microfone, câmera, alto-falantes
+ou modelo multimodal. Nenhum custo adicional ou serviço
+hospedado foi introduzido.
+
+**Próximo marco planejado:** `v0.7.2 — Desktop Interaction
+Safety & Diagnostics`, focado em robustez da navegação,
+conformidade de permissões e diagnósticos sem efeitos.
 
 ---
 
@@ -126,10 +215,9 @@ precisam ser homologados no computador Linux** do usuário.
 
 ## Próximo incremento
 
-`v0.7.1 — Controlled Desktop Navigation` está **planejado** para
-estudar um pequeno conjunto de operações navegacionais protegidas
-por consentimento humano, sem alterar o layout existente nem
-liberar execução autônoma de macros.
+`v0.7.1 — Controlled Desktop Navigation` foi implementada com
+quatro teclas estritamente delimitadas, sem alterar o layout existente
+nem liberar execução autônoma de macros. Consulte a seção da v0.7.1.
 
 ---
 
@@ -282,7 +370,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.7.0` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.7.1` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -304,6 +392,7 @@ rastreáveis no GitHub:
 | v0.6.2 | Guided Autonomy & Conversation | [Notas](docs/RELEASE_NOTES_v0.6.2.md) |
 | v0.6.3 | Conversation Reliability | [Notas](docs/RELEASE_NOTES_v0.6.3.md) |
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
+| v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -906,10 +995,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.7.0`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.7.1`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.7.0`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.7.1`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3935,11 +4024,19 @@ Registros de autorização e execução pelo SecurityGate; limites estritos
 de entrada e timeout; nenhum shell, clique ou macro autônoma.
 Automações host X11 não são executadas no sandbox de comandos Docker.
 
-### v0.7.1 — Controlled Desktop Navigation (planejado)
+### v0.7.1 — Controlled Desktop Navigation (implementado)
 
-Estudo de navegação segura com escopo estrito de comandos, confirmação
-por ação e testes adicionais, sem suporte Wayland ou garantia
-de compatibilidade de programas até homologação real.
+Nova ferramenta `desktop_navigate`: quatro operações de navegação
+por uma tecla direcionada a janela X11 identificada, com autorização
+humana para cada ação, verificação de ID/título após consentimento,
+sem atalhos livres, shell, macros ou cliques. Testes de segurança e
+diagnósticos executados na CI.
+
+### v0.7.2 — Desktop Interaction Safety & Diagnostics (planejado)
+
+Ampliação de diagnósticos, segurança dos contratos e confiabilidade
+da interação X11, condicionada à homologação física antes de
+afirmar compatibilidade com aplicativos específicos.
 
 ---
 
@@ -4291,10 +4388,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.7.0
-Release Name:          Controlled Desktop Automation Foundation
-Release Tag:          v0.7.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        X11 WINDOW INSPECTION + ONE-SHOT CONSENTED TYPE; CI GATED
+Release Target:        v0.7.1
+Release Name:          Controlled Desktop Navigation
+Release Tag:          v0.7.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        X11 ALLOWLISTED NAVIGATION + PER-ACTION CONSENT; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
