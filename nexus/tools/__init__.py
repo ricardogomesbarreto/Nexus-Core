@@ -15,7 +15,9 @@ from nexus.tools.filesystem import (
 from nexus.tools.registry import ToolRegistry
 from nexus.tools.system import SystemInfoTool
 from nexus.tools.terminal import TerminalSandboxTool
-from nexus.tools.desktop import DesktopWindowInfoTool, DesktopTypeTextTool
+from nexus.tools.desktop import (
+    DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
+)
 
 
 __all__ = [
@@ -35,4 +37,5 @@ __all__ = [
     "TerminalSandboxTool",
     "DesktopWindowInfoTool",
     "DesktopTypeTextTool",
+    "DesktopNavigateTool",
 ]
