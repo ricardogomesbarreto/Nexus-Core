@@ -113,8 +113,11 @@ class AgentPlanner:
         raise ProposalError("A proposta precisa conter uma única ação válida.")
 
     def run(
-        self, prompt: str, is_cancelled: Callable[[], bool] | None = None
+        self, prompt: str, is_cancelled: Callable[[], bool] | None = None,
+        *, allow_tools: bool = True,
     ) -> AgentOutcome:
+        if is_cancelled is not None and is_cancelled():
+            return AgentOutcome(False, error="Solicitação cancelada.", error_code="CANCELLED")
         try:
             proposal = self.plan(prompt)
         except ProposalError as exc:
@@ -129,11 +132,16 @@ class AgentPlanner:
                 False, error="Não foi possível obter resposta do modelo.",
                 error_code="MODEL_ERROR",
             )
-        if proposal.type == "message":
-            return AgentOutcome(True, content=proposal.content)
         if is_cancelled is not None and is_cancelled():
             return AgentOutcome(
                 False, error="Solicitação cancelada.", error_code="CANCELLED"
+            )
+        if proposal.type == "message":
+            return AgentOutcome(True, content=proposal.content)
+        if not allow_tools:
+            return AgentOutcome(
+                False, error="Modo sugestão não executa ferramentas.",
+                error_code="ADVISORY_ONLY",
             )
         result = self.executor.execute(proposal.tool_name, **proposal.arguments)
         return AgentOutcome(
