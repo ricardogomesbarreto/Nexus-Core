@@ -12,6 +12,7 @@ from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.wake import extract_utterance
+from nexus.vision import LocalVision, VisionError, VisionInputError
 
 
 class _WidgetBoolean:
@@ -43,7 +44,7 @@ class _WidgetChoice:
 class DesktopWindow:
     def __init__(
         self, root, app, confirmation: DesktopConfirmation,
-        speaker=None, recognizer=None,
+        speaker=None, recognizer=None, vision=None,
     ):
         import tkinter as tk
         from tkinter import messagebox, ttk
@@ -58,6 +59,9 @@ class DesktopWindow:
         self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
+        self._vision_events: Queue[tuple[str, str, str]] = Queue()
+        self.vision = vision
+        self._vision_buttons = []
         self._busy = False
         self._listening = False
         self._voice_active = True
@@ -130,6 +134,19 @@ class DesktopWindow:
         )
         self.wake_toggle.pack(side="left", padx=(12, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
+        vision_controls = ttk.Frame(frame)
+        vision_controls.pack(fill="x", pady=(8, 0))
+        ttk.Label(vision_controls, text="Visão local sob autorização:").pack(side="left", padx=(0, 8))
+        for title, callback in (
+            ("Imagem", self._vision_file),
+            ("Tela", self._vision_screen),
+            ("Câmera", self._vision_camera),
+        ):
+            button = ttk.Button(
+                vision_controls, text=title, command=callback, style="Nexus.TButton",
+            )
+            button.pack(side="left", padx=(0, 6))
+            self._vision_buttons.append(button)
 
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
@@ -191,6 +208,8 @@ class DesktopWindow:
         self.wake_required = None
         self._brand_image = None
         self._workers.clear()
+        self._vision_buttons.clear()
+        self.vision = None
         self.app.shutdown()
         self.root.destroy()
 
@@ -274,6 +293,98 @@ class DesktopWindow:
         if not self.speech_enabled.get() and self._speaking:
             self.speaker.stop()
             self.status.configure(text="Leitura em voz desativada")
+
+    def _vision_file(self) -> None:
+        self._request_vision("file")
+
+    def _vision_screen(self) -> None:
+        self._request_vision("screen")
+
+    def _vision_camera(self) -> None:
+        self._request_vision("camera")
+
+    def _request_vision(self, source: str) -> None:
+        """Capture once only following user action and explicit per-shot consent."""
+        if self._closing or self._busy or source not in ("file", "screen", "camera"):
+            return
+        from tkinter import filedialog, simpledialog
+
+        selection = None
+        label = {"file": "imagem selecionada", "screen": "tela atual",
+                 "camera": "câmera"}[source]
+        if source == "file":
+            selection = filedialog.askopenfilename(
+                parent=self.root, title="Escolher imagem local para análise",
+                filetypes=[("Imagens", "*.png *.jpg *.jpeg *.webp")],
+            )
+            if not selection:
+                return
+        elif source == "camera":
+            selection = simpledialog.askinteger(
+                "Selecionar câmera", "Índice da câmera (0 a 9):",
+                parent=self.root, initialvalue=0, minvalue=0, maxvalue=9,
+            )
+            if selection is None:
+                return
+            label = f"câmera {selection}"
+        question = simpledialog.askstring(
+            "Pergunta sobre a imagem", "Qual pergunta deseja fazer ao modelo visual?",
+            parent=self.root, initialvalue=LocalVision.DEFAULT_PROMPT,
+        )
+        if question is None:
+            return
+        try:
+            question = LocalVision.validate_question(question)
+        except VisionInputError:
+            self.status.configure(text="Pergunta visual inválida (máximo 2000 caracteres)")
+            return
+        if self._closing or self._busy:
+            return
+        consent = self.messagebox.askyesno(
+            "Nexus Core — autorização visual",
+            f"Autorizar UMA captura/leitura de {label} e enviar esta imagem "
+            "somente ao Ollama local para responder sua pergunta?\n\n"
+            "A imagem pode conter dados privados. Nenhum acesso contínuo "
+            "será iniciado. Esta autorização vale apenas para esta análise.",
+            parent=self.root,
+        )
+        if not consent or self._closing or self._busy:
+            return
+        self._busy = True
+        self.send_button.configure(state="disabled")
+        for button in self._vision_buttons:
+            button.configure(state="disabled")
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
+        if self._speaking:
+            self.speaker.stop()
+        self.status.configure(text="Analisando imagem no Ollama local…")
+        self._append("Você", f"[Visão autorizada: {label}] {question}", "user")
+        self._start_worker(self._analyze_vision, source, selection, question)
+
+    def _analyze_vision(self, source: str, selection, question: str) -> None:
+        """Worker only: never touch Tk from this thread or persist image bytes."""
+        try:
+            service = self.vision if self.vision is not None else LocalVision(settings)
+            if source == "file":
+                image = service.image_from_file(selection)
+            elif source == "camera":
+                image = service.camera(selection)
+            else:
+                image = service.screen()
+            result = service.describe(image, question=question)
+            if not isinstance(result, dict) or not isinstance(
+                result.get("description"), str
+            ) or not result["description"].strip():
+                raise VisionError("Resposta visual local inválida.")
+            self._vision_events.put(("success", question, result["description"][:12000]))
+        except VisionError as exc:
+            self._vision_events.put(("error", question, str(exc)))
+        except Exception:
+            self._vision_events.put(
+                ("error", question, "Falha ao capturar ou analisar imagem local.")
+            )
 
     def _listen(self, generation: int) -> None:
         try:
@@ -380,6 +491,30 @@ class DesktopWindow:
                     self._start_worker(self._speak, reply.text, self.voice_choice.get())
                 elif not self._speaking:
                     self._start_listening()
+        while True:
+            try:
+                kind, question, result = self._vision_events.get_nowait()
+            except Empty:
+                break
+            self._busy = False
+            if self._closing:
+                continue
+            for button in self._vision_buttons:
+                button.configure(state="normal")
+            self.send_button.configure(state="normal")
+            if kind == "success":
+                self.session.note_visual(question, result)
+                self._append("Nexus Core", result, "assistant")
+                self.status.configure(text="Análise visual concluída")
+                if self.speech_enabled.get():
+                    self._speaking = True
+                    self._start_worker(self._speak, result, self.voice_choice.get())
+                else:
+                    self._start_listening()
+            else:
+                self._append("Nexus Core", f"Análise visual indisponível: {result}", "assistant")
+                self.status.configure(text="Falha na análise visual")
+                self._start_listening()
         if (self._closing and not self._busy and not self._listening
                 and not self._speaking and not self._workers_running()):
             self._finish_close()
@@ -401,6 +536,8 @@ class DesktopWindow:
         self.speaker.stop()
         self.send_button.configure(state="disabled")
         self.mic_button.configure(state="disabled")
+        for button in self._vision_buttons:
+            button.configure(state="disabled")
         if self._busy or self._listening or self._speaking or self._workers_running():
             self.status.configure(text="Encerrando após a solicitação atual…")
         else:

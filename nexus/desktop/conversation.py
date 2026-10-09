@@ -56,6 +56,22 @@ class ChatSession:
                 self.history = self.history[-self.MAX_TURNS:]
             return ChatReply(reply, outcome)
 
+    def note_visual(self, question: str, description: str) -> None:
+        """Keep only bounded ephemeral text from a user-authorized vision reply.
+
+        Image bytes are never retained; this text permits follow-up questions.
+        """
+        if not isinstance(question, str) or not isinstance(description, str):
+            raise ValueError("Contexto visual inválido.")
+        with self._lock:
+            if self._closed.is_set():
+                return
+            self.history.append((
+                ("[Análise visual autorizada] " + question)[:self.MAX_CONTEXT_ITEM],
+                ("[Descrição visual local, não verificada] " + description)[:self.MAX_CONTEXT_ITEM],
+            ))
+            self.history = self.history[-self.MAX_TURNS:]
+
     @classmethod
     def _describe(cls, outcome: AgentOutcome) -> str:
         if outcome.content:

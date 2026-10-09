@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.6.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.0-722F37">
+  <img alt="Versão v0.6.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.6.0 — Vision & Screen Understanding Foundation`<br>
-> **Publicação da v0.6.0:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.6.1 — Vision Desktop Integration` (captura visual na interface)<br>
+> **Versão do código:** `v0.6.1 — Vision Desktop Integration`<br>
+> **Publicação da v0.6.1:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.6.2 — Guided Autonomy & Conversation` (evolução incremental, sem ações não autorizadas)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,82 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.6.1 — Vision Desktop Integration
+
+Esta versão adiciona **visão à própria janela nativa Linux**, sem alterar a
+identidade visual existente. O assistente mantém sua conversa por voz
+Vosk/ALSA e suas respostas em eSpeak NG masculino/feminino; a visão agora
+participa da conversa por meio de **descrições textuais efêmeras** e
+sugestões pertinentes, sujeitas às mesmas regras de segurança.
+
+## Utilização na interface gráfica
+
+Na janela do NEXUS CORE, a linha discreta **Visão local sob autorização**
+oferece três botões: **Imagem**, **Tela** e **Câmera**. Cada acionamento:
+
+1. É iniciado por um clique explícito. Em Imagem, escolhe-se um arquivo
+   PNG/JPEG/WEBP permitido no HOME; em Câmera, um índice 0–9; em Tela,
+   a captura será do quadro da tela ativa.
+2. Solicita ao usuário uma **pergunta visual**, com limite de 2.000
+   caracteres.
+3. Exibe confirmação **para aquela única captura/leitura e análise no
+   Ollama local**. Cancelar qualquer diálogo impede a captação.
+4. Pausa temporariamente a escuta do microfone, executa a captura e
+   análise em thread sem bloquear a janela, e apresenta a resposta no
+   transcript. Com leitura em voz alta ativada, o assistente pode
+   enunciar também a descrição.
+5. Após concluir, libera botões e retorna à escuta, se estiver ativa.
+
+Os pixels **não entram automaticamente no histórico da conversa**;
+apenas uma descrição textual resumida, sujeita ao limite de seis turnos,
+permanece na sessão **enquanto a janela está aberta**. Isso permite
+perguntas como "O que podemos melhorar nessa tela?", usando a descrição
+anterior como contexto, sem nova captura automática.
+
+## Diálogo, sugestões e autonomia delimitada
+
+O NEXUS CORE deve **responder perguntas formuladas normalmente**,
+pelo texto ou fala local, e **sugerir ações úteis quando pertinente**.
+O Agent recebeu orientações explícitas para:
+- responder em português brasileiro, com clareza e naturalidade;
+- recomendar próximos passos sem afirmar que já os executou;
+- propor no máximo uma ferramenta por solicitação;
+- nunca iniciar captura, leitura de arquivos, comandos ou rotinas
+  autônomas sem solicitação pertinente;
+- submeter toda execução de ferramenta ao `ToolExecutor`,
+  `SecurityGate`, políticas de risco e confirmação humana quando exigida.
+
+**O sistema ainda não é um assistente full-duplex com interrupção de fala
+instantânea**: capta uma fala, processa localmente, responde e retoma
+a escuta. Latência depende do microfone, Vosk, Ollama, CPU/GPU e eSpeak
+NG. "Conversa em tempo real" aqui significa interação contínua por
+turnos, sem botão obrigatório de pressionar-para-falar. Não inclui
+observação contínua da tela, iniciativas em segundo plano ou ações
+irreversíveis independentes.
+
+## Instalação opcional
+
+```bash
+python -m pip install -e '.[voice,vision]'
+nexus-core --desktop
+```
+
+Instale o modelo Vosk brasileiro no caminho configurado e um modelo
+multimodal local `gemma3:4b` no Ollama para análise de imagens.
+As capturas requerem `grim` em sessões Wayland compatíveis,
+ImageMagick `import` no X11 ou FFmpeg/V4L2 para webcam. A interface
+de texto e voz continua funcionando se a visão não estiver instalada.
+Não há monitoramento nem retenção automática de imagens, pagamentos
+ou serviços de nuvem.
+
+**Homologação pendente:** câmera, microfone, alto-falantes, integração
+Wayland/X11 e o modelo visual multimodal rodando em hardware Linux
+real. A CI verifica a GUI em display virtual e dispositivos simulados.
+A autorização por captura e as permissões do Linux continuam
+obrigatórias.
 
 ---
 
@@ -556,10 +632,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.6.0`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.6.1`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.6.0`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.6.1`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3549,10 +3625,18 @@ Homologação em hardware físico ainda pendente.
 análise multimodal sob demanda no Ollama loopback e diagnóstico local.
 Nenhuma captura automática, OCR, armazenamento ou integração na GUI.
 
-### v0.6.1 — Vision Desktop Integration (planejado)
+### v0.6.1 — Vision Desktop Integration (implementado)
 
-Planejar autorização pontual e visualização de capturas sob controle
-do usuário diretamente na interface desktop, respeitando o visual atual.
+A janela Tk disponibiliza ações de Imagem/Tela/Câmera, pergunta e
+consentimento explícitos por captura, análise assíncrona com
+Ollama local e contexto textual efêmero para perguntas subsequentes.
+Nenhuma imagem é persistida ou capturada automaticamente.
+
+### v0.6.2 — Guided Autonomy & Conversation (planejado)
+
+Evolução de sugestões contextuais, capacidade de cancelar operações
+de longa duração e diálogo mais fluido, mantendo ações mediadas
+pelo SecurityGate e sem acesso autônomo a dados sensíveis.
 
 ---
 
@@ -3918,10 +4002,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.6.0
-Release Name:          Vision & Screen Understanding Foundation
-Release Tag:          v0.6.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        OPT-IN LOCAL VISION / SCREEN / CAMERA; CI GATED
+Release Target:        v0.6.1
+Release Name:          Vision Desktop Integration
+Release Tag:          v0.6.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        CONSENT-GATED DESKTOP VISION / TEXT CONTEXT; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
