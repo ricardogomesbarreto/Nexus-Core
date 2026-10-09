@@ -50,6 +50,6 @@ jobs:
       - name: Verificar código e integração real
         run: |
           python -m compileall -q nexus tests
-          xvfb-run -a pytest -q
+          xvfb-run -a pytest -q -W error::pytest.PytestUnraisableExceptionWarning
       - name: Verificar executável Linux
         run: nexus-core --version
