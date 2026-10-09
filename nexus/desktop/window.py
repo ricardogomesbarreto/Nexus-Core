@@ -507,6 +507,16 @@ class DesktopWindow:
         ]
         if isinstance(request.data, dict) and "command" in request.data:
             details.append(f"Comando: {self._display(request.data['command'])}")
+        if request.tool_name == "desktop_type_text" and isinstance(request.data, dict):
+            # Display the exact target and bounded text before user consent.
+            details.append(
+                f"Janela X11: {self._display(request.data.get('window_title', ''))}"
+                f" (ID {self._display(request.data.get('window_id', ''))})"
+            )
+            details.append(
+                f"Texto a digitar (não envia Enter): "
+                f"{self._display(request.data.get('text', ''))}"
+            )
         for resource in request.resources:
             details.append(
                 f"Recurso {self._display(resource.name)}: {self._display(resource.path)}"

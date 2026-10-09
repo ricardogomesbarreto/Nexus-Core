@@ -18,6 +18,7 @@ from nexus.tools import (
     FileMetadataTool,
     SystemInfoTool,
     TerminalSandboxTool,
+    DesktopWindowInfoTool, DesktopTypeTextTool,
     ToolExecutor,
     ToolRegistry,
 )
@@ -47,6 +48,7 @@ class NexusApplication:
             SystemInfoTool(), ListDirectoryTool(), ReadFileTool(),
             FileMetadataTool(),
             TerminalSandboxTool(),
+            DesktopWindowInfoTool(), DesktopTypeTextTool(),
         ):
             self.tool_registry.register(tool)
 
