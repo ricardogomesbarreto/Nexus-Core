@@ -246,6 +246,8 @@ class DesktopWindow:
         self._cancel_requested = True
         if self._operation_kind == "chat":
             self.session.cancel_current()
+            # Release threads blocked on tool consent immediately.
+            self.confirmation.cancel_pending()
         self.cancel_button.configure(state="disabled")
         self.status.configure(text="Cancelamento solicitado; finalizando operação…")
 
