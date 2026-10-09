@@ -13,6 +13,9 @@ from nexus.models.model_factory import (
 )
 from nexus.security import ConfirmationHandler, SecurityGate
 from nexus.tools import (
+    ListDirectoryTool,
+    ReadFileTool,
+    SystemInfoTool,
     TerminalSandboxTool,
     ToolExecutor,
     ToolRegistry,
@@ -39,9 +42,11 @@ class NexusApplication:
 
         self.tool_registry = ToolRegistry()
 
-        self.tool_registry.register(
-            TerminalSandboxTool()
-        )
+        for tool in (
+            SystemInfoTool(), ListDirectoryTool(), ReadFileTool(),
+            TerminalSandboxTool(),
+        ):
+            self.tool_registry.register(tool)
 
         self.tool_executor = ToolExecutor(
             registry=self.tool_registry,

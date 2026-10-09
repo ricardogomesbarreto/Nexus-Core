@@ -37,9 +37,13 @@ jobs:
           python-version: '3.12'
       - name: Instalar pacote e dependências de testes
         run: python -m pip install -e '.[dev]'
+      - name: Preparar display virtual Linux
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb xauth python3-tk
       - name: Verificar código e integração real
         run: |
           python -m compileall -q nexus tests
-          pytest -q
+          xvfb-run -a pytest -q
       - name: Verificar executável Linux
         run: nexus-core --version

@@ -144,3 +144,10 @@ def test_incomplete_model_response_is_rejected(tmp_path):
     router.generate = lambda _: ModelResponse("{}", "test", False, 0, 0)
     with pytest.raises(ProposalError):
         agent.plan("agir")
+
+
+def test_closing_session_cancels_model_proposed_tool(tmp_path):
+    agent, _, medium = planner(tmp_path, proposal("medium_action", {"value": "x"}))
+    outcome = agent.run("agir", is_cancelled=lambda: True)
+    assert outcome.error_code == "CANCELLED"
+    assert medium.calls == []

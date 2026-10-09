@@ -16,13 +16,16 @@ def status_line(label, status):
     return f"║ {label:<17} {status:<25}║"
 
 
-def build_application() -> NexusApplication:
+def build_application(confirmation_handler=None) -> NexusApplication:
     provider = build_database_provider(settings)
     database = Database(provider)
 
     return NexusApplication(
         database=database,
-        confirmation_handler=ConsoleConfirmation(),
+        confirmation_handler=(
+            confirmation_handler if confirmation_handler is not None
+            else ConsoleConfirmation()
+        ),
     )
 
 
@@ -207,6 +210,14 @@ def cli(argv: list[str] | None = None) -> None:
         metavar="PROMPT",
         help="solicita uma resposta ou uma ação mediada pelo executor",
     )
+    actions.add_argument(
+        "--desktop", action="store_true",
+        help="abre a janela de conversa nativa do Linux",
+    )
+    actions.add_argument(
+        "--status", action="store_true",
+        help="exibe o estado do núcleo no terminal",
+    )
     parser.add_argument(
         "--workspace",
         help="diretório local montado como somente leitura no sandbox",
@@ -214,6 +225,15 @@ def cli(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.workspace is not None and args.sandbox_command is None:
         parser.error("--workspace exige --sandbox-command")
+
+    if args.desktop or (
+        args.sandbox_command is None and args.agent_prompt is None and not args.status
+    ):
+        from nexus.desktop.window import launch_desktop
+        result = launch_desktop()
+        if result:
+            raise SystemExit(result)
+        return
 
     result = main(args.sandbox_command, args.workspace, args.agent_prompt)
     if result:

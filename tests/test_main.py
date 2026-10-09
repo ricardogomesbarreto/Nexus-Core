@@ -132,6 +132,47 @@ def test_agent_prompt_uses_planner_and_shuts_down(monkeypatch, capsys):
     assert capsys.readouterr().out.endswith("Olá\n")
 
 
+def test_no_argument_cli_starts_desktop(monkeypatch):
+    import nexus.desktop.window as window
+
+    calls = []
+    monkeypatch.setattr(window, "launch_desktop", lambda: calls.append("desktop") or 0)
+    monkeypatch.setattr(
+        nexus_main, "build_application",
+        lambda: (_ for _ in ()).throw(AssertionError("CLI should not start")),
+    )
+    nexus_main.cli([])
+    nexus_main.cli(["--desktop"])
+    assert calls == ["desktop", "desktop"]
+
+
+def test_desktop_cli_propagates_startup_error(monkeypatch):
+    import nexus.desktop.window as window
+
+    monkeypatch.setattr(window, "launch_desktop", lambda: 2)
+    with pytest.raises(SystemExit) as exc:
+        nexus_main.cli(["--desktop"])
+    assert exc.value.code == 2
+
+
+def test_status_option_keeps_terminal_health(monkeypatch):
+    calls = []
+
+    class FakeApplication:
+        def initialize(self):
+            calls.append("initialize")
+
+        def status(self):
+            return FakeHealth()
+
+        def shutdown(self):
+            calls.append("shutdown")
+
+    monkeypatch.setattr(nexus_main, "build_application", FakeApplication)
+    nexus_main.cli(["--status"])
+    assert calls == ["initialize", "shutdown"]
+
+
 def test_main_shuts_down_when_runtime_fails_after_initialize(
     monkeypatch,
 ):

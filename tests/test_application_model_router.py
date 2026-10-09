@@ -138,7 +138,9 @@ def test_application_builds_agent_lazily_with_shared_executor(monkeypatch):
         assert agent.model_router is fake_router
         assert agent.registry is app.tool_registry
         assert agent.executor is app.tool_executor
-        assert app.tool_registry.list_tools() == ["terminal_sandbox"]
+        assert app.tool_registry.list_tools() == [
+            "list_directory", "read_file", "system_info", "terminal_sandbox"
+        ]
     finally:
         app.database.close()
 

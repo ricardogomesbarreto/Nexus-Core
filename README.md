@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.5" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.5-722F37">
+  <img alt="Versão v0.3.6" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.6-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,13 +19,13 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.5 — Controlled Agent & Tool Calling`<br>
-> **Última tag publicada:** `v0.3.5`<br>
-> **Próximo marco planejado:** `v0.3.6 — Native Desktop Interface Foundation`<br>
+> **Versão atual:** `v0.3.6 — Native Desktop Conversation Foundation`<br>
+> **Última tag publicada:** `v0.3.6`<br>
+> **Próximo marco planejado:** `v0.3.7 — Expanded Desktop Capabilities`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
-> **Interface atual:** terminal local; interface gráfica nativa planejada<br>
+> **Interface atual:** janela nativa Linux (Tk) e comandos de terminal opcionais<br>
 > **Banco único:** PostgreSQL local<br>
-> **Validação local:** `584 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
+> **Validação local:** `601 passed, 9 skipped` (display gráfico, Docker e PostgreSQL reais indisponíveis aqui)<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -42,13 +42,13 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 O **Nexus Core** é a infraestrutura central de um assistente pessoal de inteligência artificial projetado para operar prioritariamente de forma local.
 
-O programa roda como processo nativo no Linux. A distribuição atual oferece
-o comando `nexus-core` no ambiente Python do usuário. A opção
+O programa roda como processo nativo no Linux. O comando `nexus-core` abre
+a janela de conversa na sessão gráfica do usuário. A opção
 `--sandbox-command` exige confirmação no terminal para cada execução isolada.
 `--agent-prompt` aceita uma solicitação ao modelo local e pode propor uma única
 chamada mediada pelo executor.
-Os assets da futura
-interface gráfica já existem, mas uma janela gráfica ainda não foi implementada.
+Na janela, confirmações surgem em um diálogo local; um turno pode produzir uma
+resposta ou propor uma ação, com histórico curto mantido apenas em memória.
 Não há aplicação ou servidor web na arquitetura do produto.
 
 O projeto busca preservar:
@@ -383,8 +383,8 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.5
-Capability:           Controlled Agent & Tool Calling
+Release Target:       v0.3.6
+Capability:           Native Desktop Conversation Foundation
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
@@ -1652,16 +1652,27 @@ ollama run qwen3:1.7b
 # Executando o Nexus
 
 `NEXUS_DATABASE_PASSWORD` deve estar definido e o PostgreSQL local deve
-aceitar a conexão com o banco e o usuário configurados.
+aceitar a conexão com o banco e o usuário configurados. A janela precisa de
+uma sessão gráfica Linux e do módulo Tk do Python (em Debian/Ubuntu, o pacote
+do sistema `python3-tk`). Para conversar, o Ollama local e o modelo configurado
+também precisam estar disponíveis.
 
 ```bash
 nexus-core
 ```
 
-O entrypoint `python -m nexus.main` também está disponível a partir da
-raiz do projeto. O comando usa o PostgreSQL local configurado e termina
-com erro explícito quando ele não está disponível. Esta versão oferece
-uma interface de terminal, não uma janela gráfica.
+O entrypoint `python -m nexus.main` também abre a janela a partir da raiz
+do projeto. `nexus-core --desktop` é equivalente. No ambiente sem interface
+gráfica, `nexus-core --status` mostra o estado do núcleo no terminal.
+
+Na janela, digite a pergunta e use **Enviar** ou **Ctrl+Enter**. O modelo pode
+responder em linguagem natural ou propor uma ferramenta. A composição atual
+registra `system_info`, `list_directory`, `read_file` e `terminal_sandbox`.
+Leitura de arquivos passa pela política de caminhos permitidos. Cada comando
+do sandbox Docker exige confirmação individual com operação e recursos
+visíveis; fechar a janela recusa confirmações pendentes. A conversa mantém
+até seis turnos recentes na memória do processo, sem persistir mensagens.
+Cada turno faz no máximo uma chamada de ferramenta, sem loop autônomo.
 
 Para executar um comando no sandbox Docker, com aprovação presencial no
 terminal e workspace opcional montado somente para leitura:
@@ -1687,11 +1698,11 @@ nexus-core --agent-prompt 'Proponha terminal_sandbox com o comando pwd'
 O modelo devolve uma resposta de texto ou propõe **uma** ferramenta em JSON.
 A aplicação valida o contrato e envia a proposta ao `ToolExecutor`, que
 aplica a política, registra auditoria e pede confirmação humana quando
-necessária. Nesta composição a única ferramenta registrada para o Agent é
-`terminal_sandbox`; uma proposta de comando requer confirmação presencial e
-Docker operacional. O Agent não mantém sessão, não faz cadeia de chamadas e
-não altera a política de permissão. Se o modelo estiver indisponível, o
-comando falha sem executar ferramentas.
+necessária. Uma proposta de comando requer confirmação presencial e Docker
+operacional. O comando de terminal `--agent-prompt` permanece para uma
+solicitação isolada; a janela mantém o contexto curto da conversa. A política
+de permissão não é alterada pelo modelo. Se ele estiver indisponível, a
+solicitação falha sem executar ferramentas.
 
 ---
 
@@ -1727,21 +1738,22 @@ PYTHONPATH="$PWD" pytest -q
 Verificação nesta revisão (ambiente sem Docker e PostgreSQL de teste):
 
 ```text
-584 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
+601 passed; 9 skipped (1 janela gráfica, 7 integrações Docker e 1 PostgreSQL)
 ```
 
 Coleta:
 
 ```text
-592 tests collected
+610 tests collected
 ```
 
 Os sete testes que executam containers são ignorados automaticamente
 quando o daemon Docker não está disponível. Em um Linux com Docker
 operacional, o mesmo comando também verifica o isolamento real. O teste
 PostgreSQL real é executado quando `NEXUS_TEST_POSTGRES_PASSWORD` está
-definido para o banco descartável `nexus_test` no loopback. A CI configura
-esse serviço e executa a suíte em Linux com Docker.
+definido para o banco descartável `nexus_test` no loopback. O teste da janela
+precisa de um display gráfico. A CI configura PostgreSQL, Docker e display
+virtual Linux para executar a suíte completa.
 
 ---
 
@@ -2903,7 +2915,7 @@ intelligence != authority
 
 Marca e iconografia desktop nativa Nexus Line em Wine Red (`#722F37`),
 manifesto de 18 ícones e testes de integridade dos SVGs e do logotipo.
-A identidade é um conjunto de assets; ainda não há interface gráfica.
+A identidade era um conjunto de assets; a janela foi introduzida em `v0.3.6`.
 
 ## v0.3.1.2 — PostgreSQL Database Provider Foundation
 
@@ -3001,16 +3013,31 @@ permanece obrigatório para inicializar a aplicação.
 
 ---
 
+## v0.3.6 — Native Desktop Conversation Foundation
+
+A janela nativa Tk no Linux apresenta a conversa, respostas e resultados das
+ferramentas. O histórico de seis turnos é efêmero e limitado em tamanho; o
+modelo recebe o contexto de forma estruturada. A inferência ocorre em um
+worker para manter a janela responsiva, enquanto a autorização aparece na
+thread gráfica e cada solicitação ao `ToolExecutor` continua mediada pelo
+`SecurityGate`. Ações de risco exigem confirmação individual. O CLI continua
+disponível para estado, prompts isolados e comandos no sandbox.
+
+O assistente pode responder perguntas e executar apenas as ferramentas
+registradas. Outras ações no computador exigem contratos e políticas próprios
+em releases futuras; a janela não concede acesso irrestrito ao sistema.
+
+---
+
 # Roadmap
 
 O roadmap é evolutivo. Cada release adiciona uma responsabilidade
 pequena, clara e verificável.
 
-## v0.3.6 — Native Desktop Interface Foundation
+## v0.3.7 — Expanded Desktop Capabilities
 
-Próximo marco planejado: iniciar uma interface gráfica nativa para o Linux,
-com apresentação de estado e confirmação de ações controladas. A interface
-de terminal continua sendo a interface entregue até que esse marco exista.
+Próximo marco planejado: ampliar ferramentas desktop com contratos explícitos,
+políticas de autorização e respostas claras sobre resultados e limites.
 
 ---
 
@@ -3308,7 +3335,6 @@ Ainda não existem:
 * Knowledge Base;
 * voz;
 * visão;
-* GUI;
 * desktop automation;
 * provider discovery;
 * model discovery;
@@ -3457,7 +3483,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4` e `v0.3.5` já existem.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4`, `v0.3.5` e `v0.3.6` já existem.
 
 ---
 
@@ -3500,12 +3526,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.5
-Release Name:          Controlled Agent & Tool Calling
-Latest Git Tag:        v0.3.5
+Release Target:        v0.3.6
+Release Name:          Native Desktop Conversation Foundation
+Latest Git Tag:        v0.3.6
 Implementation:        RELEASED
 Release Validation:    LOCAL PASS; CI CHECKS REAL POSTGRESQL AND DOCKER
-Tests:                 584 passed, 8 skipped locally
+Tests:                 601 passed, 9 skipped locally
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)
@@ -3515,7 +3541,8 @@ Sandbox:               Docker
 Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b
 Production Provider:   ollama
-Agent / Tool Calling:  ONE PROPOSAL, TOOL EXECUTOR MEDIATED
+Desktop Interface:     NATIVE TK CONVERSATION (LINUX)
+Agent / Tool Calling:  ONE PROPOSAL PER TURN, EXECUTOR MEDIATED
 Development Status:    ACTIVE
 ────────────────────────────────────────────────────────
 ```
