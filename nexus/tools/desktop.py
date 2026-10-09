@@ -66,8 +66,12 @@ class DesktopTypeTextTool(NexusTool):
         self.backend = backend if backend is not None else X11DesktopBackend()
 
     def sensitive_resources(self, **kwargs):
-        # X11 window IDs are not filesystem paths. They are validated
-        # independently by X11DesktopBackend, immediately before typing.
+        # Reject malformed targets and content before requesting user consent.
+        # X11 IDs are not filesystem paths; runtime checks happen again after
+        # confirmation, before xdotool receives any keystrokes.
+        X11DesktopBackend.validate_id(kwargs["window_id"])
+        X11DesktopBackend.validate_title(kwargs["window_title"])
+        X11DesktopBackend.validate_text(kwargs["text"])
         return ()
 
     def execute(self, *, window_id: int, window_title: str, text: str):
