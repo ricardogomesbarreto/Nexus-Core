@@ -366,6 +366,9 @@ class DesktopWindow:
         if self._closing:
             return
         self._closing = True
+        # The original photo asset must be released on the Tk thread even
+        # when tests or users destroy the root before audio workers exit.
+        self._brand_image = None
         self._voice_active = False
         self._listen_generation += 1
         self.session.close()
