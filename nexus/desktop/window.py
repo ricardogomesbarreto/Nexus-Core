@@ -13,6 +13,32 @@ from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 
 
+class _WidgetBoolean:
+    """Expose the selected widget state without allocating a Tk Variable."""
+
+    def __init__(self, widget):
+        self.widget = widget
+
+    def get(self) -> bool:
+        return bool(self.widget.instate(("selected",)))
+
+    def set(self, value: bool) -> None:
+        self.widget.state(("selected",) if value else ("!selected",))
+
+
+class _WidgetChoice:
+    """Small adapter matching get/set while keeping the value in the widget."""
+
+    def __init__(self, widget):
+        self.widget = widget
+
+    def get(self) -> str:
+        return self.widget.get()
+
+    def set(self, value: str) -> None:
+        self.widget.set(value)
+
+
 class DesktopWindow:
     def __init__(
         self, root, app, confirmation: DesktopConfirmation,
@@ -81,18 +107,21 @@ class DesktopWindow:
 
         voice_controls = ttk.Frame(frame)
         voice_controls.pack(fill="x", pady=(10, 0))
-        self.speech_enabled = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
+        self.speech_toggle = ttk.Checkbutton(
             voice_controls, text="Ler respostas em voz alta",
-            variable=self.speech_enabled, command=self._toggle_speech,
-        ).pack(side="left")
+            command=self._toggle_speech,
+        )
+        self.speech_toggle.state(("selected",))
+        self.speech_toggle.pack(side="left")
+        self.speech_enabled = _WidgetBoolean(self.speech_toggle)
         ttk.Label(voice_controls, text="Voz:").pack(side="left", padx=(14, 4))
-        self.voice_choice = tk.StringVar(value="Feminina")
         self.voice_selector = ttk.Combobox(
-            voice_controls, textvariable=self.voice_choice,
+            voice_controls,
             values=("Feminina", "Masculina"), state="readonly", width=12,
         )
+        self.voice_selector.set("Feminina")
         self.voice_selector.pack(side="left")
+        self.voice_choice = _WidgetChoice(self.voice_selector)
 
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
