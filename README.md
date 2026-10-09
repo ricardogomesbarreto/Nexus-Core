@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.4.1" src="https://img.shields.io/badge/vers%C3%A3o-v0.4.1-722F37">
+  <img alt="Versão v0.5.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.5.0-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.4.1 — Knowledge Base`<br>
-> **Publicação da v0.4.1:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.5.x — Voice Foundation`<br>
+> **Versão do código:** `v0.5.0 — Voice Foundation`<br>
+> **Publicação da v0.5.0:** tag e release após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.6.x — Vision & Screen Understanding`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,59 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.5.0 — Voice Foundation
+
+Esta etapa consolida a **escuta contínua local** com Vosk/ALSA e
+síntese de voz feminina ou masculina pelo eSpeak NG, recursos já
+introduzidos nas versões v0.3.7/v0.3.8. A interface atual é mantida,
+sem redesenho, sem gravação de conversas em disco e sem recursos pagos.
+
+## Novidades
+
+- **Frase de ativação opcional:** marque `Exigir "Nexus" para ativar` na
+  janela para aceitar perguntas somente quando a transcrição local
+  iniciar com "Nexus", "Ei Nexus", "Olá Nexus" ou "Hey Nexus".
+  Exemplo: **"Nexus, explique redes de computadores"**. Somente o texto
+  após o prefixo será enviado ao Agent. Fala sem a frase inicial
+  será ignorada. Apenas dizer "Nexus" não dispara uma solicitação.
+- **Compatibilidade:** a opção começa **desativada**, preservando a
+  conversa contínua sem precisar pressionar botões ou pronunciar
+  a palavra de ativação. O botão **Pausar escuta** e comandos de
+  desligamento continuam disponíveis, sem alterações nas confirmações
+  obrigatórias de ações sensíveis.
+- **Diagnóstico local:** `nexus-core --voice-check` retorna um JSON
+  que informa a presença de `arecord` (ALSA), `vosk`, modelo
+  instalado e `espeak-ng`. Não inicializa PostgreSQL ou Ollama,
+  não abre microfone, não reproduz áudio e não salva informações.
+- **Testes:** reconhecimento de prefixos e rejeição de frases
+  incidentais, modos de conversa, diagnósticos sem captura e testes
+  integrados na GUI Tk com display virtual Linux.
+
+## Verificar instalação
+
+```bash
+nexus-core --voice-check
+```
+
+Para usar a voz no Linux, instale `alsa-utils`, `espeak-ng`,
+`pip install -e '.[voice]'` e configure um modelo Vosk local para
+português brasileiro (`NEXUS_VOSK_MODEL_PATH`). O programa
+continua funcional em modo texto na ausência dessas dependências.
+
+**Limitações importantes:** a frase de ativação é reconhecida
+**após** a transcrição do Vosk. Ela **não** é um mecanismo independente
+de detecção de palavra-chave de baixo consumo, e o microfone permanece
+ativo enquanto a escuta está habilitada. Para interromper a captura,
+use **Pausar escuta** ou diga o comando de pausa reconhecido;
+não dependa do filtro de frase para obter privacidade de microfone.
+
+A CI verifica o fluxo com microfone simulado, saída eSpeak NG e
+interface Tk via Xvfb, mas **não comprova** operação de um microfone,
+alto-falante ou dispositivo ALSA específico de um computador real.
+Essa homologação exige teste físico no Linux do usuário.
 
 ---
 
@@ -433,10 +486,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.4.1`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.5.0`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.4.1`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.5.0`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3406,15 +3459,14 @@ automática de conteúdo no prompt do Ollama.
 
 # Voz
 
-## v0.5.x — Voice Foundation
+## v0.5.0 — Voice Foundation
 
-Planejado:
-
-```text
-speech-to-text
-wake word
-text-to-speech
-```
+**Implementado:** speech-to-text local Vosk/ALSA e text-to-speech local
+eSpeak NG (base v0.3.7/v0.3.8), escuta contínua com pausa, frase de
+ativação **opcional** "Nexus" no início da transcrição e
+`nexus-core --voice-check` para diagnóstico sem captura.
+O filtro não é um mecanismo separado de wake-word detection.
+Homologação em hardware físico ainda pendente.
 
 ---
 
@@ -3794,10 +3846,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.4.1
-Release Name:          Knowledge Base
-Release Tag:          v0.4.1 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        LOCAL DOCUMENT KNOWLEDGE BASE; TAG GATED BY MAIN CI
+Release Target:        v0.5.0
+Release Name:          Voice Foundation
+Release Tag:          v0.5.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        OPT-IN WAKE PREFIX + LOCAL VOICE DIAGNOSTICS; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

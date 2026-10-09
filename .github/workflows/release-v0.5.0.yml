@@ -1,4 +1,4 @@
-name: Publish Nexus Core v0.4.1
+name: Publish Nexus Core v0.5.0
 
 on:
   workflow_run:
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Confirm tested commit is current main and version is 0.4.1
+      - name: Confirm tested commit is current main and version is 0.5.0
         id: validate
         env:
           TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -36,7 +36,7 @@ jobs:
           set -euo pipefail
           version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           git fetch origin main --tags
-          if [[ "$version" != "0.4.1" || "$(git rev-parse origin/main)" != "$TESTED_SHA" ]]; then
+          if [[ "$version" != "0.5.0" || "$(git rev-parse origin/main)" != "$TESTED_SHA" ]]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -50,12 +50,12 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git show-ref --verify --quiet refs/tags/v0.4.1; then
-            git tag -a v0.4.1 -m "Nexus Core v0.4.1 — Knowledge Base"
-            git push origin refs/tags/v0.4.1
+          if ! git show-ref --verify --quiet refs/tags/v0.5.0; then
+            git tag -a v0.5.0 -m "Nexus Core v0.5.0 — Voice Foundation"
+            git push origin refs/tags/v0.5.0
           fi
-          if ! gh release view v0.4.1 >/dev/null 2>&1; then
-            gh release create v0.4.1 \
-              --title "Nexus Core v0.4.1 — Knowledge Base" \
-              --notes-file docs/RELEASE_NOTES_v0.4.1.md
+          if ! gh release view v0.5.0 >/dev/null 2>&1; then
+            gh release create v0.5.0 \
+              --title "Nexus Core v0.5.0 — Voice Foundation" \
+              --notes-file docs/RELEASE_NOTES_v0.5.0.md
           fi
