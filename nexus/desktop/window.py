@@ -309,6 +309,12 @@ class DesktopWindow:
         if self._closing:
             return
         self._closing = True
+        # Tcl variables must be finalized in the GUI thread while its event
+        # loop is still alive. Otherwise a later Python GC pass (possibly in
+        # an audio worker) can invoke tkinter.Variable.__del__ off-thread.
+        # All widget callbacks are disabled by _closing after this point.
+        self.speech_enabled = None
+        self.voice_choice = None
         self._voice_active = False
         self._listen_generation += 1
         self.session.close()
