@@ -69,31 +69,50 @@ def test_closed_session_does_not_restart_after_cancel():
         raise AssertionError("Closed ChatSession was reactivated")
 
 
-def test_agent_planner_rejects_tool_calls_in_suggestion_mode(tmp_path):
-    from tests.test_agent_planner import planner, proposal
-    agent, router, medium = planner(
-        tmp_path, proposal("medium_action", {"value": "danger"}),
+def planner_for_test(tmp_path):
+    from nexus.agent import AgentPlanner
+    from nexus.models.contracts import ModelResponse
+    from nexus.security import AuditLogger, SecurityGate
+    from nexus.tools import SystemInfoTool, ToolExecutor, ToolRegistry
+
+    class Router:
+        def generate(self, request):
+            return ModelResponse(
+                '{"type":"tool_call","tool_name":"system_info","arguments":{}}',
+                "local-model", True, 0, 0,
+            )
+
+    registry = ToolRegistry()
+    registry.register(SystemInfoTool())
+    executor = ToolExecutor(
+        registry, SecurityGate(
+            audit_logger=AuditLogger(tmp_path / "guided-agent.log")
+        ),
     )
+    executions = []
+    executor.execute = lambda *a, **kw: executions.append((a, kw))
+    return AgentPlanner(Router(), registry, executor), executions
+
+
+def test_agent_planner_rejects_tool_calls_in_suggestion_mode(tmp_path):
+    agent, executions = planner_for_test(tmp_path)
     outcome = agent.run("sugira apenas", allow_tools=False)
     assert not outcome.success
     assert outcome.error_code == "ADVISORY_ONLY"
-    assert medium.calls == []
+    assert executions == []
 
 
 def test_agent_planner_cancellation_preempts_tool_execution(tmp_path):
-    from tests.test_agent_planner import planner, proposal
-    agent, _, medium = planner(
-        tmp_path, proposal("medium_action", {"value": "danger"}),
-    )
+    agent, executions = planner_for_test(tmp_path)
     original_plan = agent.plan
+    state = {"cancelled": False}
 
     def cancel_during_plan(prompt):
-        proposal = original_plan(prompt)
+        plan = original_plan(prompt)
         state["cancelled"] = True
-        return proposal
+        return plan
 
-    state = {"cancelled": False}
     agent.plan = cancel_during_plan
     outcome = agent.run("agir?", is_cancelled=lambda: state["cancelled"])
     assert outcome.error_code == "CANCELLED"
-    assert medium.calls == []
+    assert executions == []
