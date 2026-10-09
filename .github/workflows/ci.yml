@@ -36,11 +36,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Instalar pacote e dependências de testes
-        run: python -m pip install -e '.[dev]'
+        run: python -m pip install -e '.[dev,voice]'
       - name: Preparar display virtual Linux
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y xvfb xauth python3-tk
+          sudo apt-get install -y xvfb xauth python3-tk espeak-ng alsa-utils
       - name: Verificar código e integração real
         run: |
           python -m compileall -q nexus tests

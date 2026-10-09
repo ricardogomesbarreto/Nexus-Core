@@ -46,7 +46,7 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.3.6"
+    version: str = "0.3.7"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT
@@ -73,6 +73,7 @@ class Settings:
     local_model_name: str = "qwen3:1.7b"
     local_model_base_url: str = "http://127.0.0.1:11434"
     local_model_timeout: float = 120.0
+    voice_model_path: Path | None = None
 
 
 def _parse_bool(
@@ -305,6 +306,13 @@ def load_settings(
                 "finito e maior que zero"
             )
 
+    voice_model_path = defaults.voice_model_path
+    if "NEXUS_VOSK_MODEL_PATH" in source:
+        candidate = Path(source["NEXUS_VOSK_MODEL_PATH"].strip()).expanduser()
+        if not source["NEXUS_VOSK_MODEL_PATH"].strip() or not candidate.is_absolute():
+            raise ConfigurationError("NEXUS_VOSK_MODEL_PATH deve ser absoluto")
+        voice_model_path = candidate
+
     return Settings(
         node_name=node_name,
         database_provider=database_provider,
@@ -320,6 +328,7 @@ def load_settings(
         local_model_name=local_model_name,
         local_model_base_url=local_model_base_url,
         local_model_timeout=local_model_timeout,
+        voice_model_path=voice_model_path,
     )
 
 

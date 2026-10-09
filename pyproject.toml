@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-core"
-version = "0.3.6"
+version = "0.3.7"
 description = "Assistente pessoal local para Linux, com execução controlada"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -22,6 +22,7 @@ nexus-core = "nexus.main:cli"
 
 [project.optional-dependencies]
 dev = ["pytest==9.1.1"]
+voice = ["vosk>=0.3.45,<0.4"]
 
 [tool.setuptools.packages.find]
 include = ["nexus*"]

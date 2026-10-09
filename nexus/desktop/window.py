@@ -8,10 +8,14 @@ from nexus.agent import AgentOutcome
 from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
+from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 
 
 class DesktopWindow:
-    def __init__(self, root, app, confirmation: DesktopConfirmation):
+    def __init__(
+        self, root, app, confirmation: DesktopConfirmation,
+        speaker=None, recognizer=None,
+    ):
         import tkinter as tk
         from tkinter import messagebox, ttk
 
@@ -21,8 +25,13 @@ class DesktopWindow:
         self.session = ChatSession(app.agent)
         self.tk = tk
         self.messagebox = messagebox
+        self.speaker = speaker if speaker is not None else LocalSpeaker()
+        self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
+        self._audio_events: Queue[tuple[str, str]] = Queue()
         self._busy = False
+        self._listening = False
+        self._speaking = False
         self._closing = False
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
@@ -53,6 +62,21 @@ class DesktopWindow:
         self.transcript.tag_configure("user", foreground="#722F37", font=("Sans", 11, "bold"))
         self.transcript.tag_configure("assistant", foreground="#242424", font=("Sans", 11, "bold"))
 
+        voice_controls = ttk.Frame(frame)
+        voice_controls.pack(fill="x", pady=(10, 0))
+        self.speech_enabled = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            voice_controls, text="Ler respostas em voz alta",
+            variable=self.speech_enabled, command=self._toggle_speech,
+        ).pack(side="left")
+        ttk.Label(voice_controls, text="Voz:").pack(side="left", padx=(14, 4))
+        self.voice_choice = tk.StringVar(value="Feminina")
+        self.voice_selector = ttk.Combobox(
+            voice_controls, textvariable=self.voice_choice,
+            values=("Feminina", "Masculina"), state="readonly", width=12,
+        )
+        self.voice_selector.pack(side="left")
+
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
         )
@@ -63,6 +87,11 @@ class DesktopWindow:
         controls.pack(fill="x", pady=(8, 0))
         self.status = ttk.Label(controls, text="Pronto para conversar")
         self.status.pack(side="left")
+        self.mic_button = ttk.Button(
+            controls, text="Falar (8 s)", command=self._start_listening,
+            style="Nexus.TButton",
+        )
+        self.mic_button.pack(side="right", padx=(8, 0))
         self.send_button = ttk.Button(
             controls, text="Enviar", command=self._send, style="Nexus.TButton"
         )
@@ -71,6 +100,7 @@ class DesktopWindow:
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
+            "Escolha uma voz ou clique em Falar para usar o microfone. "
             "Comandos no sandbox pedem sua autorização antes de executar.",
             "assistant",
         )
@@ -97,6 +127,9 @@ class DesktopWindow:
         self._append("Você", message, "user")
         self._busy = True
         self.send_button.configure(state="disabled")
+        self.mic_button.configure(state="disabled")
+        if self._speaking:
+            self.speaker.stop()
         self.status.configure(text="Processando localmente…")
         Thread(target=self._answer, args=(message,), daemon=True).start()
         return "break"
@@ -110,6 +143,38 @@ class DesktopWindow:
                 AgentOutcome(False, error_code="SESSION_ERROR"),
             )
         self._replies.put(reply)
+
+    def _start_listening(self) -> None:
+        if self._busy or self._speaking or self._closing:
+            return
+        self._busy = True
+        self._listening = True
+        self.send_button.configure(state="disabled")
+        self.mic_button.configure(state="disabled")
+        self.status.configure(text="Gravando por até 8 segundos…")
+        Thread(target=self._listen, daemon=True).start()
+
+    def _toggle_speech(self) -> None:
+        if not self.speech_enabled.get() and self._speaking:
+            self.speaker.stop()
+            self.status.configure(text="Leitura em voz desativada")
+
+    def _listen(self) -> None:
+        try:
+            self._audio_events.put(("transcript", self.recognizer.recognize()))
+        except VoiceError as exc:
+            self._audio_events.put(("listen_error", str(exc)))
+        except Exception:
+            self._audio_events.put(("listen_error", "Falha ao reconhecer a fala local."))
+
+    def _speak(self, text: str, voice: str) -> None:
+        try:
+            self.speaker.speak(text, voice)
+            self._audio_events.put(("speak_done", ""))
+        except VoiceError as exc:
+            self._audio_events.put(("speak_error", str(exc)))
+        except Exception:
+            self._audio_events.put(("speak_error", "Falha ao reproduzir a voz local."))
 
     @staticmethod
     def _display(value) -> str:
@@ -139,6 +204,29 @@ class DesktopWindow:
         self.confirmation.process(self._confirm)
         while True:
             try:
+                kind, value = self._audio_events.get_nowait()
+            except Empty:
+                break
+            if kind in ("transcript", "listen_error"):
+                self._listening = False
+                self._busy = False
+                if not self._closing:
+                    self.send_button.configure(state="normal")
+                    self.mic_button.configure(state="normal")
+                    if kind == "transcript":
+                        self.input.delete("1.0", "end")
+                        self.input.insert("1.0", value)
+                        self._send()
+                    else:
+                        self.status.configure(text=value)
+            else:
+                self._speaking = False
+                if not self._closing and not self._busy:
+                    self.mic_button.configure(state="normal")
+                    if kind == "speak_error" and self.speech_enabled.get():
+                        self.status.configure(text=value)
+        while True:
+            try:
                 reply = self._replies.get_nowait()
             except Empty:
                 break
@@ -147,6 +235,16 @@ class DesktopWindow:
                 self._append("Nexus Core", reply.text, "assistant")
                 self.send_button.configure(state="normal")
                 self.status.configure(text="Pronto para conversar")
+                if self.speech_enabled.get() and reply.outcome.success:
+                    self._speaking = True
+                    self.mic_button.configure(state="disabled")
+                    Thread(
+                        target=self._speak,
+                        args=(reply.text, self.voice_choice.get()),
+                        daemon=True,
+                    ).start()
+                elif not self._speaking:
+                    self.mic_button.configure(state="normal")
         if self._closing and not self._busy:
             self.app.shutdown()
             self.root.destroy()
@@ -157,7 +255,10 @@ class DesktopWindow:
         self._closing = True
         self.session.close()
         self.confirmation.close()
+        self.recognizer.stop()
+        self.speaker.stop()
         self.send_button.configure(state="disabled")
+        self.mic_button.configure(state="disabled")
         if self._busy:
             self.status.configure(text="Encerrando após a solicitação atual…")
         else:

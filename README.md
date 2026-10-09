@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.6" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.6-722F37">
+  <img alt="Versão v0.3.7" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.7-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,13 +19,13 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.6 — Native Desktop Conversation Foundation`<br>
-> **Última tag publicada:** `v0.3.6`<br>
-> **Próximo marco planejado:** `v0.3.7 — Expanded Desktop Capabilities`<br>
+> **Versão atual:** `v0.3.7 — Local Voice Conversation`<br>
+> **Última tag publicada:** `v0.3.7`<br>
+> **Próximo marco planejado:** `v0.3.8 — Expanded Desktop Capabilities`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
-> **Interface atual:** janela nativa Linux (Tk) e comandos de terminal opcionais<br>
+> **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
-> **Validação local:** `601 passed, 9 skipped` (display gráfico, Docker e PostgreSQL reais indisponíveis aqui)<br>
+> **Validação local:** `608 passed, 13 skipped` (áudio, display gráfico, Docker e PostgreSQL reais indisponíveis aqui)<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -49,6 +49,9 @@ a janela de conversa na sessão gráfica do usuário. A opção
 chamada mediada pelo executor.
 Na janela, confirmações surgem em um diálogo local; um turno pode produzir uma
 resposta ou propor uma ação, com histórico curto mantido apenas em memória.
+O botão **Falar** transcreve o microfone sob demanda com Vosk; as respostas
+podem ser lidas em voz feminina ou masculina pelo eSpeak NG. O Ollama continua
+a interpretar as perguntas e propor ações, sujeito aos contratos e à política.
 Não há aplicação ou servidor web na arquitetura do produto.
 
 O projeto busca preservar:
@@ -383,8 +386,8 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.6
-Capability:           Native Desktop Conversation Foundation
+Release Target:       v0.3.7
+Capability:           Local Voice Conversation
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
@@ -1674,6 +1677,38 @@ visíveis; fechar a janela recusa confirmações pendentes. A conversa mantém
 até seis turnos recentes na memória do processo, sem persistir mensagens.
 Cada turno faz no máximo uma chamada de ferramenta, sem loop autônomo.
 
+## Voz local na janela
+
+Para ativar a saída e a entrada de voz no Linux, instale os utilitários de
+áudio do sistema e o extra Python opcional:
+
+```bash
+# Debian/Ubuntu
+sudo apt install espeak-ng alsa-utils python3-tk
+python -m pip install -e '.[voice]'
+```
+
+Instale um modelo Vosk em português no computador. O modelo leve de referência
+é `vosk-model-small-pt-0.3` (31 MB, Apache 2.0), listado na
+[página oficial dos modelos Vosk](https://alphacephei.com/vosk/models).
+Descompacte-o em
+`~/.local/share/nexus-core/voice/vosk-model-small-pt-0.3` ou indique outro
+diretório absoluto já descompactado:
+
+```bash
+export NEXUS_VOSK_MODEL_PATH="$HOME/modelos/vosk-model-small-pt-0.3"
+```
+
+**Falar (8 s)** inicia uma única captura pelo microfone; o texto reconhecido
+entra na mesma conversa e passa pelo mesmo Agent com Ollama, `ToolExecutor` e
+`SecurityGate`. Não há gravação contínua nem envio do áudio a serviços remotos;
+os dados da captura ficam na memória e são descartados após a transcrição.
+Selecione **Feminina** ou **Masculina** para a saída sintetizada em português
+brasileiro e desligue **Ler respostas em voz alta** quando quiser apenas texto.
+As variantes do eSpeak NG são sintéticas. O texto funciona mesmo sem os
+componentes de voz; a interface mostra uma mensagem se faltar o microfone,
+o executável de áudio ou o modelo de reconhecimento.
+
 Para executar um comando no sandbox Docker, com aprovação presencial no
 terminal e workspace opcional montado somente para leitura:
 
@@ -1735,16 +1770,16 @@ Comando oficial:
 PYTHONPATH="$PWD" pytest -q
 ```
 
-Verificação nesta revisão (ambiente sem Docker e PostgreSQL de teste):
+Verificação nesta revisão (ambiente sem áudio, display, Docker e PostgreSQL de teste):
 
 ```text
-601 passed; 9 skipped (1 janela gráfica, 7 integrações Docker e 1 PostgreSQL)
+608 passed; 13 skipped (2 janela gráfica, 3 síntese real, 7 Docker e 1 PostgreSQL)
 ```
 
 Coleta:
 
 ```text
-610 tests collected
+621 tests collected
 ```
 
 Os sete testes que executam containers são ignorados automaticamente
@@ -1754,6 +1789,9 @@ PostgreSQL real é executado quando `NEXUS_TEST_POSTGRES_PASSWORD` está
 definido para o banco descartável `nexus_test` no loopback. O teste da janela
 precisa de um display gráfico. A CI configura PostgreSQL, Docker e display
 virtual Linux para executar a suíte completa.
+Os testes de saída de voz geram WAV local com as duas variantes do eSpeak NG;
+microfone e modelo Vosk são testados com fakes por não haver dispositivo físico
+na CI.
 
 ---
 
@@ -3029,12 +3067,30 @@ em releases futuras; a janela não concede acesso irrestrito ao sistema.
 
 ---
 
+## v0.3.7 — Local Voice Conversation
+
+A janela recebe fala sob demanda pelo microfone por até oito segundos. O
+`arecord` captura WAV mono PCM 16 kHz e o Vosk com um modelo local português
+transcreve para texto; não há escuta permanente. O texto reconhecido entra na
+mesma `ChatSession`, e o Ollama continua como modelo de raciocínio para
+respostas e propostas de ferramenta. eSpeak NG lê as respostas com variante
+feminina ou masculina selecionada na janela; o usuário pode desligar a leitura.
+Os processos de áudio podem ser encerrados ao fechar a janela. Ausência dos
+componentes opcionais não impede a conversa por texto.
+
+Uma transcrição não ganha autorização especial: propostas continuam limitadas
+a uma chamada por turno e passam pelo contrato, `ToolExecutor`, `SecurityGate`
+e confirmação individual quando necessária. A CI valida as duas variantes
+reais de síntese, a janela Tk, PostgreSQL e Docker no Linux.
+
+---
+
 # Roadmap
 
 O roadmap é evolutivo. Cada release adiciona uma responsabilidade
 pequena, clara e verificável.
 
-## v0.3.7 — Expanded Desktop Capabilities
+## v0.3.8 — Expanded Desktop Capabilities
 
 Próximo marco planejado: ampliar ferramentas desktop com contratos explícitos,
 políticas de autorização e respostas claras sobre resultados e limites.
@@ -3204,9 +3260,7 @@ C / C++
 
 Planejado:
 
-* desktop UI;
-* chat;
-* voz;
+* interfaces acessíveis e multimodais avançadas;
 * visão;
 * status;
 * integração de dispositivos.
@@ -3333,7 +3387,6 @@ Ainda não existem:
 
 * memória persistente;
 * Knowledge Base;
-* voz;
 * visão;
 * desktop automation;
 * provider discovery;
@@ -3483,7 +3536,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4`, `v0.3.5` e `v0.3.6` já existem.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4`, `v0.3.5`, `v0.3.6` e `v0.3.7` já existem.
 
 ---
 
@@ -3526,12 +3579,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.6
-Release Name:          Native Desktop Conversation Foundation
-Latest Git Tag:        v0.3.6
+Release Target:        v0.3.7
+Release Name:          Local Voice Conversation
+Latest Git Tag:        v0.3.7
 Implementation:        RELEASED
-Release Validation:    LOCAL PASS; CI CHECKS REAL POSTGRESQL AND DOCKER
-Tests:                 601 passed, 9 skipped locally
+Release Validation:    LOCAL PASS; CI CHECKS POSTGRESQL, DOCKER, TK AND VOICE
+Tests:                 608 passed, 13 skipped locally
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)
@@ -3542,6 +3595,7 @@ Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b
 Production Provider:   ollama
 Desktop Interface:     NATIVE TK CONVERSATION (LINUX)
+Voice:                 ESPEAK NG F/M; VOSK MICROPHONE ON DEMAND
 Agent / Tool Calling:  ONE PROPOSAL PER TURN, EXECUTOR MEDIATED
 Development Status:    ACTIVE
 ────────────────────────────────────────────────────────

@@ -213,7 +213,7 @@ def test_load_settings_ignores_undeclared_environment_overrides():
     )
 
     assert settings.app_name == "Nexus Core"
-    assert settings.version == "0.3.6"
+    assert settings.version == "0.3.7"
     assert settings.project_root == PROJECT_ROOT
     assert settings.data_dir.name == "nexus-core"
     assert settings.logs_dir.name == "logs"
@@ -222,6 +222,13 @@ def test_load_settings_ignores_undeclared_environment_overrides():
     assert settings.database_provider == "postgresql"
     assert settings.database_host == "127.0.0.1"
     assert settings.database_name == "nexus"
+
+
+def test_voice_model_path_requires_absolute_path(tmp_path):
+    configured = load_settings({"NEXUS_VOSK_MODEL_PATH": str(tmp_path / "model")})
+    assert configured.voice_model_path == tmp_path / "model"
+    with pytest.raises(ConfigurationError, match="NEXUS_VOSK_MODEL_PATH"):
+        load_settings({"NEXUS_VOSK_MODEL_PATH": "relative/model"})
 
 
 def test_user_data_and_logs_follow_xdg_directories(monkeypatch, tmp_path):
