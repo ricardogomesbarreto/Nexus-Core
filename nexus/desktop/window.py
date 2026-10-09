@@ -37,6 +37,7 @@ class DesktopWindow:
         self._listen_generation = 0
         self._speaking = False
         self._closing = False
+        self._workers: list[Thread] = []
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
         root.geometry("820x620")
@@ -124,6 +125,24 @@ class DesktopWindow:
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
+    def _start_worker(self, target, *args) -> None:
+        """Retain worker references until they exit, including during shutdown."""
+        worker = Thread(target=target, args=args, daemon=True)
+        self._workers.append(worker)
+        worker.start()
+
+    def _workers_running(self) -> bool:
+        self._workers = [worker for worker in self._workers if worker.is_alive()]
+        return bool(self._workers)
+
+    def _finish_close(self) -> None:
+        """Destroy Tk resources only on the GUI thread, after all workers exit."""
+        self.speech_enabled = None
+        self.voice_choice = None
+        self._workers.clear()
+        self.app.shutdown()
+        self.root.destroy()
+
     def _send(self, event=None):
         if self._busy or self._closing:
             return "break"
@@ -143,7 +162,7 @@ class DesktopWindow:
         if self._speaking:
             self.speaker.stop()
         self.status.configure(text="Processando localmente…")
-        Thread(target=self._answer, args=(message,), daemon=True).start()
+        self._start_worker(self._answer, message)
         return "break"
 
     def _answer(self, message: str) -> None:
@@ -164,7 +183,7 @@ class DesktopWindow:
         self._listen_generation += 1
         generation = self._listen_generation
         self.status.configure(text="Ouvindo… diga sua pergunta")
-        Thread(target=self._listen, args=(generation,), daemon=True).start()
+        self._start_worker(self._listen, generation)
 
     def _toggle_listening(self) -> None:
         self._voice_active = not self._voice_active
@@ -292,16 +311,12 @@ class DesktopWindow:
                 self.status.configure(text="Escuta pausada" if not self._voice_active else "Pronto para conversar")
                 if self.speech_enabled.get() and reply.outcome.success:
                     self._speaking = True
-                    Thread(
-                        target=self._speak,
-                        args=(reply.text, self.voice_choice.get()),
-                        daemon=True,
-                    ).start()
+                    self._start_worker(self._speak, reply.text, self.voice_choice.get())
                 elif not self._speaking:
                     self._start_listening()
-        if self._closing and not self._busy and not self._listening and not self._speaking:
-            self.app.shutdown()
-            self.root.destroy()
+        if (self._closing and not self._busy and not self._listening
+                and not self._speaking and not self._workers_running()):
+            self._finish_close()
             return
         self.root.after(80, self._poll)
 
@@ -309,12 +324,6 @@ class DesktopWindow:
         if self._closing:
             return
         self._closing = True
-        # Tcl variables must be finalized in the GUI thread while its event
-        # loop is still alive. Otherwise a later Python GC pass (possibly in
-        # an audio worker) can invoke tkinter.Variable.__del__ off-thread.
-        # All widget callbacks are disabled by _closing after this point.
-        self.speech_enabled = None
-        self.voice_choice = None
         self._voice_active = False
         self._listen_generation += 1
         self.session.close()
@@ -323,11 +332,10 @@ class DesktopWindow:
         self.speaker.stop()
         self.send_button.configure(state="disabled")
         self.mic_button.configure(state="disabled")
-        if self._busy or self._listening or self._speaking:
+        if self._busy or self._listening or self._speaking or self._workers_running():
             self.status.configure(text="Encerrando após a solicitação atual…")
         else:
-            self.app.shutdown()
-            self.root.destroy()
+            self._finish_close()
 
 
 def launch_desktop() -> int:
