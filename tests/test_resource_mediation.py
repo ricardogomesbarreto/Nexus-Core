@@ -95,9 +95,15 @@ def test_terminal_workspace_is_checked_before_docker(tmp_path, monkeypatch):
 def test_terminal_workspace_allowed_and_read_only(tmp_path, monkeypatch):
     executor, home = make_executor(tmp_path, TerminalSandboxTool())
     commands = []
+    mounted_sources = []
 
     def fake_run(command, **kwargs):
         commands.append(command)
+        mounts = [part for part in command if "src=" in part]
+        assert len(mounts) == 1
+        source = Path(mounts[0].split("src=", 1)[1].split(",", 1)[0])
+        assert source.is_dir()  # the temporary snapshot is present while Docker starts
+        mounted_sources.append(source)
         return subprocess.CompletedProcess(command, 0, "OK", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -114,8 +120,8 @@ def test_terminal_workspace_allowed_and_read_only(tmp_path, monkeypatch):
         for value in commands[0] if "src=" in value
     ]
     assert len(sources) == 1
-    assert sources[0].startswith("/proc/")
-    assert "fd/" in sources[0]
+    assert sources[0] != str(home)
+    assert mounted_sources and str(mounted_sources[0]) == sources[0]
     # The descriptor must be open during subprocess invocation, not just
     # revalidated by a mutable host pathname.
     assert any("dst=/workspace,readonly" in value for value in commands[0])
