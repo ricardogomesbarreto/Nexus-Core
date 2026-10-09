@@ -86,10 +86,7 @@ def test_typing_uses_one_explicit_window_without_enter_or_shell(monkeypatch):
     assert calls[-1][1]["timeout"] == backend.TYPE_TIMEOUT
 
 
-@pytest.mark.parametrize("window_id,title", [
-    (12, "Janela antiga"), (13, "Janela atual"),
-])
-def test_focus_or_title_changed_prevents_typing(monkeypatch, window_id, title):
+def test_changed_window_title_prevents_typing(monkeypatch):
     monkeypatch.setenv("DISPLAY", ":1")
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
     monkeypatch.delenv("XDG_SESSION_TYPE", raising=False)
@@ -97,14 +94,40 @@ def test_focus_or_title_changed_prevents_typing(monkeypatch, window_id, title):
 
     def run(cmd, **kw):
         calls.append(cmd)
-        return FakeProcess(b"12\n" if "getactivewindow" in cmd else b"Janela atual\n")
+        return FakeProcess(b"Janela atual\n")
 
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     with pytest.raises(DesktopAutomationError, match="mudou"):
         X11DesktopBackend("/usr/bin/xdotool").type_text(
-            window_id=window_id, window_title=title, text="teste"
+            window_id=12, window_title="Janela antiga", text="teste"
         )
-    assert not any("type" in cmd for cmd in calls)
+    assert calls == [["/usr/bin/xdotool", "getwindowname", "12"]]
+
+
+def test_modal_focus_shift_does_not_break_explicit_target(monkeypatch):
+    monkeypatch.setenv("DISPLAY", ":1")
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("XDG_SESSION_TYPE", raising=False)
+    commands = []
+    def run(cmd, **kw):
+        commands.append(cmd)
+        return FakeProcess(b"Notas\n" if "getwindowname" in cmd else b"")
+    monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
+    assert X11DesktopBackend("/usr/bin/xdotool").type_text(
+        window_id=12, window_title="Notas", text="Nota curta"
+    ) == 10
+    assert commands[0] == ["/usr/bin/xdotool", "getwindowname", "12"]
+    assert "getactivewindow" not in str(commands)
+
+
+@pytest.mark.parametrize("display", ["localhost:10.0", "192.0.2.12:0",
+                                      "hostname:0", "tcp/remote:0"])
+def test_remote_display_is_rejected_before_process(monkeypatch, display):
+    monkeypatch.setenv("DISPLAY", display)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    monkeypatch.delenv("XDG_SESSION_TYPE", raising=False)
+    with pytest.raises(DesktopAutomationError, match="local"):
+        X11DesktopBackend("/usr/bin/xdotool").active_window()
 
 
 @pytest.mark.parametrize("data", [
