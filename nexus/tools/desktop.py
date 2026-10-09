@@ -58,7 +58,7 @@ class DesktopTypeTextTool(NexusTool):
         ),
         outputs=(
             FieldSpec("window_id", ValueKind.INTEGER),
-            FieldSpec("typed_characters", ValueKind.INTEGER),
+            FieldSpec("sent_characters", ValueKind.INTEGER),
         ),
     )
 
@@ -81,7 +81,7 @@ class DesktopTypeTextTool(NexusTool):
             )
             return ToolResult(True, self.name, data={
                 "window_id": window_id,
-                "typed_characters": count,
+                "sent_characters": count,
             })
         except DesktopAutomationError as exc:
             return ToolResult(False, self.name, error=str(exc),

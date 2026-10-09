@@ -85,7 +85,7 @@ def test_typing_requires_fresh_approval_per_operation(tmp_path):
                                   window_id=155, window_title="Notas",
                                   text="Olá")
         assert result.success is True
-        assert result.data == {"window_id": 155, "typed_characters": 3}
+        assert result.data == {"window_id": 155, "sent_characters": 3}
     assert len(confirm.requests) == 2
     assert len([call for call in backend.calls if call[0] == "type"]) == 2
     assert all(req.risk_level.name == "MEDIUM" for req in confirm.requests)
