@@ -491,6 +491,30 @@ class DesktopWindow:
                     self._start_worker(self._speak, reply.text, self.voice_choice.get())
                 elif not self._speaking:
                     self._start_listening()
+        while True:
+            try:
+                kind, question, result = self._vision_events.get_nowait()
+            except Empty:
+                break
+            self._busy = False
+            if self._closing:
+                continue
+            for button in self._vision_buttons:
+                button.configure(state="normal")
+            self.send_button.configure(state="normal")
+            if kind == "success":
+                self.session.note_visual(question, result)
+                self._append("Nexus Core", result, "assistant")
+                self.status.configure(text="Análise visual concluída")
+                if self.speech_enabled.get():
+                    self._speaking = True
+                    self._start_worker(self._speak, result, self.voice_choice.get())
+                else:
+                    self._start_listening()
+            else:
+                self._append("Nexus Core", f"Análise visual indisponível: {result}", "assistant")
+                self.status.configure(text="Falha na análise visual")
+                self._start_listening()
         if (self._closing and not self._busy and not self._listening
                 and not self._speaking and not self._workers_running()):
             self._finish_close()
