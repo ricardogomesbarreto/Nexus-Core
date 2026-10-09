@@ -225,6 +225,14 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--memory-delete", metavar="ID", type=int, help="exclui memória por identificador")
     actions.add_argument("--memory-clear", action="store_true", help="exclui todas as memórias com confirmação")
     actions.add_argument("--memory-status", action="store_true", help="resumo sem conteúdo da memória")
+    actions.add_argument("--knowledge-import", metavar="PATH", help="indexa .txt/.md autorizado (somente HOME)")
+    actions.add_argument("--knowledge-list", action="store_true", help="lista documentos indexados")
+    actions.add_argument("--knowledge-search", metavar="TEXT", help="pesquisa trechos de documentos")
+    actions.add_argument("--knowledge-delete", metavar="ID", type=int, help="remove documento e trechos indexados")
+    actions.add_argument("--knowledge-context", metavar="TEXT", help="recupera trechos de conhecimento explicitamente")
+    parser.add_argument("--knowledge-limit", type=int, default=5, help="resultados: 1 a 20")
+    parser.add_argument("--knowledge-with-memory", action="store_true",
+                        help="inclui memórias explícitas em --knowledge-context")
     parser.add_argument("--memory-days", type=int, default=90, help="retenção da nova memória: 1 a 365 dias")
     parser.add_argument("--memory-confirm", action="store_true", help="confirma exclusão total das memórias")
     parser.add_argument(
@@ -242,9 +250,28 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--memory-confirm exige --memory-clear")
     if not 1 <= args.memory_days <= 365 or (args.memory_days != 90 and args.memory_add is None and not args.memory_add_stdin):
         parser.error("--memory-days deve ser 1 a 365 e exige --memory-add")
+    knowledge_actions = (
+        args.knowledge_import is not None, args.knowledge_list,
+        args.knowledge_search is not None, args.knowledge_delete is not None,
+        args.knowledge_context is not None,
+    )
+    if sum(knowledge_actions) > 1 or (has_memory_action and any(knowledge_actions)):
+        parser.error("Ações de memória e conhecimento devem ser executadas separadamente")
+    if args.knowledge_with_memory and args.knowledge_context is None:
+        parser.error("--knowledge-with-memory exige --knowledge-context")
+    if not 1 <= args.knowledge_limit <= 20:
+        parser.error("--knowledge-limit deve estar entre 1 e 20")
+    if args.knowledge_limit != 5 and not any(knowledge_actions):
+        parser.error("--knowledge-limit exige ação de conhecimento")
     if has_memory_action:
         from nexus.memory.cli import execute_memory_command
         code = execute_memory_command(args)
+        if code:
+            raise SystemExit(code)
+        return
+    if any(knowledge_actions):
+        from nexus.knowledge.cli import execute_knowledge_command
+        code = execute_knowledge_command(args)
         if code:
             raise SystemExit(code)
         return
