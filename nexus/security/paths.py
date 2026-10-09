@@ -78,6 +78,8 @@ class PathSecurity:
     def open_regular_file(self, path: str | Path):
         """Pin a regular file inode with O_NOFOLLOW; no second pathname lookup for reads."""
         raw, _ = self._components(path)
+        if raw == self.home:
+            raise IsADirectoryError("O caminho não é um arquivo regular.")
         with self.open_directory(raw.parent) as (parent_fd, _):
             try:
                 fd = os.open(
