@@ -1,4 +1,6 @@
+import os
 import subprocess
+from contextlib import ExitStack
 from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
@@ -49,6 +51,8 @@ class TerminalSandboxTool(NexusTool):
             FieldSpec("workspace", ValueKind.STRING, nullable=True),
         ),
     )
+
+    path_security = None  # injected by ToolExecutor for mediated operations
 
     IMAGE = "ubuntu:24.04"
 
@@ -114,6 +118,36 @@ class TerminalSandboxTool(NexusTool):
                     error="Workspace não é um diretório.",
                 )
 
+        # A stable Linux descriptor pins the workspace inode before Docker
+        # evaluates its bind source, closing the pathname-switch TOCTOU gap.
+        # /proc/<pid>/fd is deliberately used instead of the mutable path.
+        # Remote Docker daemons without this host PID namespace fail closed.
+        with ExitStack() as workspace_stack:
+            workspace_fd = None
+            if workspace_path is not None:
+                try:
+                    if self.path_security is not None:
+                        workspace_fd, _ = workspace_stack.enter_context(
+                            self.path_security.open_directory(workspace_path)
+                        )
+                    else:
+                        workspace_fd = os.open(
+                            workspace_path,
+                            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC,
+                        )
+                        workspace_stack.callback(os.close, workspace_fd)
+                except OSError:
+                    return ToolResult(
+                        False, self.name,
+                        error="Workspace não pôde ser aberto com segurança.",
+                    )
+            return self._run_container(
+                command=command,
+                workspace_path=workspace_path,
+                workspace_fd=workspace_fd,
+            )
+
+    def _run_container(self, *, command, workspace_path, workspace_fd):
         docker_command = [
             "docker",
             "run",
@@ -137,13 +171,13 @@ class TerminalSandboxTool(NexusTool):
             "1000:1000",
         ]
 
-        if workspace_path is not None:
+        if workspace_fd is not None:
             docker_command.extend(
                 [
                     "--mount",
                     (
                         "type=bind,"
-                        f"src={workspace_path},"
+                        f"src=/proc/{os.getpid()}/fd/{workspace_fd},"
                         "dst=/workspace,"
                         "readonly"
                     ),
