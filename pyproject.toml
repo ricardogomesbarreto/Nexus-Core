@@ -23,6 +23,7 @@ nexus-core = "nexus.main:cli"
 [project.optional-dependencies]
 dev = ["pytest==9.1.1"]
 voice = ["vosk>=0.3.45,<0.4"]
+vision = ["Pillow>=11,<13"]
 
 [tool.setuptools.packages.find]
 include = ["nexus*"]
