@@ -222,6 +222,8 @@ def cli(argv: list[str] | None = None) -> None:
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
+    actions.add_argument("--desktop-check", action="store_true",
+                         help="diagnostica suporte X11/xdotool sem interagir com janelas")
     actions.add_argument("--vision-check", action="store_true",
                          help="diagnostica dependências de visão sem capturar nada")
     actions.add_argument("--vision-image", metavar="PATH",
@@ -279,6 +281,14 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.desktop_check:
+        if (has_memory_action or any(knowledge_actions)
+                or args.knowledge_with_memory or args.vision_question is not None
+                or args.vision_model != "gemma3:4b"):
+            parser.error("--desktop-check não aceita opções de memória, conhecimento ou visão")
+        from nexus.automation import desktop_capabilities
+        print(json.dumps(desktop_capabilities(), ensure_ascii=False))
+        return
     vision_actions = (
         args.vision_check, args.vision_image is not None,
         args.vision_screen, args.vision_camera is not None,

@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.6.3" src="https://img.shields.io/badge/vers%C3%A3o-v0.6.3-722F37">
+  <img alt="Versão v0.7.0" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.0-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.6.3 — Conversation Reliability`<br>
-> **Publicação da v0.6.3:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.7.x — Controlled Desktop Automation` (autorização e sandbox)<br>
+> **Versão do código:** `v0.7.0 — Controlled Desktop Automation Foundation`<br>
+> **Publicação da v0.7.0:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo marco planejado:** `v0.7.1 — Controlled Desktop Navigation` (expansão prudente, ainda não implementada)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,101 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.7.0 — Controlled Desktop Automation Foundation
+
+Este marco inicia **automação controlada do desktop Linux**, preservando
+a identidade visual existente e as ferramentas de conversação, visão e voz
+das versões anteriores. Automação é **por solicitação do usuário,
+uma ação de cada vez**, nunca controle livre do sistema pela IA.
+
+## O que foi implementado
+
+- **desktop_window_info**: consulta somente o **ID e título da janela
+  atualmente ativa** na sessão Linux **X11**. É uma ferramenta de
+  leitura de metadados, sem screenshot, gravação ou interação.
+- **desktop_type_text**: solicita uma **digitação pontual de texto
+  imprimível de até 300 caracteres** na janela X11 de ID e título
+  explicitamente informados. **Não envia Enter**, atalhos, mouse,
+  URLs ou comandos de terminal por conta própria.
+- O `ToolExecutor` obriga a passagem pelo `SecurityGate`.
+  `desktop_type_text` tem risco **MEDIUM** e exige confirmação
+  humana **a cada execução** com a política padrão; sem confirmação,
+  a ferramenta falha sem enviar caracteres.
+- O diálogo da interface Tk exibe a **janela de destino e o texto
+  a digitar**, para que a autorização corresponda à ação real.
+  Após o consentimento, a ferramenta verifica novamente **o ID
+  e título da janela aprovada** antes de enviar qualquer evento.
+- Argumentos passam por contratos tipados e validação adicional
+  contra controles de teclado, limites excessivos, IDs inválidos
+  e títulos alterados. O resultado registra **número de caracteres
+  cujo envio foi solicitado**, não garante que a aplicação os aceitou.
+- Chamada ao `xdotool` como subprocesso Linux com argumentos
+  delimitados, **sem shell**, tempo limite e erros sanitizados.
+  Nenhum serviço remoto, captura de imagens ou acesso contínuo
+  foi adicionado à automação.
+
+## Diagnóstico e operação
+
+Instale gratuitamente o utilitário `xdotool` na sessão X11 Linux
+conforme sua distribuição. O comando abaixo **somente verifica** a
+presença de dependências e o tipo de sessão; não abre aplicações,
+não interage com janelas, não inicia PostgreSQL nem consulta Ollama:
+
+```bash
+nexus-core --desktop-check
+```
+
+O fluxo pela conversa (texto ou voz local) é:
+
+1. Solicite ao NEXUS CORE: **"Qual é a janela ativa?"**
+   (`desktop_window_info` consulta o ID e título).
+2. Solicite: **"Digite 'Olá!' naquela janela"**. O modelo pode
+   propor a ferramenta `desktop_type_text` com o ID/título do
+   contexto da conversa, mas não recebe autoridade para executá-la.
+3. A interface mostra uma autorização pontual, incluindo a janela
+   e o texto. **Somente após aprovação** o host revalida a janela
+   e tenta enviar os caracteres. Recusar/cancelar não digita nada.
+
+A entrada visual de **Imagem/Tela/Câmera** continua exigindo
+autorização por análise e respondendo em voz feminina/masculina
+quando a leitura de voz estiver habilitada. O botão **Sugerir**
+segue **somente consultivo**, com ferramentas proibidas.
+O botão **Cancelar** continua cooperativo; não desfaz texto já
+inserido ou operações realizadas.
+
+## Limites e garantias reais
+
+**Somente X11 local nesta primeira versão.** Sessões Wayland ou
+XWayland e DISPLAY com endereço remoto são recusados. Alguns
+programas X11 ignoram eventos `XSendEvent` enviados por ID de
+janela; mesmo com saída de comando bem-sucedida, não há garantia
+de que texto tenha aparecido. O usuário precisa conferir o resultado
+na aplicação. A ferramenta não localiza campos específicos nem
+sabe se o foco está em um campo de senha. **Não autorize
+digitação de dados sigilosos ou em formulários sensíveis.**
+
+Automação de janelas age diretamente no **host X11**, fora
+do sandbox Docker de comandos; por isso é intencionalmente
+limitada e depende de consentimento específico. A v0.7.0
+**não implementa** mouse, cliques, atalhos, execução em lote,
+navegação, comandos shell fora do sandbox, controle irrestrito
+nem observação de tela constante.
+
+A CI roda testes de contratos, autorização, ID/título alterados,
+argumentos inválidos, recusa de Wayland/DISPLAY remoto, subprocessos
+e diagnóstico sem acesso à interface. **O uso físico do desktop,
+o campo de texto e compatibilidade de aplicativos X11 ainda
+precisam ser homologados no computador Linux** do usuário.
+
+## Próximo incremento
+
+`v0.7.1 — Controlled Desktop Navigation` está **planejado** para
+estudar um pequeno conjunto de operações navegacionais protegidas
+por consentimento humano, sem alterar o layout existente nem
+liberar execução autônoma de macros.
 
 ---
 
@@ -175,6 +270,23 @@ precisa ser executada no hardware Linux do usuário.
 
 ## Histórico de marcos e documentação
 
+### Índice completo das versões históricas
+
+A documentação de desenvolvimento inicial, mantida integralmente nas
+seções **Histórico de releases** e **Roadmap** deste README, registra:
+`v0.1.0`, `v0.1.1`, `v0.1.2`, `v0.1.3`, `v0.1.4`,
+`v0.1.5`, `v0.1.6`, `v0.1.7`, `v0.1.8`, `v0.1.9`;
+`v0.2.0`, `v0.2.1`, `v0.2.2`, `v0.2.3`, `v0.2.4`;
+`v0.3.0`, `v0.3.1`, `v0.3.1.1`, `v0.3.1.2`,
+`v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4`,
+`v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
+A lista acima é **registro histórico**, não declaração de que cada
+item tem uma release oficial publicada ou homologação física.
+As notas dedicadas de `v0.3.9` até `v0.7.0` estão disponíveis
+em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
+nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
+
+
 O README mantém as seções completas das versões anteriores e as notas
 oficiais abaixo, para que decisões, limitações e evolução permaneçam
 rastreáveis no GitHub:
@@ -191,6 +303,7 @@ rastreáveis no GitHub:
 | v0.6.1 | Vision Desktop Integration | [Notas](docs/RELEASE_NOTES_v0.6.1.md) |
 | v0.6.2 | Guided Autonomy & Conversation | [Notas](docs/RELEASE_NOTES_v0.6.2.md) |
 | v0.6.3 | Conversation Reliability | [Notas](docs/RELEASE_NOTES_v0.6.3.md) |
+| v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -793,10 +906,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.6.3`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código: `v0.7.0`; seções antigas descrevem baselines históricos.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.6.3`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.7.0`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -3814,15 +3927,19 @@ autorização explícita, segurança e rastreabilidade.
 
 # Automação
 
-## v0.7.x — Controlled Desktop Automation
+## v0.7.0 — Controlled Desktop Automation Foundation (implementado)
 
-Planejado:
+Consulta pontual de ID/título de janela ativa X11; digitação curta em
+janela explicitamente identificada após confirmação humana por ação.
+Registros de autorização e execução pelo SecurityGate; limites estritos
+de entrada e timeout; nenhum shell, clique ou macro autônoma.
+Automações host X11 não são executadas no sandbox de comandos Docker.
 
-* interação com desktop;
-* ações controladas;
-* autorização;
-* sandboxing;
-* observabilidade.
+### v0.7.1 — Controlled Desktop Navigation (planejado)
+
+Estudo de navegação segura com escopo estrito de comandos, confirmação
+por ação e testes adicionais, sem suporte Wayland ou garantia
+de compatibilidade de programas até homologação real.
 
 ---
 
@@ -4174,10 +4291,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.6.3
-Release Name:          Conversation Reliability
-Release Tag:          v0.6.3 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        AUDIO RACE FIXES + CONFIRMATION CANCEL + FILE AUDIT; CI GATED
+Release Target:        v0.7.0
+Release Name:          Controlled Desktop Automation Foundation
+Release Tag:          v0.7.0 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
+Implementation:        X11 WINDOW INSPECTION + ONE-SHOT CONSENTED TYPE; CI GATED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
