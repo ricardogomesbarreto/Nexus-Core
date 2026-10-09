@@ -74,7 +74,7 @@ def test_memory_connection_errors_hide_raw_driver_details(monkeypatch):
 
 
 def args(**overrides):
-    base = dict(memory_add=None, memory_list=False, memory_search=None,
+    base = dict(memory_add=None, memory_add_stdin=False, memory_list=False, memory_search=None,
                 memory_delete=None, memory_clear=False, memory_status=False,
                 memory_days=90, memory_confirm=False)
     base.update(overrides)
@@ -128,6 +128,15 @@ def test_cli_add_only_saves_explicit_input(capsys):
     assert FakeStore.created[-1].calls == ["initialize", ("add", "alguma preferência", 30)]
     assert FakeStore.created[-1].closed
     assert '"id": 7' in capsys.readouterr().out
+
+
+def test_cli_stdin_saves_without_command_argument(monkeypatch):
+    import io
+    import sys
+    FakeStore.created.clear()
+    monkeypatch.setattr(sys, "stdin", io.StringIO("dado privado digitado\\n"))
+    assert execute_memory_command(args(memory_add_stdin=True), FakeStore) == 0
+    assert FakeStore.created[-1].calls[1] == ("add", "dado privado digitado\\n", 90)
 
 
 def test_cli_clear_requires_explicit_confirmation(capsys):

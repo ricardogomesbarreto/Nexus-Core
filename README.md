@@ -57,6 +57,9 @@ seis turnos continua temporário; não há recuperação automática durante a c
 ### Comandos explícitos
 
 ```bash
+# Modo mais privado: escreva no terminal e forneça pelo stdin:
+nexus-core --memory-add-stdin --memory-days 90
+# Alternativa (o texto pode ficar no histórico do terminal):
 nexus-core --memory-add "Prefiro respostas objetivas" --memory-days 90
 nexus-core --memory-list
 nexus-core --memory-search "respostas"
@@ -67,7 +70,9 @@ nexus-core --memory-clear --memory-confirm
 
 O ID 1 acima é ilustrativo. Os comandos não iniciam o Ollama nem a interface
 desktop. As memórias ficam em **texto claro no PostgreSQL local**. O argumento
-de `--memory-add` pode aparecer no histórico do shell e na lista de processos:
+de `--memory-add` pode aparecer no histórico do shell e na lista de processos.
+`--memory-add-stdin` aceita até 1.200 caracteres pela entrada padrão sem
+incluir a frase na linha de comando, mas não criptografa o banco:
 **não armazene senhas, tokens ou outros segredos**. A versão não inclui
 embedding, RAG, sincronização cloud ou memória automática do agente.
 
@@ -377,7 +382,8 @@ host antes de executar ferramentas. Cada tag preserva o snapshot da sua versão.
 O PostgreSQL local é o único provider de banco configurado para produção.
 A aplicação exige `NEXUS_DATABASE_PASSWORD` no processo de composição,
 conecta no `initialize()`, cria `system_events` e fecha a conexão no
-`shutdown()`. O banco não é memória persistente do assistente.
+`shutdown()`. A tabela `system_events` não representa a memória do assistente; as memórias
+explícitas da v0.4.0 usam `nexus_memories` e `nexus_memory_audit`.
 
 A `v0.3.1` evolui a Local Model Layer introduzida na `v0.3.0`.
 

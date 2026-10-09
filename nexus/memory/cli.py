@@ -33,6 +33,10 @@ def execute_memory_command(args, store_factory=PostgreSQLMemoryStore) -> int:
         store.initialize()
         if args.memory_add is not None:
             result = {"saved": _item(store.add(args.memory_add, args.memory_days))}
+        elif args.memory_add_stdin:
+            # Read only a bounded amount, never echo the input to terminal or logs.
+            content = sys.stdin.read(PostgreSQLMemoryStore.MAX_LENGTH + 2)
+            result = {"saved": _item(store.add(content, args.memory_days))}
         elif args.memory_list:
             result = {"memories": [_item(item) for item in store.list_entries()]}
         elif args.memory_search is not None:
