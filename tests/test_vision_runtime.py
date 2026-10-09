@@ -111,3 +111,18 @@ def test_capability_probe_does_not_use_hardware(monkeypatch):
     assert result["camera_capture_tested"] is False
     assert result["screen_capture_tested"] is False
     assert not any(result["checks"].values())
+
+
+def test_capture_applies_os_file_size_limit(monkeypatch):
+    options = {}
+    class Result:
+        returncode = 0
+
+    def run(argv, *, stdout, preexec_fn=None, **kwargs):
+        options["preexec_fn"] = preexec_fn
+        stdout.write(image_bytes())
+        return Result()
+
+    monkeypatch.setattr("nexus.vision.local.subprocess.run", run)
+    assert LocalVision._capture(["capture-test"]).startswith(b"\x89PNG")
+    assert options["preexec_fn"] == LocalVision._limit_capture_output
