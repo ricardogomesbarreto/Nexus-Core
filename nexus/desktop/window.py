@@ -63,6 +63,8 @@ class DesktopWindow:
         self.vision = vision
         self._vision_buttons = []
         self._busy = False
+        self._operation_kind = None
+        self._cancel_requested = False
         self._listening = False
         self._voice_active = True
         self._listen_generation = 0
@@ -171,6 +173,15 @@ class DesktopWindow:
             controls, text="Enviar", command=self._send, style="Nexus.TButton"
         )
         self.send_button.pack(side="right")
+        self.suggest_button = ttk.Button(
+            controls, text="Sugerir", command=self._suggest, style="Nexus.TButton",
+        )
+        self.suggest_button.pack(side="right", padx=(0, 6))
+        self.cancel_button = ttk.Button(
+            controls, text="Cancelar", command=self._cancel_current,
+            style="Nexus.TButton", state="disabled",
+        )
+        self.cancel_button.pack(side="right", padx=(0, 6))
         root.protocol("WM_DELETE_WINDOW", self._close)
         self._append(
             "Nexus Core",
@@ -213,7 +224,48 @@ class DesktopWindow:
         self.app.shutdown()
         self.root.destroy()
 
-    def _send(self, event=None):
+    def _suggest(self):
+        if self._busy or self._closing:
+            return
+        self.input.delete("1.0", "end")
+        self.input.insert(
+            "1.0", "Considerando a conversa, sugira próximos passos práticos "
+                   "que eu possa escolher. Apenas aconselhe, sem executar ações.",
+        )
+        self._send(advisory_only=True)
+
+    def _cancel_current(self):
+        """Cancel pending answer presentation and block future tool execution.
+
+        It cannot undo an already executed action or interrupt every Ollama call.
+        """
+        if not self._busy or self._closing:
+            return
+        self._cancel_requested = True
+        if self._operation_kind == "chat":
+            self.session.cancel_current()
+        self.cancel_button.configure(state="disabled")
+        self.status.configure(text="Cancelamento solicitado; finalizando operação…")
+
+    def _finish_operation(self):
+        self._busy = False
+        self._cancel_requested = False
+        self._operation_kind = None
+        self.send_button.configure(state="normal")
+        self.suggest_button.configure(state="normal")
+        self.cancel_button.configure(state="disabled")
+        for button in self._vision_buttons:
+            button.configure(state="normal")
+
+    def _say_response(self, text: str) -> bool:
+        """Speak normal and visual answers through the same local TTS channel."""
+        if not self.speech_enabled.get() or not text.strip():
+            return False
+        self._speaking = True
+        self._start_worker(self._speak, text, self.voice_choice.get())
+        return True
+
+    def _send(self, event=None, *, advisory_only=False):
         if self._busy or self._closing:
             return "break"
         message = self.input.get("1.0", "end-1c").strip()
@@ -224,20 +276,27 @@ class DesktopWindow:
             return "break"
         self.input.delete("1.0", "end")
         self._append("Você", message, "user")
+        self.session.prepare_turn()
         self._busy = True
+        self._operation_kind = "chat"
+        self._cancel_requested = False
         self.send_button.configure(state="disabled")
+        self.suggest_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
+        for button in self._vision_buttons:
+            button.configure(state="disabled")
         if self._listening:
             self._listen_generation += 1
             self.recognizer.stop()
         if self._speaking:
             self.speaker.stop()
         self.status.configure(text="Processando localmente…")
-        self._start_worker(self._answer, message)
+        self._start_worker(self._answer, message, advisory_only)
         return "break"
 
-    def _answer(self, message: str) -> None:
+    def _answer(self, message: str, advisory_only: bool = False) -> None:
         try:
-            reply = self.session.ask(message)
+            reply = self.session.ask(message, advisory_only=advisory_only)
         except Exception:
             reply = ChatReply(
                 "Não foi possível processar a solicitação.",
@@ -351,7 +410,11 @@ class DesktopWindow:
         if not consent or self._closing or self._busy:
             return
         self._busy = True
+        self._operation_kind = "vision"
+        self._cancel_requested = False
         self.send_button.configure(state="disabled")
+        self.suggest_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
         for button in self._vision_buttons:
             button.configure(state="disabled")
         if self._listening:
@@ -481,35 +544,43 @@ class DesktopWindow:
                 reply = self._replies.get_nowait()
             except Empty:
                 break
-            self._busy = False
+            cancelled = self._cancel_requested
             if not self._closing:
-                self._append("Nexus Core", reply.text, "assistant")
-                self.send_button.configure(state="normal")
-                self.status.configure(text="Escuta pausada" if not self._voice_active else "Pronto para conversar")
-                if self.speech_enabled.get() and reply.outcome.success:
-                    self._speaking = True
-                    self._start_worker(self._speak, reply.text, self.voice_choice.get())
-                elif not self._speaking:
+                self._finish_operation()
+                if cancelled or reply.outcome.error_code == "CANCELLED":
+                    self._append("Nexus Core", "Solicitação cancelada.", "assistant")
+                    self.status.configure(text="Solicitação cancelada")
                     self._start_listening()
+                else:
+                    self._append("Nexus Core", reply.text, "assistant")
+                    self.status.configure(
+                        text="Escuta pausada" if not self._voice_active
+                        else "Pronto para conversar"
+                    )
+                    if not (reply.outcome.success and self._say_response(reply.text)):
+                        self._start_listening()
+            else:
+                self._busy = False
         while True:
             try:
                 kind, question, result = self._vision_events.get_nowait()
             except Empty:
                 break
-            self._busy = False
+            cancelled = self._cancel_requested
             if self._closing:
+                self._busy = False
                 continue
-            for button in self._vision_buttons:
-                button.configure(state="normal")
-            self.send_button.configure(state="normal")
-            if kind == "success":
+            self._finish_operation()
+            if cancelled:
+                self._append("Nexus Core", "Análise visual cancelada.", "assistant")
+                self.status.configure(text="Análise visual cancelada")
+                self._start_listening()
+            elif kind == "success":
                 self.session.note_visual(question, result)
                 self._append("Nexus Core", result, "assistant")
                 self.status.configure(text="Análise visual concluída")
-                if self.speech_enabled.get():
-                    self._speaking = True
-                    self._start_worker(self._speak, result, self.voice_choice.get())
-                else:
+                # File, screen and camera all use the same voice output path.
+                if not self._say_response(result):
                     self._start_listening()
             else:
                 self._append("Nexus Core", f"Análise visual indisponível: {result}", "assistant")
@@ -535,6 +606,8 @@ class DesktopWindow:
         self.recognizer.stop()
         self.speaker.stop()
         self.send_button.configure(state="disabled")
+        self.suggest_button.configure(state="disabled")
+        self.cancel_button.configure(state="disabled")
         self.mic_button.configure(state="disabled")
         for button in self._vision_buttons:
             button.configure(state="disabled")
