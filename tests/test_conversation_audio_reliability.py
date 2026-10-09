@@ -116,13 +116,15 @@ def test_stale_speech_completion_does_not_unset_new_speaking_state(ui):
     spin(root, lambda: not window._listening)
     assert window._say_response("Resposta anterior")
     spin(root, lambda: len(speaker.started) == 1)
+    previous_generation = window._speak_generation
     window._stop_speaking()
     assert window._say_response("Resposta atual")
     spin(root, lambda: len(speaker.started) == 2)
-    speaker.started[0].set()
-    spin(root, lambda: not window._audio_events.empty())
+    # Synthesize delayed completion deterministically, without timing races.
+    window._audio_events.put(("speak_done", "", previous_generation))
     root.update()
     assert window._speaking
+    speaker.started[0].set()
     assert speaker.spoken == [
         ("Resposta anterior", "Feminina"),
         ("Resposta atual", "Feminina"),
@@ -142,8 +144,8 @@ def test_silencing_mid_response_invalidates_late_tts_event(ui):
     window._toggle_speech()
     assert not window._speaking
     before = window._speak_generation
-    speaker.started[0].set()
-    spin(root, lambda: not window._audio_events.empty())
+    window._audio_events.put(("speak_done", "", before - 1))
     root.update()
+    speaker.started[0].set()
     assert window._speak_generation == before
     assert not window._speaking
