@@ -20,6 +20,23 @@ class X11DesktopBackend:
     MAX_QUERY_BYTES = 4096
     COMMAND_TIMEOUT = 5
     TYPE_TIMEOUT = 12
+    NAVIGATION_KEYS = {
+        "next_field": "Tab",
+        "previous_field": "ISO_Left_Tab",
+        "page_up": "Prior",
+        "page_down": "Next",
+    }
+
+    @classmethod
+    def validate_navigation(cls, action: str) -> str:
+        """An explicit allowlist, not an arbitrary xdotool keysym."""
+        if type(action) is not str or action not in cls.NAVIGATION_KEYS:
+            raise DesktopAutomationError(
+                "Navegação inválida: use next_field, previous_field, "
+                "page_up ou page_down."
+            )
+        return action
+
 
     def __init__(self, binary: str | None = None):
         self._binary = binary
@@ -94,6 +111,41 @@ class X11DesktopBackend:
         title = self.validate_title(self._query("getwindowname", str(ident)))
         return ident, title
 
+    def navigate(self, *, window_id: int, window_title: str,
+                 action: str) -> str:
+        """Send exactly one fixed navigation key to the consented X11 window.
+
+        No Enter, arrows, shortcuts, arbitrary key symbols or repetition.
+        """
+        ident = self.validate_id(window_id)
+        title = self.validate_title(window_title)
+        action = self.validate_navigation(action)
+        # Revalidate after a potentially long user confirmation dialog,
+        # just like type_text; no dependency on temporarily changed focus.
+        if self.validate_title(self._query("getwindowname", str(ident))) != title:
+            raise DesktopAutomationError(
+                "A janela de destino mudou após a autorização. Nenhuma tecla enviada."
+            )
+        cmd = [
+            self._command(), "key", "--window", str(ident),
+            "--clearmodifiers", "--", self.NAVIGATION_KEYS[action],
+        ]
+        try:
+            result = subprocess.run(
+                cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, timeout=self.COMMAND_TIMEOUT,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise DesktopAutomationError(
+                "Não foi possível concluir a navegação X11; verifique a janela."
+            ) from exc
+        if result.returncode != 0:
+            raise DesktopAutomationError(
+                "Navegação X11 falhou ou foi parcialmente executada."
+            )
+        return action
+
     def type_text(self, *, window_id: int, window_title: str, text: str) -> int:
         ident = self.validate_id(window_id)
         title = self.validate_title(window_title)
@@ -139,7 +191,7 @@ def desktop_capabilities() -> dict:
         )) and not bool(os.environ.get("WAYLAND_DISPLAY"))
             and os.environ.get("XDG_SESSION_TYPE", "").lower() != "wayland",
         "xdotool": bool(shutil.which("xdotool")),
-        "effects": "read window title or type single approved text",
+        "effects": "read window title, type approved text or send one allowlisted navigation key",
         "camera_access": False,
         "screenshot_access": False,
         "wayland_supported": False,
