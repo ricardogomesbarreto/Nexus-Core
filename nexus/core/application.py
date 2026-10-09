@@ -1,4 +1,5 @@
 from nexus.config.settings import settings
+from nexus.agent import AgentPlanner
 from nexus.core.connectivity import ConnectivityManager
 from nexus.core.connectivity_monitor import ConnectivityMonitor
 from nexus.core.logger import setup_logger
@@ -57,6 +58,7 @@ class NexusApplication:
         self.runtime_state = RuntimeStateController()
 
         self._model_router = None
+        self._agent = None
 
         self._initialized = False
         self._shutdown_complete = False
@@ -77,6 +79,16 @@ class NexusApplication:
         return self.model_router.resolve(
             "ollama"
         )
+
+    @property
+    def agent(self):
+        if self._agent is None:
+            self._agent = AgentPlanner(
+                model_router=self.model_router,
+                registry=self.tool_registry,
+                executor=self.tool_executor,
+            )
+        return self._agent
 
     def initialize(self):
         if self._initialized:

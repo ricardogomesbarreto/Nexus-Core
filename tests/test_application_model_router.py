@@ -122,6 +122,27 @@ def test_application_caches_model_router(
         app.database.close()
 
 
+def test_application_builds_agent_lazily_with_shared_executor(monkeypatch):
+    fake_router = FakeModelRouter()
+    monkeypatch.setattr(
+        application_module,
+        "build_model_router",
+        lambda settings: fake_router,
+    )
+    app = NexusApplication(database=FakeDatabase())
+    try:
+        assert app._agent is None
+        assert app._model_router is None
+        agent = app.agent
+        assert agent is app.agent
+        assert agent.model_router is fake_router
+        assert agent.registry is app.tool_registry
+        assert agent.executor is app.tool_executor
+        assert app.tool_registry.list_tools() == ["terminal_sandbox"]
+    finally:
+        app.database.close()
+
+
 def test_legacy_local_model_client_uses_registered_ollama_provider(
     monkeypatch,
 ):

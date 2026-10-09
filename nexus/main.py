@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 
 from nexus.config.settings import settings
@@ -28,6 +29,7 @@ def build_application() -> NexusApplication:
 def main(
     sandbox_command: str | None = None,
     workspace: str | None = None,
+    agent_prompt: str | None = None,
 ):
     app = build_application()
 
@@ -153,6 +155,16 @@ def main(
         print("╚" + "═" * WIDTH + "╝")
         print()
 
+        if agent_prompt is not None:
+            outcome = app.agent.run(agent_prompt)
+            if outcome.content:
+                print(outcome.content)
+            if outcome.tool_result is not None:
+                print(json.dumps(outcome.tool_result.as_dict(), ensure_ascii=False))
+            if not outcome.success:
+                print(outcome.error, file=sys.stderr)
+                return 1
+
         if sandbox_command is not None:
             result = app.tool_executor.execute(
                 "terminal_sandbox",
@@ -184,10 +196,16 @@ def cli(argv: list[str] | None = None) -> None:
         action="version",
         version=f"Nexus Core {settings.version}",
     )
-    parser.add_argument(
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
         "--sandbox-command",
         metavar="COMMAND",
         help="executa um comando isolado após confirmação humana",
+    )
+    actions.add_argument(
+        "--agent-prompt",
+        metavar="PROMPT",
+        help="solicita uma resposta ou uma ação mediada pelo executor",
     )
     parser.add_argument(
         "--workspace",
@@ -197,7 +215,7 @@ def cli(argv: list[str] | None = None) -> None:
     if args.workspace is not None and args.sandbox_command is None:
         parser.error("--workspace exige --sandbox-command")
 
-    result = main(args.sandbox_command, args.workspace)
+    result = main(args.sandbox_command, args.workspace, args.agent_prompt)
     if result:
         raise SystemExit(result)
 

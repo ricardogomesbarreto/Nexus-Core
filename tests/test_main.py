@@ -98,6 +98,40 @@ def test_cli_rejects_workspace_without_command(capsys):
     assert "--workspace exige --sandbox-command" in capsys.readouterr().err
 
 
+def test_cli_rejects_simultaneous_agent_and_sandbox(capsys):
+    with pytest.raises(SystemExit) as exc:
+        nexus_main.cli(["--agent-prompt", "oi", "--sandbox-command", "pwd"])
+    assert exc.value.code == 2
+
+
+def test_agent_prompt_uses_planner_and_shuts_down(monkeypatch, capsys):
+    from nexus.agent import AgentOutcome
+
+    calls = []
+
+    class FakeAgent:
+        def run(self, prompt):
+            calls.append(prompt)
+            return AgentOutcome(True, content="Olá")
+
+    class FakeApplication:
+        agent = FakeAgent()
+
+        def initialize(self):
+            calls.append("initialize")
+
+        def status(self):
+            return FakeHealth()
+
+        def shutdown(self):
+            calls.append("shutdown")
+
+    monkeypatch.setattr(nexus_main, "build_application", FakeApplication)
+    assert nexus_main.main(agent_prompt="oi") == 0
+    assert calls == ["initialize", "oi", "shutdown"]
+    assert capsys.readouterr().out.endswith("Olá\n")
+
+
 def test_main_shuts_down_when_runtime_fails_after_initialize(
     monkeypatch,
 ):

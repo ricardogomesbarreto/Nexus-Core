@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.3.4" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.4-722F37">
+  <img alt="Versão v0.3.5" src="https://img.shields.io/badge/vers%C3%A3o-v0.3.5-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,13 +19,13 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão atual:** `v0.3.4 — Structured Tool Contracts`<br>
-> **Última tag publicada:** `v0.3.4`<br>
-> **Próximo marco planejado:** `v0.3.5 — Controlled Agent & Tool Calling`<br>
+> **Versão atual:** `v0.3.5 — Controlled Agent & Tool Calling`<br>
+> **Última tag publicada:** `v0.3.5`<br>
+> **Próximo marco planejado:** `v0.3.6 — Native Desktop Interface Foundation`<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** terminal local; interface gráfica nativa planejada<br>
 > **Banco único:** PostgreSQL local<br>
-> **Validação local:** `566 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
+> **Validação local:** `584 passed, 8 skipped` (Docker e PostgreSQL reais indisponíveis aqui)<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -45,6 +45,8 @@ O **Nexus Core** é a infraestrutura central de um assistente pessoal de intelig
 O programa roda como processo nativo no Linux. A distribuição atual oferece
 o comando `nexus-core` no ambiente Python do usuário. A opção
 `--sandbox-command` exige confirmação no terminal para cada execução isolada.
+`--agent-prompt` aceita uma solicitação ao modelo local e pode propor uma única
+chamada mediada pelo executor.
 Os assets da futura
 interface gráfica já existem, mas uma janela gráfica ainda não foi implementada.
 Não há aplicação ou servidor web na arquitetura do produto.
@@ -381,8 +383,8 @@ Essas capacidades devem ser introduzidas por releases próprias.
 # Baseline atual
 
 ```text
-Release Target:       v0.3.4
-Capability:           Structured Tool Contracts
+Release Target:       v0.3.5
+Capability:           Controlled Agent & Tool Calling
 Tests:                veja a seção Testes abaixo
 Primary Platform:     Linux
 Runtime Baseline:     Python 3.12
@@ -1675,6 +1677,22 @@ e logs ficam no diretório do usuário conforme `XDG_DATA_HOME` e
 `XDG_STATE_HOME` (padrões `~/.local/share/nexus-core` e
 `~/.local/state/nexus-core/logs`).
 
+Com Ollama local ativo e o modelo configurado disponível, o primeiro Agent
+aceita uma solicitação de cada vez:
+
+```bash
+nexus-core --agent-prompt 'Proponha terminal_sandbox com o comando pwd'
+```
+
+O modelo devolve uma resposta de texto ou propõe **uma** ferramenta em JSON.
+A aplicação valida o contrato e envia a proposta ao `ToolExecutor`, que
+aplica a política, registra auditoria e pede confirmação humana quando
+necessária. Nesta composição a única ferramenta registrada para o Agent é
+`terminal_sandbox`; uma proposta de comando requer confirmação presencial e
+Docker operacional. O Agent não mantém sessão, não faz cadeia de chamadas e
+não altera a política de permissão. Se o modelo estiver indisponível, o
+comando falha sem executar ferramentas.
+
 ---
 
 # Exemplo de ModelRouter
@@ -1709,13 +1727,13 @@ PYTHONPATH="$PWD" pytest -q
 Verificação nesta revisão (ambiente sem Docker e PostgreSQL de teste):
 
 ```text
-566 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
+584 passed; 8 skipped (7 integrações Docker e 1 PostgreSQL)
 ```
 
 Coleta:
 
 ```text
-574 tests collected
+592 tests collected
 ```
 
 Os sete testes que executam containers são ignorados automaticamente
@@ -2941,24 +2959,22 @@ Rejeições e retornos inválidos são auditados com códigos de erro estáveis.
 Os contratos podem ser inspecionados por `ToolRegistry.contracts()` e
 serializados em JSON. A interface de terminal, a confirmação humana e o
 PostgreSQL local continuam sendo os componentes de execução desta versão.
-O Agent/Planner permanece para `v0.3.5`.
-
----
-
-# Roadmap
-
-O roadmap é evolutivo. Cada release adiciona uma responsabilidade
-pequena, clara e verificável.
+O Agent/Planner foi introduzido em `v0.3.5`.
 
 ---
 
 ## v0.3.5 — Controlled Agent & Tool Calling
 
-Objetivo:
+O primeiro `AgentPlanner` traduz uma solicitação em resposta de texto ou
+proposta de **uma** chamada. O formato JSON é validado estritamente: objetos
+com campos extras, chaves duplicadas, respostas incompletas, ferramentas fora
+do registro e argumentos inválidos são recusados e auditados. Conteúdo do
+modelo nunca autoriza a si mesmo; cada chamada atravessa o contrato da
+ferramenta, o `ToolExecutor`, o `SecurityGate` e a confirmação humana quando
+a política exige. Erros do modelo não disparam execução. A composição é lazy
+e o CLI `--agent-prompt` expõe o fluxo no desktop Linux.
 
-introduzir o primeiro Agent/Planner controlado sobre as fronteiras de segurança já estabelecidas.
-
-Arquitetura alvo:
+Fluxo implementado:
 
 ```text
 Model Layer
@@ -2979,12 +2995,22 @@ SecurityGate
 Tool
 ```
 
-Pré-requisitos obrigatórios:
+Esta release limita o Agent a uma proposta por solicitação; não há loop
+autônomo nem acesso direto do provider às ferramentas. O PostgreSQL local
+permanece obrigatório para inicializar a aplicação.
 
-* `v0.3.2 — Security Resource Mediation`;
-* `v0.3.3 — Explicit Confirmation & Authorization`;
-* `v0.3.4 — Structured Tool Contracts`;
-* nenhuma execução direta `ModelProvider → Tool`.
+---
+
+# Roadmap
+
+O roadmap é evolutivo. Cada release adiciona uma responsabilidade
+pequena, clara e verificável.
+
+## v0.3.6 — Native Desktop Interface Foundation
+
+Próximo marco planejado: iniciar uma interface gráfica nativa para o Linux,
+com apresentação de estado e confirmação de ações controladas. A interface
+de terminal continua sendo a interface entregue até que esse marco exista.
 
 ---
 
@@ -3278,9 +3304,6 @@ Essa separação é deliberada.
 
 Ainda não existem:
 
-* Agent;
-* Planner;
-* tool calling por LLM;
 * memória persistente;
 * Knowledge Base;
 * voz;
@@ -3434,7 +3457,7 @@ v0.3.1
 
 A `v0.3.1` foi fechada com tag anotada.
 
-As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3` e `v0.3.4` já existem.
+As tags `v0.3.1.1`, `v0.3.1.2`, `v0.3.1.3`, `v0.3.2`, `v0.3.3`, `v0.3.4` e `v0.3.5` já existem.
 
 ---
 
@@ -3477,12 +3500,12 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.3.4
-Release Name:          Structured Tool Contracts
-Latest Git Tag:        v0.3.4
+Release Target:        v0.3.5
+Release Name:          Controlled Agent & Tool Calling
+Latest Git Tag:        v0.3.5
 Implementation:        RELEASED
 Release Validation:    LOCAL PASS; CI CHECKS REAL POSTGRESQL AND DOCKER
-Tests:                 566 passed, 8 skipped locally
+Tests:                 584 passed, 8 skipped locally
 Primary Platform:      Linux
 Runtime Baseline:      Python 3.12
 Database:              PostgreSQL (loopback, Psycopg 3)
@@ -3492,7 +3515,7 @@ Sandbox:               Docker
 Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b
 Production Provider:   ollama
-Agent / Tool Calling:  NOT IMPLEMENTED
+Agent / Tool Calling:  ONE PROPOSAL, TOOL EXECUTOR MEDIATED
 Development Status:    ACTIVE
 ────────────────────────────────────────────────────────
 ```
