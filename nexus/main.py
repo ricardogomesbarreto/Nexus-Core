@@ -224,6 +224,10 @@ def cli(argv: list[str] | None = None) -> None:
     )
     actions.add_argument("--desktop-check", action="store_true",
                          help="diagnostica suporte X11/xdotool sem interagir com janelas")
+    actions.add_argument("--devices-check", action="store_true",
+                         help="mostra o contrato de dispositivos sem buscar hardware")
+    actions.add_argument("--devices-preview-stdin", action="store_true",
+                         help="valida manifesto JSON de dispositivos por entrada padrão (sem conexão)")
     actions.add_argument("--vision-check", action="store_true",
                          help="diagnostica dependências de visão sem capturar nada")
     actions.add_argument("--vision-image", metavar="PATH",
@@ -288,6 +292,28 @@ def cli(argv: list[str] | None = None) -> None:
             parser.error("--desktop-check não aceita opções de memória, conhecimento ou visão")
         from nexus.automation import desktop_capabilities
         print(json.dumps(desktop_capabilities(), ensure_ascii=False))
+        return
+    if args.devices_check or args.devices_preview_stdin:
+        if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
+                or args.vision_question is not None or args.vision_model != "gemma3:4b"
+                or args.knowledge_limit != 5 or args.memory_days != 90
+                or args.memory_confirm or args.workspace is not None):
+            parser.error("Dispositivos não podem ser combinados com outras ações")
+        from nexus.devices import (
+            DeviceContractError, device_capabilities,
+            parse_manifest, preview_manifest,
+        )
+        if args.devices_check:
+            print(json.dumps(device_capabilities(), ensure_ascii=False))
+            return
+        # Bounded input; never log or echo the untrusted manifest.
+        from nexus.devices.contracts import MAX_MANIFEST_BYTES
+        raw = sys.stdin.read(MAX_MANIFEST_BYTES + 1)
+        try:
+            data = preview_manifest(parse_manifest(raw))
+        except DeviceContractError as exc:
+            parser.error(str(exc))
+        print(json.dumps(data, ensure_ascii=False))
         return
     vision_actions = (
         args.vision_check, args.vision_image is not None,
