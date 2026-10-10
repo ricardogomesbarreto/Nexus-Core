@@ -18,6 +18,8 @@ import venv
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 MIN_VERSION = (3, 12)
 SYSTEM_PACKAGES = (
     "python3-venv", "python3-tk", "postgresql", "xdotool",
