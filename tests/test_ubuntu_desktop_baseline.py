@@ -185,3 +185,51 @@ def test_python_version_and_non_root_are_prerequisites(monkeypatch, capsys):
     monkeypatch.setattr(install_linux, "install_system_packages",
                         lambda: pytest.fail("No packages as root"))
     assert install_linux.main([]) == 2
+
+def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch):
+    from nexus.config.settings import settings
+    import subprocess
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    calls = []
+
+    def virtual_environment(target, **kwargs):
+        (target / "bin").mkdir(parents=True)
+        (target / "bin/python").write_bytes(b"python executable")
+
+    def fake_run(args, **kwargs):
+        calls.append((args, kwargs))
+        if "--version" in args:
+            return subprocess.CompletedProcess(
+                args, 0, stdout="Nexus Core " + settings.version
+            )
+        return subprocess.CompletedProcess(args, 0, stdout=None)
+
+    monkeypatch.setattr(install_linux.venv, "create", virtual_environment)
+    monkeypatch.setattr(install_linux, "_run", fake_run)
+    home = install_linux.install_managed_python()
+    assert (home / "current").is_symlink()
+    assert (home / "current").resolve().name == "v" + settings.version
+    pip_args, kwargs = calls[0]
+    assert "-e" not in pip_args
+    assert str(install_linux.ROOT) + "[voice,vision]" in pip_args
+    assert kwargs["cwd"] == install_linux.ROOT
+    assert calls[-1][0][-1] == "--version"
+
+
+def test_bootstrap_rejects_wrong_installed_version(tmp_path, monkeypatch):
+    import subprocess
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    def virtual_environment(target, **kwargs):
+        (target / "bin").mkdir(parents=True)
+        (target / "bin/python").write_bytes(b"python executable")
+    monkeypatch.setattr(install_linux.venv, "create", virtual_environment)
+    monkeypatch.setattr(
+        install_linux, "_run",
+        lambda args, **kwargs: subprocess.CompletedProcess(
+            args, 0, stdout="Nexus Core 0.1.0"
+        ),
+    )
+    with pytest.raises(RuntimeError, match="divergente"):
+        install_linux.install_managed_python()
+    from nexus.updates.manager import managed_home
+    assert not (managed_home() / "current").exists()
