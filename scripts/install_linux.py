@@ -40,11 +40,12 @@ def installed(command: str) -> bool:
 
 
 def _run(args: list[str], *, input_text=None, timeout=300,
-         capture=False) -> subprocess.CompletedProcess:
+         capture=False, cwd=None) -> subprocess.CompletedProcess:
     return subprocess.run(
         args, input=input_text, text=True,
         stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
         stderr=subprocess.DEVNULL, timeout=timeout, check=True,
+        cwd=cwd,
     )
 
 
@@ -166,13 +167,20 @@ def install_managed_python():
     if not target.exists():
         venv.create(target, with_pip=True, symlinks=False)
     python = target / "bin/python"
+    # Regular local package install: unlike pip -e, it does not depend on
+    # keeping the development checkout in the same filesystem location.
     _run(
         [str(python), "-m", "pip", "install", "--disable-pip-version-check",
-         "--no-input", "-e", ".[voice,vision]"],
-        timeout=600,
+         "--no-input", str(ROOT) + "[voice,vision]"],
+        timeout=600, cwd=ROOT,
     )
     _run([str(python), "-m", "pip", "check"], timeout=30)
-    _run([str(python), "-m", "nexus.main", "--version"], timeout=20)
+    verified = _run(
+        [str(python), "-m", "nexus.main", "--version"],
+        timeout=20, capture=True, cwd=home,
+    )
+    if verified.stdout.strip() != "Nexus Core " + settings.version:
+        raise RuntimeError("A instalação Python retornou versão divergente.")
     _switch_current(home, target)
     return home
 
