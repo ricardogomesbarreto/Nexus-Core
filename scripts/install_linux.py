@@ -1,11 +1,12 @@
-"""Interactive Ubuntu/Debian bootstrap for Nexus Core user-managed installation.
+"""Interactive Ubuntu 24.04 LTS bootstrap for Nexus Core user-managed installation.
 
 Run from a reviewed source checkout with Python 3.12+:
     python3 scripts/install_linux.py
 
 No shell pipelines, root-owned venv, auto-added Docker group, or unapproved
-system changes. Other distributions receive a dependency report instead.
+system changes. Other distributions receive a passive report; installation refuses mutations.
 """
+import argparse
 import json
 import os
 from pathlib import Path
@@ -21,10 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 MIN_VERSION = (3, 12)
-SYSTEM_PACKAGES = (
-    "python3-venv", "python3-tk", "postgresql", "xdotool",
-    "espeak-ng", "alsa-utils", "ffmpeg",
-)
+from nexus.platforms import UBUNTU_PACKAGES, linux_profile, platform_capabilities
+SYSTEM_PACKAGES = UBUNTU_PACKAGES
 
 
 def confirm(question: str) -> bool:
@@ -49,46 +48,53 @@ def _run(args: list[str], *, input_text=None, timeout=300,
     )
 
 
-def _debian_family() -> bool:
-    try:
-        info = Path("/etc/os-release").read_text(encoding="utf-8")
-    except OSError:
-        return False
-    return any(line.startswith("ID=" + distro) or line.startswith("ID_LIKE=" + distro)
-               for distro in ("ubuntu", "debian")) or " debian" in info
+def _ubuntu_supported() -> bool:
+    """Never infer package-manager permissions from ID_LIKE=debian."""
+    return linux_profile().installer_supported
 
 
 def system_requirements() -> list[str]:
-    missing = []
-    for binary in ("psql", "xdotool", "espeak-ng", "arecord", "ffmpeg"):
-        if not installed(binary):
-            missing.append(binary)
-    try:
-        import tkinter
-        del tkinter
-    except ImportError:
-        missing.append("python3-tk")
+    """Passively inspect required desktop helpers; no service connection."""
+    report = platform_capabilities()
+    missing = list(report["missing_required"])
+    if not installed("xdotool"):
+        # X11 automation is optional for Wayland, but should be installed on
+        # Ubuntu to permit the separate physical X11 acceptance tests.
+        missing.append("xdotool")
     return missing
 
 
-def install_system_packages() -> None:
+def install_system_packages() -> bool:
+    """Install official Ubuntu packages only with explicit operator consent.
+
+    A refusal or unresolved dependency blocks the bootstrap rather than
+    falsely reporting the application as fully installed.
+    """
+    if not _ubuntu_supported():
+        print("Instalador não habilitado nesta distribuição; rode --check.")
+        return False
     missing = system_requirements()
     if not missing:
         print("Dependências de sistema encontradas.")
-        return
+        return True
     print("Dependências ausentes: " + ", ".join(missing))
-    if not _debian_family() or not installed("apt-get") or not installed("sudo"):
-        print("Distribuição sem instalador apt/sudo suportado; "
-              "instale os componentes pelo gerenciador oficial do Linux.")
-        return
-    if not confirm("Instalar pacotes oficiais via sudo apt-get?"):
-        print("Instalação de pacotes de sistema recusada.")
-        return
+    if not installed("apt-get") or not installed("sudo"):
+        print("apt-get/sudo indisponíveis: instalação guiada interrompida.")
+        return False
+    if not confirm("Instalar pacotes oficiais Ubuntu via sudo apt-get?"):
+        print("Instalação de pacotes recusada; nenhuma etapa seguinte foi executada.")
+        return False
     try:
         _run(["sudo", "apt-get", "update"], timeout=300)
         _run(["sudo", "apt-get", "install", "-y", *SYSTEM_PACKAGES], timeout=600)
     except (OSError, subprocess.SubprocessError):
-        print("Não foi possível concluir apt-get; verifique os pacotes manualmente.")
+        print("apt-get falhou; verifique os pacotes antes de tentar novamente.")
+        return False
+    unresolved = system_requirements()
+    if unresolved:
+        print("Dependências ainda ausentes: " + ", ".join(unresolved))
+        return False
+    return True
 
 
 def _credentials_file() -> Path:
@@ -215,7 +221,14 @@ os.execv(str(python), [str(python), "-m", "nexus.updates.launcher", *sys.argv[1:
     return destination
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu Desktop")
+    parser.add_argument("--check", action="store_true",
+                        help="mostra diagnóstico somente leitura, em qualquer distribuição")
+    args = parser.parse_args(argv)
+    if args.check:
+        print(json.dumps(platform_capabilities(), ensure_ascii=False))
+        return 0
     if os.geteuid() == 0:
         print("Execute como usuário comum; sudo só quando autorizado.", file=sys.stderr)
         return 2
@@ -225,8 +238,15 @@ def main() -> int:
     if sys.platform != "linux":
         print("Somente Linux é suportado.", file=sys.stderr)
         return 2
-    print("NEXUS CORE — instalação guiada e gerenciada (sem custos adicionais).")
-    install_system_packages()
+    profile = linux_profile()
+    if not profile.installer_supported:
+        print("Instalação automática validada apenas para Ubuntu Desktop 24.04 LTS; "
+              "em outras distribuições use --check. Nada foi instalado.", file=sys.stderr)
+        return 2
+    print("NEXUS CORE — instalação guiada para Ubuntu Desktop 24.04 LTS.")
+    if not install_system_packages():
+        print("Instalação interrompida: requisitos do Ubuntu ainda ausentes.", file=sys.stderr)
+        return 2
     provision_postgresql()
     try:
         home = install_managed_python()
