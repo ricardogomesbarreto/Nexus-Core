@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.1 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.1--dev-722F37">
+  <img alt="Versão v0.8.2 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.2--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,10 +19,10 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.1 — Linux Bootstrap & Verified Self-Update`<br>
-> **Publicação da v0.8.1:** pendente; depende de v0.7.3/v0.8.0 integradas, CI aprovada, instalação Linux real e homologação pertinente; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.1 prepara instalação e atualizações; sem novas conexões de hardware)<br>
-> **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.2 — Ubuntu Desktop Baseline & Portability`<br>
+> **Publicação da v0.8.2:** pendente; depende de v0.7.3/v0.8.0/v0.8.1 integradas, CI aprovada e homologação no Ubuntu Desktop real; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.2 prioriza Ubuntu 24.04 LTS; suporte a outras distribuições virá após validação)<br>
+> **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
@@ -35,6 +35,26 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.2 — Ubuntu Desktop Baseline & Distribution Portability (em desenvolvimento)
+
+O NEXUS CORE terá **Ubuntu Desktop 24.04 LTS como alvo principal e prioritário** para desenvolvimento, instalação guiada, testes de integração e homologação física. Nesta fase não afirmamos compatibilidade garantida com todas as distribuições Linux; o suporte será ampliado depois, respeitando as particularidades de Ubuntu LTS adicionais, Debian, Fedora, Arch Linux e SteamOS.
+
+O novo módulo `nexus.platforms` disponibiliza um **perfil passivo de compatibilidade** (ID/versão do sistema, sessão X11/Wayland, Python, dependências e limites de teste), isolado do instalador. É possível consultar qualquer Linux sem executar comandos de instalação, acessar sensores ou inicializar banco/modelo:
+
+```bash
+nexus-core --platform-check
+# Também disponível diretamente no checkout de código:
+python3 scripts/install_linux.py --check
+```
+
+O instalador `python3 scripts/install_linux.py` somente realiza alterações no **Ubuntu 24.04 LTS com Python 3.12+**, e exige consentimento para instalar pacotes oficiais. Se os pacotes estiverem ausentes ou a autorização for recusada, a instalação não será apresentada como bem-sucedida. `ID_LIKE=debian` não autoriza o uso de comandos Ubuntu em outras distribuições. A CI passa a rodar em `ubuntu-24.04`, com PostgreSQL, Docker, Xvfb e Python 3.12.
+
+**Compatibilidade X11/Wayland:** o aplicativo Tk pode ser executado em Wayland, mas a automação `xdotool` de janelas de terceiros permanece limitada a sessões X11 locais com consentimento por ação. A inspeção de dependências não comprova microfone, câmera, Ollama em execução, modelo instalado ou PostgreSQL saudável.
+
+O código de voz, visão, integrações, atualizações verificadas e interface visual permanece preservado. Consulte as [notas da v0.8.2](docs/RELEASE_NOTES_v0.8.2.md) para a matriz de suporte, critérios de aceite e adaptações planejadas.
 
 ---
 
@@ -457,7 +477,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.8.1` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.8.2` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -484,6 +504,7 @@ rastreáveis no GitHub:
 | v0.7.3 | Desktop Target Integrity — PR, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
 | v0.8.0 | Device Registry Foundation — PR empilhado, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
 | v0.8.1 | Linux Bootstrap & Verified Self-Update — PR empilhado, sem tag | [Notas](docs/RELEASE_NOTES_v0.8.1.md) |
+| v0.8.2 | Ubuntu Desktop Baseline & Portability — PR empilhado, sem tag | [Notas](docs/RELEASE_NOTES_v0.8.2.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1086,10 +1107,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.1`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.2`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.1` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.2` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4144,7 +4165,7 @@ CI completa e validação em desktop X11 físico permanecem pendentes.
 
 ## v0.8.x — Devices & Distributed Architecture
 
-**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **v0.8.1 (em desenvolvimento):** instalador Linux guiado e atualizações estáveis verificadas na inicialização. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
+**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **v0.8.1 (em desenvolvimento):** instalador Linux guiado e atualizações estáveis verificadas na inicialização. **v0.8.2 (em desenvolvimento):** Ubuntu 24.04 LTS como baseline, diagnóstico passivo multi-distro e matriz de compatibilidade. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
 
 Para microcontroladores:
 
@@ -4481,10 +4502,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.1 (STACKED DEVELOPMENT BRANCH)
-Release Name:          Linux Bootstrap & Verified Self-Update
-Release Tag:          v0.8.1 NOT YET PUBLISHED (MAIN CI REQUIRED)
-Implementation:        OPT-IN USER INSTALLER; VERIFIED RELEASE WHEEL; ATOMIC VENV SWITCH
+Release Target:        v0.8.2 (STACKED DEVELOPMENT BRANCH)
+Release Name:          Ubuntu Desktop Baseline & Portability
+Release Tag:          v0.8.2 NOT YET PUBLISHED (MAIN CI REQUIRED)
+Implementation:        UBUNTU 24.04 FIRST; PASSIVE CROSS-DISTRO REPORT; FAIL-CLOSED INSTALLER
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
