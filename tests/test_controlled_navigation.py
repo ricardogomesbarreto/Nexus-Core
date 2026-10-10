@@ -213,7 +213,7 @@ def test_backend_failures_return_denial_and_audit(tmp_path):
     backend.deny = True
     result = tool.execute(
         "desktop_navigate", window_id=12, window_title="Editor",
-        action="page_up",
+        window_pid=321, window_class="EditorClass", action="page_up",
     )
     assert not result.success
     assert result.error_code == "DESKTOP_DENIED"
@@ -249,7 +249,7 @@ def test_injected_extra_key_is_rejected_by_contract(tmp_path):
     tool, backend = executor(tmp_path, confirm)
     response = tool.execute(
         "desktop_navigate", window_id=12, window_title="Editor",
-        action="next_field", repeat=5,
+        window_pid=321, window_class="EditorClass", action="next_field", repeat=5,
     )
     assert not response.success
     assert response.error_code == "INVALID_INPUT"
