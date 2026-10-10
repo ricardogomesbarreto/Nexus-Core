@@ -195,7 +195,7 @@ def install_staged(home: Path | None = None, *, current_version: str) -> str | N
     release = pending_release(home)
     if release is None or version_tuple(release.version) <= version_tuple(current_version):
         return None
-    existing = _checked_current(home)
+    _checked_current(home)
     versions = _private_directory(home / "versions")
     target = versions / ("v" + release.version)
     if target.exists() or target.is_symlink():
@@ -214,23 +214,23 @@ def install_staged(home: Path | None = None, *, current_version: str) -> str | N
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, timeout=300, check=True,
         )
-        subprocess.run(
+        result = subprocess.run(
             [str(python), "-m", "nexus.main", "--version"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, timeout=20, check=True,
         )
-        # Ensure the new package is not falsely reporting an older version.
-        result = subprocess.run(
-            [str(python), "-m", "importlib.metadata", "nexus-core"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, timeout=20, check=False,
-        )
-        # No metadata CLI is relied upon; the --version subprocess is the gate.
-        del result
+        if result.stdout.decode("utf-8", errors="strict").strip() != (
+            "Nexus Core " + release.version
+        ):
+            raise UpdateError("O pacote instalado não corresponde à release.")
         _switch_current(home, target)
         _metadata_file(home).unlink(missing_ok=True)
         return release.version
-    except (OSError, subprocess.SubprocessError, UpdateError) as exc:
+    except (OSError, subprocess.SubprocessError, UpdateError, UnicodeError) as exc:
+        # Only the unselected venv created by this call may be discarded.
+        import shutil
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target, ignore_errors=True)
         raise UpdateError("Atualização falhou; versão anterior preservada.") from exc
 
 
