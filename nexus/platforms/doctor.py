@@ -6,7 +6,6 @@ reads data rows, executes shell commands or touches database credentials.
 """
 from http.client import HTTPConnection, HTTPException
 import json
-import os
 import shutil
 import subprocess
 
@@ -111,7 +110,7 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
         "missing_packages": known_missing,
         "postgresql": pg,
         "ollama": llm,
-        "ready_for_full_use": not blockers,
+        "core_services_ready_to_try": not blockers,
         "blockers": blockers,
         "recommendations": actions,
         "camera_tested": False,
