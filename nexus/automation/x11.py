@@ -17,6 +17,8 @@ class X11DesktopBackend:
     MAX_TITLE = 200
     MAX_TEXT = 300
     MAX_WINDOW_ID = 2**32 - 1
+    MAX_PROCESS_ID = 2**31 - 1
+    MAX_WINDOW_CLASS = 128
     MAX_QUERY_BYTES = 4096
     COMMAND_TIMEOUT = 5
     TYPE_TIMEOUT = 12
@@ -75,6 +77,23 @@ class X11DesktopBackend:
         return title
 
     @classmethod
+    def validate_pid(cls, value) -> int:
+        # _NET_WM_PID is untrusted X11 metadata, never an authorization token.
+        if type(value) is not int or not 1 <= value <= cls.MAX_PROCESS_ID:
+            raise DesktopAutomationError("PID de janela X11 inválido.")
+        return value
+
+    @classmethod
+    def validate_class(cls, value) -> str:
+        if (
+            type(value) is not str or not value.strip()
+            or len(value) > cls.MAX_WINDOW_CLASS
+            or not all(ch.isprintable() for ch in value)
+        ):
+            raise DesktopAutomationError("Classe de janela X11 inválida.")
+        return value
+
+    @classmethod
     def validate_text(cls, content) -> str:
         if (
             type(content) is not str or not content.strip()
@@ -103,29 +122,55 @@ class X11DesktopBackend:
         except UnicodeDecodeError as exc:
             raise DesktopAutomationError("Título de janela X11 inválido.") from exc
 
-    def active_window(self) -> tuple[int, str]:
+    def _identity(self, ident: int) -> tuple[str, int, str]:
+        """Inspect current window identity; absent metadata fails closed."""
+        title = self.validate_title(self._query("getwindowname", str(ident)))
+        raw_pid = self._query("getwindowpid", str(ident))
+        if not re.fullmatch(r"[0-9]{1,10}", raw_pid):
+            raise DesktopAutomationError("PID da janela X11 indisponível.")
+        pid = self.validate_pid(int(raw_pid))
+        window_class = self.validate_class(
+            self._query("getwindowclassname", str(ident))
+        )
+        return title, pid, window_class
+
+    def _require_target(
+        self, *, window_id: int, window_title: str,
+        window_pid: int, window_class: str,
+    ) -> int:
+        ident = self.validate_id(window_id)
+        expected = (
+            self.validate_title(window_title),
+            self.validate_pid(window_pid),
+            self.validate_class(window_class),
+        )
+        # Re-query immediately after human approval, before any keystroke.
+        # ID reuse, title collisions, PID or WM_CLASS changes are rejected.
+        if self._identity(ident) != expected:
+            raise DesktopAutomationError(
+                "A identidade da janela mudou após a autorização. Nenhuma ação enviada."
+            )
+        return ident
+
+    def active_window(self) -> tuple[int, str, int, str]:
         raw = self._query("getactivewindow")
         if not re.fullmatch(r"[0-9]{1,10}", raw):
             raise DesktopAutomationError("Identificador de janela X11 inválido.")
         ident = self.validate_id(int(raw))
-        title = self.validate_title(self._query("getwindowname", str(ident)))
-        return ident, title
+        title, pid, window_class = self._identity(ident)
+        return ident, title, pid, window_class
 
     def navigate(self, *, window_id: int, window_title: str,
-                 action: str) -> str:
+                 window_pid: int, window_class: str, action: str) -> str:
         """Send exactly one fixed navigation key to the consented X11 window.
 
         No Enter, arrows, shortcuts, arbitrary key symbols or repetition.
         """
-        ident = self.validate_id(window_id)
-        title = self.validate_title(window_title)
         action = self.validate_navigation(action)
-        # Revalidate after a potentially long user confirmation dialog,
-        # just like type_text; no dependency on temporarily changed focus.
-        if self.validate_title(self._query("getwindowname", str(ident))) != title:
-            raise DesktopAutomationError(
-                "A janela de destino mudou após a autorização. Nenhuma tecla enviada."
-            )
+        ident = self._require_target(
+            window_id=window_id, window_title=window_title,
+            window_pid=window_pid, window_class=window_class,
+        )
         cmd = [
             self._command(), "key", "--window", str(ident),
             "--clearmodifiers", "--", self.NAVIGATION_KEYS[action],
@@ -146,20 +191,17 @@ class X11DesktopBackend:
             )
         return action
 
-    def type_text(self, *, window_id: int, window_title: str, text: str) -> int:
-        ident = self.validate_id(window_id)
-        title = self.validate_title(window_title)
+    def type_text(
+        self, *, window_id: int, window_title: str,
+        window_pid: int, window_class: str, text: str,
+    ) -> int:
         value = self.validate_text(text)
-        # Approval dialogs often shift focus to Nexus itself. The user instead
-        # explicitly approved an *exact window ID and title*, so revalidate
-        # those after consent without relying on the now-changed active focus.
-        current_title = self.validate_title(
-            self._query("getwindowname", str(ident))
+        # Approval dialogs may shift focus; the exact target is revalidated
+        # by ID, title, PID and class instead of trusting the active focus.
+        ident = self._require_target(
+            window_id=window_id, window_title=window_title,
+            window_pid=window_pid, window_class=window_class,
         )
-        if current_title != title:
-            raise DesktopAutomationError(
-                "A janela de destino mudou após a autorização. Nenhum texto digitado."
-            )
         # Fixed window ID prevents unrelated focus changes from redirecting
         # keystrokes. Some X11 apps intentionally ignore XSendEvent typing.
         # No shell, newline, keyboard shortcut or mouse action.
