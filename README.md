@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.7.3 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.3--dev-722F37">
+  <img alt="Versão v0.8.0 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.0--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (branch/PR):** `v0.7.3 — Desktop Target Integrity`<br>
-> **Publicação da v0.7.3:** pendente; tag e release somente após CI aprovada no commit integrado à `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo grupo de marcos:** `v0.8.x — Devices & Distributed Architecture` (planejado; não implementado)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.0 — Device Registry Foundation`<br>
+> **Publicação da v0.8.0:** pendente; depende da integração ordenada da v0.7.3, CI aprovada na `main` e homologação pertinente; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices & Distributed Architecture` (v0.8.0 é fundação declarativa, sem hardware conectado)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,26 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.0 — Device Registry Foundation (em desenvolvimento)
+
+A primeira entrega da linha **Devices & Distributed Architecture** estabelece um catálogo declarativo de dispositivos Arduino e ESP32, **sem conexão física, descoberta ou comunicação de rede**. O pacote `nexus.devices` valida manifestos `nexus.devices.v1`, limitados a **32 itens e 16 KiB**, e implementa um registro atômico e efêmero em memória. Os dados são declarações do usuário, não leituras de sensores nem dispositivos emparelhados.
+
+Apenas as famílias `arduino` e `esp32` são aceitas, e somente capacidades descritivas de leitura como `temperature.read`, `humidity.read`, `motion.read`, `position.read` e `battery.read`. O contrato rejeita endpoints, credenciais, comandos, parâmetros adicionais, identificadores duplicados e qualquer transporte diferente de `disabled`.
+
+Diagnósticos sem hardware nem inicialização do modelo ou PostgreSQL:
+
+```bash
+nexus-core --devices-check
+# Para validar seu próprio manifesto JSON através de stdin:
+nexus-core --devices-preview-stdin < exemplo-dispositivos.json
+```
+
+A prévia confirma apenas a conformidade do manifesto; ela mostra `connected_devices: 0` e não registra dispositivos fora da memória do processo. **Não há integração serial/USB, BLE, MQTT, Wi-Fi, LoRa, telemetria real, operação remota ou controle de atuadores.** A confirmação por ação continuará obrigatória antes de qualquer futura comunicação com dispositivos; essa comunicação não faz parte desta versão.
+
+A v0.8.0 é construída em PR separado **sobre a v0.7.3**, ainda não integrada à `main` por depender da homologação de desktop X11 real. A CI precisa validar o commit de cada PR; publicação/merge seguirão a ordem de dependências. Interface nativa, visual aprovado, áudio feminino/masculino, escuta com pausa, visão consentida, PostgreSQL e Ollama permanecem inalterados. Consulte as [notas v0.8.0](docs/RELEASE_NOTES_v0.8.0.md).
 
 ---
 
@@ -418,7 +438,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.7.3` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.8.0` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -442,7 +462,8 @@ rastreáveis no GitHub:
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 | v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
 | v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
-| v0.7.3 | Desktop Target Integrity — desenvolvimento, sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
+| v0.7.3 | Desktop Target Integrity — PR, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
+| v0.8.0 | Device Registry Foundation — PR empilhado, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1045,10 +1066,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.7.3`; a `main` permanece v0.7.2 até CI e merge.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.0`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.7.3` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.0` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4103,14 +4124,7 @@ CI completa e validação em desktop X11 físico permanecem pendentes.
 
 ## v0.8.x — Devices & Distributed Architecture
 
-Planejado:
-
-* nodes;
-* Arduino;
-* ESP32;
-* dispositivos;
-* comunicação entre máquinas;
-* arquitetura distribuída.
+**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
 
 Para microcontroladores:
 
@@ -4447,10 +4461,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.7.3 (DEVELOPMENT BRANCH)
-Release Name:          Desktop Target Integrity
-Release Tag:          v0.7.3 NOT YET PUBLISHED (MAIN CI REQUIRED)
-Implementation:        X11 WINDOW ID/TITLE/PID/CLASS MATCH; PER-ACTION CONSENT
+Release Target:        v0.8.0 (STACKED DEVELOPMENT BRANCH)
+Release Name:          Device Registry Foundation
+Release Tag:          v0.8.0 NOT YET PUBLISHED (MAIN CI REQUIRED)
+Implementation:        DECLARATIVE DEVICE INVENTORY; NO HARDWARE / NETWORK ACCESS
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
