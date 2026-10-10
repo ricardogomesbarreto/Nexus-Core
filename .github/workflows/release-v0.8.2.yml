@@ -1,10 +1,10 @@
 name: Publish Nexus Core v0.8.2
 
+# SAFETY HOLD: code integration is authorized; physical Ubuntu/X11
+# acceptance has NOT been performed. Re-enable release only in a
+# separate reviewed change with a verified main CI and acceptance record.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,10 +12,9 @@ permissions:
 jobs:
   release:
     name: Tag and publish tested release
-    if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-          github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_repository.full_name == github.repository }}
+    # Deliberate hard stop: no tag/release without a later explicit PR.
+    if: ${{ false }}
+
     runs-on: ubuntu-latest
     permissions:
       contents: write
