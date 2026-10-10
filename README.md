@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.0 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.0--dev-722F37">
+  <img alt="Versão v0.8.1 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.1--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.0 — Device Registry Foundation`<br>
-> **Publicação da v0.8.0:** pendente; depende da integração ordenada da v0.7.3, CI aprovada na `main` e homologação pertinente; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices & Distributed Architecture` (v0.8.0 é fundação declarativa, sem hardware conectado)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.1 — Linux Bootstrap & Verified Self-Update`<br>
+> **Publicação da v0.8.1:** pendente; depende de v0.7.3/v0.8.0 integradas, CI aprovada, instalação Linux real e homologação pertinente; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.1 prepara instalação e atualizações; sem novas conexões de hardware)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,25 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.1 — Linux Bootstrap & Verified Self-Update (em desenvolvimento)
+
+O NEXUS CORE oferece um instalador guiado para **Ubuntu/Debian com Python 3.12+**, capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
+
+```bash
+# Em um checkout revisado desta versão, sem sudo:
+python3 scripts/install_linux.py
+# Após a instalação, iniciar pelo launcher gerenciado:
+~/.local/bin/nexus-core
+```
+
+O instalador pergunta expressamente se o usuário deseja ativar **atualizações automáticas**. Quando autorizado, o launcher consulta o repositório oficial GitHub por releases **estáveis**, confere versão, URL, nome exato do wheel, limite de tamanho e **SHA-256 divulgado na API GitHub**. A atualização é baixada sob diretório privado e instalada em novo venv, com verificação do executável antes de trocar atomicamente o link `current`; a instalação anterior é mantida para recuperação. Enquanto o assistente funciona, uma thread **opt-in** pode preparar releases novas a cada hora, mas **só instala na próxima inicialização**. Sem internet, o CORE já instalado continua operando.
+
+**Não há `curl | bash`, instalação silenciosa como root, scripts de terceiros desconhecidos, atualizações de código não estável ou mudança do visual do assistente.** A segurança depende da integridade do GitHub e do digest; ainda não há assinatura independente nem lockfile integral dos pacotes transitivos. A gestão de Ollama, modelos de voz Vosk, permissões de áudio/câmera e acesso seguro ao Docker pode exigir passos próprios. Instaladores automáticos apt são destinados a Ubuntu/Debian; SteamOS/Arch e outras distribuições recebem diagnóstico, sem comandos de pacotes incompatíveis.
+
+Essas capacidades estão **em desenvolvimento** no PR da v0.8.1 e **não foram publicadas na main**. Consulte [notas da v0.8.1](docs/RELEASE_NOTES_v0.8.1.md) para requisitos, limites e testes de aceitação.
 
 ---
 
@@ -438,7 +457,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.8.0` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.8.1` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -464,6 +483,7 @@ rastreáveis no GitHub:
 | v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
 | v0.7.3 | Desktop Target Integrity — PR, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
 | v0.8.0 | Device Registry Foundation — PR empilhado, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
+| v0.8.1 | Linux Bootstrap & Verified Self-Update — PR empilhado, sem tag | [Notas](docs/RELEASE_NOTES_v0.8.1.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1066,10 +1086,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.0`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.1`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.0` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.1` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4124,7 +4144,7 @@ CI completa e validação em desktop X11 físico permanecem pendentes.
 
 ## v0.8.x — Devices & Distributed Architecture
 
-**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
+**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **v0.8.1 (em desenvolvimento):** instalador Linux guiado e atualizações estáveis verificadas na inicialização. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
 
 Para microcontroladores:
 
@@ -4461,10 +4481,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.0 (STACKED DEVELOPMENT BRANCH)
-Release Name:          Device Registry Foundation
-Release Tag:          v0.8.0 NOT YET PUBLISHED (MAIN CI REQUIRED)
-Implementation:        DECLARATIVE DEVICE INVENTORY; NO HARDWARE / NETWORK ACCESS
+Release Target:        v0.8.1 (STACKED DEVELOPMENT BRANCH)
+Release Name:          Linux Bootstrap & Verified Self-Update
+Release Tag:          v0.8.1 NOT YET PUBLISHED (MAIN CI REQUIRED)
+Implementation:        OPT-IN USER INSTALLER; VERIFIED RELEASE WHEEL; ATOMIC VENV SWITCH
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
