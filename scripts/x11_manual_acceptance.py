@@ -81,7 +81,11 @@ def run() -> int:
     # GUI is created only after the operator deliberately invokes this module.
     import tkinter as tk
     title = "NEXUS-CORE-X11-HOMOLOG-" + secrets.token_hex(6)
-    root = tk.Tk(className="NexusCoreX11Homolog")
+    try:
+        root = tk.Tk(className="NexusCoreX11Homolog")
+    except tk.TclError:
+        print("Não foi possível criar a janela X11 de homologação.")
+        return 2
     try:
         root.title(title)
         root.geometry("460x130")
@@ -151,7 +155,10 @@ def run() -> int:
         print("Homologação interrompida ou recusada; nenhuma aprovação registrada.")
         return 2
     finally:
-        root.destroy()
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
 
 
 if __name__ == "__main__":
