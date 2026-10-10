@@ -234,6 +234,11 @@ def test_capability_check_does_not_open_X11(monkeypatch):
     ]
     assert result["typing_max_characters"] == 300
     assert result["confirmation_per_action"] is True
+    assert result["target_identity_fields"] == [
+        "window_id", "window_title", "window_pid", "window_class",
+    ]
+    assert result["target_revalidated_after_confirmation"] is True
+    assert result["target_identity_cryptographically_verified"] is False
     assert result["wayland_supported"] is False
     assert result["camera_access"] is False
 
