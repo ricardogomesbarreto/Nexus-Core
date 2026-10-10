@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.4 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.4--dev-722F37">
+  <img alt="Versão v0.8.5 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.5--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.4 — Ubuntu Readiness Preflight`; a `main` contém código até v0.8.2, com a v0.8.3 no PR #15<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3/v0.8.4 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.4 verifica login PostgreSQL read-only, modelo Ollama instalado e dependências de voz; outras distribuições virão depois de homologadas)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.5 — Ubuntu Recovery & Documentation Integrity`; a `main` contém código até v0.8.2, com v0.8.3 no PR #15 e v0.8.4 no PR #16<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.8.5 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.5 acrescenta recuperação offline opt-in do atualizador e auditoria documental; outras distribuições virão depois de homologadas)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,25 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.5 — Ubuntu Recovery & Documentation Integrity (em desenvolvimento)
+
+O NEXUS CORE passa a disponibilizar uma **ferramenta de recuperação offline independente do seu próprio ambiente Python**, instalada no Ubuntu como `~/.local/bin/nexus-core-recover`. Quando uma atualização deixa a versão atual inutilizável, o operador pode escolher a **versão anterior já preservada**, após fechar o assistente e confirmar expressamente a reversão.
+
+```bash
+~/.local/bin/nexus-core-recover --status    # inspeciona versões sem fazer alterações
+~/.local/bin/nexus-core-recover --rollback  # exige terminal + confirmação REVERTER
+```
+
+A recuperação não precisa de internet nem de importar o NEXUS CORE possivelmente danificado. Limita-se a selecionar outro ambiente de execução Python dentro do diretório privado do usuário e **desliga atualizações automáticas antes de reverter**. O módulo recusa symlinks fora da instalação, executáveis ausentes, diretórios permissivos e ausência de versão anterior. **Não reverte banco PostgreSQL, migrações, modelos ou dados**; não interrompe uma aplicação já aberta. A recuperação exige uma atualização anterior que tenha preservado `previous`.
+
+A v0.8.5 inclui uma [auditoria da documentação](docs/DOCUMENTATION_AUDIT_v0.8.5.md) cobrindo o README, todas as notas históricas disponíveis, identidade visual, aceitação física X11 e workflows CI/release, com matriz de regras obrigatórias e esclarecimentos de estados antigos dos PRs.
+
+**Diretrizes preservadas:** Ubuntu Desktop **24.04 LTS** é a plataforma de instalação prioritária; futuras distros dependem de homologação; aplicativo nativo Tk e identidade visual inalterados; PostgreSQL e Ollama locais; segurança e consentimento por ação; nenhuma tag/release sem CI exata e aceite físico. Leia as [notas da v0.8.5](docs/RELEASE_NOTES_v0.8.5.md).
+
+**Status:** v0.8.5 é desenvolvida sobre o PR #16 (v0.8.4), que depende de #15 (v0.8.3). Ambas versões ainda são draft; v0.7.3–v0.8.2 já estão integradas como código na `main`. Última release pública: **v0.7.2**.
 
 ---
 
@@ -93,7 +112,7 @@ O código de voz, visão, integrações, atualizações verificadas e interface 
 
 # v0.8.1 — Linux Bootstrap & Verified Self-Update (em desenvolvimento)
 
-O NEXUS CORE oferece um instalador guiado para **Ubuntu/Debian com Python 3.12+**, capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
+A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. **O suporte atual do instalador foi posteriormente restringido na v0.8.2 ao Ubuntu Desktop 24.04 LTS com Python 3.12+**; o instalador é capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
 
 ```bash
 # Em um checkout revisado desta versão, sem sudo:
@@ -510,7 +529,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.8.4` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.8.5` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -540,6 +559,7 @@ rastreáveis no GitHub:
 | v0.8.2 | Ubuntu Desktop Baseline & Portability — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.2.md) |
 | v0.8.3 | Ubuntu First-Run Doctor — PR de desenvolvimento; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.3.md) |
 | v0.8.4 | Ubuntu Readiness Preflight — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.4.md) |
+| v0.8.5 | Ubuntu Recovery & Documentation Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.5.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1142,10 +1162,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.4`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.5`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.4` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.5` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4537,10 +4557,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.4 (STACKED DEVELOPMENT PR)
-Release Name:          Ubuntu Readiness Preflight
-Release Tag:          v0.8.4 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        READ-ONLY POSTGRESQL LOGIN, OLLAMA MODEL INVENTORY, VOICE CHECK
+Release Target:        v0.8.5 (STACKED DEVELOPMENT PR)
+Release Name:          Ubuntu Recovery & Documentation Integrity
+Release Tag:          v0.8.5 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        OFFLINE MANAGED ROLLBACK; DOCUMENTATION AUDIT; UBUNTU FIRST
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
