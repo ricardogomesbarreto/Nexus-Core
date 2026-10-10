@@ -32,18 +32,23 @@ def test_navigation_sends_single_fixed_keysym(monkeypatch, action, keysym):
 
     def run(command, **kw):
         calls.append((command, kw))
-        return subprocess.CompletedProcess(
-            command, 0,
-            stdout=b"Editor\n" if "getwindowname" in command else b"",
+        data = (
+            b"Editor\n" if "getwindowname" in command else
+            b"321\n" if "getwindowpid" in command else
+            b"EditorClass\n" if "getwindowclassname" in command else b""
         )
+        return subprocess.CompletedProcess(command, 0, stdout=data)
 
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     result = X11DesktopBackend("/usr/bin/xdotool").navigate(
-        window_id=12, window_title="Editor", action=action,
+        window_id=12, window_title="Editor",
+        window_pid=321, window_class="EditorClass", action=action,
     )
     assert result == action
     assert [c for c, _ in calls] == [
         ["/usr/bin/xdotool", "getwindowname", "12"],
+        ["/usr/bin/xdotool", "getwindowpid", "12"],
+        ["/usr/bin/xdotool", "getwindowclassname", "12"],
         ["/usr/bin/xdotool", "key", "--window", "12",
          "--clearmodifiers", "--", keysym],
     ]
@@ -73,7 +78,8 @@ def test_renamed_window_blocks_navigation_before_keypress(monkeypatch):
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     with pytest.raises(DesktopAutomationError, match="mudou"):
         X11DesktopBackend("/usr/bin/xdotool").navigate(
-            window_id=17, window_title="Editor", action="page_down",
+            window_id=17, window_title="Editor",
+            window_pid=321, window_class="EditorClass", action="page_down",
         )
     assert calls == [["/usr/bin/xdotool", "getwindowname", "17"]]
 
@@ -92,7 +98,8 @@ def test_unsupported_sessions_refuse_navigation(monkeypatch, wayland, display):
                         lambda *a, **kw: pytest.fail("Must not launch subprocess"))
     with pytest.raises(DesktopAutomationError):
         X11DesktopBackend("/usr/bin/xdotool").navigate(
-            window_id=12, window_title="Editor", action="next_field",
+            window_id=12, window_title="Editor",
+            window_pid=321, window_class="EditorClass", action="next_field",
         )
 
 
@@ -102,13 +109,18 @@ def test_failed_navigation_never_claims_success(monkeypatch, mode):
     def run(cmd, **kw):
         if "getwindowname" in cmd:
             return subprocess.CompletedProcess(cmd, 0, stdout=b"Editor\n")
+        if "getwindowpid" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, stdout=b"321\n")
+        if "getwindowclassname" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, stdout=b"EditorClass\n")
         if mode == "timeout":
             raise subprocess.TimeoutExpired(cmd, 5, output=b"sensitive")
         return subprocess.CompletedProcess(cmd, 1)
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     with pytest.raises(DesktopAutomationError) as caught:
         X11DesktopBackend("/usr/bin/xdotool").navigate(
-            window_id=12, window_title="Editor", action="previous_field",
+            window_id=12, window_title="Editor",
+            window_pid=321, window_class="EditorClass", action="previous_field",
         )
     assert "sensitive" not in str(caught.value)
 
@@ -118,10 +130,10 @@ class Backend:
         self.actions = []
         self.deny = False
 
-    def navigate(self, *, window_id, window_title, action):
+    def navigate(self, *, window_id, window_title, window_pid, window_class, action):
         if self.deny:
             raise DesktopAutomationError("Janela não está disponível.")
-        self.actions.append((window_id, window_title, action))
+        self.actions.append((window_id, window_title, window_pid, window_class, action))
         return action
 
 
@@ -149,7 +161,7 @@ def test_registered_app_exposes_only_enumerated_navigation():
     assert app.tool_registry.exists("desktop_navigate")
     assert c["desktop_navigate"]["permission"] == "MEDIUM"
     assert c["desktop_navigate"]["inputs"]["required"] == [
-        "window_id", "window_title", "action",
+        "window_id", "window_title", "window_pid", "window_class", "action",
     ]
     assert "keys" not in c["desktop_navigate"]["inputs"]["properties"]
 
@@ -159,7 +171,7 @@ def test_no_confirmation_means_no_navigation(tmp_path):
         tool, backend = executor(tmp_path, consent)
         response = tool.execute(
             "desktop_navigate", window_id=12,
-            window_title="Editor", action="next_field",
+            window_title="Editor", window_pid=321, window_class="EditorClass", action="next_field",
         )
         assert not response.success
         assert backend.actions == []
@@ -171,7 +183,7 @@ def test_each_single_navigation_requires_a_separate_consent(tmp_path):
     for action in ALLOWED:
         reply = tool.execute(
             "desktop_navigate", window_id=12,
-            window_title="Editor", action=action,
+            window_title="Editor", window_pid=321, window_class="EditorClass", action=action,
         )
         assert reply.success
         assert reply.data == {"window_id": 12, "action": action}
@@ -187,7 +199,7 @@ def test_rejected_shortcuts_never_reach_confirmation_or_backend(tmp_path, bad):
     consent = Consent(True)
     tool, backend = executor(tmp_path, consent)
     reply = tool.execute(
-        "desktop_navigate", window_id=12, window_title="Editor", action=bad,
+        "desktop_navigate", window_id=12, window_title="Editor", window_pid=321, window_class="EditorClass", action=bad,
     )
     assert not reply.success
     assert reply.error_code in ("INVALID_RESOURCES", "INVALID_INPUT")
@@ -219,13 +231,17 @@ def test_gui_confirmation_previews_exact_navigation():
     request = SecurityRequest(
         action="desktop_navigate", description="Navegar uma tecla",
         risk_level=RiskLevel.MEDIUM, tool_name="desktop_navigate",
-        data={"window_id": 12, "window_title": "Notas", "action": "page_down"},
+        data={"window_id": 12, "window_title": "Notas",
+              "window_pid": 321, "window_class": "NotesClass",
+              "action": "page_down"},
     )
     assert window._confirm(request) is True
     assert len(captured) == 1
     assert "Notas" in captured[0][1]
     assert "12" in captured[0][1]
     assert "page_down" in captured[0][1]
+    assert "321" in captured[0][1]
+    assert "NotesClass" in captured[0][1]
 
 
 def test_injected_extra_key_is_rejected_by_contract(tmp_path):
