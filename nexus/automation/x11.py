@@ -122,9 +122,15 @@ class X11DesktopBackend:
         except UnicodeDecodeError as exc:
             raise DesktopAutomationError("Título de janela X11 inválido.") from exc
 
-    def _identity(self, ident: int) -> tuple[str, int, str]:
+    def _identity(
+        self, ident: int, *, expected_title: str | None = None,
+    ) -> tuple[str, int, str]:
         """Inspect current window identity; absent metadata fails closed."""
         title = self.validate_title(self._query("getwindowname", str(ident)))
+        if expected_title is not None and title != expected_title:
+            raise DesktopAutomationError(
+                "A identidade da janela mudou após a autorização. Nenhuma ação enviada."
+            )
         raw_pid = self._query("getwindowpid", str(ident))
         if not re.fullmatch(r"[0-9]{1,10}", raw_pid):
             raise DesktopAutomationError("PID da janela X11 indisponível.")
@@ -146,7 +152,7 @@ class X11DesktopBackend:
         )
         # Re-query immediately after human approval, before any keystroke.
         # ID reuse, title collisions, PID or WM_CLASS changes are rejected.
-        if self._identity(ident) != expected:
+        if self._identity(ident, expected_title=expected[0]) != expected:
             raise DesktopAutomationError(
                 "A identidade da janela mudou após a autorização. Nenhuma ação enviada."
             )
