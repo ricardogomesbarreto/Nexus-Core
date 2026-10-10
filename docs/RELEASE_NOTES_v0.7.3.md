@@ -21,6 +21,8 @@ Aplicações que não disponibilizam PID ou classe X11 não serão controladas: 
 1. Instalação e compilação de todos os módulos Python com Python 3.12+.
 2. Suíte completa `pytest` em Linux/Xvfb, com PostgreSQL, Docker e dependências opcionais usadas pela CI.
 3. Homologação em desktop Linux X11 real com `xdotool`, incluindo janela que muda de identidade, ausência de PID/WM_CLASS, recusa de consentimento e aplicativo que não aceita `XSendEvent`.
+   - Roteiro reproduzível: [docs/X11_PHYSICAL_HOMOLOGATION.md](X11_PHYSICAL_HOMOLOGATION.md), com `python -m scripts.x11_manual_acceptance` e confirmações separadas para cada envio, exclusivamente em janela temporária.
+   - Saída `passed=true` só pode ser registrada após **execução real em sessão Linux X11 física**, não mediante CI/Xvfb.
 4. Documentação, pacote e commits consistentes; tag/release somente após CI verde para o commit integrado à `main`.
 
 **Estado nesta branch:** código e testes preparados; CI completa e homologação física não verificadas. Não declarar publicação estável apenas pela existência do PR.
