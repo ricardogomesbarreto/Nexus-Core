@@ -16,13 +16,16 @@ from .manager import (
 def cli() -> None:
     home = managed_home()
     if autoupdate_enabled(home):
+        running_version = settings.version
         try:
             # If offline, a previously verified staging area can still apply.
-            install_staged(home, current_version=settings.version)
+            installed = install_staged(home, current_version=running_version)
+            if installed is not None:
+                running_version = installed
         except (UpdateError, OSError) as exc:
             print("Nexus Core: atualização adiada; instalação anterior preservada.", file=sys.stderr)
         try:
-            stage_latest(settings.version, home)
+            stage_latest(running_version, home)
             # The freshly staged release applies at the next launch, not now.
         except (UpdateError, OSError):
             pass
