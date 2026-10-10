@@ -526,6 +526,11 @@ class DesktopWindow:
             details.append(
                 f"Navegação (uma tecla): {self._display(request.data.get('action', ''))}"
             )
+        if request.tool_name in ("desktop_type_text", "desktop_navigate") and isinstance(request.data, dict):
+            details.append(
+                f"Identidade X11: PID {self._display(request.data.get('window_pid', ''))}"
+                f", classe {self._display(request.data.get('window_class', ''))}"
+            )
         for resource in request.resources:
             details.append(
                 f"Recurso {self._display(resource.name)}: {self._display(resource.path)}"
