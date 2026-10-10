@@ -442,6 +442,7 @@ rastreáveis no GitHub:
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 | v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
 | v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
+| v0.7.3 | Desktop Target Integrity — desenvolvimento, sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1044,10 +1045,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.7.2`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.7.3`; a `main` permanece v0.7.2 até CI e merge.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.7.2`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.7.3` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4446,10 +4447,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.7.2
-Release Name:          Desktop Interaction Safety & Diagnostics
-Release Tag:          v0.7.2 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        PASSIVE X11 READINESS + ALLOWLISTED ACTIONS; CI GATED
+Release Target:        v0.7.3 (DEVELOPMENT BRANCH)
+Release Name:          Desktop Target Integrity
+Release Tag:          v0.7.3 NOT YET PUBLISHED (MAIN CI REQUIRED)
+Implementation:        X11 WINDOW ID/TITLE/PID/CLASS MATCH; PER-ACTION CONSENT
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
