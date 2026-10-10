@@ -8,6 +8,7 @@ from nexus.core.runtime_state import RuntimeStateController
 from nexus.database.database import Database
 from nexus.devices import DeviceRegistry
 from nexus.events import EventBus, EventType
+from nexus.updates.watcher import AutoUpdateWatcher
 from nexus.monitoring.health import HealthStatus
 from nexus.models.model_factory import (
     build_model_router,
@@ -65,6 +66,7 @@ class NexusApplication:
         self.connectivity_manager = ConnectivityManager()
 
         self.connectivity_monitor: ConnectivityMonitor | None = None
+        self.update_watcher: AutoUpdateWatcher | None = None
 
         self.health = HealthStatus()
 
@@ -230,6 +232,17 @@ class NexusApplication:
 
         self._initialized = True
 
+        # Opt-in background staging does not install while the app is active.
+        # The managed launcher opts in explicitly via NEXUS_RUNNING_MANAGED.
+        import os
+        if os.environ.get("NEXUS_RUNNING_MANAGED") == "1":
+            from nexus.updates.manager import autoupdate_enabled
+            if autoupdate_enabled():
+                self.update_watcher = AutoUpdateWatcher(
+                    settings.version, logger=self.logger
+                )
+                self.update_watcher.start()
+
         self.logger.info("Nexus Core inicializado")
 
     def status(self):
@@ -238,6 +251,9 @@ class NexusApplication:
     def shutdown(self):
         if self._shutdown_complete:
             return
+
+        if self.update_watcher is not None:
+            self.update_watcher.stop()
 
         if self.connectivity_monitor is not None:
             self.connectivity_monitor.stop()

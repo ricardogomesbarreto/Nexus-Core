@@ -1,0 +1,81 @@
+name: Publish Nexus Core v0.8.1
+
+# SAFETY HOLD: code integration is authorized; physical Ubuntu/X11
+# acceptance has NOT been performed. Re-enable release only in a
+# separate reviewed change with a verified main CI and acceptance record.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Tag and publish tested release
+    # Deliberate hard stop: no tag/release without a later explicit PR.
+    if: ${{ false }}
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Confirm tested commit is current main and version is 0.8.1
+        id: validate
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          git fetch origin main --tags
+          if [[ "$version" != "0.8.1" || "$(git rev-parse origin/main)" != "$TESTED_SHA" ]]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+      - name: Build verified-installable wheel
+        if: steps.validate.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'build==1.3.0'
+          python -m build --wheel
+          test -f dist/nexus_core-0.8.1-py3-none-any.whl
+          sha256sum dist/nexus_core-0.8.1-py3-none-any.whl
+      - name: Publish immutable verified source snapshot
+        if: steps.validate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git show-ref --verify --quiet refs/tags/v0.8.1; then
+            if [[ "$(git rev-list -n 1 v0.8.1)" != "$(git rev-parse HEAD)" ]]; then
+              echo "Existing tag points to another commit; aborting." >&2
+              exit 1
+            fi
+          else
+            git tag -a v0.8.1 -m "Nexus Core v0.8.1 — Linux Setup & Verified Auto Update"
+            git push origin refs/tags/v0.8.1
+          fi
+          if ! gh release view v0.8.1 >/dev/null 2>&1; then
+            gh release create v0.8.1 \
+              dist/nexus_core-0.8.1-py3-none-any.whl \
+              --title "Nexus Core v0.8.1 — Linux Setup & Verified Auto Update" \
+              --notes-file docs/RELEASE_NOTES_v0.8.1.md
+          fi
+          wheel_count="$(gh release view v0.8.1 --json assets --jq \
+            '[.assets[].name | select(. == "nexus_core-0.8.1-py3-none-any.whl")] | length')"
+          if [[ "$wheel_count" != "1" ]]; then
+            echo "Release asset absent or ambiguous, refusing publication." >&2
+            exit 1
+          fi
