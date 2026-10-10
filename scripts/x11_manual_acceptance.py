@@ -109,7 +109,7 @@ def run() -> int:
         )
         results = {
             "scope": "linux_x11_own_temporary_window",
-            "real_desktop_test": True,
+            "execution": "interactive_local_x11",
             "identity": "verified",
             "mismatched_identity_denied": False,
             "typing": "not_attempted",
