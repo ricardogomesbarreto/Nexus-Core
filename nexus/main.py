@@ -227,6 +227,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="verifica PostgreSQL e Ollama somente no loopback local, sem alterações",
     )
     actions.add_argument(
+        "--ubuntu-preflight", action="store_true",
+        help="testa login PostgreSQL somente leitura, modelo Ollama local e dependências de voz",
+    )
+    actions.add_argument(
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
@@ -293,6 +297,16 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.ubuntu_preflight:
+        if (has_memory_action or any(knowledge_actions)
+                or args.knowledge_with_memory or args.vision_question is not None
+                or args.vision_model != "gemma3:4b" or args.workspace is not None
+                or args.memory_confirm or args.memory_days != 90
+                or args.knowledge_limit != 5):
+            parser.error("--ubuntu-preflight é diagnóstico isolado")
+        from nexus.platforms import ubuntu_preflight
+        print(json.dumps(ubuntu_preflight(), ensure_ascii=False))
+        return
     if args.ubuntu_doctor:
         if (has_memory_action or any(knowledge_actions)
                 or args.knowledge_with_memory or args.vision_question is not None
