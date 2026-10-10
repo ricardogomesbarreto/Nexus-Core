@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.2 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.2--dev-722F37">
+  <img alt="Versão v0.8.3 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.3--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.2 — Ubuntu Desktop Baseline & Portability`<br>
-> **Publicação da v0.8.2:** pendente; depende de v0.7.3/v0.8.0/v0.8.1 integradas, CI aprovada e homologação no Ubuntu Desktop real; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.2 prioriza Ubuntu 24.04 LTS; suporte a outras distribuições virá após validação)<br>
+> **Versão em desenvolvimento (PR):** `v0.8.3 — Ubuntu First-Run Doctor`; **`main` contém código até v0.8.2**<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3 está em PR; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.3 diagnostica a primeira execução no Ubuntu 24.04; outras distribuições virão depois de homologadas)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -38,7 +38,22 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 ---
 
-# v0.8.2 — Ubuntu Desktop Baseline & Distribution Portability (em desenvolvimento)
+# v0.8.3 — Ubuntu First-Run Doctor (em desenvolvimento)
+
+A próxima versão do NEXUS CORE oferece o diagnóstico local e limitado `nexus-core --ubuntu-doctor`. Ele consulta **somente** o PostgreSQL no endereço `127.0.0.1:5432` por `pg_isready` e o Ollama no `127.0.0.1:11434/api/version` (resposta limitada, timeout, sem redirects ou downloads). A ferramenta separa indisponibilidade dos serviços de ausência de pacotes e apresenta recomendações sem executar alterações. **Não autentica no banco, não verifica modelos Ollama instalados, não inicia microfone/câmera e não garante funcionalidade completa do assistente.**
+
+```bash
+nexus-core --platform-check  # inventário passivo, nenhuma conexão
+nexus-core --ubuntu-doctor   # apenas duas consultas ao loopback local
+```
+
+O Ubuntu Desktop **24.04 LTS** continua o alvo de desenvolvimento, instalação e homologação. O uso das ferramentas não cria serviços, não utiliza sudo e não acessa sistemas externos. Outras distribuições Linux terão adaptação e testes próprios em versões futuras.
+
+**Estado dos merges:** PRs [#11](https://github.com/ricardogomesbarreto/Nexus-Core/pull/11), [#12](https://github.com/ricardogomesbarreto/Nexus-Core/pull/12), [#13](https://github.com/ricardogomesbarreto/Nexus-Core/pull/13) e [#14](https://github.com/ricardogomesbarreto/Nexus-Core/pull/14) já foram integrados à `main`, em ordem. **Isso não equivale a homologação física ou release estável.** As publicações automáticas dessas versões continuam explicitamente bloqueadas enquanto não houver os aceites de X11 e de instalação Ubuntu real. Consulte as [notas v0.8.3](docs/RELEASE_NOTES_v0.8.3.md).
+
+---
+
+# v0.8.2 — Ubuntu Desktop Baseline & Distribution Portability (integrado ao código, release não homologada)
 
 O NEXUS CORE terá **Ubuntu Desktop 24.04 LTS como alvo principal e prioritário** para desenvolvimento, instalação guiada, testes de integração e homologação física. Nesta fase não afirmamos compatibilidade garantida com todas as distribuições Linux; o suporte será ampliado depois, respeitando as particularidades de Ubuntu LTS adicionais, Debian, Fedora, Arch Linux e SteamOS.
 
@@ -477,7 +492,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.8.2` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.8.3` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -501,10 +516,11 @@ rastreáveis no GitHub:
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 | v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
 | v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
-| v0.7.3 | Desktop Target Integrity — PR, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
-| v0.8.0 | Device Registry Foundation — PR empilhado, ainda sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
-| v0.8.1 | Linux Bootstrap & Verified Self-Update — PR empilhado, sem tag | [Notas](docs/RELEASE_NOTES_v0.8.1.md) |
-| v0.8.2 | Ubuntu Desktop Baseline & Portability — PR empilhado, sem tag | [Notas](docs/RELEASE_NOTES_v0.8.2.md) |
+| v0.7.3 | Desktop Target Integrity — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
+| v0.8.0 | Device Registry Foundation — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
+| v0.8.1 | Linux Bootstrap & Verified Self-Update — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.1.md) |
+| v0.8.2 | Ubuntu Desktop Baseline & Portability — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.2.md) |
+| v0.8.3 | Ubuntu First-Run Doctor — PR de desenvolvimento; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.3.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1107,10 +1123,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.2`; a `main` permanece na v0.7.2 até CI, homologação e merge ordenado das versões pendentes.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.3`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.2` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.3` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4502,10 +4518,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.2 (STACKED DEVELOPMENT BRANCH)
-Release Name:          Ubuntu Desktop Baseline & Portability
-Release Tag:          v0.8.2 NOT YET PUBLISHED (MAIN CI REQUIRED)
-Implementation:        UBUNTU 24.04 FIRST; PASSIVE CROSS-DISTRO REPORT; FAIL-CLOSED INSTALLER
+Release Target:        v0.8.3 (DEVELOPMENT PR)
+Release Name:          Ubuntu First-Run Doctor
+Release Tag:          v0.8.3 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        READ-ONLY LOCAL POSTGRESQL/OLLAMA SERVICE DIAGNOSTICS
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
