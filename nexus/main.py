@@ -219,6 +219,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="exibe o estado do núcleo no terminal",
     )
     actions.add_argument(
+        "--platform-check", action="store_true",
+        help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
+    )
+    actions.add_argument(
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
@@ -285,6 +289,16 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.platform_check:
+        if (has_memory_action or any(knowledge_actions)
+                or args.knowledge_with_memory or args.vision_question is not None
+                or args.vision_model != "gemma3:4b" or args.workspace is not None
+                or args.memory_confirm or args.memory_days != 90
+                or args.knowledge_limit != 5):
+            parser.error("--platform-check é diagnóstico isolado e não aceita outras opções")
+        from nexus.platforms import platform_capabilities
+        print(json.dumps(platform_capabilities(), ensure_ascii=False))
+        return
     if args.desktop_check:
         if (has_memory_action or any(knowledge_actions)
                 or args.knowledge_with_memory or args.vision_question is not None
