@@ -18,16 +18,18 @@ class Backend:
         self.calls = []
         self.title = "Notas"
         self.window_id = 155
+        self.window_pid = 321
+        self.window_class = "NotesClass"
         self.denied = False
 
     def active_window(self):
         self.calls.append(("inspect",))
         if self.denied:
             raise DesktopAutomationError("Display X11 indisponível.")
-        return self.window_id, self.title
+        return self.window_id, self.title, self.window_pid, self.window_class
 
-    def type_text(self, *, window_id, window_title, text):
-        self.calls.append(("type", window_id, window_title, text))
+    def type_text(self, *, window_id, window_title, window_pid, window_class, text):
+        self.calls.append(("type", window_id, window_title, window_pid, window_class, text))
         if self.denied:
             raise DesktopAutomationError("Falha X11.")
         return len(text)
@@ -65,7 +67,7 @@ def test_app_registers_both_desktop_actions():
     assert contracts["desktop_type_text"]["permission"] == "MEDIUM"
     assert contracts["desktop_window_info"]["permission"] == "LOW"
     assert contracts["desktop_type_text"]["inputs"]["required"] == [
-        "window_id", "window_title", "text",
+        "window_id", "window_title", "window_pid", "window_class", "text",
     ]
 
 
@@ -73,7 +75,8 @@ def test_read_only_window_inspection_returns_bounded_metadata(tmp_path):
     executor, backend = setup_tools(tmp_path)
     response = executor.execute("desktop_window_info")
     assert response.success is True
-    assert response.data == {"window_id": 155, "window_title": "Notas"}
+    assert response.data == {"window_id": 155, "window_title": "Notas",
+                             "window_pid": 321, "window_class": "NotesClass"}
     assert backend.calls == [("inspect",)]
 
 
@@ -83,7 +86,7 @@ def test_typing_requires_fresh_approval_per_operation(tmp_path):
     for _ in range(2):
         result = executor.execute("desktop_type_text",
                                   window_id=155, window_title="Notas",
-                                  text="Olá")
+                                  window_pid=321, window_class="NotesClass", text="Olá")
         assert result.success is True
         assert result.data == {"window_id": 155, "sent_characters": 3}
     assert len(confirm.requests) == 2
@@ -95,7 +98,7 @@ def test_typing_requires_fresh_approval_per_operation(tmp_path):
 def test_missing_false_or_nonboolean_confirmation_blocks_typing(tmp_path, consent):
     executor, backend = setup_tools(tmp_path, consent=consent)
     response = executor.execute("desktop_type_text",
-                                window_id=155, window_title="Notas", text="Abc")
+                                window_id=155, window_title="Notas", window_pid=321, window_class="NotesClass", text="Abc")
     assert not response.success
     assert not backend.calls
     assert response.error_code in ("CONFIRMATION_REQUIRED", "CONFIRMATION_REJECTED")
@@ -107,7 +110,8 @@ def test_missing_false_or_nonboolean_confirmation_blocks_typing(tmp_path, consen
     {"window_id": 155, "window_title": "Notas", "text": "x" * 301},
     {"window_id": 155, "window_title": "Notas\n", "text": "ok"},
     {"window_id": 155, "window_title": "Notas", "text": ""},
-    {"window_id": 155, "window_title": "Notas", "text": "ok", "extra": 1},
+    {"window_id": 155, "window_title": "Notas", "window_pid": 321,
+     "window_class": "NotesClass", "text": "ok", "extra": 1},
 ])
 def test_invalid_model_tool_calls_are_denied_before_consent(tmp_path, arguments):
     consent = Consent(True)
@@ -126,7 +130,7 @@ def test_invalid_window_after_confirmation_fails_without_claiming_typing(tmp_pat
     consent = Consent(True, callback=change)
     executor, backend = setup_tools(tmp_path, consent=consent, backend=backend)
     result = executor.execute("desktop_type_text",
-                              window_id=155, window_title="Notas", text="xyz")
+                              window_id=155, window_title="Notas", window_pid=321, window_class="NotesClass", text="xyz")
     assert not result.success
     assert result.error_code == "DESKTOP_DENIED"
     assert "OUTCOME=ERROR" in (tmp_path / "desktop-audit.log").read_text()
@@ -135,7 +139,7 @@ def test_invalid_window_after_confirmation_fails_without_claiming_typing(tmp_pat
 def test_tool_execution_never_leaks_text_into_result(tmp_path):
     executor, backend = setup_tools(tmp_path, consent=Consent(True))
     result = executor.execute("desktop_type_text", window_id=155,
-                              window_title="Notas", text="not my password")
+                              window_title="Notas", window_pid=321, window_class="NotesClass", text="not my password")
     assert result.success
     assert "not my password" not in json.dumps(result.as_dict())
 
@@ -144,7 +148,7 @@ def test_sensitive_desktop_call_does_not_use_unsafe_low_risk_bypass(tmp_path):
     executor, backend = setup_tools(tmp_path)
     safe = executor.execute("desktop_window_info")
     dangerous = executor.execute("desktop_type_text",
-                                 window_id=155, window_title="Notas", text="A")
+                                 window_id=155, window_title="Notas", window_pid=321, window_class="NotesClass", text="A")
     assert safe.success
     assert not dangerous.success
     assert not any(c[0] == "type" for c in backend.calls)
