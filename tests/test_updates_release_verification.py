@@ -114,6 +114,35 @@ def test_download_cannot_overwrite_symlink(tmp_path, monkeypatch):
     assert important.read_text() == "keep"
 
 
+def test_official_api_release_response_is_allowed(monkeypatch):
+    class Fake:
+        def geturl(self):
+            return releases.API
+        def read(self, n):
+            return b'{"ok":true}'
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return None
+    monkeypatch.setattr(releases, "urlopen", lambda *a, **kw: Fake())
+    assert releases._https_get(releases.API, maximum=256) == b'{"ok":true}'
+
+
+def test_official_api_cannot_redirect_to_download_cdn(monkeypatch):
+    class Fake:
+        def geturl(self):
+            return "https://objects.githubusercontent.com/untrusted"
+        def read(self, n):
+            return b"trick"
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return None
+    monkeypatch.setattr(releases, "urlopen", lambda *a, **kw: Fake())
+    with pytest.raises(UpdateError, match="Redirecionamento"):
+        releases._https_get(releases.API, maximum=256)
+
+
 def test_https_get_rejects_untrusted_redirect(monkeypatch):
     class Fake:
         def geturl(self):
