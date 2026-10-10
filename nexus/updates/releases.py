@@ -104,8 +104,9 @@ def _https_get(url: str, *, maximum: int) -> bytes:
             from urllib.parse import urlsplit
             parsed = urlsplit(final)
             allowed = (
-                parsed.hostname == "github.com" or
-                (parsed.hostname is not None and
+                (url == API and parsed.hostname == "api.github.com") or
+                (url != API and parsed.hostname == "github.com") or
+                (url != API and parsed.hostname is not None and
                  (parsed.hostname == "release-assets.githubusercontent.com" or
                   parsed.hostname.endswith(".githubusercontent.com")))
             )
