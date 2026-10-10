@@ -46,14 +46,22 @@ def test_active_window_queries_fixed_binary_without_shell(monkeypatch):
 
     def run(cmd, **kw):
         calls.append((cmd, kw))
-        return FakeProcess(b"120\n" if "getactivewindow" in cmd else b"Editor \xe2\x80\x94 Teste\n")
+        if "getactivewindow" in cmd:
+            return FakeProcess(b"120\n")
+        if "getwindowpid" in cmd:
+            return FakeProcess(b"321\n")
+        if "getwindowclassname" in cmd:
+            return FakeProcess(b"EditorClass\n")
+        return FakeProcess(b"Editor \xe2\x80\x94 Teste\n")
 
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     backend = X11DesktopBackend("/usr/bin/xdotool")
-    assert backend.active_window() == (120, "Editor — Teste")
+    assert backend.active_window() == (120, "Editor — Teste", 321, "EditorClass")
     assert [cmd for cmd, _ in calls] == [
         ["/usr/bin/xdotool", "getactivewindow"],
         ["/usr/bin/xdotool", "getwindowname", "120"],
+        ["/usr/bin/xdotool", "getwindowpid", "120"],
+        ["/usr/bin/xdotool", "getwindowclassname", "120"],
     ]
     assert all(kw.get("shell") is None for _, kw in calls)
     assert all(kw["stdin"] == subprocess.DEVNULL for _, kw in calls)
@@ -72,12 +80,16 @@ def test_typing_uses_one_explicit_window_without_enter_or_shell(monkeypatch):
             return FakeProcess(b"88\n")
         if "getwindowname" in cmd:
             return FakeProcess("Notas\n".encode("utf-8"))
+        if "getwindowpid" in cmd:
+            return FakeProcess(b"321\n")
+        if "getwindowclassname" in cmd:
+            return FakeProcess(b"NotesClass\n")
         return FakeProcess()
 
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     backend = X11DesktopBackend("/usr/bin/xdotool")
     assert backend.type_text(window_id=88, window_title="Notas",
-                             text="Olá, minha anotação.") == 20
+                             window_pid=321, window_class="NotesClass", text="Olá, minha anotação.") == 20
     assert calls[-1][0] == [
         "/usr/bin/xdotool", "type", "--window", "88", "--clearmodifiers",
         "--delay", "2", "--", "Olá, minha anotação.",
@@ -99,7 +111,8 @@ def test_changed_window_title_prevents_typing(monkeypatch):
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     with pytest.raises(DesktopAutomationError, match="mudou"):
         X11DesktopBackend("/usr/bin/xdotool").type_text(
-            window_id=12, window_title="Janela antiga", text="teste"
+            window_id=12, window_title="Janela antiga",
+            window_pid=321, window_class="NotesClass", text="teste"
         )
     assert calls == [["/usr/bin/xdotool", "getwindowname", "12"]]
 
@@ -111,10 +124,17 @@ def test_modal_focus_shift_does_not_break_explicit_target(monkeypatch):
     commands = []
     def run(cmd, **kw):
         commands.append(cmd)
-        return FakeProcess(b"Notas\n" if "getwindowname" in cmd else b"")
+        if "getwindowname" in cmd:
+            return FakeProcess(b"Notas\n")
+        if "getwindowpid" in cmd:
+            return FakeProcess(b"321\n")
+        if "getwindowclassname" in cmd:
+            return FakeProcess(b"NotesClass\n")
+        return FakeProcess()
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     assert X11DesktopBackend("/usr/bin/xdotool").type_text(
-        window_id=12, window_title="Notas", text="Nota curta"
+        window_id=12, window_title="Notas",
+        window_pid=321, window_class="NotesClass", text="Nota curta"
     ) == 10
     assert commands[0] == ["/usr/bin/xdotool", "getwindowname", "12"]
     assert "getactivewindow" not in str(commands)
@@ -184,11 +204,16 @@ def test_failed_typing_does_not_claim_success(monkeypatch):
             return FakeProcess(b"15\n")
         if "getwindowname" in cmd:
             return FakeProcess(b"Notes\n")
+        if "getwindowpid" in cmd:
+            return FakeProcess(b"321\n")
+        if "getwindowclassname" in cmd:
+            return FakeProcess(b"NotesClass\n")
         return FakeProcess(rc=1)
     monkeypatch.setattr("nexus.automation.x11.subprocess.run", run)
     with pytest.raises(DesktopAutomationError, match="parcialmente"):
         X11DesktopBackend("/usr/bin/xdotool").type_text(
-            window_id=15, window_title="Notes", text="value"
+            window_id=15, window_title="Notes",
+            window_pid=321, window_class="NotesClass", text="value"
         )
 
 
