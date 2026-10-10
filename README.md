@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.7.2" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.2-722F37">
+  <img alt="Versão v0.7.3 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.7.3--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão do código:** `v0.7.2 — Desktop Interaction Safety & Diagnostics`<br>
-> **Publicação da v0.7.2:** tag e release somente após CI aprovada na `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Próximo marco planejado:** `v0.7.3 — Desktop Target Integrity` (ainda não implementado)<br>
+> **Versão em desenvolvimento (branch/PR):** `v0.7.3 — Desktop Target Integrity`<br>
+> **Publicação da v0.7.3:** pendente; tag e release somente após CI aprovada no commit integrado à `main`; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Próximo grupo de marcos:** `v0.8.x — Devices & Distributed Architecture` (planejado; não implementado)<br>
 > **Plataforma e distribuição:** aplicativo local executável no Linux; código sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,20 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.7.3 — Desktop Target Integrity (desenvolvimento)
+
+A v0.7.3 reforça a integridade do destino de digitação/navegação no **Linux X11 local**. A ferramenta de leitura pontual `desktop_window_info` passa a retornar `window_id`, `window_title`, `window_pid` e `window_class`. Os quatro atributos passam a ser **obrigatórios** nas ferramentas `desktop_type_text` e `desktop_navigate`. A janela Tk apresenta o ID, título, PID, classe e a ação proposta no diálogo de consentimento individual.
+
+Após a confirmação do usuário, o adaptador `xdotool` consulta novamente título, PID e WM_CLASS do mesmo ID. Identidade alterada, metadados ausentes ou valores inválidos **bloqueiam a operação antes do envio**. São preservadas as quatro teclas permitidas, o limite de 300 caracteres, a proibição de shell/cliques/atalhos arbitrários e o modo consultivo **Sugerir**. A consulta inicial e a revalidação usam subprocesso sem shell com timeout e saída limitada.
+
+**Limite de segurança:** PID e WM_CLASS são declarações não autenticadas de clientes X11; não impedem falsificação, reutilização nem eliminam integralmente corridas entre a última consulta e a ação. Os aplicativos podem rejeitar eventos `XSendEvent`. Janelas sem PID ou WM_CLASS não podem receber comandos, por decisão de segurança. Não há suporte Wayland, controle autônomo contínuo ou captura automática. O comando `nexus-core --desktop-check` permanece **passivo**, sem testar o X11 real.
+
+**Compatibilidade:** chamadas antigas que informam somente ID/título agora são recusadas. Primeiro consulte `desktop_window_info`, depois solicite a operação na janela reconhecida, confira todos os atributos e autorize aquela ação individualmente. Voz, visão mediante consentimento, PostgreSQL local, Ollama e identidade visual são preservados.
+
+**Qualidade/publicação:** testes de regressão para PID, classe e identidade de destino estão na branch; a CI integral Python 3.12/PostgreSQL/Docker/Xvfb e a homologação em X11 físico continuam pendentes. **Não há tag ou release estável v0.7.3 nesta etapa.** Detalhes: [Release notes v0.7.3](docs/RELEASE_NOTES_v0.7.3.md).
 
 ---
 
@@ -69,9 +83,7 @@ alinhados com essa configuração. Voz local feminina/masculina, escuta
 contínua com pausa, conversa via Ollama e análise visual pontual com
 consentimento mantêm os limites documentados nas versões anteriores.
 
-**Próximo marco planejado:** `v0.7.3 — Desktop Target Integrity`,
-para ampliar a identificação da janela entre consulta e autorização,
-dependendo de validação do comportamento em um desktop X11 real.
+**Marco v0.7.3 em desenvolvimento:** consulte a seção inicial para os contratos e limites da verificação de identidade. A integração e a publicação dependem da validação real.
 
 ---
 
@@ -406,7 +418,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-As notas dedicadas de `v0.3.9` até `v0.7.2` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.7.3` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -430,6 +442,7 @@ rastreáveis no GitHub:
 | v0.7.0 | Controlled Desktop Automation Foundation | [Notas](docs/RELEASE_NOTES_v0.7.0.md) |
 | v0.7.1 | Controlled Desktop Navigation | [Notas](docs/RELEASE_NOTES_v0.7.1.md) |
 | v0.7.2 | Desktop Interaction Safety & Diagnostics | [Notas](docs/RELEASE_NOTES_v0.7.2.md) |
+| v0.7.3 | Desktop Target Integrity — desenvolvimento, sem tag | [Notas](docs/RELEASE_NOTES_v0.7.3.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1032,10 +1045,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código: `v0.7.2`; seções antigas descrevem baselines históricos.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.7.3`; a `main` permanece v0.7.2 até CI e merge.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.7.2`. Para as funcionalidades disponíveis,
+dependências atuais da `v0.7.3` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4076,10 +4089,13 @@ ações permitidas e limites de digitação/consentimento. Testes cobrem
 as variantes X11 local, Wayland, display remoto e dependência ausente.
 Não afirma compatibilidade física com aplicativos específicos.
 
-### v0.7.3 — Desktop Target Integrity (planejado)
+### v0.7.3 — Desktop Target Integrity (em desenvolvimento; não publicada)
 
-Fortalecer a identificação da janela entre consulta e autorização,
-após homologação da interação em um desktop X11 real.
+Consulta e confirmação apresentam ID, título, PID e classe da janela.
+Digitação/navegação exigem os quatro atributos e os revalidam após o
+consentimento. Metadados ausentes ou divergentes impedem o envio do
+evento. Testes com subprocessos simulados foram acrescentados;
+CI completa e validação em desktop X11 físico permanecem pendentes.
 
 ---
 
@@ -4431,10 +4447,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.7.2
-Release Name:          Desktop Interaction Safety & Diagnostics
-Release Tag:          v0.7.2 (PUBLISHED ONLY AFTER MAIN CI SUCCESS)
-Implementation:        PASSIVE X11 READINESS + ALLOWLISTED ACTIONS; CI GATED
+Release Target:        v0.7.3 (DEVELOPMENT BRANCH)
+Release Name:          Desktop Target Integrity
+Release Tag:          v0.7.3 NOT YET PUBLISHED (MAIN CI REQUIRED)
+Implementation:        X11 WINDOW ID/TITLE/PID/CLASS MATCH; PER-ACTION CONSENT
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

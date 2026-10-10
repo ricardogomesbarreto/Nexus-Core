@@ -13,7 +13,7 @@ from nexus.automation.x11 import DesktopAutomationError, X11DesktopBackend
 class DesktopWindowInfoTool(NexusTool):
     name = "desktop_window_info"
     description = (
-        "Consulta apenas identificador e título da janela ativa Linux X11; "
+        "Consulta ID, título, PID e classe da janela ativa Linux X11; "
         "não captura pixels nem opera controles."
     )
     risk_level = RiskLevel.LOW
@@ -22,6 +22,8 @@ class DesktopWindowInfoTool(NexusTool):
         outputs=(
             FieldSpec("window_id", ValueKind.INTEGER),
             FieldSpec("window_title", ValueKind.STRING),
+            FieldSpec("window_pid", ValueKind.INTEGER),
+            FieldSpec("window_class", ValueKind.STRING),
         ),
     )
 
@@ -33,9 +35,10 @@ class DesktopWindowInfoTool(NexusTool):
 
     def execute(self, **kwargs):
         try:
-            ident, title = self.backend.active_window()
+            ident, title, pid, window_class = self.backend.active_window()
             return ToolResult(True, self.name, data={
                 "window_id": ident, "window_title": title,
+                "window_pid": pid, "window_class": window_class,
             })
         except DesktopAutomationError as exc:
             return ToolResult(False, self.name, error=str(exc),
@@ -58,6 +61,8 @@ class DesktopNavigateTool(NexusTool):
         inputs=(
             FieldSpec("window_id", ValueKind.INTEGER),
             FieldSpec("window_title", ValueKind.STRING, nonempty=True),
+            FieldSpec("window_pid", ValueKind.INTEGER),
+            FieldSpec("window_class", ValueKind.STRING, nonempty=True),
             FieldSpec("action", ValueKind.STRING, nonempty=True),
         ),
         outputs=(
@@ -72,13 +77,17 @@ class DesktopNavigateTool(NexusTool):
     def sensitive_resources(self, **kwargs):
         X11DesktopBackend.validate_id(kwargs["window_id"])
         X11DesktopBackend.validate_title(kwargs["window_title"])
+        X11DesktopBackend.validate_pid(kwargs["window_pid"])
+        X11DesktopBackend.validate_class(kwargs["window_class"])
         X11DesktopBackend.validate_navigation(kwargs["action"])
         return ()
 
-    def execute(self, *, window_id: int, window_title: str, action: str):
+    def execute(self, *, window_id: int, window_title: str,
+                window_pid: int, window_class: str, action: str):
         try:
             completed = self.backend.navigate(
-                window_id=window_id, window_title=window_title, action=action,
+                window_id=window_id, window_title=window_title,
+                window_pid=window_pid, window_class=window_class, action=action,
             )
             return ToolResult(True, self.name, data={
                 "window_id": window_id, "action": completed,
@@ -91,7 +100,7 @@ class DesktopNavigateTool(NexusTool):
 class DesktopTypeTextTool(NexusTool):
     name = "desktop_type_text"
     description = (
-        "Digita texto curto na janela X11 explicitamente identificada e ativa, "
+        "Digita texto curto na janela X11 identificada por ID/título/PID/classe, "
         "sem Enter, após confirmação humana por ação; não executa comandos."
     )
     risk_level = RiskLevel.MEDIUM
@@ -100,6 +109,8 @@ class DesktopTypeTextTool(NexusTool):
         inputs=(
             FieldSpec("window_id", ValueKind.INTEGER),
             FieldSpec("window_title", ValueKind.STRING, nonempty=True),
+            FieldSpec("window_pid", ValueKind.INTEGER),
+            FieldSpec("window_class", ValueKind.STRING, nonempty=True),
             FieldSpec("text", ValueKind.STRING, nonempty=True),
         ),
         outputs=(
@@ -117,13 +128,17 @@ class DesktopTypeTextTool(NexusTool):
         # confirmation, before xdotool receives any keystrokes.
         X11DesktopBackend.validate_id(kwargs["window_id"])
         X11DesktopBackend.validate_title(kwargs["window_title"])
+        X11DesktopBackend.validate_pid(kwargs["window_pid"])
+        X11DesktopBackend.validate_class(kwargs["window_class"])
         X11DesktopBackend.validate_text(kwargs["text"])
         return ()
 
-    def execute(self, *, window_id: int, window_title: str, text: str):
+    def execute(self, *, window_id: int, window_title: str,
+                window_pid: int, window_class: str, text: str):
         try:
             count = self.backend.type_text(
-                window_id=window_id, window_title=window_title, text=text,
+                window_id=window_id, window_title=window_title,
+                window_pid=window_pid, window_class=window_class, text=text,
             )
             return ToolResult(True, self.name, data={
                 "window_id": window_id,
