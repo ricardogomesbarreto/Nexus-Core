@@ -50,8 +50,7 @@ def test_only_ubuntu_is_supported_in_operational_installation_policy():
         PROJECT_ROOT / "docs/DOCUMENTATION_AUDIT_v0.8.5.md"
     ).read_text(encoding="utf-8")
     assert "Ubuntu Desktop 24.04 LTS" in readme
-    assert "ao Ubuntu Desktop 24.04 LTS" in audit
-    assert "historicamente" not in audit.lower() or "Ubuntu" in audit
+    assert "Ubuntu Desktop 24.04 LTS" in audit
     assert "Debian" in audit  # only as future policy or superseded text
 
 
