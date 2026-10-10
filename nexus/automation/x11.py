@@ -252,7 +252,12 @@ def desktop_capabilities() -> dict:
         "navigation_actions": list(X11DesktopBackend.NAVIGATION_KEYS),
         "typing_max_characters": X11DesktopBackend.MAX_TEXT,
         "confirmation_per_action": True,
-        "effects": "read window title, type approved text or send one allowlisted navigation key",
+        "target_identity_fields": [
+            "window_id", "window_title", "window_pid", "window_class",
+        ],
+        "target_revalidated_after_confirmation": True,
+        "target_identity_cryptographically_verified": False,
+        "effects": "read window ID/title/PID/class, type approved text or send one allowlisted navigation key",
         "camera_access": False,
         "screenshot_access": False,
         "wayland_supported": False,
