@@ -6,6 +6,7 @@ from nexus.core.logger import setup_logger
 from nexus.core.runtime import RuntimeMode
 from nexus.core.runtime_state import RuntimeStateController
 from nexus.database.database import Database
+from nexus.devices import DeviceRegistry
 from nexus.events import EventBus, EventType
 from nexus.monitoring.health import HealthStatus
 from nexus.models.model_factory import (
@@ -39,6 +40,9 @@ class NexusApplication:
         self.database = database
 
         self.event_bus = EventBus()
+
+        # Inert local declarations only: never discover or contact hardware.
+        self.device_registry = DeviceRegistry()
 
         self.security_gate = SecurityGate()
 
