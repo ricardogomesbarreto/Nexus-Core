@@ -13,7 +13,7 @@ from nexus.automation.x11 import DesktopAutomationError, X11DesktopBackend
 class DesktopWindowInfoTool(NexusTool):
     name = "desktop_window_info"
     description = (
-        "Consulta apenas identificador e título da janela ativa Linux X11; "
+        "Consulta ID, título, PID e classe da janela ativa Linux X11; "
         "não captura pixels nem opera controles."
     )
     risk_level = RiskLevel.LOW
@@ -100,7 +100,7 @@ class DesktopNavigateTool(NexusTool):
 class DesktopTypeTextTool(NexusTool):
     name = "desktop_type_text"
     description = (
-        "Digita texto curto na janela X11 explicitamente identificada e ativa, "
+        "Digita texto curto na janela X11 identificada por ID/título/PID/classe, "
         "sem Enter, após confirmação humana por ação; não executa comandos."
     )
     risk_level = RiskLevel.MEDIUM
