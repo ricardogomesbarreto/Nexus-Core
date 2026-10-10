@@ -42,3 +42,5 @@ O manifesto permite **declarar intenção**, não relatar telemetria ou um dispo
 A v0.8.0 é desenvolvida em PR **empilhado sobre a branch v0.7.3**. A v0.7.3 ainda depende de homologação física da interação X11. Sem integração ordenada, CI verde no commit final da `main` e testes físicos pertinentes, **não haverá tag nem release estável v0.8.0**.
 
 Próximos incrementos da linha v0.8.x: transporte autenticado opt-in, telemetria limitada somente leitura, pareamento seguro e testes com Arduino/ESP32 reais. Essas capacidades **não estão implementadas na v0.8.0**.
+
+> **Atualização de estado (10/10/2026):** o código foi integrado à `main` após v0.7.3, sem publicação de tag estável; a homologação física exigida no roadmap permanece pendente. O texto anterior descreve a dependência no momento do desenvolvimento.
