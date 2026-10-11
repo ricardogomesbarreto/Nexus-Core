@@ -186,7 +186,15 @@ def test_marker_cleanup_error_must_not_delete_already_activated_venv(
         (path / "bin" / "python").write_text("python")
     monkeypatch.setattr(manager.venv, "create", fake_venv)
     def fake_run(cmd, **kwargs):
-        output = b"Nexus Core 0.8.6\n" if "nexus.main" in cmd else b""
+        if "--platform-check" in cmd:
+            output = (
+                b'{"mode":"passive","target":"ubuntu_24_04_lts",'
+                b'"system":"Linux","installer_supported":true,'
+                b'"python_supported":true,"changes_performed":false,'
+                b'"missing_required":[]}'
+            )
+        else:
+            output = b"Nexus Core 0.8.6\n" if "--version" in cmd else b""
         return subprocess.CompletedProcess(cmd, 0, stdout=output)
     monkeypatch.setattr(manager.subprocess, "run", fake_run)
     class BrokenMarker:
