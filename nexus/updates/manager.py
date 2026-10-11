@@ -17,6 +17,16 @@ from .releases import (
 
 
 def managed_home() -> Path:
+    # The standalone launcher anchors its verified home on every execution.
+    # User session XDG_DATA_HOME may change after installation; never select
+    # a different managed installation because of that environment drift.
+    if os.environ.get("NEXUS_RUNNING_MANAGED") == "1":
+        pinned = os.environ.get("NEXUS_MANAGED_HOME")
+        if pinned:
+            folder = Path(pinned)
+            if not folder.is_absolute() or folder.is_symlink():
+                raise UpdateError("Instalação gerenciada sem diretório confiável.")
+            return folder
     base = os.environ.get("XDG_DATA_HOME")
     root = Path(base).expanduser() if base and Path(base).is_absolute() else Path.home() / ".local/share"
     return root / "nexus-core" / "managed"
