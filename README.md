@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.7 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.7--dev-722F37">
+  <img alt="Versão v0.8.8 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.8--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.7 — Ubuntu Pre-Activation Validation`; a `main` contém código até v0.8.2, com PRs pendentes #15 (v0.8.3), #16 (v0.8.4), #17 (v0.8.5) e #18 (v0.8.6)<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.8.7 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.7 exige verificações isoladas de dependências, versão e Ubuntu antes da ativação de um novo ambiente Python; outras distros somente após homologação)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.8 — Managed Launcher Integrity`; a `main` contém código até v0.8.2, com PRs pendentes #15 (v0.8.3), #16 (v0.8.4), #17 (v0.8.5), #18 (v0.8.6) e #19 (v0.8.7)<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.8.8 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.8 ancora e valida o inicializador gerenciado independente da configuração XDG posterior; outras distros somente após homologação)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,22 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.8 — Managed Launcher Integrity (em desenvolvimento)
+
+Esta versão prioriza o início real da instalação gerenciada no Ubuntu Desktop 24.04 LTS: o comando `~/.local/bin/nexus-core` passa a ser uma cópia autônoma do inicializador `nexus/updates/managed_entrypoint.py`, usando somente a biblioteca padrão do Python e os caminhos da instalação salvos quando o usuário a realizou.
+
+Antes de executar o Python do NEXUS CORE, o inicializador verifica que `managed` e `versions` são pastas privadas do usuário, que o link `current` aponta para uma versão diretamente dentro de `versions` e que `bin/python` é um arquivo regular pertencente ao usuário e com permissão de execução, recusando links simbólicos externos e binários manipulados. Somente então inicia o ambiente com `python -I -m nexus.updates.launcher`.
+
+O `NEXUS_MANAGED_HOME` passa a ser fixado pelo inicializador e utilizado internamente. Assim, mudanças posteriores na variável `XDG_DATA_HOME` da sessão não fazem o atualizador procurar ou modificar outra instalação. O instalador e o atualizador também protegem os diretórios das novas versões com permissão `0700`, garantindo consistência com a verificação.
+
+As credenciais PostgreSQL opcionais são lidas somente de um JSON privado do próprio usuário, com tamanho limitado, sem expor a senha e sem substituir credenciais já definidas. O mecanismo não instala serviços, não altera banco ou modelos e preserva a interface Tk e as autorizações do assistente.
+
+**Limites:** isso não é uma assinatura criptográfica do ambiente nem substitui homologação física de Ubuntu, X11, voz, câmera, Ollama e atualizações/rollback. A ferramenta offline independente `nexus-core-recover` continua responsável por versões quebradas. A nova implementação está descrita nas [notas v0.8.8](docs/RELEASE_NOTES_v0.8.8.md).
+
+O marco depende da [v0.8.7 — PR #19](https://github.com/ricardogomesbarreto/Nexus-Core/pull/19). A última release estável permanece **v0.7.2**; nenhum workflow de publicação foi habilitado.
 
 ---
 
@@ -573,7 +589,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).\nAs notas dedicadas de `v0.3.9` até `v0.8.7` estão disponíveis
+A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).\nAs notas dedicadas de `v0.3.9` até `v0.8.8` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -606,6 +622,7 @@ rastreáveis no GitHub:
 | v0.8.5 | Ubuntu Recovery & Documentation Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.5.md) |
 | v0.8.6 | Ubuntu Maintenance Coordination — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.6.md) |
 | v0.8.7 | Ubuntu Pre-Activation Validation — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.7.md) |
+| v0.8.8 | Managed Launcher Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.8.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1208,10 +1225,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.7`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.8`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.7` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.8` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4603,10 +4620,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.7 (STACKED DEVELOPMENT PR)
-Release Name:          Ubuntu Pre-Activation Validation
-Release Tag:          v0.8.7 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        ISOLATED PIP CHECK; PACKAGE VERSION; PASSIVE UBUNTU PLATFORM SMOKE
+Release Target:        v0.8.8 (STACKED DEVELOPMENT PR)
+Release Name:          Managed Launcher Integrity
+Release Tag:          v0.8.8 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        STANDALONE MANAGED LAUNCHER; PINNED HOME; SAFE CURRENT TARGET
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
