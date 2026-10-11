@@ -26,7 +26,7 @@ def test_every_version_note_and_historical_readme_anchor_exists():
 def test_all_unhomologated_release_workflows_stay_explicitly_disabled():
     for release in (
         "0.7.3", "0.8.0", "0.8.1", "0.8.2",
-        "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9",
+        "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.9.0",
     ):
         path = PROJECT_ROOT / ".github/workflows" / f"release-v{release}.yml"
         text = path.read_text(encoding="utf-8")
