@@ -60,6 +60,8 @@ def verify_installed_runtime(
                 argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL, timeout=timeout, check=True,
             )
+            if result.returncode != 0:
+                raise RuntimeVerificationError("Verificação do pacote falhou.")
             if argv[-1] == "--version":
                 validate_version_output(result.stdout, expected_version)
             elif argv[-1] == "--platform-check":
