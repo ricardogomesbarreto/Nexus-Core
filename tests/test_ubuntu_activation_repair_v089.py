@@ -1,6 +1,8 @@
 """v0.8.9 — Safe offline repair of interrupted Ubuntu activation."""
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -237,8 +239,14 @@ def test_standalone_recovery_status_command_remains_import_free(
     home, _ = setup_home(tmp_path)
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     script = install_linux.write_recovery_launcher(home)
-    result = os.popen("true").close()  # no bearing on tested command
-    assert result is None
+    result = subprocess.run(
+        [sys.executable, str(script), "--activation-status"],
+        cwd=tmp_path,
+        env={"HOME": str(tmp_path), "PATH": os.environ.get("PATH", "")},
+        stdin=subprocess.DEVNULL, capture_output=True, text=True,
+        timeout=10, check=True,
+    )
+    assert json.loads(result.stdout)["status"] == "clear"
     data = script.read_text(encoding="utf-8")
     assert "_INSTALL_HOME = " in data
     assert "from nexus" not in data
