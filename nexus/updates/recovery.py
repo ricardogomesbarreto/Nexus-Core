@@ -9,6 +9,8 @@ Rollback is interactive and opt-in. It affects executable selection only:
 NO database schema rollback, files deleted, process restart or downloads.
 """
 import argparse
+from contextlib import contextmanager
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -45,6 +47,34 @@ def _owned_private_directory(path: Path) -> None:
         raise RecoveryError("Diretório inacessível.") from exc
     if mode.st_uid != os.getuid() or (mode.st_mode & 0o077):
         raise RecoveryError("Diretório gerenciado deve pertencer ao usuário e ser privado.")
+
+
+@contextmanager
+def maintenance_lock(home: Path):
+    """Non-blocking per-installation Linux flock, shared with the updater.
+
+    A persistent lock file is expected; the kernel releases ownership if
+    the process crashes. Never wait while a second process changes versions.
+    """
+    _owned_private_directory(home)
+    flags = os.O_RDWR | os.O_CREAT | os.O_CLOEXEC | os.O_NOFOLLOW
+    fd = None
+    try:
+        fd = os.open(home / ".maintenance.lock", flags, 0o600)
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+                or info.st_nlink != 1 or info.st_mode & 0o077):
+            raise RecoveryError("Arquivo de bloqueio não confiável.")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (BlockingIOError, InterruptedError) as exc:
+            raise RecoveryError("Outra manutenção do NEXUS CORE está em execução.") from exc
+        yield
+    except OSError as exc:
+        raise RecoveryError("Não foi possível proteger a instalação.") from exc
+    finally:
+        if fd is not None:
+            os.close(fd)
 
 
 def _version_slot(home: Path, name: str) -> Path:
@@ -151,6 +181,12 @@ def rollback(home: Path | None = None, *, input_fn=input, tty=None) -> dict:
     if answer.strip() != "REVERTER":
         raise RecoveryError("Operação não autorizada.")
 
+    with maintenance_lock(home):
+        return _rollback_locked(home)
+
+
+def _rollback_locked(home: Path) -> dict:
+    """Revalidate target links *after* gaining the exclusive lock."""
     _owned_private_directory(home)
     old = _version_slot(home, "current")
     previous = _version_slot(home, "previous")
