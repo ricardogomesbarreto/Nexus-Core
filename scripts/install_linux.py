@@ -176,6 +176,8 @@ def _install_managed_python_locked(home: Path):
         raise RuntimeError("Ambiente de instalação inseguro.")
     if not target.exists():
         venv.create(target, with_pip=True, symlinks=False)
+    # The launcher must never execute a runtime from a public folder.
+    target.chmod(0o700)
     python = target / "bin/python"
     # Regular local package install: unlike pip -e, it does not depend on
     # keeping the development checkout in the same filesystem location.
