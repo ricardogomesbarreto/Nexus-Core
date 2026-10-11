@@ -238,6 +238,8 @@ def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
         raise UpdateError("A versão de destino já existe: instalação requer revisão.")
     try:
         venv.create(target, with_pip=True, symlinks=False)
+        # The standalone launcher rejects public version directories.
+        target.chmod(0o700)
         python = target / "bin" / "python"
         wheel = _wheel_path(home, release)
         if not _verify_wheel(wheel, release):
