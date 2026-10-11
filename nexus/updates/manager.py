@@ -9,6 +9,7 @@ import sys
 import tempfile
 import venv
 
+from .recovery import RecoveryError, maintenance_lock
 from .releases import (
     ReleaseWheel, UpdateError, download_verified, latest_release, version_tuple,
 )
@@ -114,6 +115,18 @@ def stage_latest(current_version: str, home: Path | None = None) -> ReleaseWheel
     release = latest_release(current_version)
     if release is None:
         return None
+    try:
+        with maintenance_lock(home):
+            # A concurrent explicit rollback may disable auto-updates while
+            # this client was checking the network. Never re-enable or stage.
+            if not autoupdate_enabled(home):
+                return None
+            return _stage_latest_locked(home, release)
+    except RecoveryError as exc:
+        raise UpdateError("Instalação ocupada; atualização adiada.") from exc
+
+
+def _stage_latest_locked(home: Path, release: ReleaseWheel) -> ReleaseWheel:
     _private_directory(home)
     downloads = _private_directory(home / "downloads")
     target = _wheel_path(home, release)
@@ -190,6 +203,17 @@ def install_staged(home: Path | None = None, *, current_version: str) -> str | N
     On failure the current installation remains selected.
     """
     home = home if home is not None else managed_home()
+    if not autoupdate_enabled(home):
+        return None
+    try:
+        with maintenance_lock(home):
+            return _install_staged_locked(home, current_version=current_version)
+    except RecoveryError as exc:
+        raise UpdateError("Outra operação gerenciada em andamento.") from exc
+
+
+def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
+    # Always re-evaluate authorization after acquiring the exclusive lock.
     if not autoupdate_enabled(home):
         return None
     release = pending_release(home)
