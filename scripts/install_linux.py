@@ -184,13 +184,21 @@ def _install_managed_python_locked(home: Path):
          "--no-input", str(ROOT) + "[voice,vision]"],
         timeout=600, cwd=ROOT,
     )
-    _run([str(python), "-m", "pip", "check"], timeout=30)
+    from nexus.updates.verification import (
+        validate_platform_report, validate_version_output,
+    )
+    # Verify from an isolated interpreter, not the checkout. No GUI/db starts.
+    _run([str(python), "-I", "-m", "pip", "check"], timeout=30, cwd=home)
     verified = _run(
-        [str(python), "-m", "nexus.main", "--version"],
+        [str(python), "-I", "-m", "nexus.main", "--version"],
         timeout=20, capture=True, cwd=home,
     )
-    if verified.stdout.strip() != "Nexus Core " + settings.version:
-        raise RuntimeError("A instalação Python retornou versão divergente.")
+    validate_version_output(verified.stdout, settings.version)
+    platform = _run(
+        [str(python), "-I", "-m", "nexus.main", "--platform-check"],
+        timeout=20, capture=True, cwd=home,
+    )
+    validate_platform_report(platform.stdout)
     _switch_current(home, target)
     return home
 
