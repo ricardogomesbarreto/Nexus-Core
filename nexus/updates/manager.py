@@ -226,7 +226,7 @@ def _previous_target(home: Path, versions: Path) -> Path | None:
     except (OSError, RuntimeError) as exc:
         raise UpdateError("Versão anterior não pode ser verificada.") from exc
     if (target.parent != versions.resolve(strict=True)
-            or not re.fullmatch(r"v[0-9]+\\.[0-9]+\\.[0-9]+", target.name)):
+            or not re.fullmatch(r"v[0-9]+[.][0-9]+[.][0-9]+", target.name)):
         raise UpdateError("Versão anterior aponta fora da instalação.")
     return target
 
