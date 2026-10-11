@@ -42,6 +42,8 @@ def test_launcher_records_pinned_home_before_exec_and_uses_isolated_python(
     def fake_exec(path, args):
         executed.append((path, args))
     monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setenv("NEXUS_RUNNING_MANAGED", "0")
+    monkeypatch.setenv("NEXUS_MANAGED_HOME", "not-in-use")
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "another-data-home"))
     entry.launch(["--version"], home=home, execv=fake_exec)
     assert executed == [(
@@ -153,6 +155,8 @@ def test_launch_keeps_user_supplied_password_untouched(tmp_path, monkeypatch):
     secret.write_text(json.dumps({"database_password": "local-password"}))
     secret.chmod(0o600)
     monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "already-configured")
+    monkeypatch.setenv("NEXUS_RUNNING_MANAGED", "0")
+    monkeypatch.setenv("NEXUS_MANAGED_HOME", "not-in-use")
     entry.launch([], home=home, credentials=secret, execv=lambda *a: None)
     assert os.environ["NEXUS_DATABASE_PASSWORD"] == "already-configured"
 
