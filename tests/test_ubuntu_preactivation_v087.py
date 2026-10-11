@@ -135,7 +135,8 @@ def test_update_invalid_platform_keeps_previous_current_and_cleans_new(tmp_path,
 
     with pytest.raises(UpdateError, match="preservada"):
         manager.install_staged(home, current_version="0.8.6")
-    assert invoked == ["check", "--version", "--platform-check"]
+    assert invoked[0].endswith("nexus_core-0.8.7-py3-none-any.whl[voice,vision]")
+    assert invoked[1:] == ["check", "--version", "--platform-check"]
     assert (home / "current").resolve() == old
     assert not (versions / "v0.8.7").exists()
     assert manager.autoupdate_enabled(home) is True
