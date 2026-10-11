@@ -176,6 +176,9 @@ def _switch_current(home: Path, version_dir: Path) -> None:
     versions = home / "versions"
     if version_dir.parent.resolve() != versions.resolve():
         raise UpdateError("Caminho de versão inesperado.")
+    temp = home / ".current-next"
+    if temp.exists() or temp.is_symlink():
+        raise UpdateError("Atualização simultânea não permitida.")
     if current.exists() or current.is_symlink():
         previous = _checked_current(home)
         new_previous = home / ".previous-next"
@@ -186,9 +189,6 @@ def _switch_current(home: Path, version_dir: Path) -> None:
             os.replace(new_previous, home / "previous")
         finally:
             new_previous.unlink(missing_ok=True)
-    temp = home / ".current-next"
-    if temp.exists() or temp.is_symlink():
-        raise UpdateError("Atualização simultânea não permitida.")
     try:
         temp.symlink_to(version_dir)
         os.replace(temp, current)
@@ -248,14 +248,25 @@ def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
         ):
             raise UpdateError("O pacote instalado não corresponde à release.")
         _switch_current(home, target)
-        _metadata_file(home).unlink(missing_ok=True)
+        # The active selection has ALREADY changed. A failure to remove a
+        # stale marker must never trigger deletion of the running version.
+        try:
+            _metadata_file(home).unlink(missing_ok=True)
+        except OSError:
+            pass
         return release.version
     except (OSError, subprocess.SubprocessError, UpdateError, UnicodeError) as exc:
-        # Only the unselected venv created by this call may be discarded.
+        # Clean up only an unselected new venv. Never delete whichever
+        # version the active symlink now points to.
         import shutil
-        if target.is_dir() and not target.is_symlink():
+        current = home / "current"
+        try:
+            selected = current.resolve(strict=True) if current.is_symlink() else None
+        except (OSError, RuntimeError):
+            selected = None
+        if target.is_dir() and not target.is_symlink() and selected != target:
             shutil.rmtree(target, ignore_errors=True)
-        raise UpdateError("Atualização falhou; versão anterior preservada.") from exc
+        raise UpdateError("Atualização falhou; instalação selecionada preservada.") from exc
 
 
 def current_python(home: Path | None = None) -> Path:
