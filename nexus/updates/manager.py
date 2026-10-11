@@ -167,6 +167,9 @@ def _stage_latest_locked(home: Path, release: ReleaseWheel) -> ReleaseWheel:
 
 
 def _checked_current(home: Path) -> Path:
+    marker = _activation_intent_file(home)
+    if marker.is_symlink() or marker.exists():
+        raise UpdateError("Ativação anterior requer reparo offline.")
     target = home / "current"
     versions = home / "versions"
     if not target.is_symlink() or versions.is_symlink() or not versions.is_dir():
