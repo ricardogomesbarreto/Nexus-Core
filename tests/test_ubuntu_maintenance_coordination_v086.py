@@ -157,3 +157,56 @@ def test_explicit_disabling_prevents_followup_auto_update(tmp_path, monkeypatch)
     manager.set_autoupdate(False, home)
     assert manager.stage_latest("0.8.5", home) is None
     assert manager.install_staged(home, current_version="0.8.5") is None
+
+
+def test_consent_revoked_during_online_check_prevents_staging(tmp_path, monkeypatch):
+    home, current, _ = installed(tmp_path)
+    def simulated_network_callback(version):
+        # The operator performed recovery/disabled auto-update while the
+        # network request was in progress.
+        manager.set_autoupdate(False, home)
+        return fake_release()
+    monkeypatch.setattr(manager, "latest_release", simulated_network_callback)
+    monkeypatch.setattr(manager, "download_verified",
+                        lambda *a: pytest.fail("No staging after revocation"))
+    assert manager.stage_latest("0.8.5", home) is None
+    assert not (home / "staged-release.json").exists()
+    assert (home / "current").resolve() == current
+
+
+def test_marker_cleanup_error_must_not_delete_already_activated_venv(
+    tmp_path, monkeypatch,
+):
+    home, old, _ = installed(tmp_path)
+    release = fake_release()
+    monkeypatch.setattr(manager, "pending_release", lambda _: release)
+    monkeypatch.setattr(manager, "_verify_wheel", lambda *args: True)
+    def fake_venv(path, **kwargs):
+        (path / "bin").mkdir(parents=True)
+        (path / "bin" / "python").write_text("python")
+    monkeypatch.setattr(manager.venv, "create", fake_venv)
+    def fake_run(cmd, **kwargs):
+        output = b"Nexus Core 0.8.6\\n" if "nexus.main" in cmd else b""
+        return subprocess.CompletedProcess(cmd, 0, stdout=output)
+    monkeypatch.setattr(manager.subprocess, "run", fake_run)
+    class BrokenMarker:
+        def unlink(self, **kwargs):
+            raise OSError("filesystem failure after activation")
+    monkeypatch.setattr(manager, "_metadata_file", lambda _: BrokenMarker())
+    assert manager.install_staged(home, current_version="0.8.5") == "0.8.6"
+    chosen = (home / "current").resolve()
+    assert chosen.name == "v0.8.6"
+    assert (chosen / "bin/python").is_file()
+    assert (home / "previous").resolve() == old
+
+
+def test_temporary_link_collision_prevents_any_previous_pointer_changes(tmp_path):
+    home, old, previous = installed(tmp_path)
+    target = home / "versions" / "v0.8.6"
+    target.mkdir()
+    (home / ".current-next").write_text("keep")
+    with pytest.raises(UpdateError, match="simultânea"):
+        manager._switch_current(home, target)
+    assert (home / "current").resolve() == old
+    assert (home / "previous").resolve() == previous
+    assert (home / ".current-next").read_text() == "keep"
