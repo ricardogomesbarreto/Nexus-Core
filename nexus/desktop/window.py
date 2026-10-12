@@ -199,6 +199,7 @@ class DesktopWindow:
         self.cancel_button.pack(side="right", padx=(0, 6))
         root.protocol("WM_DELETE_WINDOW", self._close)
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
+        root.bind("<Control-Shift-I>", self._show_privacy_status)
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
@@ -212,9 +213,9 @@ class DesktopWindow:
         root.after(80, self._poll)
         root.after(120, self._start_listening)
 
-    def _refresh_privacy_status(self) -> None:
-        """Update only labels for changed state; run exclusively on Tk thread."""
-        labels = MultimodalStatus(
+    def _privacy_snapshot(self) -> MultimodalStatus:
+        """Capture presentation state on the Tk thread, without probing devices."""
+        return MultimodalStatus(
             listening_allowed=self._voice_active,
             listening_requested=self._listening,
             speech_enabled=self.speech_enabled.get(),
@@ -223,11 +224,26 @@ class DesktopWindow:
             vision_source=self._vision_source,
             cancellation_requested=self._cancel_requested,
             closing=self._closing,
-        ).labels()
+        )
+
+    def _refresh_privacy_status(self) -> None:
+        """Update only labels for changed state; run exclusively on Tk thread."""
+        labels = self._privacy_snapshot().labels()
         if labels != self._privacy_last:
             for widget, label in zip(self._privacy_labels, labels):
                 widget.configure(text=label)
             self._privacy_last = labels
+
+    def _show_privacy_status(self, event=None):
+        """Explicit, keyboard-accessible snapshot; no capture or Agent call."""
+        if not self._closing:
+            labels = self._privacy_snapshot().labels()
+            self.messagebox.showinfo(
+                "Nexus Core — estado de privacidade",
+                "\n".join(labels) + "\n\nEstados do aplicativo; não verificam hardware.",
+                parent=self.root,
+            )
+        return "break"
 
     def _shortcut_toggle_listening(self, event=None):
         """Keyboard access to the same mic toggle, never to visual capture."""
