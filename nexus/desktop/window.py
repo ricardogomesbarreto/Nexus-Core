@@ -245,6 +245,16 @@ class DesktopWindow:
             )
         return "break"
 
+    def _answer_privacy_status(self, utterance: str) -> None:
+        """Answer an explicit voice request using only the current Tk state."""
+        labels = self._privacy_snapshot().labels()
+        response = ". ".join(labels) + ". Estados do aplicativo; não verificam hardware."
+        self._append("Você", utterance, "user")
+        self._append("Nexus Core", response, "assistant")
+        self.status.configure(text="Estado de privacidade informado")
+        if not self._say_response(response):
+            self._start_listening()
+
     def _shortcut_toggle_listening(self, event=None):
         """Keyboard access to the same mic toggle, never to visual capture."""
         if not self._closing:
@@ -403,6 +413,9 @@ class DesktopWindow:
             return "pause"
         if normalized in {"desligue o assistente", "feche o nexus core"}:
             return "shutdown"
+        if normalized in {"qual o estado da privacidade", "qual e o estado da privacidade",
+                          "como esta minha privacidade", "informe o estado da privacidade"}:
+            return "privacy_status"
         return None
 
     def _toggle_wake(self) -> None:
@@ -633,6 +646,8 @@ class DesktopWindow:
                         self._append("Nexus Core", "Escuta pausada. Retome pelo botão.", "assistant")
                     elif command == "shutdown":
                         self._close()
+                    elif command == "privacy_status":
+                        self._answer_privacy_status(utterance)
                     elif kind == "transcript" and utterance:
                         self.input.delete("1.0", "end")
                         self.input.insert("1.0", utterance)
