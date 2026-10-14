@@ -201,6 +201,7 @@ class DesktopWindow:
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         root.bind("<Control-Shift-I>", self._show_privacy_status)
         root.bind("<Control-Shift-X>", self._shortcut_cancel_current)
+        root.bind("<Control-Shift-S>", self._shortcut_stop_speaking)
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
@@ -265,6 +266,14 @@ class DesktopWindow:
     def _shortcut_cancel_current(self, event=None):
         """Use the existing Cancel action for the current operation only."""
         self._cancel_current()
+        return "break"
+
+    def _shortcut_stop_speaking(self, event=None):
+        """Stop only the current TTS output, keeping future speech enabled."""
+        if not self._closing and self._speaking:
+            self._stop_speaking()
+            self.status.configure(text="Leitura em voz interrompida")
+            self._start_listening()
         return "break"
 
     def _append(self, speaker: str, message: str, tag: str) -> None:
