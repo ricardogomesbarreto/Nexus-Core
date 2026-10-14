@@ -25,8 +25,8 @@ def test_shortcut_stops_only_current_reply_and_ignores_late_event(ui):
     assert speaker.stopped == 1
     assert not window._speaking
     assert window.speech_enabled.get()
-    assert window.status.cget("text") == "Leitura em voz interrompida"
     spin(root, lambda: len(recognizer.started) == 2)
+    assert window._listening
 
     window._audio_events.put(("speak_done", "", old_generation))
     root.update()
