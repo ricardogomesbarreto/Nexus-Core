@@ -455,7 +455,34 @@ class DesktopWindow:
         if normalized in {"qual o estado da privacidade", "qual e o estado da privacidade",
                           "como esta minha privacidade", "informe o estado da privacidade"}:
             return "privacy_status"
+        if normalized in {"ative a voz", "ligue a voz", "ativar voz",
+                          "ligar voz", "leia as respostas em voz alta"}:
+            return "speech_on"
+        if normalized in {"desative a voz", "desligue a voz", "desativar voz",
+                          "desligar voz", "responda somente por texto"}:
+            return "speech_off"
+        if normalized in {"analisar imagem", "analise uma imagem",
+                          "analisar arquivo de imagem"}:
+            return "vision_file"
+        if normalized in {"analisar tela", "analise a tela"}:
+            return "vision_screen"
+        if normalized in {"analisar camera", "analise a camera"}:
+            return "vision_camera"
         return None
+
+    def _spoken_speech_control(self, command: str, utterance: str) -> None:
+        """Apply a recognized local setting without involving the model."""
+        enabled = command == "speech_on"
+        if self.speech_enabled.get() != enabled:
+            self.speech_enabled.set(enabled)
+            self._toggle_speech()
+        self._refresh_privacy_status()
+        answer = "Leitura em voz ativada." if enabled else "Leitura em voz desativada."
+        self._append("Você", utterance, "user")
+        self._append("Nexus Core", answer, "assistant")
+        self.status.configure(text=answer)
+        if not self._say_response(answer):
+            self._start_listening()
 
     def _toggle_wake(self) -> None:
         if self._closing:
@@ -708,6 +735,14 @@ class DesktopWindow:
                         self._close()
                     elif command == "privacy_status":
                         self._answer_privacy_status(utterance)
+                    elif command in ("speech_on", "speech_off"):
+                        self._spoken_speech_control(command, utterance)
+                    elif command in ("vision_file", "vision_screen", "vision_camera"):
+                        self._request_vision(command.removeprefix("vision_"))
+                        # Selection or consent may be cancelled. Only then
+                        # resume listening; a running analysis will resume it.
+                        if not self._busy:
+                            self._start_listening()
                     elif kind == "transcript" and utterance:
                         self.input.delete("1.0", "end")
                         self.input.insert("1.0", utterance)
