@@ -580,7 +580,16 @@ class DesktopWindow:
         if self._closing or generation != self._speak_generation:
             return
         try:
-            self.speaker.speak(text, voice)
+            if type(self.speaker) is LocalSpeaker:
+                # The real eSpeak process must recheck after Popen: stop()
+                # can race with process registration. Injected speakers keep
+                # their original two-argument interface.
+                self.speaker.speak(
+                    text, voice,
+                    cancelled=lambda: self._closing or generation != self._speak_generation,
+                )
+            else:
+                self.speaker.speak(text, voice)
             self._audio_events.put(("speak_done", "", generation))
         except VoiceError as exc:
             self._audio_events.put(("speak_error", str(exc), generation))
