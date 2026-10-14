@@ -246,7 +246,7 @@ class DesktopWindow:
         return "break"
 
     def _answer_privacy_status(self, utterance: str) -> None:
-        """Answer an explicit voice request using only the current Tk state."""
+        """Answer an explicit voice or text request using only current Tk state."""
         labels = self._privacy_snapshot().labels()
         response = ". ".join(labels) + ". Estados do aplicativo; não verificam hardware."
         self._append("Você", utterance, "user")
@@ -345,6 +345,18 @@ class DesktopWindow:
             return "break"
         if len(message) > ChatSession.MAX_MESSAGE:
             self.status.configure(text="Mensagem excede 4000 caracteres")
+            return "break"
+        if not advisory_only and self._voice_command(message) == "privacy_status":
+            # A typed status request is local, even while the microphone is
+            # paused. Stop active recognition/playback before replying so TTS
+            # cannot be picked up as a second user turn.
+            self.input.delete("1.0", "end")
+            if self._listening:
+                self._listen_generation += 1
+                self.recognizer.stop()
+            if self._speaking:
+                self._stop_speaking()
+            self._answer_privacy_status(message)
             return "break"
         self.input.delete("1.0", "end")
         self._append("Você", message, "user")
