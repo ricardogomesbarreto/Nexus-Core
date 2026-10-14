@@ -196,3 +196,86 @@ def test_closed_window_ignores_stale_vision_events(desktop):
     window._close()
     spin(root, lambda: app.closed)
     assert window.session.history == []
+
+
+@pytest.mark.parametrize(
+    "binding, capture, image",
+    [
+        ("<Control-Shift-F>",
+         ("file", "/home/example/notes.png"), b"private-image"),
+        ("<Control-Shift-T>",
+         ("screen",), b"private-screen"),
+        ("<Control-Shift-K>",
+         ("camera", 2), b"private-camera"),
+    ],
+)
+def test_vision_shortcut_uses_single_shot_consent(
+    desktop, monkeypatch, binding, capture, image
+):
+    from tkinter import filedialog, simpledialog
+
+    root, app, window, vision = desktop
+    monkeypatch.setattr(filedialog, "askopenfilename",
+                        lambda *a, **kw: "/home/example/notes.png")
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: 2)
+    monkeypatch.setattr(simpledialog, "askstring",
+                        lambda *a, **kw: "O que aparece?")
+    approvals = []
+    monkeypatch.setattr(
+        window.messagebox, "askyesno",
+        lambda title, message, **kw: approvals.append(message) or True,
+    )
+
+    assert root.bind(binding)
+    root.update()
+    root.event_generate(binding, when="tail")
+    spin(root, lambda: not window._busy and len(vision.calls) == 2)
+    assert len(approvals) == 1
+    assert "UMA captura/leitura" in approvals[0]
+    assert "Ollama local" in approvals[0]
+    assert vision.calls == [capture, ("describe", image, "O que aparece?")]
+    assert not app.agent.requests
+
+
+@pytest.mark.parametrize(
+    "shortcut", ["_shortcut_vision_file", "_shortcut_vision_screen",
+                 "_shortcut_vision_camera"],
+)
+def test_vision_shortcut_refusal_cannot_capture(desktop, monkeypatch, shortcut):
+    from tkinter import filedialog, simpledialog
+
+    root, app, window, vision = desktop
+    monkeypatch.setattr(filedialog, "askopenfilename",
+                        lambda *a, **kw: "/home/example/notes.png")
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: 2)
+    monkeypatch.setattr(simpledialog, "askstring", lambda *a, **kw: "Descreva")
+    approvals = []
+    monkeypatch.setattr(window.messagebox, "askyesno",
+                        lambda *a, **kw: approvals.append(True) or False)
+
+    assert getattr(window, shortcut)() == "break"
+    assert approvals == [True]
+    assert vision.calls == []
+    assert not window._busy
+    assert not app.agent.requests
+
+
+def test_vision_shortcuts_respect_selection_cancellation_and_busy_state(
+    desktop, monkeypatch
+):
+    from tkinter import filedialog, simpledialog
+
+    root, app, window, vision = desktop
+    monkeypatch.setattr(filedialog, "askopenfilename", lambda *a, **kw: "")
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: None)
+    monkeypatch.setattr(window.messagebox, "askyesno",
+                        lambda *a, **kw: pytest.fail("unexpected consent"))
+    assert window._shortcut_vision_file() == "break"
+    assert window._shortcut_vision_camera() == "break"
+    window._busy = True
+    monkeypatch.setattr(simpledialog, "askstring",
+                        lambda *a, **kw: pytest.fail("unexpected dialog"))
+    assert window._shortcut_vision_screen() == "break"
+    assert vision.calls == []
+    assert not app.agent.requests
+    window._busy = False
