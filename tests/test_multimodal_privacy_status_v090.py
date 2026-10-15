@@ -212,3 +212,58 @@ def test_authorized_vision_shows_progress_and_cancellation_truthfully(
     spin(root, lambda: not window._busy)
     assert ui_labels(window)[2] == "Visão: sem captura"
     assert app.agent.calls == []
+
+
+def test_on_demand_privacy_dialog_uses_current_state_without_devices(
+    desktop, monkeypatch,
+):
+    root, window, app, vision = desktop
+    dialogs = []
+    monkeypatch.setattr(window.messagebox, "showinfo", lambda *a, **kw: dialogs.append((a, kw)))
+    assert root.bind("<Control-Shift-I>")
+    assert window._show_privacy_status() == "break"
+    assert "Escuta: aguardando" in dialogs[-1][0][1] or "Escuta: solicitada" in dialogs[-1][0][1]
+    assert "Visão: sem captura" in dialogs[-1][0][1]
+    assert "não verificam hardware" in dialogs[-1][0][1]
+    assert dialogs[-1][1]["parent"] is root
+
+    window._shortcut_toggle_listening()
+    window.speech_enabled.set(False)
+    # No GUI poll is needed: the dialog must use the current state, not cached labels.
+    assert window._show_privacy_status() == "break"
+    assert "Escuta: pausada" in dialogs[-1][0][1]
+    assert "Voz: desativada" in dialogs[-1][0][1]
+    assert vision.captures == 0
+    assert app.agent.calls == []
+
+
+def test_on_demand_dialog_reports_only_authorized_visual_source(
+    desktop, monkeypatch,
+):
+    from tkinter import simpledialog
+    root, window, app, vision = desktop
+    dialogs = []
+    monkeypatch.setattr(window.messagebox, "showinfo", lambda *a, **kw: dialogs.append(a[1]))
+    monkeypatch.setattr(simpledialog, "askstring", lambda *a, **kw: "Segredo do arquivo")
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_screen()
+    spin(root, lambda: vision.entered.is_set())
+    window._show_privacy_status()
+    assert "Visão: processando tela" in dialogs[-1]
+    assert "Segredo do arquivo" not in dialogs[-1]
+    window._cancel_current()
+    window._show_privacy_status()
+    assert "Visão: cancelamento solicitado" in dialogs[-1]
+    assert vision.captures == 1
+    assert app.agent.calls == []
+    vision.release.set()
+    spin(root, lambda: not window._busy)
+
+
+def test_privacy_shortcut_does_not_reopen_dialog_during_shutdown(desktop, monkeypatch):
+    root, window, app, vision = desktop
+    monkeypatch.setattr(window.messagebox, "showinfo",
+                        lambda *a, **kw: pytest.fail("Dialog after shutdown"))
+    window._close()
+    assert window._show_privacy_status() == "break"
+    assert vision.captures == 0
