@@ -205,3 +205,48 @@ def test_spoken_settings_obey_optional_wake_gate_without_agent(desktop):
     assert window.speech_enabled.get()
     assert app.agent.requests == []
     assert vision.calls == []
+
+
+@pytest.mark.parametrize("spoken,command", [
+    ("Nexus, mude para voz masculina", "voice_male"),
+    ("Use voz feminina!", "voice_female"),
+    ("selecione voz masculina", "voice_male"),
+])
+def test_v0910_spoken_voice_selection_matches_only_explicit_phrases(spoken, command):
+    assert DesktopWindow._voice_command(spoken) == command
+    assert DesktopWindow._voice_command("Qual voz feminina você recomenda?") is None
+    assert DesktopWindow._voice_command("use voz masculina e analise a tela") is None
+
+
+def test_v0910_spoken_voice_selection_obeys_wake_gate_and_uses_new_voice(desktop):
+    root, app, window, recognizer, speaker, vision = desktop
+    window.wake_required.set(True)
+    recognizer.transcripts.put("use voz masculina")
+    spin(root, lambda: recognizer.calls >= 2)
+    assert window.voice_choice.get() == "Feminina"
+
+    recognizer.transcripts.put("Nexus, use voz masculina")
+    spin(root, lambda: speaker.spoken == [("Voz masculina selecionada.", "Masculina")])
+    assert window.voice_choice.get() == "Masculina"
+    assert window._voice_active
+    assert app.agent.requests == [] and vision.calls == []
+
+    spin(root, lambda: recognizer.calls >= 3)
+    recognizer.transcripts.put("Nexus, mude para voz feminina")
+    spin(root, lambda: len(speaker.spoken) == 2)
+    assert speaker.spoken[-1] == ("Voz feminina selecionada.", "Feminina")
+    assert window.voice_choice.get() == "Feminina"
+    assert app.agent.requests == []
+
+
+def test_v0910_voice_selection_while_speech_muted_keeps_mute_and_listens(desktop):
+    root, app, window, recognizer, speaker, vision = desktop
+    window.speech_enabled.set(False)
+    recognizer.transcripts.put("selecione voz masculina")
+    spin(root, lambda: window.voice_choice.get() == "Masculina"
+         and recognizer.calls >= 2)
+    assert not window.speech_enabled.get()
+    assert speaker.spoken == []
+    assert window._voice_active and not window._busy
+    assert app.agent.requests == [] and vision.calls == []
+    assert "Voz masculina selecionada." in window.transcript.get("1.0", "end")
