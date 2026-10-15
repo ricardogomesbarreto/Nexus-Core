@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.9.7 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.9.7--dev-722F37">
+  <img alt="Versão v0.9.8 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.9.8--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.9.7 — Keyboard-Gated Vision Requests`; a `main` contém código até v0.8.2, com PRs pendentes #15–#28 (v0.8.3–v0.9.6)<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.9.7 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.7 abre as ações visuais por teclado com autorização individual)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.9.8 — Accessible Speech Output Toggle`; a `main` contém código até v0.8.2, com PRs pendentes #15–#29 (v0.8.3–v0.9.7)<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.9.8 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.8 controla a saída falada pelo teclado sem alterar a escuta)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,28 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.9.8 — Accessible Speech Output Toggle (em desenvolvimento)
+
+Na janela desktop, **Ctrl+Shift+V** alterna a opção **Ler respostas em voz
+alta**. Quando desativada durante uma fala, interrompe a reprodução local
+em curso; respostas seguintes permanecem em texto até a opção ser
+reativada. Reativar não reproduz automaticamente a última mensagem.
+O atalho usa a mesma política do controle visual e atualiza o indicador
+de privacidade **Voz**.
+
+O comando não pausa nem reativa o microfone, não inicia análise visual,
+Ollama ou execução de ferramentas. A escuta pausada pelo usuário continua
+pausada. Testes Tk sob display virtual cobrem alternância por evento de
+teclado, fala em andamento, evento de áudio atrasado e resposta visual
+pendente. Áudio físico e teclado real ainda requerem homologação no Ubuntu
+Desktop 24.04 LTS. Leia as [notas da v0.9.8](docs/RELEASE_NOTES_v0.9.8.md).
+
+Esta branch depende da [v0.9.7 — PR #29](https://github.com/ricardogomesbarreto/Nexus-Core/pull/29)
+e da integração ordenada dos PRs #15–#28. O workflow de release continua
+bloqueado até CI na `main` e homologação física registrada.
 
 ---
 
@@ -803,7 +825,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
 A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).
-As notas dedicadas de `v0.3.9` até `v0.9.7` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.9.8` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -846,6 +868,7 @@ rastreáveis no GitHub:
 | v0.9.5 | Spoken Reply Interruption — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.5.md) |
 | v0.9.6 | TTS Startup Cancellation Safety — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.6.md) |
 | v0.9.7 | Keyboard-Gated Vision Requests — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.7.md) |
+| v0.9.8 | Accessible Speech Output Toggle — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.8.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1448,10 +1471,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.9.7`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.9.8`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.9.7` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.9.8` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4843,10 +4866,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.9.7 (STACKED DEVELOPMENT PR)
-Release Name:          Keyboard-Gated Vision Requests
-Release Tag:          v0.9.7 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        THREE VISUAL SHORTCUTS; PER-SHOT CONSENT REQUIRED
+Release Target:        v0.9.8 (STACKED DEVELOPMENT PR)
+Release Name:          Accessible Speech Output Toggle
+Release Tag:          v0.9.8 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        SPEECH OUTPUT SHORTCUT; MICROPHONE STATE PRESERVED
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

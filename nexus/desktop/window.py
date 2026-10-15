@@ -202,6 +202,7 @@ class DesktopWindow:
         root.bind("<Control-Shift-I>", self._show_privacy_status)
         root.bind("<Control-Shift-X>", self._shortcut_cancel_current)
         root.bind("<Control-Shift-S>", self._shortcut_stop_speaking)
+        root.bind("<Control-Shift-V>", self._shortcut_toggle_speech)
         root.bind("<Control-Shift-F>", self._shortcut_vision_file)
         root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
@@ -277,6 +278,14 @@ class DesktopWindow:
             self._stop_speaking()
             self.status.configure(text="Leitura em voz interrompida")
             self._start_listening()
+        return "break"
+
+    def _shortcut_toggle_speech(self, event=None):
+        """Use the speech checkbutton policy without changing microphone state."""
+        if not self._closing:
+            self.speech_enabled.set(not self.speech_enabled.get())
+            self._toggle_speech()
+            self._refresh_privacy_status()
         return "break"
 
     def _append(self, speaker: str, message: str, tag: str) -> None:
