@@ -1,4 +1,4 @@
-"""Interactive Ubuntu 24.04 LTS bootstrap for Nexus Core user-managed installation.
+"""Interactive Ubuntu bootstrap for Nexus Core user-managed installation.
 
 Run from a reviewed source checkout with Python 3.12+:
     python3 scripts/install_linux.py
@@ -24,6 +24,15 @@ if str(ROOT) not in sys.path:
 MIN_VERSION = (3, 12)
 from nexus.platforms import UBUNTU_PACKAGES, linux_profile, platform_capabilities
 SYSTEM_PACKAGES = UBUNTU_PACKAGES
+PACKAGES_FOR_MISSING = {
+    "psql": ("postgresql", "postgresql-client"),
+    "pg_isready": ("postgresql", "postgresql-client"),
+    "espeak-ng": ("espeak-ng",),
+    "arecord": ("alsa-utils",),
+    "ffmpeg": ("ffmpeg",),
+    "python3-tk": ("python3-tk",),
+    "python3-venv": ("python3-venv",),
+}
 
 
 def confirm(question: str) -> bool:
@@ -58,10 +67,6 @@ def system_requirements() -> list[str]:
     """Passively inspect required desktop helpers; no service connection."""
     report = platform_capabilities()
     missing = list(report["missing_required"])
-    if not installed("xdotool"):
-        # X11 automation is optional for Wayland, but should be installed on
-        # Ubuntu to permit the separate physical X11 acceptance tests.
-        missing.append("xdotool")
     return missing
 
 
@@ -79,6 +84,12 @@ def install_system_packages() -> bool:
         print("Dependências de sistema encontradas.")
         return True
     print("Dependências ausentes: " + ", ".join(missing))
+    if any(requirement not in PACKAGES_FOR_MISSING for requirement in missing):
+        print("Dependência sem pacote Ubuntu conhecido; instalação interrompida.")
+        return False
+    packages = [package for package in SYSTEM_PACKAGES
+                if any(package in PACKAGES_FOR_MISSING[requirement]
+                       for requirement in missing)]
     if not installed("apt-get") or not installed("sudo"):
         print("apt-get/sudo indisponíveis: instalação guiada interrompida.")
         return False
@@ -87,7 +98,7 @@ def install_system_packages() -> bool:
         return False
     try:
         _run(["sudo", "apt-get", "update"], timeout=300)
-        _run(["sudo", "apt-get", "install", "-y", *SYSTEM_PACKAGES], timeout=600)
+        _run(["sudo", "apt-get", "install", "-y", *packages], timeout=600)
     except (OSError, subprocess.SubprocessError):
         print("apt-get falhou; verifique os pacotes antes de tentar novamente.")
         return False
@@ -343,10 +354,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     profile = linux_profile()
     if not profile.installer_supported:
-        print("Instalação automática validada apenas para Ubuntu Desktop 24.04 LTS; "
+        print("Instalação requer Ubuntu reconhecido e Python 3.12+; "
               "em outras distribuições use --check. Nada foi instalado.", file=sys.stderr)
         return 2
-    print("NEXUS CORE — instalação guiada para Ubuntu Desktop 24.04 LTS.")
+    print(f"NEXUS CORE — instalação guiada para Ubuntu {profile.release}.")
     if not install_system_packages():
         print("Instalação interrompida: requisitos do Ubuntu ainda ausentes.", file=sys.stderr)
         return 2

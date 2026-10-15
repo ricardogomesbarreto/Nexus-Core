@@ -80,10 +80,11 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
     # Never echo untrusted system paths, server replies or environment values.
     known_missing = [x for x in (
         "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg", "python3-tk",
+        "python3-venv",
     ) if x in required]
     blockers = []
     if not profile.installer_supported:
-        blockers.append("ubuntu_24_04_not_confirmed")
+        blockers.append("ubuntu_install_prerequisites_not_met")
     if known_missing:
         blockers.append("missing_desktop_packages")
     if pg["reachable"] is not True:
@@ -100,7 +101,7 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
     if profile.session != "x11":
         actions.append("Only optional xdotool window automation requires a local X11 session; Tk desktop UI can use Wayland.")
     if not profile.installer_supported:
-        actions.append("Ubuntu 24.04 LTS is the only installer baseline; other distros are diagnostic-only.")
+        actions.append("Ubuntu requires a recognized version and Python 3.12+; other distros are diagnostic-only.")
     return {
         "schema": "nexus.ubuntu-doctor.v1",
         "mode": "local_read_only",

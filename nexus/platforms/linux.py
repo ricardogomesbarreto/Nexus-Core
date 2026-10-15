@@ -1,6 +1,6 @@
 """NEXUS CORE v0.8.2: passive desktop-Linux platform inventory.
 
-Only Ubuntu 24.04 LTS is the current *installer* validation target.
+Ubuntu releases with a valid VERSION_ID and Python 3.12+ may use the installer.
 Unknown distributions are reported but no package-manager action is inferred.
 This module does not open hardware, connect to networks or start services.
 """
@@ -14,7 +14,7 @@ import shutil
 import sys
 
 
-SUPPORTED_UBUNTU = "24.04"
+UBUNTU_RELEASE = re.compile(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", re.ASCII)
 REQUIRED_BINARIES = (
     "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg",
 )
@@ -23,7 +23,7 @@ OPTIONAL_BINARIES = (
 )
 UBUNTU_PACKAGES = (
     "python3-venv", "python3-tk", "postgresql", "postgresql-client",
-    "xdotool", "espeak-ng", "alsa-utils", "ffmpeg",
+    "espeak-ng", "alsa-utils", "ffmpeg",
 )
 
 
@@ -38,7 +38,7 @@ class LinuxProfile:
     @property
     def target(self) -> str:
         if self.installer_supported:
-            return "ubuntu_24_04_lts"
+            return "ubuntu_compatible"
         if self.system != "Linux":
             return "non_linux"
         if self.distro == "ubuntu":
@@ -84,7 +84,7 @@ def linux_profile(
         session = "unknown"
     supported = (
         system == "Linux" and distro == "ubuntu"
-        and release == SUPPORTED_UBUNTU
+        and UBUNTU_RELEASE.fullmatch(release) is not None
         and sys.version_info >= (3, 12)
     )
     return LinuxProfile(system, distro, release, session, supported)
@@ -94,6 +94,7 @@ def platform_capabilities(
     *, profile: LinuxProfile | None = None,
     locate=None,
     tkinter_available: bool | None = None,
+    venv_available: bool | None = None,
 ) -> dict:
     """Read-only capability snapshot; status is not a hardware health check."""
     profile = linux_profile() if profile is None else profile
@@ -103,11 +104,18 @@ def platform_capabilities(
             tkinter_available = importlib.util.find_spec("tkinter") is not None
         except (ImportError, ValueError):
             tkinter_available = False
+    if venv_available is None:
+        try:
+            venv_available = importlib.util.find_spec("ensurepip") is not None
+        except (ImportError, ValueError):
+            venv_available = False
     needed = {binary: bool(locate(binary)) for binary in REQUIRED_BINARIES}
     optional = {binary: bool(locate(binary)) for binary in OPTIONAL_BINARIES}
     missing = [name for name, available in needed.items() if not available]
     if not tkinter_available:
         missing.append("python3-tk")
+    if not venv_available:
+        missing.append("python3-venv")
     return {
         "mode": "passive",
         "target": profile.target,
@@ -120,6 +128,7 @@ def platform_capabilities(
         "required": needed,
         "optional": optional,
         "tkinter_available": bool(tkinter_available),
+        "venv_available": bool(venv_available),
         "missing_required": missing,
         "desktop_gui_ready_to_try": bool(tkinter_available and profile.system == "Linux"),
         "x11_automation_ready_to_try": bool(
@@ -132,8 +141,9 @@ def platform_capabilities(
         "ollama_model_tested": False,
         "changes_performed": False,
         "notes": (
-            "Ubuntu 24.04 LTS é o alvo de instalação; outras distros somente "
-            "diagnóstico nesta fase. A interface Tk pode funcionar em Wayland, "
+            "Instalação Ubuntu condicionada a Python 3.12+, dependências e "
+            "verificação local do PostgreSQL; outras distros somente diagnóstico. "
+            "A interface Tk pode funcionar em Wayland, "
             "mas automação de teclado por xdotool exige sessão X11 local."
         ),
     }

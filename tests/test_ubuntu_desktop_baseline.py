@@ -1,4 +1,4 @@
-"""Ubuntu 24.04 is the only installation baseline; other Linux distros are read-only."""
+"""Ubuntu installer eligibility follows runtime capabilities, not one release."""
 import json
 from types import SimpleNamespace
 
@@ -33,8 +33,10 @@ def test_readonly_os_release_parsing(content, expected):
 
 
 @pytest.mark.parametrize("os_release,system,target,supported", [
-    (UBUNTU, "Linux", "ubuntu_24_04_lts", True),
-    (UBUNTU_FUTURE, "Linux", "ubuntu_not_yet_validated", False),
+    (UBUNTU, "Linux", "ubuntu_compatible", True),
+    (UBUNTU_FUTURE, "Linux", "ubuntu_compatible", True),
+    ('ID=ubuntu\nVERSION_ID="26.04.1"\n', "Linux", "ubuntu_compatible", True),
+    ('ID=ubuntu\nVERSION_ID=rolling\n', "Linux", "ubuntu_not_yet_validated", False),
     (DEBIAN, "Linux", "linux_other_distro_future", False),
     (ARCH, "Linux", "linux_other_distro_future", False),
     (STEAMOS, "Linux", "linux_other_distro_future", False),
@@ -48,6 +50,14 @@ def test_explicit_installer_support_boundary(os_release, system, target, support
     )
     assert profile.target == target
     assert profile.installer_supported is supported
+
+
+def test_ubuntu_2604_requires_python_312(monkeypatch):
+    import nexus.platforms.linux as linux
+    monkeypatch.setattr(linux.sys, "version_info", (3, 11, 9))
+    profile = linux.linux_profile(os_release=UBUNTU_FUTURE, system="Linux")
+    assert profile.installer_supported is False
+    assert profile.target == "ubuntu_not_yet_validated"
 
 
 def test_ubuntu_wayland_gui_vs_x11_automation_distinction():
@@ -86,6 +96,16 @@ def test_report_makes_missing_dependencies_explicit():
     assert report["desktop_gui_ready_to_try"] is False
 
 
+def test_missing_venv_is_reported_before_database_provisioning():
+    profile = linux_profile(os_release=UBUNTU_FUTURE, system="Linux")
+    report = platform_capabilities(
+        profile=profile, locate=lambda cmd: "/usr/bin/" + cmd,
+        tkinter_available=True, venv_available=False,
+    )
+    assert report["missing_required"] == ["python3-venv"]
+    assert report["venv_available"] is False
+
+
 def test_cli_platform_check_is_read_only_and_does_not_open_database(monkeypatch, capsys):
     import nexus.main as entry
     monkeypatch.setattr(entry, "build_application",
@@ -112,7 +132,7 @@ def test_cli_platform_check_rejects_mixed_operations(arguments):
 
 
 @pytest.mark.parametrize("distro_text", [
-    DEBIAN, ARCH, STEAMOS, FEDORA, UBUNTU_FUTURE,
+    DEBIAN, ARCH, STEAMOS, FEDORA, 'ID=ubuntu\nVERSION_ID=rolling\n',
 ])
 def test_installer_refuses_all_unverified_distros_before_commands(
     distro_text, monkeypatch, capsys,
@@ -128,6 +148,25 @@ def test_installer_refuses_all_unverified_distros_before_commands(
                         lambda: pytest.fail("Unsupported distro may not install Python"))
     assert install_linux.main([]) == 2
     assert "Nada foi instalado" in capsys.readouterr().err
+
+
+def test_ubuntu_2604_installer_enters_normal_dependency_flow(monkeypatch):
+    profile = linux_profile(os_release=UBUNTU_FUTURE, system="Linux")
+    monkeypatch.setattr(install_linux, "linux_profile", lambda: profile)
+    monkeypatch.setattr(install_linux.os, "geteuid", lambda: 1000)
+    monkeypatch.setattr(install_linux, "install_system_packages", lambda: False)
+    monkeypatch.setattr(install_linux, "provision_postgresql",
+                        lambda: pytest.fail("No database after dependencies fail"))
+    assert install_linux.main([]) == 2
+
+
+def test_wayland_does_not_require_xdotool_for_installation(monkeypatch):
+    monkeypatch.setattr(install_linux, "platform_capabilities",
+                        lambda: {"missing_required": []})
+    monkeypatch.setattr(install_linux, "installed",
+                        lambda cmd: pytest.fail("No optional xdotool check"))
+    assert install_linux.system_requirements() == []
+    assert "xdotool" not in install_linux.SYSTEM_PACKAGES
 
 
 def test_installer_check_is_passive_even_on_unsupported_linux(monkeypatch, capsys):
@@ -264,6 +303,21 @@ def test_approved_ubuntu_packages_use_argument_array_not_shell(monkeypatch):
     assert "postgresql" in captured[1]
 
 
+def test_ubuntu_2604_installs_only_missing_audio_packages(monkeypatch):
+    profile = linux_profile(os_release=UBUNTU_FUTURE, system="Linux")
+    monkeypatch.setattr(install_linux, "linux_profile", lambda: profile)
+    results = [["espeak-ng", "ffmpeg"], []]
+    monkeypatch.setattr(install_linux, "system_requirements",
+                        lambda: results.pop(0))
+    monkeypatch.setattr(install_linux, "installed", lambda _: True)
+    monkeypatch.setattr(install_linux, "confirm", lambda _: True)
+    captured = []
+    monkeypatch.setattr(install_linux, "_run",
+                        lambda argv, **kw: captured.append(argv))
+    assert install_linux.install_system_packages() is True
+    assert captured[1] == ["sudo", "apt-get", "install", "-y", "espeak-ng", "ffmpeg"]
+
+
 def test_python_version_and_non_root_are_prerequisites(monkeypatch, capsys):
     monkeypatch.setattr(install_linux.os, "geteuid", lambda: 0)
     monkeypatch.setattr(install_linux, "install_system_packages",
@@ -289,8 +343,9 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
         if "--platform-check" in args:
             return subprocess.CompletedProcess(
                 args, 0, stdout=(
-                    '{"mode":"passive","target":"ubuntu_24_04_lts",'
-                    '"system":"Linux","installer_supported":true,'
+                    '{"mode":"passive","target":"ubuntu_compatible",'
+                    '"system":"Linux","distro":"ubuntu","version_id":"26.04",'
+                    '"installer_supported":true,'
                     '"python_supported":true,"changes_performed":false,'
                     '"missing_required":[]}'
                 )
@@ -390,8 +445,9 @@ def test_failed_login_does_not_activate_new_version(tmp_path, monkeypatch):
             return SimpleNamespace(stdout="Nexus Core " + settings.version)
         if "--platform-check" in argv:
             return SimpleNamespace(stdout=json.dumps({
-                "mode": "passive", "target": "ubuntu_24_04_lts",
-                "system": "Linux", "installer_supported": True,
+                "mode": "passive", "target": "ubuntu_compatible",
+                "system": "Linux", "distro": "ubuntu", "version_id": "26.04",
+                "installer_supported": True,
                 "python_supported": True, "changes_performed": False,
                 "missing_required": [],
             }))

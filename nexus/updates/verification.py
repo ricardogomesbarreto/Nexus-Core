@@ -7,6 +7,7 @@ A successful probe is not an end-to-end application or hardware certification.
 """
 import json
 from pathlib import Path
+import re
 import subprocess
 
 
@@ -25,7 +26,7 @@ def validate_version_output(output: str | bytes, expected: str) -> None:
 
 
 def validate_platform_report(output: str | bytes) -> None:
-    """Enforce Ubuntu 24.04 first and no reported side effects or missing tools."""
+    """Enforce a recognized Ubuntu version and required runtime capabilities."""
     try:
         text = output.decode("utf-8", errors="strict") if isinstance(output, bytes) else output
         if type(text) is not str or len(text) > 12_000:
@@ -35,8 +36,11 @@ def validate_platform_report(output: str | bytes) -> None:
         raise RuntimeVerificationError("Diagnóstico de instalação inválido.") from exc
     if type(result) is not dict or not (
         result.get("mode") == "passive"
-        and result.get("target") == "ubuntu_24_04_lts"
+        and result.get("target") == "ubuntu_compatible"
         and result.get("system") == "Linux"
+        and result.get("distro") == "ubuntu"
+        and type(result.get("version_id")) is str
+        and re.fullmatch(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", result["version_id"]) is not None
         and result.get("installer_supported") is True
         and result.get("python_supported") is True
         and result.get("changes_performed") is False

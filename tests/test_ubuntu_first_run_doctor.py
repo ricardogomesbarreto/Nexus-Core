@@ -157,7 +157,7 @@ def test_doctor_does_not_authorize_other_distros():
         postgres=lambda: {"status": "accepting_connections", "reachable": True},
         ollama=lambda: {"status": "reachable", "reachable": True},
     )
-    assert "ubuntu_24_04_not_confirmed" in report["blockers"]
+    assert "ubuntu_install_prerequisites_not_met" in report["blockers"]
 
 
 def test_cli_doctor_does_not_initialize_application(monkeypatch, capsys):
