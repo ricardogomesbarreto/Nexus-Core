@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.9 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.9%20na%20main-722F37">
+  <img alt="Versão v0.9.10 em desenvolvimento" src="https://img.shields.io/badge/vers%C3%A3o-v0.9.10--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -20,8 +20,9 @@
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
 > **Código na `main`:** `v0.9.9 — Spoken Desktop Controls`; os PRs #15–#31 (v0.8.3–v0.9.9) foram integrados em ordem, sem criar tags dessas versões.<br>
+> **Versão em desenvolvimento:** `v0.9.10 — Spoken Voice Selection`, em PR sobre a `main`; ainda não integrada nem publicada.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.9 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.9 oferece solicitações visuais e controle da saída de voz também por comando falado)<br>
+> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.10 acrescenta seleção da voz feminina/masculina por comando falado)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -40,6 +41,31 @@ As seções de versões abaixo preservam a evolução da implementação. Códig
 integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
+
+---
+
+# v0.9.10 — Spoken Voice Selection (em desenvolvimento)
+
+Na janela desktop, diga **"Use voz feminina"**, **"Use voz masculina"**,
+**"Mude para voz feminina/masculina"** ou **"Selecione voz
+feminina/masculina"** para alterar o mesmo seletor já disponível na
+interface. O comando é tratado localmente, sem chamar o Agent/Ollama,
+acessar o PostgreSQL, capturar imagens ou executar ferramentas. A confirmação
+aparece no histórico e usa a voz recém-selecionada quando a opção **Ler
+respostas em voz alta** estiver ligada. Se estiver desligada, a escolha é
+feita sem reativar a fala: a confirmação fica apenas em texto.
+
+As frases precisam ser pedidos completos. A palavra de ativação **"Nexus"**
+continua obrigatória quando essa opção está marcada. Com a escuta pausada,
+nenhum comando falado é recebido; retome pelo botão ou `Ctrl+Shift+M`.
+A escolha vale para a sessão atual e não altera o estado do microfone ou
+autorizações. Testes em display virtual cobrem as duas vozes, frase de
+ativação, saída silenciada e isolamento do modelo. Áudio e microfone físicos
+no Ubuntu 24.04 LTS seguem pendentes de homologação.
+
+Leia as [notas da v0.9.10](docs/RELEASE_NOTES_v0.9.10.md).
+Este desenvolvimento parte do código v0.9.9 já integrado à `main`. O
+workflow de release permanece bloqueado até aceite físico registrado.
 
 ---
 
@@ -853,7 +879,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
 A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).
-As notas dedicadas de `v0.3.9` até `v0.9.9` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.9.10` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -898,6 +924,7 @@ rastreáveis no GitHub:
 | v0.9.7 | Keyboard-Gated Vision Requests — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.7.md) |
 | v0.9.8 | Accessible Speech Output Toggle — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.8.md) |
 | v0.9.9 | Spoken Desktop Controls — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.9.md) |
+| v0.9.10 | Spoken Voice Selection — PR de desenvolvimento; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.10.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1500,10 +1527,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na `main`: `v0.9.9`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.9.10`; a `main` contém v0.9.9. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais do código `v0.9.9` na `main`. Para as funcionalidades disponíveis,
+dependências atuais do código `v0.9.10` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4897,10 +4924,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Code Version:          v0.9.9 (INTEGRATED IN MAIN; NOT RELEASED)
-Release Name:          Spoken Desktop Controls
-Release Tag:          v0.9.9 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        LOCAL VOICE COMMANDS; PER-SHOT VISUAL CONSENT
+Code Version:          v0.9.10 (DEVELOPMENT PR; MAIN AT v0.9.9)
+Release Name:          Spoken Voice Selection
+Release Tag:          v0.9.10 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        LOCAL FEMALE/MALE VOICE SELECTION COMMANDS
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

@@ -461,6 +461,12 @@ class DesktopWindow:
         if normalized in {"desative a voz", "desligue a voz", "desativar voz",
                           "desligar voz", "responda somente por texto"}:
             return "speech_off"
+        if normalized in {"use voz feminina", "mude para voz feminina",
+                          "selecione voz feminina"}:
+            return "voice_female"
+        if normalized in {"use voz masculina", "mude para voz masculina",
+                          "selecione voz masculina"}:
+            return "voice_male"
         if normalized in {"analisar imagem", "analise uma imagem",
                           "analisar arquivo de imagem"}:
             return "vision_file"
@@ -478,6 +484,17 @@ class DesktopWindow:
             self._toggle_speech()
         self._refresh_privacy_status()
         answer = "Leitura em voz ativada." if enabled else "Leitura em voz desativada."
+        self._append("Você", utterance, "user")
+        self._append("Nexus Core", answer, "assistant")
+        self.status.configure(text=answer)
+        if not self._say_response(answer):
+            self._start_listening()
+
+    def _spoken_voice_selection(self, command: str, utterance: str) -> None:
+        """Change only the local TTS choice; preserve microphone and mute state."""
+        voice = "Feminina" if command == "voice_female" else "Masculina"
+        self.voice_choice.set(voice)
+        answer = f"Voz {voice.lower()} selecionada."
         self._append("Você", utterance, "user")
         self._append("Nexus Core", answer, "assistant")
         self.status.configure(text=answer)
@@ -737,6 +754,8 @@ class DesktopWindow:
                         self._answer_privacy_status(utterance)
                     elif command in ("speech_on", "speech_off"):
                         self._spoken_speech_control(command, utterance)
+                    elif command in ("voice_female", "voice_male"):
+                        self._spoken_voice_selection(command, utterance)
                     elif command in ("vision_file", "vision_screen", "vision_camera"):
                         self._request_vision(command.removeprefix("vision_"))
                         # Selection or consent may be cancelled. Only then
