@@ -62,6 +62,8 @@ continuam sob o botão **Cancelar** ou `Ctrl+Shift+X`.
 Testes Tk sob display virtual cobrem autorização, recusa, seleção
 cancelada, resposta falada e frase de ativação. Hardware Ubuntu físico
 segue pendente. Leia as [notas da v0.9.9](docs/RELEASE_NOTES_v0.9.9.md).
+Uma correção nesta branch impede que a recusa ou falha da configuração
+PostgreSQL seja apresentada como instalação concluída.
 Esta branch depende da [v0.9.8 — PR #30](https://github.com/ricardogomesbarreto/Nexus-Core/pull/30)
 e da integração ordenada dos PRs #15–#29. O workflow de release segue
 bloqueado até CI na `main` e homologação física registrada.
@@ -438,6 +440,14 @@ O código de voz, visão, integrações, atualizações verificadas e interface 
 # v0.8.1 — Linux Bootstrap & Verified Self-Update (em desenvolvimento)
 
 A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. **O suporte atual do instalador foi posteriormente restringido na v0.8.2 ao Ubuntu Desktop 24.04 LTS com Python 3.12+**; o instalador é capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
+
+**Correção na v0.9.9:** a instalação para antes de criar o ambiente Python e
+o launcher se não houver senha PostgreSQL local utilizável. Após uma recusa
+ou quando banco/usuário já existirem, configure a credencial manualmente
+com `NEXUS_DATABASE_PASSWORD` e execute novamente o instalador. Um arquivo
+de credenciais privado porém inválido não conta como configuração pronta.
+Essa verificação de presença/formato não substitui o teste de autenticação
+no PostgreSQL nem a homologação da instalação em Ubuntu físico.
 
 ```bash
 # Em um checkout revisado desta versão, sem sudo:

@@ -152,6 +152,90 @@ def test_installer_rejects_apt_refusal_before_any_setup(monkeypatch):
     assert install_linux.main([]) == 2
 
 
+def test_installer_never_reports_success_without_postgresql_credentials(
+    monkeypatch, capsys,
+):
+    profile = linux_profile(os_release=UBUNTU, system="Linux")
+    monkeypatch.setattr(install_linux, "linux_profile", lambda: profile)
+    monkeypatch.setattr(install_linux.os, "geteuid", lambda: 1000)
+    monkeypatch.setattr(install_linux, "install_system_packages", lambda: True)
+    monkeypatch.setattr(install_linux, "_existing_credentials", lambda: False)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "installed", lambda command: True)
+    monkeypatch.setattr(install_linux, "confirm", lambda question: False)
+    monkeypatch.setattr(install_linux, "_run",
+                        lambda *a, **kw: pytest.fail("No PostgreSQL commands after refusal"))
+    monkeypatch.setattr(install_linux, "install_managed_python",
+                        lambda: pytest.fail("No venv without database credentials"))
+
+    assert install_linux.main([]) == 2
+    output = capsys.readouterr()
+    assert "Banco não configurado automaticamente" in output.out
+    assert "Instalação concluída" not in output.out
+    assert "configure credenciais PostgreSQL" in output.err
+
+
+def test_installer_accepts_explicit_manual_password_without_provisioning(monkeypatch):
+    monkeypatch.setattr(install_linux, "_existing_credentials", lambda: False)
+    monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "senha-manual-de-teste")
+    monkeypatch.setattr(install_linux, "confirm",
+                        lambda question: pytest.fail("No provisioning prompt"))
+    assert install_linux.provision_postgresql() is True
+
+
+def test_existing_credentials_must_contain_valid_private_password(tmp_path, monkeypatch):
+    file = tmp_path / "credentials.json"
+    monkeypatch.setattr(install_linux, "_credentials_file", lambda: file)
+    file.write_text("{}", encoding="utf-8")
+    file.chmod(0o600)
+    assert not install_linux._existing_credentials()
+    file.write_text('{"database_password": "senha-local-de-teste"}', encoding="utf-8")
+    assert install_linux._existing_credentials()
+    file.chmod(0o644)
+    assert not install_linux._existing_credentials()
+
+
+def test_successful_provision_requires_a_readable_private_credential(
+    tmp_path, monkeypatch,
+):
+    file = tmp_path / "config" / "nexus-core" / "credentials.json"
+    monkeypatch.setattr(install_linux, "_credentials_file", lambda: file)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "installed", lambda command: True)
+    monkeypatch.setattr(install_linux, "confirm", lambda question: True)
+    statements = []
+
+    def query(argv, **kwargs):
+        statements.append(kwargs["input_text"])
+        return SimpleNamespace(stdout="")
+
+    monkeypatch.setattr(install_linux, "_run", query)
+    assert install_linux.provision_postgresql() is True
+    assert file.stat().st_mode & 0o077 == 0
+    assert install_linux._existing_credentials()
+    assert any(sql.startswith("CREATE ROLE nexus") for sql in statements)
+    assert any(sql.startswith("CREATE DATABASE nexus") for sql in statements)
+
+
+def test_existing_postgresql_role_is_preserved_until_manually_configured(
+    monkeypatch,
+):
+    monkeypatch.setattr(install_linux, "_existing_credentials", lambda: False)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "installed", lambda command: True)
+    monkeypatch.setattr(install_linux, "confirm", lambda question: True)
+    statements = []
+
+    def query(argv, **kwargs):
+        statements.append(kwargs["input_text"])
+        return SimpleNamespace(stdout="1")
+
+    monkeypatch.setattr(install_linux, "_run", query)
+    assert install_linux.provision_postgresql() is False
+    assert len(statements) == 2
+    assert all(sql.startswith("SELECT 1") for sql in statements)
+
+
 def test_no_sudo_when_user_declines(monkeypatch):
     profile = linux_profile(os_release=UBUNTU, system="Linux")
     monkeypatch.setattr(install_linux, "linux_profile", lambda: profile)
