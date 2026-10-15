@@ -200,6 +200,7 @@ class DesktopWindow:
         root.protocol("WM_DELETE_WINDOW", self._close)
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         root.bind("<Control-Shift-I>", self._show_privacy_status)
+        root.bind("<Control-Shift-X>", self._shortcut_cancel_current)
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
@@ -261,6 +262,11 @@ class DesktopWindow:
             self._toggle_listening()
         return "break"
 
+    def _shortcut_cancel_current(self, event=None):
+        """Use the existing Cancel action for the current operation only."""
+        self._cancel_current()
+        return "break"
+
     def _append(self, speaker: str, message: str, tag: str) -> None:
         self.transcript.configure(state="normal")
         self.transcript.insert("end", f"{speaker}\n", tag)
@@ -306,7 +312,7 @@ class DesktopWindow:
 
         It cannot undo an already executed action or interrupt every Ollama call.
         """
-        if not self._busy or self._closing:
+        if not self._busy or self._closing or self._cancel_requested:
             return
         self._cancel_requested = True
         if self._operation_kind == "chat":
