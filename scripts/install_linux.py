@@ -122,6 +122,25 @@ def _existing_credentials() -> bool:
     return load_local_password(_credentials_file()) is not None
 
 
+def _save_credentials(password: str, database_name: str, database_user: str) -> None:
+    """Store credentials only in an owner-private file; never replace one."""
+    file = _credentials_file()
+    if file.is_symlink() or file.parent.is_symlink() or file.exists():
+        raise RuntimeError("Caminho de credenciais já existente ou inseguro.")
+    file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    file.parent.chmod(0o700)
+    fd, temp_name = tempfile.mkstemp(prefix=".db-", dir=file.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump({"database_password": password,
+                       "database_name": database_name,
+                       "database_user": database_user}, stream)
+        os.replace(temp_name, file)
+    finally:
+        Path(temp_name).unlink(missing_ok=True)
+
+
 def provision_postgresql() -> bool:
     if _existing_credentials():
         print("Credenciais locais de PostgreSQL já configuradas; nenhuma senha foi alterada.")
@@ -141,29 +160,25 @@ def provision_postgresql() -> bool:
                            "-v", "ON_ERROR_STOP=1", "-tA", "-d", "postgres"],
                           input_text=sql, timeout=30, capture=True)
             return result.stdout.strip()
+        database_name = "nexus"
         role_exists = query("SELECT 1 FROM pg_roles WHERE rolname='nexus';") == "1"
         db_exists = query("SELECT 1 FROM pg_database WHERE datname='nexus';") == "1"
         if role_exists or db_exists:
-            print("Usuário ou banco existente: configuração preservada. "
-                  "Configure NEXUS_DATABASE_PASSWORD manualmente.")
-            return False
+            print("Usuário ou banco 'nexus' existente: configuração preservada.")
+            if not confirm("Criar usuário e banco exclusivos 'nexus_core' para este assistente?"):
+                print("Banco não configurado automaticamente.")
+                return False
+            database_name = "nexus_core"
+            if (query("SELECT 1 FROM pg_roles WHERE rolname='nexus_core';") == "1"
+                    or query("SELECT 1 FROM pg_database WHERE datname='nexus_core';") == "1"):
+                print("Usuário ou banco 'nexus_core' já existe; nenhuma senha foi alterada. "
+                      "Configure credenciais manualmente.")
+                return False
         password = secrets.token_urlsafe(36)
         # SQL goes on stdin, never argv or printed output.
-        query(f"CREATE ROLE nexus LOGIN PASSWORD '{password}';")
-        query("CREATE DATABASE nexus OWNER nexus;")
-        file = _credentials_file()
-        if file.is_symlink() or file.parent.is_symlink():
-            raise RuntimeError("Caminho de credenciais inseguro.")
-        file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        file.parent.chmod(0o700)
-        fd, temp_name = tempfile.mkstemp(prefix=".db-", dir=file.parent)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as stream:
-                os.fchmod(stream.fileno(), 0o600)
-                json.dump({"database_password": password}, stream)
-            os.replace(temp_name, file)
-        finally:
-            Path(temp_name).unlink(missing_ok=True)
+        query(f"CREATE ROLE {database_name} LOGIN PASSWORD '{password}';")
+        query(f"CREATE DATABASE {database_name} OWNER {database_name};")
+        _save_credentials(password, database_name, database_name)
         print("PostgreSQL local configurado e credenciais protegidas (0600).")
         return _existing_credentials()
     except (OSError, RuntimeError, subprocess.SubprocessError):
@@ -182,14 +197,18 @@ def verify_local_postgresql(python: Path, home: Path) -> None:
     The password is passed only in the child environment, never in argv or
     diagnostics. An Ollama/Vosk failure does not invalidate a PostgreSQL login.
     """
-    from nexus.updates.managed_entrypoint import load_local_password
+    from nexus.updates.managed_entrypoint import load_local_database_config
     password = os.environ.get("NEXUS_DATABASE_PASSWORD")
-    if not password:
-        password = load_local_password(_credentials_file())
+    config = load_local_database_config(_credentials_file())
+    if not password and config is not None:
+        password = config["database_password"]
     if not password:
         raise PostgreSQLAuthenticationError("Credenciais locais indisponíveis.")
     environment = os.environ.copy()
     environment["NEXUS_DATABASE_PASSWORD"] = password
+    if config is not None:
+        environment.setdefault("NEXUS_DATABASE_NAME", config["database_name"])
+        environment.setdefault("NEXUS_DATABASE_USER", config["database_user"])
     try:
         result = _run(
             [str(python), "-I", "-m", "nexus.main", "--ubuntu-preflight"],
@@ -257,6 +276,11 @@ def _install_managed_python_locked(home: Path):
     )
     validate_platform_report(platform.stdout)
     verify_local_postgresql(python, home)
+    if not _existing_credentials():
+        password = os.environ.get("NEXUS_DATABASE_PASSWORD")
+        if password:
+            _save_credentials(password, os.environ.get("NEXUS_DATABASE_NAME", "nexus"),
+                              os.environ.get("NEXUS_DATABASE_USER", "nexus"))
     _switch_current(home, target)
     return home
 

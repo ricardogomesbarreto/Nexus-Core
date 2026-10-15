@@ -149,6 +149,40 @@ def test_password_is_only_loaded_from_private_bounded_regular_file(tmp_path):
     assert entry.load_local_password(secret) is None
 
 
+def test_launcher_loads_dedicated_postgresql_identity_from_private_file(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setattr(entry.os, "geteuid", lambda: 1000)
+    home, _, _ = installed(tmp_path)
+    secret = tmp_path / "credentials.json"
+    secret.write_text(json.dumps({
+        "database_name": "nexus_core", "database_user": "nexus_core",
+        "database_password": "private-test-password",
+    }))
+    secret.chmod(0o600)
+    for key in ("NEXUS_DATABASE_PASSWORD", "NEXUS_DATABASE_NAME", "NEXUS_DATABASE_USER",
+                "NEXUS_RUNNING_MANAGED", "NEXUS_MANAGED_HOME"):
+        monkeypatch.setenv(key, "temporary-test-value")
+        monkeypatch.delenv(key, raising=False)
+    entry.launch([], home=home, credentials=secret, execv=lambda *args: None)
+    assert os.environ["NEXUS_DATABASE_NAME"] == "nexus_core"
+    assert os.environ["NEXUS_DATABASE_USER"] == "nexus_core"
+    assert os.environ["NEXUS_DATABASE_PASSWORD"] == "private-test-password"
+
+
+def test_launcher_rejects_public_or_malformed_database_identity(tmp_path):
+    secret = tmp_path / "credentials.json"
+    secret.write_text(json.dumps({
+        "database_name": "nexus_core\nUNTRUSTED", "database_user": "nexus_core",
+        "database_password": "private-test-password",
+    }))
+    secret.chmod(0o600)
+    assert entry.load_local_database_config(secret) is None
+    secret.write_text(json.dumps({"database_password": "private-test-password"}))
+    secret.chmod(0o644)
+    assert entry.load_local_database_config(secret) is None
+
+
 def test_launch_keeps_user_supplied_password_untouched(tmp_path, monkeypatch):
     home, _, _ = installed(tmp_path)
     secret = tmp_path / "db_credentials.json"
