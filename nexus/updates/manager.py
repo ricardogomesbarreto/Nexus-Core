@@ -10,6 +10,7 @@ import tempfile
 import venv
 
 from .recovery import RecoveryError, maintenance_lock
+from .verification import RuntimeVerificationError, verify_installed_runtime
 from .releases import (
     ReleaseWheel, UpdateError, download_verified, latest_release, version_tuple,
 )
@@ -238,15 +239,8 @@ def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, timeout=300, check=True,
         )
-        result = subprocess.run(
-            [str(python), "-m", "nexus.main", "--version"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, timeout=20, check=True,
-        )
-        if result.stdout.decode("utf-8", errors="strict").strip() != (
-            "Nexus Core " + release.version
-        ):
-            raise UpdateError("O pacote instalado não corresponde à release.")
+        # Smoke-check the new venv while the prior version is still selected.
+        verify_installed_runtime(python, release.version)
         _switch_current(home, target)
         # The active selection has ALREADY changed. A failure to remove a
         # stale marker must never trigger deletion of the running version.
@@ -255,7 +249,7 @@ def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
         except OSError:
             pass
         return release.version
-    except (OSError, subprocess.SubprocessError, UpdateError, UnicodeError) as exc:
+    except (OSError, subprocess.SubprocessError, UpdateError, RuntimeVerificationError, UnicodeError) as exc:
         # Clean up only an unselected new venv. Never delete whichever
         # version the active symlink now points to.
         import shutil

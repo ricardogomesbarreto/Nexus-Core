@@ -202,6 +202,15 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
             return subprocess.CompletedProcess(
                 args, 0, stdout="Nexus Core " + settings.version
             )
+        if "--platform-check" in args:
+            return subprocess.CompletedProcess(
+                args, 0, stdout=(
+                    '{"mode":"passive","target":"ubuntu_24_04_lts",'
+                    '"system":"Linux","installer_supported":true,'
+                    '"python_supported":true,"changes_performed":false,'
+                    '"missing_required":[]}'
+                )
+            )
         return subprocess.CompletedProcess(args, 0, stdout=None)
 
     monkeypatch.setattr(install_linux.venv, "create", virtual_environment)
@@ -213,7 +222,9 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
     assert "-e" not in pip_args
     assert str(install_linux.ROOT) + "[voice,vision]" in pip_args
     assert kwargs["cwd"] == install_linux.ROOT
-    assert calls[-1][0][-1] == "--version"
+    assert calls[-1][0][-1] == "--platform-check"
+    assert all("-I" in cmd for cmd, kw in calls if "nexus.main" in cmd)
+    assert any(cmd[-2:] == ["pip", "check"] for cmd, kw in calls)
 
 
 def test_bootstrap_rejects_wrong_installed_version(tmp_path, monkeypatch):

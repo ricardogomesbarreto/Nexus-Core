@@ -90,7 +90,14 @@ def test_new_version_is_installed_separately_and_switched_atomically(tmp_path, m
     seen = []
     def run(cmd, **kw):
         seen.append(cmd)
-        if "nexus.main" in cmd:
+        if "--platform-check" in cmd:
+            return subprocess.CompletedProcess(cmd, 0, stdout=(
+                b'{"mode":"passive","target":"ubuntu_24_04_lts",'
+                b'"system":"Linux","installer_supported":true,'
+                b'"python_supported":true,"changes_performed":false,'
+                b'"missing_required":[]}'
+            ))
+        if "--version" in cmd:
             return subprocess.CompletedProcess(cmd, 0, stdout=b"Nexus Core 0.8.2\n")
         return subprocess.CompletedProcess(cmd, 0, stdout=b"")
     monkeypatch.setattr(manager.subprocess, "run", run)
