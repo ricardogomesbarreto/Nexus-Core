@@ -176,6 +176,8 @@ def _install_managed_python_locked(home: Path):
         raise RuntimeError("Ambiente de instalação inseguro.")
     if not target.exists():
         venv.create(target, with_pip=True, symlinks=False)
+    # The launcher must never execute a runtime from a public folder.
+    target.chmod(0o700)
     python = target / "bin/python"
     # Regular local package install: unlike pip -e, it does not depend on
     # keeping the development checkout in the same filesystem location.
@@ -204,7 +206,12 @@ def _install_managed_python_locked(home: Path):
 
 
 def write_launcher(home: Path) -> Path:
+    """Install a self-contained, private launcher with a pinned managed home."""
+    from nexus.updates.manager import _private_directory
+    _private_directory(home)
     bin_dir = Path.home() / ".local" / "bin"
+    if bin_dir.is_symlink():
+        raise RuntimeError("Diretório de executáveis não pode ser link simbólico.")
     bin_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     destination = bin_dir / "nexus-core"
     marker = "# NEXUS-CORE-MANAGED-LAUNCHER"
@@ -212,35 +219,24 @@ def write_launcher(home: Path) -> Path:
         raise RuntimeError("Não substituímos links simbólicos de executáveis.")
     if destination.exists() and marker not in destination.read_text(encoding="utf-8")[:250]:
         raise RuntimeError("Há outro executável nexus-core; não será substituído.")
-    content = f"""#!/usr/bin/env python3
-{marker}
-import json
-import os
-import pathlib
-import sys
-home = pathlib.Path({str(home)!r})
-secret = pathlib.Path({str(_credentials_file())!r})
-if secret.is_file() and not secret.is_symlink():
-    info = secret.stat()
-    if info.st_uid == os.getuid() and info.st_mode & 0o077 == 0:
-        try:
-            value = json.loads(secret.read_text(encoding="utf-8"))
-            if isinstance(value.get("database_password"), str):
-                os.environ.setdefault(
-                    "NEXUS_DATABASE_PASSWORD", value["database_password"]
-                )
-        except (OSError, ValueError, AttributeError):
-            pass
-os.environ["NEXUS_RUNNING_MANAGED"] = "1"
-python = home / "current" / "bin" / "python"
-os.execv(str(python), [str(python), "-m", "nexus.updates.launcher", *sys.argv[1:]])
-"""
+    source = (ROOT / "nexus" / "updates" / "managed_entrypoint.py").read_text(
+        encoding="utf-8"
+    )
+    if source.count("_INSTALL_HOME = None") != 1 or source.count("_CREDENTIALS_PATH = None") != 1 or marker not in source[:250]:
+        raise RuntimeError("Modelo de inicialização não reconhecido.")
+    content = source.replace(
+        "_INSTALL_HOME = None", "_INSTALL_HOME = " + repr(str(home))
+    ).replace(
+        "_CREDENTIALS_PATH = None",
+        "_CREDENTIALS_PATH = " + repr(str(_credentials_file())),
+    )
     fd, name = tempfile.mkstemp(prefix=".nexus-launcher-", dir=bin_dir)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             stream.write(content)
             stream.flush()
             os.fchmod(stream.fileno(), 0o700)
+            os.fsync(stream.fileno())
         os.replace(name, destination)
     finally:
         Path(name).unlink(missing_ok=True)

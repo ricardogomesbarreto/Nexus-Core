@@ -17,6 +17,16 @@ from .releases import (
 
 
 def managed_home() -> Path:
+    # The standalone launcher anchors its verified home on every execution.
+    # User session XDG_DATA_HOME may change after installation; never select
+    # a different managed installation because of that environment drift.
+    if os.environ.get("NEXUS_RUNNING_MANAGED") == "1":
+        pinned = os.environ.get("NEXUS_MANAGED_HOME")
+        if pinned:
+            folder = Path(pinned)
+            if not folder.is_absolute() or folder.is_symlink():
+                raise UpdateError("Instalação gerenciada sem diretório confiável.")
+            return folder
     base = os.environ.get("XDG_DATA_HOME")
     root = Path(base).expanduser() if base and Path(base).is_absolute() else Path.home() / ".local/share"
     return root / "nexus-core" / "managed"
@@ -228,6 +238,8 @@ def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
         raise UpdateError("A versão de destino já existe: instalação requer revisão.")
     try:
         venv.create(target, with_pip=True, symlinks=False)
+        # The standalone launcher rejects public version directories.
+        target.chmod(0o700)
         python = target / "bin" / "python"
         wheel = _wheel_path(home, release)
         if not _verify_wheel(wheel, release):
