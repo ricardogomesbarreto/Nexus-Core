@@ -8,4 +8,4 @@ def test_entrypoint_reports_version_without_database(capsys):
         cli(["--version"])
 
     assert exc.value.code == 0
-    assert capsys.readouterr().out.strip() == "Nexus Core 0.8.2"
+    assert capsys.readouterr().out.strip() == "Nexus Core 0.8.3"

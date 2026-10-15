@@ -223,6 +223,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
     )
     actions.add_argument(
+        "--ubuntu-doctor", action="store_true",
+        help="verifica PostgreSQL e Ollama somente no loopback local, sem alterações",
+    )
+    actions.add_argument(
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
@@ -289,6 +293,16 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.ubuntu_doctor:
+        if (has_memory_action or any(knowledge_actions)
+                or args.knowledge_with_memory or args.vision_question is not None
+                or args.vision_model != "gemma3:4b" or args.workspace is not None
+                or args.memory_confirm or args.memory_days != 90
+                or args.knowledge_limit != 5):
+            parser.error("--ubuntu-doctor deve ser executado isoladamente")
+        from nexus.platforms import ubuntu_doctor
+        print(json.dumps(ubuntu_doctor(), ensure_ascii=False))
+        return
     if args.platform_check:
         if (has_memory_action or any(knowledge_actions)
                 or args.knowledge_with_memory or args.vision_question is not None
