@@ -46,14 +46,21 @@ class LocalSpeaker(_StoppableProcess):
     VOICES = {"Feminina": "pt-br+f3", "Masculina": "pt-br+m3"}
     MAX_SPEECH = 2400
 
-    def speak(self, text: str, voice: str = "Feminina") -> None:
+    def speak(
+        self, text: str, voice: str = "Feminina",
+        *, cancelled: Callable[[], bool] | None = None,
+    ) -> None:
         if voice not in self.VOICES:
             raise VoiceError("Seleção de voz inválida.")
         if not isinstance(text, str) or not text.strip():
             raise VoiceError("Não há texto para falar.")
+        if cancelled is not None and cancelled():
+            return
         binary = shutil.which("espeak-ng")
         if binary is None:
             raise VoiceError("Instale eSpeak NG para ouvir as respostas.")
+        if cancelled is not None and cancelled():
+            return
         try:
             process = subprocess.Popen(
                 [binary, "-v", self.VOICES[voice], "-b", "1", "--stdin"],
@@ -64,6 +71,16 @@ class LocalSpeaker(_StoppableProcess):
             raise VoiceError("Não foi possível iniciar a síntese de voz.") from exc
         self._set_process(process)
         try:
+            # A stop can arrive while Popen is starting, before stop() sees
+            # the process. Recheck after registration and never send the text.
+            if cancelled is not None and cancelled():
+                self.stop()
+                try:
+                    process.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.communicate()
+                return
             try:
                 process.communicate(input=text[:self.MAX_SPEECH], timeout=60)
             except subprocess.TimeoutExpired as exc:
