@@ -13,4 +13,4 @@ A preferência vale para a sessão atual; não há persistência de voz entre re
 
 ## Integração e publicação
 
-Marco de desenvolvimento sobre v0.9.9, integrada à `main` pelos PRs #15–#31. A última release oficial permanece v0.7.2. O workflow v0.9.10 fica desabilitado; a publicação requer integração ordenada, CI no commit final da `main`, homologação física Ubuntu 24.04 LTS (X11, áudio, câmera, Ollama, PostgreSQL, instalação e recuperação) e revisão específica do workflow.
+Código integrado à `main` após v0.9.9, pelos PRs #15–#33. A última release oficial permanece v0.7.2. O workflow v0.9.10 fica desabilitado; a publicação requer CI no commit final da `main`, homologação física Ubuntu 24.04 LTS (X11, áudio, câmera, Ollama, PostgreSQL, instalação e recuperação) e revisão específica do workflow.
