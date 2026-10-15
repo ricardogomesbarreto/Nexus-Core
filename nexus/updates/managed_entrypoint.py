@@ -33,6 +33,11 @@ def _private_folder(folder: Path) -> None:
 def validate_current(home: Path) -> Path:
     """Resolve only an owned non-symlink executable in a direct version slot."""
     _private_folder(home)
+    marker = home / ".activation-intent.json"
+    if marker.is_symlink() or marker.exists():
+        raise LauncherError(
+            "Ativação interrompida; consulte nexus-core-recover --activation-status."
+        )
     versions = home / "versions"
     _private_folder(versions)
     current = home / "current"

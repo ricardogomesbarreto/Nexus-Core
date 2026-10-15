@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.8.8 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.8--dev-722F37">
+  <img alt="Versão v0.8.9 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.8.9--dev-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.8.8 — Managed Launcher Integrity`; a `main` contém código até v0.8.2, com PRs pendentes #15 (v0.8.3), #16 (v0.8.4), #17 (v0.8.5), #18 (v0.8.6) e #19 (v0.8.7)<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.8.8 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.8 ancora e valida o inicializador gerenciado independente da configuração XDG posterior; outras distros somente após homologação)<br>
+> **Versão em desenvolvimento (PR empilhado):** `v0.8.9 — Ubuntu Activation Journal & Offline Repair`; a `main` contém código até v0.8.2, com PRs pendentes #15–#20 (v0.8.3–v0.8.8)<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.8.9 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.8.x — Devices, Linux Setup & Updates` (v0.8.9 registra ativação interrompida e permite reparo offline somente com autorização; outras distros somente após homologação)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -35,6 +35,29 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Primary Color:** `#722F37`<br>
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
+
+---
+
+# v0.8.9 — Ubuntu Activation Journal & Offline Repair (em desenvolvimento)
+
+Esta versão fecha uma lacuna conhecida de atualizações no **Ubuntu Desktop 24.04 LTS**: a troca dos apontadores `previous` e `current` envolve duas operações de sistema de arquivos, que podem ser interrompidas entre si. A nova `.activation-intent.json`, gravada de forma privada antes de modificar os apontadores, registra a versão antiga, a candidata e a versão anterior ao início da operação. Uma ativação concluída remove o registro; uma interrupção deixa evidência para análise.
+
+Quando há registro pendente, o inicializador e o atualizador gerenciado **recusam continuar**. A ferramenta offline independente do Python do assistente, `nexus-core-recover`, ganha dois comandos:
+
+```bash
+# Diagnóstico do estado, sem rede nem qualquer alteração:
+~/.local/bin/nexus-core-recover --activation-status
+
+# Reparo da ativação interrompida, autorizado no terminal:
+~/.local/bin/nexus-core-recover --repair-activation
+# Digite REPARAR somente se concordar com a reconciliação dos links.
+```
+
+O reparo valida os arquivos e as versões sob o lock da v0.8.6, desliga atualização automática e concilia `previous` com `current`, **sem executar nem substituir a versão atual por conta própria**. Se `current` continuar na versão antiga, recupera a referência anterior; se já estiver na nova versão, confirma a referência `previous` correta. O procedimento não altera banco PostgreSQL, credenciais, modelos, arquivos do usuário ou serviços.
+
+**Limites:** o registro detecta e auxilia o reparo, mas **não torna duas trocas de symlink atomicamente transacionais**. O auxiliar externo da v0.8.8 instalado anteriormente precisa ser atualizado explicitamente para incluir a nova trava de execução, já que um wheel novo não altera automaticamente scripts fora do ambiente Python. Nada substitui testes no Ubuntu físico. Leia [notas v0.8.9](docs/RELEASE_NOTES_v0.8.9.md).
+
+O marco está empilhado sobre a v0.8.8 [PR #20](https://github.com/ricardogomesbarreto/Nexus-Core/pull/20). A última release estável permanece **v0.7.2** e nenhum workflow futuro foi habilitado para publicação.
 
 ---
 
@@ -589,7 +612,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 `v0.3.5`, `v0.3.6`, `v0.3.7`, `v0.3.8`, `v0.3.9`.
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
-A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).\nAs notas dedicadas de `v0.3.9` até `v0.8.8` estão disponíveis
+A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).\nAs notas dedicadas de `v0.3.9` até `v0.8.9` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -623,6 +646,7 @@ rastreáveis no GitHub:
 | v0.8.6 | Ubuntu Maintenance Coordination — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.6.md) |
 | v0.8.7 | Ubuntu Pre-Activation Validation — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.7.md) |
 | v0.8.8 | Managed Launcher Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.8.md) |
+| v0.8.9 | Ubuntu Activation Journal & Offline Repair — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.9.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1225,10 +1249,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.8.8`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
+**Versão do código na branch de desenvolvimento: `v0.8.9`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.8.8` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais da `v0.8.9` em desenvolvimento. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4620,10 +4644,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.8.8 (STACKED DEVELOPMENT PR)
-Release Name:          Managed Launcher Integrity
-Release Tag:          v0.8.8 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        STANDALONE MANAGED LAUNCHER; PINNED HOME; SAFE CURRENT TARGET
+Release Target:        v0.8.9 (STACKED DEVELOPMENT PR)
+Release Name:          Ubuntu Activation Journal & Offline Repair
+Release Tag:          v0.8.9 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        PRIVATE ACTIVATION JOURNAL; CONSENTED OFFLINE POINTER REPAIR
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

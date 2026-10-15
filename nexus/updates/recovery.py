@@ -105,6 +105,151 @@ def _version_slot(home: Path, name: str) -> Path:
     return target
 
 
+def _activation_intent(home: Path) -> dict | None:
+    """Read a bounded, private, strict journal without following symlinks."""
+    marker = home / ".activation-intent.json"
+    if not marker.is_symlink() and not marker.exists():
+        return None
+    if marker.is_symlink() or not marker.is_file():
+        raise RecoveryError("Registro de ativação inválido.")
+    mode = marker.stat()
+    if (mode.st_uid != os.getuid() or mode.st_nlink != 1
+            or mode.st_mode & 0o077 or mode.st_size > 2048):
+        raise RecoveryError("Registro de ativação inseguro.")
+    try:
+        data = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise RecoveryError("Registro de ativação ilegível.") from exc
+    if type(data) is not dict or set(data) != {
+        "schema", "from", "to", "previous_before",
+    } or data["schema"] != "nexus.activation-intent.v1":
+        raise RecoveryError("Formato do registro de ativação inválido.")
+    if (type(data["from"]) is not str or VERSION.fullmatch(data["from"]) is None
+            or type(data["to"]) is not str or VERSION.fullmatch(data["to"]) is None
+            or data["from"] == data["to"]
+            or (data["previous_before"] is not None
+                and (type(data["previous_before"]) is not str
+                     or VERSION.fullmatch(data["previous_before"]) is None))):
+        raise RecoveryError("Referências de versão inválidas.")
+    return data
+
+
+def activation_status(home: Path | None = None) -> dict:
+    """Report whether a local activation is pending; never alter files."""
+    home = home_directory() if home is None else Path(home)
+    _owned_private_directory(home)
+    try:
+        data = _activation_intent(home)
+        state = "interrupted" if data is not None else "clear"
+    except RecoveryError:
+        state = "invalid_record"
+    return {
+        "schema": "nexus.activation-repair.v1",
+        "status": state,
+        "repair_requires_confirmation": state != "clear",
+        "database_modified": False,
+        "external_network_used": False,
+        "automatic_repair_performed": False,
+    }
+
+
+def _verified_version(home: Path, name: str) -> Path:
+    """Validate only owned direct version folders with a viable runtime."""
+    versions = home / "versions"
+    _owned_private_directory(versions)
+    if VERSION.fullmatch(name) is None:
+        raise RecoveryError("Versão inválida para reparo.")
+    folder = versions / name
+    if folder.is_symlink() or not folder.is_dir():
+        raise RecoveryError("Versão referenciada não está instalada.")
+    meta = folder.stat()
+    if meta.st_uid != os.getuid() or meta.st_mode & 0o022:
+        raise RecoveryError("Versão referenciada insegura.")
+    executable = folder / "bin/python"
+    if executable.is_symlink() or not executable.is_file():
+        raise RecoveryError("Python da versão inválido.")
+    meta = executable.stat()
+    if meta.st_uid != os.getuid() or not meta.st_mode & stat.S_IXUSR:
+        raise RecoveryError("Python da versão inseguro.")
+    return folder
+
+
+def _repair_activation_locked(home: Path) -> dict:
+    """Safely reconcile previous with current under the exclusive lock."""
+    _owned_private_directory(home)
+    record = _activation_intent(home)
+    if record is None:
+        raise RecoveryError("Nenhuma ativação interrompida para reparar.")
+    before = _verified_version(home, record["from"])
+    previous_before = (
+        _verified_version(home, record["previous_before"])
+        if record["previous_before"] is not None else None
+    )
+    current = _version_slot(home, "current")
+    if current.name not in (record["from"], record["to"]):
+        raise RecoveryError("Versão atual diverge do registro.")
+    if current.name == record["to"]:
+        _verified_version(home, record["to"])
+    # An unknown previous reference must never be overwritten silently.
+    previous_link = home / "previous"
+    if previous_link.is_symlink():
+        old_previous = _version_slot(home, "previous")
+        allowed = {record["from"], record["previous_before"]}
+        if old_previous.name not in allowed:
+            raise RecoveryError("Versão anterior inesperada; revisão manual.")
+    elif previous_link.exists():
+        raise RecoveryError("Referência anterior inválida.")
+    for name in ("previous", "current"):
+        temp = home / ("." + name + "-recovery-next")
+        if temp.exists() or temp.is_symlink():
+            raise RecoveryError("Outra recuperação encontra-se em andamento.")
+    # Preserve operator intent: the repair does not switch current. If current
+    # is already new, finish the previous pointer. If still old, undo the
+    # partial previous pointer update and keep the old runtime selected.
+    desired_previous = before if current.name == record["to"] else previous_before
+    if desired_previous is None:
+        previous_link.unlink(missing_ok=True)
+    elif not previous_link.is_symlink() or previous_link.resolve(strict=True) != desired_previous:
+        _safe_replace_link(home, "previous", desired_previous)
+    (home / ".activation-intent.json").unlink()
+    return {
+        "schema": "nexus.activation-repair.v1",
+        "result": "reconciled",
+        "current": current.name,
+        "previous": desired_previous.name if desired_previous else None,
+        "auto_updates_enabled": False,
+        "database_modified": False,
+        "external_network_used": False,
+        "process_restarted": False,
+    }
+
+
+def repair_activation(home: Path | None = None, *, input_fn=input, tty=None) -> dict:
+    """Require a human's terminal consent before any repair or preference edit."""
+    home = home_directory() if home is None else Path(home)
+    status = activation_status(home)
+    if status["status"] != "interrupted":
+        raise RecoveryError("Nenhum registro reparável disponível.")
+    if tty is None:
+        tty = sys.stdin.isatty()
+    if not tty:
+        raise RecoveryError("Reparo requer terminal interativo.")
+    try:
+        answer = input_fn(
+            "Reparar somente os links do programa, sem restaurar banco de "
+            "dados? Digite REPARAR para autorizar: "
+        )
+    except (EOFError, KeyboardInterrupt) as exc:
+        raise RecoveryError("Reparo não autorizado.") from exc
+    if answer.strip() != "REPARAR":
+        raise RecoveryError("Reparo não autorizado.")
+    with maintenance_lock(home):
+        # Prevent applying a staged release immediately after repair.
+        # The installer/updater and repair all share the same flock.
+        _disable_updates(home)
+        return _repair_activation_locked(home)
+
+
 def recovery_status(home: Path | None = None) -> dict:
     home = home_directory() if home is None else Path(home)
     _owned_private_directory(home)
@@ -221,13 +366,22 @@ def cli(argv=None) -> int:
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--status", action="store_true", help="consulta somente leitura")
+    group.add_argument("--activation-status", action="store_true", help="consulta registro de ativação sem alterar nada")
     group.add_argument("--rollback", action="store_true", help="reverte somente a versão executável")
+    group.add_argument("--repair-activation", action="store_true", help="repara uma ativação interrompida com confirmação")
     args = parser.parse_args(argv)
     if os.geteuid() == 0:
         print("Não execute a recuperação como root.", file=sys.stderr)
         return 2
     try:
-        output = rollback() if args.rollback else recovery_status()
+        if args.repair_activation:
+            output = repair_activation()
+        elif args.activation_status:
+            output = activation_status()
+        elif args.rollback:
+            output = rollback()
+        else:
+            output = recovery_status()
     except (RecoveryError, OSError, RuntimeError):
         print("Instalação inválida ou operação não autorizada; nenhuma aprovação presumida.", file=sys.stderr)
         return 2

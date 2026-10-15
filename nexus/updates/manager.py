@@ -167,6 +167,9 @@ def _stage_latest_locked(home: Path, release: ReleaseWheel) -> ReleaseWheel:
 
 
 def _checked_current(home: Path) -> Path:
+    marker = _activation_intent_file(home)
+    if marker.is_symlink() or marker.exists():
+        raise UpdateError("Ativação anterior requer reparo offline.")
     target = home / "current"
     versions = home / "versions"
     if not target.is_symlink() or versions.is_symlink() or not versions.is_dir():
@@ -181,22 +184,79 @@ def _checked_current(home: Path) -> Path:
     return current
 
 
+def _activation_intent_file(home: Path) -> Path:
+    return home / ".activation-intent.json"
+
+
+def _write_activation_intent(home: Path, *, before: Path, after: Path,
+                             previous_before: Path | None) -> None:
+    """Record enough local state to repair an interrupted two-link switch."""
+    marker = _activation_intent_file(home)
+    if marker.exists() or marker.is_symlink():
+        raise UpdateError("Ativação anterior exige inspeção e reparo offline.")
+    payload = {
+        "schema": "nexus.activation-intent.v1",
+        "from": before.name,
+        "to": after.name,
+        "previous_before": previous_before.name if previous_before else None,
+    }
+    fd, tmp = tempfile.mkstemp(prefix=".activation-new-", dir=home)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump(payload, stream, sort_keys=True)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Under the v0.8.6 maintenance lock; never clobber a marker.
+        if marker.exists() or marker.is_symlink():
+            raise UpdateError("Ativação anterior exige reparo.")
+        os.replace(tmp, marker)
+    finally:
+        Path(tmp).unlink(missing_ok=True)
+
+
+def _previous_target(home: Path, versions: Path) -> Path | None:
+    slot = home / "previous"
+    if not slot.is_symlink():
+        if slot.exists():
+            raise UpdateError("Link da versão anterior inválido.")
+        return None
+    try:
+        target = slot.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise UpdateError("Versão anterior não pode ser verificada.") from exc
+    if (target.parent != versions.resolve(strict=True)
+            or not re.fullmatch(r"v[0-9]+[.][0-9]+[.][0-9]+", target.name)):
+        raise UpdateError("Versão anterior aponta fora da instalação.")
+    return target
+
+
 def _switch_current(home: Path, version_dir: Path) -> None:
-    """Atomic symlink switch preserving a previous version for rollback."""
+    """Journal the two symlink swaps for explicit offline crash repair.
+
+    The caller holds the installation's exclusive v0.8.6 maintenance lock.
+    This does not make two filesystem operations one atomic transaction.
+    """
     current = home / "current"
     versions = home / "versions"
+    marker = _activation_intent_file(home)
+    if marker.exists() or marker.is_symlink():
+        raise UpdateError("Ativação interrompida; execute reparo offline.")
     if version_dir.parent.resolve() != versions.resolve():
         raise UpdateError("Caminho de versão inesperado.")
     temp = home / ".current-next"
-    if temp.exists() or temp.is_symlink():
+    new_previous = home / ".previous-next"
+    if (temp.exists() or temp.is_symlink()
+            or new_previous.exists() or new_previous.is_symlink()):
         raise UpdateError("Atualização simultânea não permitida.")
     if current.exists() or current.is_symlink():
-        previous = _checked_current(home)
-        new_previous = home / ".previous-next"
-        if new_previous.exists() or new_previous.is_symlink():
-            raise UpdateError("Atualização simultânea não permitida.")
+        before = _checked_current(home)
+        old_previous = _previous_target(home, versions)
+        # All checks and the durable intent precede any mutation of links.
+        _write_activation_intent(home, before=before, after=version_dir,
+                                 previous_before=old_previous)
         try:
-            new_previous.symlink_to(previous)
+            new_previous.symlink_to(before)
             os.replace(new_previous, home / "previous")
         finally:
             new_previous.unlink(missing_ok=True)
@@ -205,6 +265,10 @@ def _switch_current(home: Path, version_dir: Path) -> None:
         os.replace(temp, current)
     finally:
         temp.unlink(missing_ok=True)
+    # If this removal fails, keep the journal to force explicit inspection.
+    # Never erase it on a partial activation or crash.
+    if marker.is_file() and not marker.is_symlink():
+        marker.unlink()
 
 
 def install_staged(home: Path | None = None, *, current_version: str) -> str | None:
