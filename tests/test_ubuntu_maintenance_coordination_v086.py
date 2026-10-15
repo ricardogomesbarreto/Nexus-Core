@@ -188,8 +188,9 @@ def test_marker_cleanup_error_must_not_delete_already_activated_venv(
     def fake_run(cmd, **kwargs):
         if "--platform-check" in cmd:
             output = (
-                b'{"mode":"passive","target":"ubuntu_24_04_lts",'
-                b'"system":"Linux","installer_supported":true,'
+                b'{"mode":"passive","target":"ubuntu_compatible",'
+                b'"system":"Linux","distro":"ubuntu","version_id":"24.04",'
+                b'"installer_supported":true,'
                 b'"python_supported":true,"changes_performed":false,'
                 b'"missing_required":[]}'
             )

@@ -11,8 +11,10 @@ from nexus.updates.releases import ReleaseWheel, UpdateError
 
 GOOD = {
     "mode": "passive",
-    "target": "ubuntu_24_04_lts",
+    "target": "ubuntu_compatible",
     "system": "Linux",
+    "distro": "ubuntu",
+    "version_id": "26.04",
     "installer_supported": True,
     "python_supported": True,
     "changes_performed": False,
@@ -25,6 +27,8 @@ GOOD = {
     {"target": "linux_other_distro_future"},
     {"target": "ubuntu_not_yet_validated"},
     {"system": "Darwin"},
+    {"distro": "debian"},
+    {"version_id": "rolling"},
     {"installer_supported": False},
     {"python_supported": False},
     {"changes_performed": True},
@@ -48,6 +52,7 @@ def test_malformed_platform_report_does_not_pass(content):
 def test_read_only_ubuntu_report_passes_without_side_effects():
     verification.validate_platform_report(json.dumps(GOOD))
     verification.validate_platform_report(json.dumps(GOOD).encode("utf-8"))
+    verification.validate_platform_report(json.dumps(dict(GOOD, version_id="24.04")))
 
 
 def test_expected_version_exact_match_only():

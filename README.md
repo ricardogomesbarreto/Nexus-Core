@@ -22,7 +22,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Código na `main`:** `v0.9.11 — First-Run PostgreSQL Authentication`; desenvolvimento integrado após a v0.9.10, sem tag deste marco.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.11 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.11 comprova o login PostgreSQL local antes da ativação gerenciada)<br>
-> **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
+> **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
@@ -40,6 +40,39 @@ As seções de versões abaixo preservam a evolução da implementação. Códig
 integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
+
+## Compatibilidade do instalador Ubuntu
+
+O bloqueio exclusivo da versão 24.04 foi removido do código após a v0.9.11.
+Em um Ubuntu identificado por `/etc/os-release` (`ID=ubuntu` e `VERSION_ID`
+numérico como `24.04` ou `26.04`), o instalador aceita **Python 3.12 ou
+superior** e verifica as dependências disponíveis no próprio computador.
+Pacotes ausentes são apresentados antes de pedir autorização para `apt-get`;
+se uma dependência continuar ausente, a instalação para. O banco é somente
+PostgreSQL: a ativação exige login local autenticado e `SELECT 1` no ambiente
+Python instalado. Outras distribuições continuam apenas no diagnóstico.
+
+No Ubuntu 26.04 com Wayland, a janela Tk pode ser testada normalmente.
+`xdotool` é opcional e a automação de janelas de terceiros requer sessão X11
+local; sua ausência no Wayland não impede a instalação. `--check` é passivo
+e não certifica áudio, câmera, inferência Ollama ou funcionamento físico.
+Compatibilidade de instalação não significa homologação de todas as versões
+Ubuntu: a CI automatizada ainda usa Ubuntu 24.04/Python 3.12, e o aceite
+físico no Ubuntu 26.04/Python 3.14/Wayland permanece pendente.
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+python3 scripts/install_linux.py --check
+python3 scripts/install_linux.py  # usuário comum; sudo apenas após confirmação
+~/.local/bin/nexus-core --version
+~/.local/bin/nexus-core --ubuntu-preflight
+~/.local/bin/nexus-core --desktop
+```
+
+Se já houver um usuário ou banco `nexus`, o instalador preserva os dados e
+solicita uma configuração manual de senha antes de continuar. O Ollama e o
+modelo Vosk em português têm preparação e testes próprios descritos abaixo.
 
 ---
 
@@ -435,7 +468,7 @@ nexus-core --ubuntu-preflight # SELECT 1 somente leitura, /api/tags local e recu
 
 O preflight autentica no PostgreSQL já configurado usando `SELECT 1` e sessão `default_transaction_read_only=on`, verifica se o nome do modelo `qwen3:1.7b` (ou outro explicitamente configurado) aparece no inventário do Ollama local e inspeciona ferramentas de fala Vosk/ALSA/eSpeak NG. **Não faz download ou execução de modelos, consultas a outras redes, instalações de pacotes, nem testes físicos de microfone, webcam ou alto-falantes.** Saídas JSON não incluem senhas, lista completa de modelos, histórico nem conteúdos pessoais.
 
-`text_chat_dependencies_ready_to_try` e `voice_chat_dependencies_ready_to_try` indicam apenas pré-requisitos. Não certificam inferência, áudio, estabilidade, desempenho ou hardware. A linha principal segue **Ubuntu Desktop 24.04 LTS**, mantendo compatibilidade futura com outras distribuições como meta, não como capacidade já homologada. Leia as [notas v0.8.4](docs/RELEASE_NOTES_v0.8.4.md).
+`text_chat_dependencies_ready_to_try` e `voice_chat_dependencies_ready_to_try` indicam apenas pré-requisitos. Não certificam inferência, áudio, estabilidade, desempenho ou hardware. A CI permanece em **Ubuntu Desktop 24.04 LTS**; o instalador passou a aceitar outras versões Ubuntu compatíveis, sem alegar homologação física de cada uma. Leia as [notas v0.8.4](docs/RELEASE_NOTES_v0.8.4.md).
 
 **Estado atual:** o código v0.8.4 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
@@ -450,7 +483,7 @@ nexus-core --platform-check  # inventário passivo, nenhuma conexão
 nexus-core --ubuntu-doctor   # apenas duas consultas ao loopback local
 ```
 
-O Ubuntu Desktop **24.04 LTS** continua o alvo de desenvolvimento, instalação e homologação. O uso das ferramentas não cria serviços, não utiliza sudo e não acessa sistemas externos. Outras distribuições Linux terão adaptação e testes próprios em versões futuras.
+Na v0.8.3, o Ubuntu Desktop **24.04 LTS** era o alvo exclusivo de instalação; a restrição foi removida posteriormente, conforme a seção de compatibilidade atual. O uso destas ferramentas de diagnóstico não cria serviços, não utiliza sudo e não acessa sistemas externos. Outras distribuições Linux terão adaptação e testes próprios em versões futuras.
 
 **Estado dos merges:** PRs [#11](https://github.com/ricardogomesbarreto/Nexus-Core/pull/11), [#12](https://github.com/ricardogomesbarreto/Nexus-Core/pull/12), [#13](https://github.com/ricardogomesbarreto/Nexus-Core/pull/13) e [#14](https://github.com/ricardogomesbarreto/Nexus-Core/pull/14) já foram integrados à `main`, em ordem. **Isso não equivale a homologação física ou release estável.** As publicações automáticas dessas versões continuam explicitamente bloqueadas enquanto não houver os aceites de X11 e de instalação Ubuntu real. Consulte as [notas v0.8.3](docs/RELEASE_NOTES_v0.8.3.md).
 
@@ -458,7 +491,7 @@ O Ubuntu Desktop **24.04 LTS** continua o alvo de desenvolvimento, instalação 
 
 # v0.8.2 — Ubuntu Desktop Baseline & Distribution Portability (integrado ao código, release não homologada)
 
-O NEXUS CORE terá **Ubuntu Desktop 24.04 LTS como alvo principal e prioritário** para desenvolvimento, instalação guiada, testes de integração e homologação física. Nesta fase não afirmamos compatibilidade garantida com todas as distribuições Linux; o suporte será ampliado depois, respeitando as particularidades de Ubuntu LTS adicionais, Debian, Fedora, Arch Linux e SteamOS.
+Na v0.8.2, **Ubuntu Desktop 24.04 LTS era o primeiro alvo** para desenvolvimento, instalação guiada, testes de integração e homologação física. A seção atual de compatibilidade registra a ampliação para outras versões Ubuntu que atendam aos requisitos. Debian, Fedora, Arch Linux e SteamOS seguem sem instalador guiado.
 
 O novo módulo `nexus.platforms` disponibiliza um **perfil passivo de compatibilidade** (ID/versão do sistema, sessão X11/Wayland, Python, dependências e limites de teste), isolado do instalador. É possível consultar qualquer Linux sem executar comandos de instalação, acessar sensores ou inicializar banco/modelo:
 
@@ -468,7 +501,7 @@ nexus-core --platform-check
 python3 scripts/install_linux.py --check
 ```
 
-O instalador `python3 scripts/install_linux.py` somente realiza alterações no **Ubuntu 24.04 LTS com Python 3.12+**, e exige consentimento para instalar pacotes oficiais. Se os pacotes estiverem ausentes ou a autorização for recusada, a instalação não será apresentada como bem-sucedida. `ID_LIKE=debian` não autoriza o uso de comandos Ubuntu em outras distribuições. A CI passa a rodar em `ubuntu-24.04`, com PostgreSQL, Docker, Xvfb e Python 3.12.
+Na implementação original da v0.8.2, o instalador só alterava o **Ubuntu 24.04 LTS com Python 3.12+**. A restrição fixa foi removida posteriormente, conforme a seção atual de compatibilidade. O consentimento para pacotes e a recusa de `ID_LIKE=debian` em outras distros permanecem. A CI desta linha roda em `ubuntu-24.04`, com PostgreSQL, Docker, Xvfb e Python 3.12.
 
 **Compatibilidade X11/Wayland:** o aplicativo Tk pode ser executado em Wayland, mas a automação `xdotool` de janelas de terceiros permanece limitada a sessões X11 locais com consentimento por ação. A inspeção de dependências não comprova microfone, câmera, Ollama em execução, modelo instalado ou PostgreSQL saudável.
 
@@ -478,7 +511,7 @@ O código de voz, visão, integrações, atualizações verificadas e interface 
 
 # v0.8.1 — Linux Bootstrap & Verified Self-Update (código integrado; release pendente)
 
-A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. **O suporte atual do instalador foi posteriormente restringido na v0.8.2 ao Ubuntu Desktop 24.04 LTS com Python 3.12+**; o instalador é capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
+A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. A v0.8.2 o restringiu temporariamente ao Ubuntu Desktop 24.04 LTS; a seção atual de compatibilidade descreve a ampliação posterior. O instalador verifica dependências do sistema e propõe sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. Pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
 
 **Correção na v0.9.9:** a instalação para antes de criar o ambiente Python e
 o launcher se não houver senha PostgreSQL local utilizável. Após uma recusa
@@ -497,7 +530,7 @@ python3 scripts/install_linux.py
 
 O instalador pergunta expressamente se o usuário deseja ativar **atualizações automáticas**. Quando autorizado, o launcher consulta o repositório oficial GitHub por releases **estáveis**, confere versão, URL, nome exato do wheel, limite de tamanho e **SHA-256 divulgado na API GitHub**. A atualização é baixada sob diretório privado e instalada em novo venv, com verificação do executável antes de trocar atomicamente o link `current`; a instalação anterior é mantida para recuperação. Enquanto o assistente funciona, uma thread **opt-in** pode preparar releases novas a cada hora, mas **só instala na próxima inicialização**. Sem internet, o CORE já instalado continua operando.
 
-**Não há `curl | bash`, instalação silenciosa como root, scripts de terceiros desconhecidos, atualizações de código não estável ou mudança do visual do assistente.** A segurança depende da integridade do GitHub e do digest; ainda não há assinatura independente nem lockfile integral dos pacotes transitivos. A gestão de Ollama, modelos de voz Vosk, permissões de áudio/câmera e acesso seguro ao Docker pode exigir passos próprios. O instalador automático atual é restrito ao Ubuntu Desktop 24.04 LTS; Debian, SteamOS/Arch e outras distribuições recebem diagnóstico, sem comandos de pacotes incompatíveis.
+**Não há `curl | bash`, instalação silenciosa como root, scripts de terceiros desconhecidos, atualizações de código não estável ou mudança do visual do assistente.** A segurança depende da integridade do GitHub e do digest; ainda não há assinatura independente nem lockfile integral dos pacotes transitivos. A gestão de Ollama, modelos de voz Vosk, permissões de áudio/câmera e acesso seguro ao Docker pode exigir passos próprios. O instalador automático atual aceita Ubuntu com requisitos compatíveis; Debian, SteamOS/Arch e outras distribuições recebem diagnóstico, sem comandos de pacotes incompatíveis.
 
 Esse código está integrado à `main`, mas segue sem release estável e sem homologação física da instalação. Consulte as [notas da v0.8.1](docs/RELEASE_NOTES_v0.8.1.md) para requisitos, limites e testes de aceitação.
 
@@ -4643,7 +4676,7 @@ física e publicação estável continuam pendentes. Evoluções futuras incluem
 * integração de dispositivos.
 
 **Estimativa de planejamento para concluir a linha 0.9.x no Ubuntu Desktop
-24.04 LTS:** v0.9.11 implementada e três marcos de desenvolvimento
+(CI 24.04; aceite físico por versão pendente):** v0.9.11 implementada e três marcos de desenvolvimento
 restantes, sujeitos aos resultados do aceite físico:
 
 | Marco proposto | Critério principal |

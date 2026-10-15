@@ -92,8 +92,9 @@ def test_new_version_is_installed_separately_and_switched_atomically(tmp_path, m
         seen.append(cmd)
         if "--platform-check" in cmd:
             return subprocess.CompletedProcess(cmd, 0, stdout=(
-                b'{"mode":"passive","target":"ubuntu_24_04_lts",'
-                b'"system":"Linux","installer_supported":true,'
+                b'{"mode":"passive","target":"ubuntu_compatible",'
+                b'"system":"Linux","distro":"ubuntu","version_id":"24.04",'
+                b'"installer_supported":true,'
                 b'"python_supported":true,"changes_performed":false,'
                 b'"missing_required":[]}'
             ))
