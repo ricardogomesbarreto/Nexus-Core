@@ -9,6 +9,7 @@ import sys
 import tempfile
 import venv
 
+from .recovery import RecoveryError, maintenance_lock
 from .releases import (
     ReleaseWheel, UpdateError, download_verified, latest_release, version_tuple,
 )
@@ -114,6 +115,18 @@ def stage_latest(current_version: str, home: Path | None = None) -> ReleaseWheel
     release = latest_release(current_version)
     if release is None:
         return None
+    try:
+        with maintenance_lock(home):
+            # A concurrent explicit rollback may disable auto-updates while
+            # this client was checking the network. Never re-enable or stage.
+            if not autoupdate_enabled(home):
+                return None
+            return _stage_latest_locked(home, release)
+    except RecoveryError as exc:
+        raise UpdateError("Instalação ocupada; atualização adiada.") from exc
+
+
+def _stage_latest_locked(home: Path, release: ReleaseWheel) -> ReleaseWheel:
     _private_directory(home)
     downloads = _private_directory(home / "downloads")
     target = _wheel_path(home, release)
@@ -163,6 +176,9 @@ def _switch_current(home: Path, version_dir: Path) -> None:
     versions = home / "versions"
     if version_dir.parent.resolve() != versions.resolve():
         raise UpdateError("Caminho de versão inesperado.")
+    temp = home / ".current-next"
+    if temp.exists() or temp.is_symlink():
+        raise UpdateError("Atualização simultânea não permitida.")
     if current.exists() or current.is_symlink():
         previous = _checked_current(home)
         new_previous = home / ".previous-next"
@@ -173,9 +189,6 @@ def _switch_current(home: Path, version_dir: Path) -> None:
             os.replace(new_previous, home / "previous")
         finally:
             new_previous.unlink(missing_ok=True)
-    temp = home / ".current-next"
-    if temp.exists() or temp.is_symlink():
-        raise UpdateError("Atualização simultânea não permitida.")
     try:
         temp.symlink_to(version_dir)
         os.replace(temp, current)
@@ -190,6 +203,17 @@ def install_staged(home: Path | None = None, *, current_version: str) -> str | N
     On failure the current installation remains selected.
     """
     home = home if home is not None else managed_home()
+    if not autoupdate_enabled(home):
+        return None
+    try:
+        with maintenance_lock(home):
+            return _install_staged_locked(home, current_version=current_version)
+    except RecoveryError as exc:
+        raise UpdateError("Outra operação gerenciada em andamento.") from exc
+
+
+def _install_staged_locked(home: Path, *, current_version: str) -> str | None:
+    # Always re-evaluate authorization after acquiring the exclusive lock.
     if not autoupdate_enabled(home):
         return None
     release = pending_release(home)
@@ -224,14 +248,25 @@ def install_staged(home: Path | None = None, *, current_version: str) -> str | N
         ):
             raise UpdateError("O pacote instalado não corresponde à release.")
         _switch_current(home, target)
-        _metadata_file(home).unlink(missing_ok=True)
+        # The active selection has ALREADY changed. A failure to remove a
+        # stale marker must never trigger deletion of the running version.
+        try:
+            _metadata_file(home).unlink(missing_ok=True)
+        except OSError:
+            pass
         return release.version
     except (OSError, subprocess.SubprocessError, UpdateError, UnicodeError) as exc:
-        # Only the unselected venv created by this call may be discarded.
+        # Clean up only an unselected new venv. Never delete whichever
+        # version the active symlink now points to.
         import shutil
-        if target.is_dir() and not target.is_symlink():
+        current = home / "current"
+        try:
+            selected = current.resolve(strict=True) if current.is_symlink() else None
+        except (OSError, RuntimeError):
+            selected = None
+        if target.is_dir() and not target.is_symlink() and selected != target:
             shutil.rmtree(target, ignore_errors=True)
-        raise UpdateError("Atualização falhou; versão anterior preservada.") from exc
+        raise UpdateError("Atualização falhou; instalação selecionada preservada.") from exc
 
 
 def current_python(home: Path | None = None) -> Path:

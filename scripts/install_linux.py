@@ -155,11 +155,21 @@ def provision_postgresql() -> None:
 
 
 def install_managed_python():
+    from nexus.updates.recovery import RecoveryError, maintenance_lock
+    from nexus.updates.manager import _private_directory, managed_home
+    home = _private_directory(managed_home())
+    try:
+        with maintenance_lock(home):
+            return _install_managed_python_locked(home)
+    except RecoveryError as exc:
+        raise RuntimeError("Instalação já está em manutenção.") from exc
+
+
+def _install_managed_python_locked(home: Path):
     from nexus.config.settings import settings
     from nexus.updates.manager import (
         _private_directory, _switch_current, managed_home,
     )
-    home = _private_directory(managed_home())
     versions = _private_directory(home / "versions")
     target = versions / ("v" + settings.version)
     if target.is_symlink():

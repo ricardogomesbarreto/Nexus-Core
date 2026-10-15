@@ -13,16 +13,30 @@ from .manager import (
 )
 
 
+# Diagnostics must not mutate installed code or contact GitHub.
+# A conservative check: even a mixed/invalid request never upgrades.
+READ_ONLY_FLAGS = frozenset((
+    "--help", "-h", "--version", "--status",
+    "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
+    "--desktop-check", "--voice-check", "--vision-check",
+    "--devices-check", "--devices-preview-stdin",
+))
+
+
+def should_run_maintenance(arguments: list[str]) -> bool:
+    return not any(argument in READ_ONLY_FLAGS for argument in arguments)
+
+
 def cli() -> None:
     home = managed_home()
-    if autoupdate_enabled(home):
+    if should_run_maintenance(sys.argv[1:]) and autoupdate_enabled(home):
         running_version = settings.version
         try:
             # If offline, a previously verified staging area can still apply.
             installed = install_staged(home, current_version=running_version)
             if installed is not None:
                 running_version = installed
-        except (UpdateError, OSError) as exc:
+        except (UpdateError, OSError):
             print("Nexus Core: atualização adiada; instalação anterior preservada.", file=sys.stderr)
         try:
             stage_latest(running_version, home)
