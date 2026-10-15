@@ -299,6 +299,8 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
 
     monkeypatch.setattr(install_linux.venv, "create", virtual_environment)
     monkeypatch.setattr(install_linux, "_run", fake_run)
+    monkeypatch.setattr(install_linux, "verify_local_postgresql",
+                        lambda python, home: calls.append(("verified", {})))
     home = install_linux.install_managed_python()
     assert (home / "current").is_symlink()
     assert (home / "current").resolve().name == "v" + settings.version
@@ -306,9 +308,104 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
     assert "-e" not in pip_args
     assert str(install_linux.ROOT) + "[voice,vision]" in pip_args
     assert kwargs["cwd"] == install_linux.ROOT
-    assert calls[-1][0][-1] == "--platform-check"
-    assert all("-I" in cmd for cmd, kw in calls if "nexus.main" in cmd)
-    assert any(cmd[-2:] == ["pip", "check"] for cmd, kw in calls)
+    assert calls[-2][0][-1] == "--platform-check"
+    assert calls[-1][0] == "verified"
+    assert all("-I" in cmd for cmd, kw in calls if isinstance(cmd, list) and "nexus.main" in cmd)
+    assert any(isinstance(cmd, list) and cmd[-2:] == ["pip", "check"] for cmd, kw in calls)
+
+
+def test_postgresql_login_uses_child_environment_and_read_only_preflight(
+    tmp_path, monkeypatch,
+):
+    monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "private-test-password")
+    observed = {}
+
+    def fake_run(argv, **kwargs):
+        observed.update(argv=argv, options=kwargs)
+        return SimpleNamespace(stdout=json.dumps({
+            "schema": "nexus.ubuntu-preflight.v1",
+            "checks": {"postgresql_authenticated": True},
+            "status": {"postgresql": "authenticated_read_only"},
+        }))
+
+    monkeypatch.setattr(install_linux, "_run", fake_run)
+    install_linux.verify_local_postgresql(tmp_path / "bin/python", tmp_path)
+    assert observed["argv"][-1] == "--ubuntu-preflight"
+    assert "-I" in observed["argv"]
+    assert "private-test-password" not in repr(observed["argv"])
+    assert observed["options"]["env"]["NEXUS_DATABASE_PASSWORD"] == "private-test-password"
+    assert observed["options"]["cwd"] == tmp_path
+
+
+@pytest.mark.parametrize("report", [
+    {"schema": "nexus.ubuntu-preflight.v1",
+     "checks": {"postgresql_authenticated": False},
+     "status": {"postgresql": "connection_or_auth_failure"}},
+    {"schema": "nexus.ubuntu-preflight.v1",
+     "checks": {"postgresql_authenticated": True},
+     "status": {"postgresql": "credentials_missing"}},
+    {"schema": "unexpected", "checks": {"postgresql_authenticated": True},
+     "status": {"postgresql": "authenticated_read_only"}},
+])
+def test_postgresql_login_rejects_unverified_status(tmp_path, monkeypatch, report):
+    monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "private-test-password")
+    monkeypatch.setattr(install_linux, "_run",
+                        lambda *a, **k: SimpleNamespace(stdout=json.dumps(report)))
+    with pytest.raises(install_linux.PostgreSQLAuthenticationError) as error:
+        install_linux.verify_local_postgresql(tmp_path / "bin/python", tmp_path)
+    assert "private-test-password" not in str(error.value)
+
+
+def test_postgresql_login_loads_private_file_when_environment_is_missing(
+    tmp_path, monkeypatch,
+):
+    credential = tmp_path / "credentials.json"
+    credential.write_text('{"database_password": "from-private-file"}')
+    credential.chmod(0o600)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "_credentials_file", lambda: credential)
+
+    def fake_run(argv, **kwargs):
+        assert kwargs["env"]["NEXUS_DATABASE_PASSWORD"] == "from-private-file"
+        return SimpleNamespace(stdout=json.dumps({
+            "schema": "nexus.ubuntu-preflight.v1",
+            "checks": {"postgresql_authenticated": True},
+            "status": {"postgresql": "authenticated_read_only"},
+        }))
+
+    monkeypatch.setattr(install_linux, "_run", fake_run)
+    install_linux.verify_local_postgresql(tmp_path / "bin/python", tmp_path)
+
+
+def test_failed_login_does_not_activate_new_version(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+
+    def virtual_environment(target, **kwargs):
+        (target / "bin").mkdir(parents=True)
+        (target / "bin/python").write_bytes(b"python executable")
+
+    def fake_run(argv, **kwargs):
+        if "--version" in argv:
+            from nexus.config.settings import settings
+            return SimpleNamespace(stdout="Nexus Core " + settings.version)
+        if "--platform-check" in argv:
+            return SimpleNamespace(stdout=json.dumps({
+                "mode": "passive", "target": "ubuntu_24_04_lts",
+                "system": "Linux", "installer_supported": True,
+                "python_supported": True, "changes_performed": False,
+                "missing_required": [],
+            }))
+        return SimpleNamespace(stdout=None)
+
+    monkeypatch.setattr(install_linux.venv, "create", virtual_environment)
+    monkeypatch.setattr(install_linux, "_run", fake_run)
+    monkeypatch.setattr(install_linux, "verify_local_postgresql",
+                        lambda *a: (_ for _ in ()).throw(
+                            install_linux.PostgreSQLAuthenticationError("login recusado")))
+    with pytest.raises(install_linux.PostgreSQLAuthenticationError):
+        install_linux.install_managed_python()
+    from nexus.updates.manager import managed_home
+    assert not (managed_home() / "current").exists()
 
 
 def test_bootstrap_rejects_wrong_installed_version(tmp_path, monkeypatch):

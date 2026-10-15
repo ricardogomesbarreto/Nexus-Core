@@ -40,12 +40,12 @@ def installed(command: str) -> bool:
 
 
 def _run(args: list[str], *, input_text=None, timeout=300,
-         capture=False, cwd=None) -> subprocess.CompletedProcess:
+         capture=False, cwd=None, env=None) -> subprocess.CompletedProcess:
     return subprocess.run(
         args, input=input_text, text=True,
         stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
         stderr=subprocess.DEVNULL, timeout=timeout, check=True,
-        cwd=cwd,
+        cwd=cwd, env=env,
     )
 
 
@@ -161,6 +161,43 @@ def provision_postgresql() -> bool:
         return False
 
 
+class PostgreSQLAuthenticationError(RuntimeError):
+    """The configured local credentials were not proved by a read-only login."""
+
+
+def verify_local_postgresql(python: Path, home: Path) -> None:
+    """Authenticate through the installed runtime before making it current.
+
+    The password is passed only in the child environment, never in argv or
+    diagnostics. An Ollama/Vosk failure does not invalidate a PostgreSQL login.
+    """
+    from nexus.updates.managed_entrypoint import load_local_password
+    password = os.environ.get("NEXUS_DATABASE_PASSWORD")
+    if not password:
+        password = load_local_password(_credentials_file())
+    if not password:
+        raise PostgreSQLAuthenticationError("Credenciais locais indisponíveis.")
+    environment = os.environ.copy()
+    environment["NEXUS_DATABASE_PASSWORD"] = password
+    try:
+        result = _run(
+            [str(python), "-I", "-m", "nexus.main", "--ubuntu-preflight"],
+            timeout=25, capture=True, cwd=home, env=environment,
+        )
+        if len(result.stdout) > 65_536:
+            raise ValueError("Resposta de diagnóstico extensa.")
+        report = json.loads(result.stdout)
+        if (type(report) is not dict
+                or report.get("schema") != "nexus.ubuntu-preflight.v1"
+                or type(report.get("checks")) is not dict
+                or report["checks"].get("postgresql_authenticated") is not True
+                or type(report.get("status")) is not dict
+                or report["status"].get("postgresql") != "authenticated_read_only"):
+            raise PostgreSQLAuthenticationError("Login PostgreSQL não confirmado.")
+    except (OSError, subprocess.SubprocessError, ValueError, TypeError) as exc:
+        raise PostgreSQLAuthenticationError("Login PostgreSQL não confirmado.") from exc
+
+
 def install_managed_python():
     from nexus.updates.recovery import RecoveryError, maintenance_lock
     from nexus.updates.manager import _private_directory, managed_home
@@ -208,6 +245,7 @@ def _install_managed_python_locked(home: Path):
         timeout=20, capture=True, cwd=home,
     )
     validate_platform_report(platform.stdout)
+    verify_local_postgresql(python, home)
     _switch_current(home, target)
     return home
 
@@ -323,22 +361,31 @@ def main(argv: list[str] | None = None) -> int:
         from nexus.updates.manager import set_autoupdate
         enabled = confirm("Ativar verificação automática de releases estáveis?")
         set_autoupdate(enabled, home)
-    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+    except PostgreSQLAuthenticationError:
+        print("Instalação interrompida: autenticação PostgreSQL local não confirmada. "
+              "Revise usuário, senha, banco e serviço; a nova versão não foi ativada.",
+              file=sys.stderr)
+        return 2
+    except (OSError, RuntimeError, subprocess.SubprocessError):
         print("Falha na instalação do ambiente Python do usuário.", file=sys.stderr)
         return 2
     print(f"Instalação concluída: {executable}")
     print(f"Recuperação offline instalada: {recovery}")
     print("Executar: ~/.local/bin/nexus-core")
+    print("PostgreSQL: login local somente leitura confirmado antes da ativação.")
+    print("Diagnóstico adicional: ~/.local/bin/nexus-core --ubuntu-preflight "
+          "(sem teste físico de áudio, câmera ou inferência).")
     print("Atualizações automáticas: " + ("ativadas" if enabled else "desativadas"))
     if not installed("ollama"):
         print("Ollama ainda ausente: instale pelo canal oficial; nunca executamos curl|bash.")
     else:
-        print("Ollama detectado. Instale modelos explicitamente, se necessário: "
-              "ollama pull qwen3:1.7b")
+        print("Binário Ollama detectado; disponibilidade do serviço/modelo "
+              "depende do diagnóstico. Se necessário: ollama pull qwen3:1.7b")
     if not installed("docker"):
         print("Docker não detectado; recursos de sandbox exigem instalação/configuração independente.")
-    print("Modelos de voz Vosk, permissões de áudio/câmera e testes físicos "
-          "continuam sujeitos ao diagnóstico na máquina do usuário.")
+    print("Instale separadamente um modelo Vosk em português no diretório "
+          "indicado no README ou configure NEXUS_VOSK_MODEL_PATH. "
+          "Permissões de áudio/câmera e operação física exigem teste no desktop.")
     return 0
 
 

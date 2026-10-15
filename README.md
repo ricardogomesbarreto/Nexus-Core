@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.10 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.10%20na%20main-722F37">
+  <img alt="Código v0.9.11 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.11%20na%20main-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código na `main`:** `v0.9.10 — Spoken Voice Selection`; os PRs #15–#33 (v0.8.3–v0.9.10) foram integrados em ordem, sem criar tags dessas versões.<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.10 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.10 acrescenta seleção da voz feminina/masculina por comando falado)<br>
+> **Código na `main`:** `v0.9.11 — First-Run PostgreSQL Authentication`; desenvolvimento integrado após a v0.9.10, sem tag deste marco.<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.11 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.11 comprova o login PostgreSQL local antes da ativação gerenciada)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -40,6 +40,32 @@ As seções de versões abaixo preservam a evolução da implementação. Códig
 integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
+
+---
+
+# v0.9.11 — First-Run PostgreSQL Authentication (código integrado; release pendente)
+
+No instalador guiado para Ubuntu Desktop 24.04 LTS, a existência de uma senha
+no ambiente ou no arquivo privado de credenciais deixou de ser suficiente para
+ativar a versão. Após instalar e verificar o pacote no ambiente Python do
+usuário, o instalador executa `--ubuntu-preflight` com esse ambiente e exige
+um login PostgreSQL local autenticado seguido de `SELECT 1` somente leitura.
+Se o login falhar, não troca o link da versão ativa, não cria os launchers nem
+relata instalação concluída. A senha é passada apenas no ambiente do processo
+filho; não aparece em argumentos, mensagens ou logs do diagnóstico.
+
+O mesmo pré-diagnóstico verifica se o modelo Ollama configurado está listado e
+se as dependências locais de entrada/saída de voz estão visíveis, **sem
+baixar modelos nem abrir hardware**. Esses dois resultados orientam a
+configuração separada do Ollama e de um modelo Vosk em português; uma falha
+nesses componentes não é confundida com falha de autenticação no banco. O
+comando `nexus-core --ubuntu-preflight` continua disponível após a instalação
+para conferir os estados. A presença do binário Ollama ou do diretório Vosk
+não comprova inferência, reconhecimento, reprodução de áudio ou operação do
+microfone e câmera no computador físico.
+
+Leia as [notas da v0.9.11](docs/RELEASE_NOTES_v0.9.11.md). A publicação
+estável permanece condicionada ao aceite físico e à revisão do workflow.
 
 ---
 
@@ -878,7 +904,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
 A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).
-As notas dedicadas de `v0.3.9` até `v0.9.10` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.9.11` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -924,6 +950,7 @@ rastreáveis no GitHub:
 | v0.9.8 | Accessible Speech Output Toggle — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.8.md) |
 | v0.9.9 | Spoken Desktop Controls — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.9.md) |
 | v0.9.10 | Spoken Voice Selection — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.10.md) |
+| v0.9.11 | First-Run PostgreSQL Authentication — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.11.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1526,10 +1553,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na `main`: `v0.9.10`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
+**Versão do código na `main`: `v0.9.11`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais do código `v0.9.10` na `main`. Para as funcionalidades disponíveis,
+dependências atuais do código `v0.9.11` na `main`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4605,8 +4632,9 @@ C / C++
 
 ## v0.9.x — Multimodal Interface
 
-O código v0.9.0–v0.9.10 já integra privacidade multimodal, atalhos,
-comandos falados locais e análise visual por ação autorizada. A homologação
+O código v0.9.0–v0.9.11 já integra privacidade multimodal, atalhos,
+comandos falados locais, análise visual por ação autorizada e verificação do
+login PostgreSQL antes da ativação pelo instalador. A homologação
 física e publicação estável continuam pendentes. Evoluções futuras incluem:
 
 * interfaces acessíveis e multimodais avançadas;
@@ -4615,12 +4643,12 @@ física e publicação estável continuam pendentes. Evoluções futuras incluem
 * integração de dispositivos.
 
 **Estimativa de planejamento para concluir a linha 0.9.x no Ubuntu Desktop
-24.04 LTS:** quatro marcos de desenvolvimento, sujeitos aos resultados do
-aceite físico; não representam releases já aprovadas:
+24.04 LTS:** v0.9.11 implementada e três marcos de desenvolvimento
+restantes, sujeitos aos resultados do aceite físico:
 
 | Marco proposto | Critério principal |
 | --- | --- |
-| v0.9.11 | Verificar autenticação PostgreSQL no primeiro uso e orientar os requisitos locais de Ollama/Vosk sem relatar prontidão falsa. |
+| v0.9.11 | Implementado no código: login PostgreSQL antes de ativar o instalador; diagnóstico e orientação Ollama/Vosk sem alegar teste físico. |
 | v0.9.12 | Ampliar ações desktop autorizadas por operação, com contratos e testes de segurança. |
 | v0.9.13 | Encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria; hoje cada turno executa no máximo uma ferramenta. |
 | v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
@@ -4944,10 +4972,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Code Version:          v0.9.10 (INTEGRATED IN MAIN; NOT RELEASED)
-Release Name:          Spoken Voice Selection
-Release Tag:          v0.9.10 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        LOCAL FEMALE/MALE VOICE SELECTION COMMANDS
+Code Version:          v0.9.11 (INTEGRATED IN MAIN; NOT RELEASED)
+Release Name:          First-Run PostgreSQL Authentication
+Release Tag:          v0.9.11 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        VERIFIED LOCAL POSTGRESQL LOGIN BEFORE ACTIVATION
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
