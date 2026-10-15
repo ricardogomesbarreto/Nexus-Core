@@ -14,4 +14,4 @@ O instalador verifica a disponibilidade de uma senha com formato válido, mas n�
 
 ## Integração e publicação
 
-Branch de desenvolvimento sobre o PR #30 (v0.9.8), após a cadeia #15–#29. A `main` contém código até v0.8.2; a última release oficial é v0.7.2. O workflow de release v0.9.9 permanece desabilitado. Integração ordenada, CI no SHA final da `main` e aceite físico registrado precedem tag/release estável.
+Código integrado à `main` em ordem pelos PRs #15–#31 (v0.8.3–v0.9.9). A última release oficial continua v0.7.2. O workflow de release v0.9.9 permanece desabilitado; CI no SHA final da `main`, aceite físico registrado e revisão específica do workflow precedem tag/release estável.
