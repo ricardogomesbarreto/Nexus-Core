@@ -471,9 +471,9 @@ python3 scripts/install_linux.py
 
 O instalador pergunta expressamente se o usuário deseja ativar **atualizações automáticas**. Quando autorizado, o launcher consulta o repositório oficial GitHub por releases **estáveis**, confere versão, URL, nome exato do wheel, limite de tamanho e **SHA-256 divulgado na API GitHub**. A atualização é baixada sob diretório privado e instalada em novo venv, com verificação do executável antes de trocar atomicamente o link `current`; a instalação anterior é mantida para recuperação. Enquanto o assistente funciona, uma thread **opt-in** pode preparar releases novas a cada hora, mas **só instala na próxima inicialização**. Sem internet, o CORE já instalado continua operando.
 
-**Não há `curl | bash`, instalação silenciosa como root, scripts de terceiros desconhecidos, atualizações de código não estável ou mudança do visual do assistente.** A segurança depende da integridade do GitHub e do digest; ainda não há assinatura independente nem lockfile integral dos pacotes transitivos. A gestão de Ollama, modelos de voz Vosk, permissões de áudio/câmera e acesso seguro ao Docker pode exigir passos próprios. Instaladores automáticos apt são destinados a Ubuntu/Debian; SteamOS/Arch e outras distribuições recebem diagnóstico, sem comandos de pacotes incompatíveis.
+**Não há `curl | bash`, instalação silenciosa como root, scripts de terceiros desconhecidos, atualizações de código não estável ou mudança do visual do assistente.** A segurança depende da integridade do GitHub e do digest; ainda não há assinatura independente nem lockfile integral dos pacotes transitivos. A gestão de Ollama, modelos de voz Vosk, permissões de áudio/câmera e acesso seguro ao Docker pode exigir passos próprios. O instalador automático atual é restrito ao Ubuntu Desktop 24.04 LTS; Debian, SteamOS/Arch e outras distribuições recebem diagnóstico, sem comandos de pacotes incompatíveis.
 
-Essas capacidades estão **em desenvolvimento** no PR da v0.8.1 e **não foram publicadas na main**. Consulte [notas da v0.8.1](docs/RELEASE_NOTES_v0.8.1.md) para requisitos, limites e testes de aceitação.
+Esse código está integrado à `main`, mas segue sem release estável e sem homologação física da instalação. Consulte as [notas da v0.8.1](docs/RELEASE_NOTES_v0.8.1.md) para requisitos, limites e testes de aceitação.
 
 ---
 
@@ -2957,7 +2957,9 @@ gráfica, `nexus-core --status` mostra o estado do núcleo no terminal.
 
 Na janela, digite a pergunta e use **Enviar** ou **Ctrl+Enter**. O modelo pode
 responder em linguagem natural ou propor uma ferramenta. A composição atual
-registra `system_info`, `list_directory`, `read_file` e `terminal_sandbox`.
+registra `system_info`, `list_directory`, `read_file`, `file_metadata`,
+`terminal_sandbox`, `desktop_window_info`, `desktop_type_text` e
+`desktop_navigate`.
 Leitura de arquivos passa pela política de caminhos permitidos. Cada comando
 do sandbox Docker exige confirmação individual com operação e recursos
 visíveis; fechar a janela recusa confirmações pendentes. A conversa mantém
@@ -2991,14 +2993,17 @@ o fim de cada fala pela pausa e o texto reconhecido entra na mesma conversa,
 passando pelo Agent com Ollama, `ToolExecutor` e `SecurityGate`. A escuta é
 suspensa durante o processamento e a leitura da resposta para evitar retorno
 da própria voz ao microfone. Após responder, volta a escutar automaticamente.
-Use **Pausar escuta** e **Retomar escuta**, ou diga **“pare de escutar”** para
-pausar; depois de pausado, retome pelo botão. Diga **“desligue o assistente”**
+Use **Pausar escuta** e **Retomar escuta**, `Ctrl+Shift+M`, ou diga
+**“pare de escutar”** para pausar; depois de pausado, retome pelo botão ou
+pelo atalho. Diga **“desligue o assistente”**
 ou use o botão **Desligar assistente** para encerrar a janela. Nenhum desses
 comandos de controle é encaminhado ao Ollama. A captura usa segmentos de até
 30 segundos, reiniciados automaticamente após silêncio. Não há envio do áudio
 a serviços remotos; os dados da captura ficam na memória até a transcrição.
 Selecione **Feminina** ou **Masculina** para a saída sintetizada em português
-brasileiro e desligue **Ler respostas em voz alta** quando quiser apenas texto.
+brasileiro, ou diga **“Use voz feminina”** / **“Use voz masculina”** enquanto
+a escuta estiver ativa. Desligue **Ler respostas em voz alta** quando quiser
+apenas texto; escolher outra voz não reativa a saída falada.
 As variantes do eSpeak NG são sintéticas. O texto funciona mesmo sem os
 componentes de voz; a interface mostra uma mensagem se faltar o microfone,
 o executável de áudio ou o modelo de reconhecimento.
@@ -4600,7 +4605,7 @@ C / C++
 
 ## v0.9.x — Multimodal Interface
 
-O código v0.9.0–v0.9.9 já integra privacidade multimodal, atalhos,
+O código v0.9.0–v0.9.10 já integra privacidade multimodal, atalhos,
 comandos falados locais e análise visual por ação autorizada. A homologação
 física e publicação estável continuam pendentes. Evoluções futuras incluem:
 
@@ -4608,6 +4613,22 @@ física e publicação estável continuam pendentes. Evoluções futuras incluem
 * visão;
 * status;
 * integração de dispositivos.
+
+**Estimativa de planejamento para concluir a linha 0.9.x no Ubuntu Desktop
+24.04 LTS:** quatro marcos de desenvolvimento, sujeitos aos resultados do
+aceite físico; não representam releases já aprovadas:
+
+| Marco proposto | Critério principal |
+| --- | --- |
+| v0.9.11 | Verificar autenticação PostgreSQL no primeiro uso e orientar os requisitos locais de Ollama/Vosk sem relatar prontidão falsa. |
+| v0.9.12 | Ampliar ações desktop autorizadas por operação, com contratos e testes de segurança. |
+| v0.9.13 | Encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria; hoje cada turno executa no máximo uma ferramenta. |
+| v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
+
+A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.14:
+novas falhas podem exigir versões adicionais. “Fazer tudo no computador” não
+é uma capacidade certificável sem delimitar ações e permissões. A publicação
+estável exige CI no commit final da `main` e homologação física registrada.
 
 ---
 
