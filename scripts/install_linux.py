@@ -229,6 +229,42 @@ os.execv(str(python), [str(python), "-m", "nexus.updates.launcher", *sys.argv[1:
     return destination
 
 
+def write_recovery_launcher(home: Path) -> Path:
+    """Deploy standalone stdlib recovery before the managed Python can break.
+
+    Unlike calling the installed Nexus package, this helper still runs
+    through Ubuntu's system python3 even after a failed update.
+    """
+    from nexus.updates.manager import _private_directory
+    _private_directory(home)
+    bin_dir = Path.home() / ".local" / "bin"
+    if bin_dir.is_symlink():
+        raise RuntimeError("Diretório de executáveis é um link simbólico.")
+    bin_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+    destination = bin_dir / "nexus-core-recover"
+    marker = '"""Standalone Ubuntu recovery entry point'
+    if destination.is_symlink():
+        raise RuntimeError("Link simbólico para recuperação não autorizado.")
+    if destination.exists() and marker not in destination.read_text(encoding="utf-8")[:300]:
+        raise RuntimeError("Não substituir utilitário de recuperação desconhecido.")
+    source = (ROOT / "nexus" / "updates" / "recovery.py").read_text(encoding="utf-8")
+    placeholder = "_INSTALL_HOME = None"
+    if source.count(placeholder) != 1 or marker not in source[:300]:
+        raise RuntimeError("Código de recuperação não possui contrato reconhecido.")
+    embedded = source.replace(placeholder, "_INSTALL_HOME = " + repr(str(home)))
+    fd, name = tempfile.mkstemp(prefix=".nexus-recover-", dir=bin_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            os.fchmod(stream.fileno(), 0o700)
+            stream.write(embedded)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, destination)
+    finally:
+        Path(name).unlink(missing_ok=True)
+    return destination
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu Desktop")
     parser.add_argument("--check", action="store_true",
@@ -259,6 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         home = install_managed_python()
         executable = write_launcher(home)
+        recovery = write_recovery_launcher(home)
         from nexus.updates.manager import set_autoupdate
         enabled = confirm("Ativar verificação automática de releases estáveis?")
         set_autoupdate(enabled, home)
@@ -266,6 +303,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Falha na instalação do ambiente Python do usuário.", file=sys.stderr)
         return 2
     print(f"Instalação concluída: {executable}")
+    print(f"Recuperação offline instalada: {recovery}")
     print("Executar: ~/.local/bin/nexus-core")
     print("Atualizações automáticas: " + ("ativadas" if enabled else "desativadas"))
     if not installed("ollama"):

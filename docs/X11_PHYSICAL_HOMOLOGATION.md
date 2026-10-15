@@ -6,7 +6,7 @@ Este documento separa **evidência de CI em Xvfb** de **homologação real no co
 
 - Uma sessão **Linux X11 local**, não Wayland nem acesso remoto. Verifique `echo "$XDG_SESSION_TYPE"`; o valor esperado é `x11`. `DISPLAY` deve identificar um display local como `:0`.
 - `Python 3.12+`, `python3-tk` e `xdotool` instalados pelo gerenciador de pacotes do Linux.
-- Diretório do NEXUS CORE na **branch do PR #11** com dependências locais instaladas. Não executar como `root`.
+- Diretório do NEXUS CORE na branch `main` ou em uma branch posterior que contenha as correções X11 da v0.7.3, com dependências instaladas. Não executar como `root`.
 - Nenhuma senha nem janela com informação sensível deve ser usada. O roteiro cria uma janela Tk temporária que se encerra ao fim.
 - É necessário um terminal **interativo**. O script não executa comandos de teclado sem confirmação humana por operação.
 
@@ -48,4 +48,4 @@ Uma falha por aplicativo que ignore eventos sintéticos, por ausência de `_NET_
 
 O operador pode enviar à revisão do PR #11 somente o **JSON final** emitido pelo teste e um resumo não sensível da sessão (distribuição, desktop X11, versão Python e versão xdotool). Não anexar prints com dados pessoais nem logs de outras janelas.
 
-Até haver esse registro e uma CI novamente aprovada no commit final da `main`, o PR #11 continua em rascunho e a v0.7.3 não pode receber tag/release estável. O PR #12 (v0.8.0) é empilhado e deve ser atualizado e integrado **após** v0.7.3, também com CI própria na `main`.
+**Estado atual (10/10/2026):** os PRs #11 (v0.7.3) e #12 (v0.8.0) já foram integrados ao código da `main`, em ordem, sem liberar novas tags estáveis. **O teste físico X11 ainda não foi registrado.** O roteiro permanece obrigatório para a homologação, e nenhum merge anterior deve ser apresentado como certificação física. A publicação estável continuará bloqueada até aceite real e CI do commit final da `main`.

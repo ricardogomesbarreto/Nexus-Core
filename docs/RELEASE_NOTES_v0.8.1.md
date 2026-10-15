@@ -1,6 +1,6 @@
 # NEXUS CORE v0.8.1 — Linux Bootstrap & Verified Self-Update
 
-## Instalação e primeira execução
+> **Nota de compatibilidade retrospectiva (10/10/2026):** a formulação original desta versão mencionava Ubuntu/Debian. A diretriz oficial posterior da **v0.8.2 restringiu a instalação automática ao Ubuntu Desktop 24.04 LTS**. Mencionar Debian neste histórico não constitui suporte/homologação atual. Este marco foi integrado como código à `main`, porém segue sem tag estável própria, aguardando aceite físico.\n\n## Instalação e primeira execução
 
 - Novo instalador interativo `python3 scripts/install_linux.py`, destinado inicialmente a Ubuntu/Debian com Python 3.12+.
 - Detecção de ferramentas Linux e opção de instalação de pacotes oficiais mediante confirmação e senha do `sudo`: Tk, PostgreSQL, xdotool, eSpeak NG, ALSA, FFmpeg e suporte a `venv`. Não executa `curl | bash`, não opera como root e não concede automaticamente acesso ao grupo Docker.

@@ -30,3 +30,5 @@ Aplicações que não disponibilizam PID ou classe X11 não serão controladas: 
 ## Próximos marcos
 
 A linha `v0.8.x` do roadmap trata de dispositivos e arquitetura distribuída; a priorização depende do aceite da v0.7.3.
+
+> **Atualização de estado (10/10/2026):** o código está integrado à `main`, mas o aceite físico X11 ainda não foi registrado. O procedimento atual é o de [homologação física X11](X11_PHYSICAL_HOMOLOGATION.md). A tag/release v0.7.3 permanece bloqueada.
