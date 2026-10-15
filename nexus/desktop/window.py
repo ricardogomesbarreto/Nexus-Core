@@ -202,6 +202,9 @@ class DesktopWindow:
         root.bind("<Control-Shift-I>", self._show_privacy_status)
         root.bind("<Control-Shift-X>", self._shortcut_cancel_current)
         root.bind("<Control-Shift-S>", self._shortcut_stop_speaking)
+        root.bind("<Control-Shift-F>", self._shortcut_vision_file)
+        root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
+        root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
@@ -473,6 +476,18 @@ class DesktopWindow:
 
     def _vision_camera(self) -> None:
         self._request_vision("camera")
+
+    def _shortcut_vision_file(self, event=None):
+        self._vision_file()
+        return "break"
+
+    def _shortcut_vision_screen(self, event=None):
+        self._vision_screen()
+        return "break"
+
+    def _shortcut_vision_camera(self, event=None):
+        self._vision_camera()
+        return "break"
 
     def _request_vision(self, source: str) -> None:
         """Capture once only following user action and explicit per-shot consent."""
