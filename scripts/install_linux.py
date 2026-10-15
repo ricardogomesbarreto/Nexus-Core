@@ -105,20 +105,25 @@ def _credentials_file() -> Path:
 
 
 def _existing_credentials() -> bool:
-    file = _credentials_file()
-    return file.is_file() and not file.is_symlink() and file.stat().st_mode & 0o077 == 0
+    # Apply the same validation as the managed launcher. A private but
+    # malformed file must not make installation appear complete.
+    from nexus.updates.managed_entrypoint import load_local_password
+    return load_local_password(_credentials_file()) is not None
 
 
-def provision_postgresql() -> None:
+def provision_postgresql() -> bool:
     if _existing_credentials():
         print("Credenciais locais de PostgreSQL já configuradas; nenhuma senha foi alterada.")
-        return
+        return True
+    if os.environ.get("NEXUS_DATABASE_PASSWORD", "").strip():
+        print("Senha PostgreSQL informada pelo ambiente; configuração manual preservada.")
+        return True
     if not installed("psql") or not installed("sudo"):
         print("PostgreSQL precisa ser configurado antes do primeiro uso.")
-        return
+        return False
     if not confirm("Configurar banco local exclusivo 'nexus' e usuário 'nexus'?"):
         print("Banco não configurado automaticamente.")
-        return
+        return False
     try:
         def query(sql: str) -> str:
             result = _run(["sudo", "-u", "postgres", "psql", "-X",
@@ -130,7 +135,7 @@ def provision_postgresql() -> None:
         if role_exists or db_exists:
             print("Usuário ou banco existente: configuração preservada. "
                   "Configure NEXUS_DATABASE_PASSWORD manualmente.")
-            return
+            return False
         password = secrets.token_urlsafe(36)
         # SQL goes on stdin, never argv or printed output.
         query(f"CREATE ROLE nexus LOGIN PASSWORD '{password}';")
@@ -149,9 +154,11 @@ def provision_postgresql() -> None:
         finally:
             Path(temp_name).unlink(missing_ok=True)
         print("PostgreSQL local configurado e credenciais protegidas (0600).")
+        return _existing_credentials()
     except (OSError, RuntimeError, subprocess.SubprocessError):
         print("Provisionamento do PostgreSQL incompleto; confira a configuração "
               "antes de usar o assistente. Nenhuma senha foi exibida.")
+        return False
 
 
 def install_managed_python():
@@ -305,7 +312,10 @@ def main(argv: list[str] | None = None) -> int:
     if not install_system_packages():
         print("Instalação interrompida: requisitos do Ubuntu ainda ausentes.", file=sys.stderr)
         return 2
-    provision_postgresql()
+    if not provision_postgresql():
+        print("Instalação interrompida: configure credenciais PostgreSQL locais "
+              "e tente novamente.", file=sys.stderr)
+        return 2
     try:
         home = install_managed_python()
         executable = write_launcher(home)
