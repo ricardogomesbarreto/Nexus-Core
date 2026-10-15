@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Versão v0.9.9 (em desenvolvimento)" src="https://img.shields.io/badge/vers%C3%A3o-v0.9.9--dev-722F37">
+  <img alt="Código v0.9.9 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.9%20na%20main-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,8 +19,8 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Versão em desenvolvimento (PR empilhado):** `v0.9.9 — Spoken Desktop Controls`; a `main` contém código até v0.8.2, com PRs pendentes #15–#30 (v0.8.3–v0.9.8)<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.8.2 foi integrado sem tags, pendente de homologação física; v0.8.3–v0.9.9 em PRs; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Código na `main`:** `v0.9.9 — Spoken Desktop Controls`; os PRs #15–#31 (v0.8.3–v0.9.9) foram integrados em ordem, sem criar tags dessas versões.<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.9 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.9 oferece solicitações visuais e controle da saída de voz também por comando falado)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop 24.04 LTS como baseline do instalador; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
@@ -36,9 +36,14 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
 
+As seções de versões abaixo preservam a evolução da implementação. Código
+integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
+PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
+tag/release estável. Os workflows de publicação permanecem bloqueados.
+
 ---
 
-# v0.9.9 — Spoken Desktop Controls (em desenvolvimento)
+# v0.9.9 — Spoken Desktop Controls (código integrado; release pendente)
 
 Além dos atalhos da janela, o assistente aceita comandos falados locais
 para **"analisar imagem"**, **"analisar tela"** e **"analisar câmera"**.
@@ -62,15 +67,15 @@ continuam sob o botão **Cancelar** ou `Ctrl+Shift+X`.
 Testes Tk sob display virtual cobrem autorização, recusa, seleção
 cancelada, resposta falada e frase de ativação. Hardware Ubuntu físico
 segue pendente. Leia as [notas da v0.9.9](docs/RELEASE_NOTES_v0.9.9.md).
-Uma correção nesta branch impede que a recusa ou falha da configuração
+Uma correção nesta versão impede que a recusa ou falha da configuração
 PostgreSQL seja apresentada como instalação concluída.
-Esta branch depende da [v0.9.8 — PR #30](https://github.com/ricardogomesbarreto/Nexus-Core/pull/30)
-e da integração ordenada dos PRs #15–#29. O workflow de release segue
-bloqueado até CI na `main` e homologação física registrada.
+As versões v0.8.3–v0.9.9 foram integradas à `main` pelos PRs #15–#31.
+O workflow de release segue bloqueado até homologação física registrada
+e revisão específica da publicação.
 
 ---
 
-# v0.9.8 — Accessible Speech Output Toggle (em desenvolvimento)
+# v0.9.8 — Accessible Speech Output Toggle (código integrado; release pendente)
 
 Na janela desktop, **Ctrl+Shift+V** alterna a opção **Ler respostas em voz
 alta**. Quando desativada durante uma fala, interrompe a reprodução local
@@ -86,13 +91,11 @@ teclado, fala em andamento, evento de áudio atrasado e resposta visual
 pendente. Áudio físico e teclado real ainda requerem homologação no Ubuntu
 Desktop 24.04 LTS. Leia as [notas da v0.9.8](docs/RELEASE_NOTES_v0.9.8.md).
 
-Esta branch depende da [v0.9.7 — PR #29](https://github.com/ricardogomesbarreto/Nexus-Core/pull/29)
-e da integração ordenada dos PRs #15–#28. O workflow de release continua
-bloqueado até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.8 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.7 — Keyboard-Gated Vision Requests (em desenvolvimento)
+# v0.9.7 — Keyboard-Gated Vision Requests (código integrado; release pendente)
 
 Na janela desktop, **Ctrl+Shift+F** abre a escolha de um arquivo de imagem,
 **Ctrl+Shift+T** solicita análise da tela atual e **Ctrl+Shift+K** seleciona
@@ -108,13 +111,11 @@ o cancelamento e o bloqueio durante operação. Ainda é necessária a
 homologação física de tela e câmera no Ubuntu Desktop 24.04 LTS.
 Leia as [notas da v0.9.7](docs/RELEASE_NOTES_v0.9.7.md).
 
-Esta branch depende da [v0.9.6 — PR #28](https://github.com/ricardogomesbarreto/Nexus-Core/pull/28)
-e da integração ordenada dos PRs #15–#27. O workflow de release continua
-bloqueado até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.7 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.6 — TTS Startup Cancellation Safety (em desenvolvimento)
+# v0.9.6 — TTS Startup Cancellation Safety (código integrado; release pendente)
 
 A interrupção de voz da v0.9.5 também deve valer se **Ctrl+Shift+S**
 chegar enquanto o eSpeak NG está iniciando. Antes, a janela podia marcar
@@ -130,13 +131,11 @@ dois argumentos. O teste reproduz precisamente a parada durante a criação
 do processo; a verificação com alto-falante e hardware Ubuntu continua
 pendente. Leia as [notas da v0.9.6](docs/RELEASE_NOTES_v0.9.6.md).
 
-Esta branch depende da [v0.9.5 — PR #27](https://github.com/ricardogomesbarreto/Nexus-Core/pull/27)
-e da integração ordenada dos PRs #15–#26. Workflow de release bloqueado
-até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.6 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.5 — Spoken Reply Interruption (em desenvolvimento)
+# v0.9.5 — Spoken Reply Interruption (código integrado; release pendente)
 
 Durante uma resposta falada, **Ctrl+Shift+S** interrompe somente a
 reprodução atual. O texto da resposta continua no histórico e a opção
@@ -154,13 +153,11 @@ cobrem a reprodução, a escuta pausada e a próxima resposta; ainda é
 necessário o teste físico de áudio no Ubuntu. Leia as
 [notas da v0.9.5](docs/RELEASE_NOTES_v0.9.5.md).
 
-Esta branch depende da [v0.9.4 — PR #26](https://github.com/ricardogomesbarreto/Nexus-Core/pull/26)
-e da integração ordenada dos PRs #15–#25. O workflow de release segue
-bloqueado até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.5 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.4 — Accessible Cancellation Shortcut (em desenvolvimento)
+# v0.9.4 — Accessible Cancellation Shortcut (código integrado; release pendente)
 
 O atalho **Ctrl+Shift+X** aciona o mesmo **Cancelar** da janela durante
 uma pergunta em processamento ou análise visual já autorizada. Quando
@@ -178,13 +175,11 @@ Testes Tk sob display virtual cobrem estado ocioso, conversa pendente e
 análise visual autorizada. Não substituem homologação física Ubuntu.
 Leia as [notas da v0.9.4](docs/RELEASE_NOTES_v0.9.4.md).
 
-Esta branch depende da [v0.9.3 — PR #25](https://github.com/ricardogomesbarreto/Nexus-Core/pull/25)
-e da integração ordenada dos PRs #15–#24. O workflow de release segue
-bloqueado até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.4 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.3 — Typed Privacy Status (em desenvolvimento)
+# v0.9.3 — Typed Privacy Status (código integrado; release pendente)
 
 Digite **“Qual é o estado da privacidade?”** na caixa de conversa e envie
 para receber no histórico o estado atual de **Escuta, Voz e Visão**. As
@@ -206,13 +201,11 @@ desligada, isolamento do modelo e a conversa normal. Não constituem
 homologação física em Ubuntu Desktop. Leia as
 [notas da v0.9.3](docs/RELEASE_NOTES_v0.9.3.md).
 
-Esta branch depende da [v0.9.2 — PR #24](https://github.com/ricardogomesbarreto/Nexus-Core/pull/24)
-e da integração ordenada dos PRs #15–#23. O workflow de release
-permanece bloqueado até CI na `main` e homologação física registrada.
+**Estado atual:** o código v0.9.3 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.2 — Spoken Privacy Status (em desenvolvimento)
+# v0.9.2 — Spoken Privacy Status (código integrado; release pendente)
 
 Durante a conversa contínua, pergunte **“Qual é o estado da privacidade?”**,
 **“Como está minha privacidade?”** ou **“Informe o estado da privacidade.”**
@@ -230,13 +223,11 @@ voz selecionada, saída desativada e a palavra de ativação. Isso não é
 homologação física de microfone, alto-falantes nem leitor de tela.
 Leia as [notas da v0.9.2](docs/RELEASE_NOTES_v0.9.2.md).
 
-Esta branch depende da [v0.9.1 — PR #23](https://github.com/ricardogomesbarreto/Nexus-Core/pull/23)
-e da integração ordenada dos PRs #15–#22. O workflow de release segue
-desabilitado até a CI no commit da `main` e homologação física registrada.
+**Estado atual:** o código v0.9.2 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.1 — On-Demand Privacy Status (em desenvolvimento)
+# v0.9.1 — On-Demand Privacy Status (código integrado; release pendente)
 
 O atalho **Ctrl+Shift+I** mostra, em um diálogo nativo da janela Tk,
 os estados atuais de **Escuta, Voz e Visão**. A consulta é explícita,
@@ -259,14 +250,11 @@ sem deixar uma chamada ao modelo ou captura não autorizada. Isso não
 substitui homologação de leitor de tela nem testes em Ubuntu Desktop real.
 Leia as [notas da v0.9.1](docs/RELEASE_NOTES_v0.9.1.md).
 
-Esta branch depende da [v0.9.0 — PR #22](https://github.com/ricardogomesbarreto/Nexus-Core/pull/22)
-e da integração ordenada dos PRs #15–#21. Nenhuma tag estável será
-publicada antes da CI no commit da `main` e da homologação física
-registrada. O workflow de release continua desabilitado.
+**Estado atual:** o código v0.9.1 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.9.0 — Multimodal Privacy & Accessibility Status (em desenvolvimento)
+# v0.9.0 — Multimodal Privacy & Accessibility Status (código integrado; release pendente)
 
 Iniciando a linha `v0.9.x — Multimodal Interface` prevista no roadmap, esta versão aprimora a **transparência do estado de privacidade** do assistente desktop, preservando a interface Tk e a identidade Nexus Line. A janela mantém os mesmos controles e apresenta um painel textual discreto com três indicadores: **Escuta**, **Voz** e **Visão**.
 
@@ -278,11 +266,11 @@ O novo atalho `Ctrl+Shift+M` realiza exatamente a mesma ação do botão `Pausar
 
 Os testes verificam os estados em unidade e na janela Tk sob Xvfb, inclusive recusa de consentimento sem acesso à tela, cancelamento visual e pausa por teclado. São **testes simulados de interface**, não homologação física de microfone, câmera, leitores de tela ou Ollama em produção. Leia [notas da v0.9.0](docs/RELEASE_NOTES_v0.9.0.md).
 
-A v0.9.0 depende da [v0.8.9 — PR #21](https://github.com/ricardogomesbarreto/Nexus-Core/pull/21), após os PRs #15–#20. Última release publicada: **v0.7.2**. O workflow de release permanece bloqueado até aceite físico Ubuntu e CI na main.
+**Estado atual:** o código v0.9.0 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.9 — Ubuntu Activation Journal & Offline Repair (em desenvolvimento)
+# v0.8.9 — Ubuntu Activation Journal & Offline Repair (código integrado; release pendente)
 
 Esta versão fecha uma lacuna conhecida de atualizações no **Ubuntu Desktop 24.04 LTS**: a troca dos apontadores `previous` e `current` envolve duas operações de sistema de arquivos, que podem ser interrompidas entre si. A nova `.activation-intent.json`, gravada de forma privada antes de modificar os apontadores, registra a versão antiga, a candidata e a versão anterior ao início da operação. Uma ativação concluída remove o registro; uma interrupção deixa evidência para análise.
 
@@ -301,11 +289,11 @@ O reparo valida os arquivos e as versões sob o lock da v0.8.6, desliga atualiza
 
 **Limites:** o registro detecta e auxilia o reparo, mas **não torna duas trocas de symlink atomicamente transacionais**. O auxiliar externo da v0.8.8 instalado anteriormente precisa ser atualizado explicitamente para incluir a nova trava de execução, já que um wheel novo não altera automaticamente scripts fora do ambiente Python. Nada substitui testes no Ubuntu físico. Leia [notas v0.8.9](docs/RELEASE_NOTES_v0.8.9.md).
 
-O marco está empilhado sobre a v0.8.8 [PR #20](https://github.com/ricardogomesbarreto/Nexus-Core/pull/20). A última release estável permanece **v0.7.2** e nenhum workflow futuro foi habilitado para publicação.
+**Estado atual:** o código v0.8.9 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.8 — Managed Launcher Integrity (em desenvolvimento)
+# v0.8.8 — Managed Launcher Integrity (código integrado; release pendente)
 
 Esta versão prioriza o início real da instalação gerenciada no Ubuntu Desktop 24.04 LTS: o comando `~/.local/bin/nexus-core` passa a ser uma cópia autônoma do inicializador `nexus/updates/managed_entrypoint.py`, usando somente a biblioteca padrão do Python e os caminhos da instalação salvos quando o usuário a realizou.
 
@@ -317,11 +305,11 @@ As credenciais PostgreSQL opcionais são lidas somente de um JSON privado do pr�
 
 **Limites:** isso não é uma assinatura criptográfica do ambiente nem substitui homologação física de Ubuntu, X11, voz, câmera, Ollama e atualizações/rollback. A ferramenta offline independente `nexus-core-recover` continua responsável por versões quebradas. A nova implementação está descrita nas [notas v0.8.8](docs/RELEASE_NOTES_v0.8.8.md).
 
-O marco depende da [v0.8.7 — PR #19](https://github.com/ricardogomesbarreto/Nexus-Core/pull/19). A última release estável permanece **v0.7.2**; nenhum workflow de publicação foi habilitado.
+**Estado atual:** o código v0.8.8 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.7 — Ubuntu Pre-Activation Validation (em desenvolvimento)
+# v0.8.7 — Ubuntu Pre-Activation Validation (código integrado; release pendente)
 
 Na versão anterior, a manutenção de instalação, atualização e recuperação passou a usar `flock` exclusivo. Nesta versão, o NEXUS CORE evolui a **validação anterior à troca de versão**, para evitar selecionar um ambiente Python novo que não possua as dependências necessárias ou que não execute corretamente os próprios diagnósticos passivos.
 
@@ -337,11 +325,11 @@ O `-I` impede que código localizado no diretório corrente ou em `PYTHONPATH` s
 
 **Limite operacional:** passar nesses três checks **não** demonstra funcionamento completo da instalação, áudio, imagem, Ollama, PostgreSQL autenticado ou integridade de todos os pacotes. Os testes reais em Ubuntu físico continuam necessários. [Notas v0.8.7](docs/RELEASE_NOTES_v0.8.7.md).
 
-Este marco está empilhado sobre o [PR #18 v0.8.6](https://github.com/ricardogomesbarreto/Nexus-Core/pull/18), e a última release estável publicada continua **v0.7.2**. Nenhuma tag nova será liberada antes da homologação física.
+**Estado atual:** o código v0.8.7 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.6 — Ubuntu Maintenance Coordination (em desenvolvimento)
+# v0.8.6 — Ubuntu Maintenance Coordination (código integrado; release pendente)
 
 Este incremento resolve um risco concreto do NEXUS CORE gerenciado: a **possibilidade de instalação, atualização automática e recuperação offline ocorrerem ao mesmo tempo**. Todas essas operações passam a usar um **bloqueio de manutenção Linux** compartilhado, `fcntl.flock`, no arquivo privado `.maintenance.lock`. Uma segunda operação encontra o ambiente ocupado e recusa alterar `current`, `previous` ou iniciar instalação de dependências. O lock é liberado pelo kernel quando o processo termina, mesmo após falha.
 
@@ -361,11 +349,11 @@ A atualização revalida a autorização depois de adquirir o lock (inclusive ca
 
 **Limites:** exclusividade por lock não é garantia de segurança contra usuários que editam arquivos diretamente; a troca de dois symlinks não constitui uma transação atômica conjunta. Nenhum banco PostgreSQL, memória, modelo, voz, câmera ou arquivo do usuário é alterado por esse mecanismo. O aceite físico no Ubuntu Desktop 24.04 LTS continua obrigatório e não é substituído pela CI. Consultar [notas da v0.8.6](docs/RELEASE_NOTES_v0.8.6.md).
 
-A v0.8.6 é preparada como PR empilhado sobre [#17](https://github.com/ricardogomesbarreto/Nexus-Core/pull/17), que depende de #16 e #15. A última release estável publicada ainda é **v0.7.2**, e os workflows futuros continuam bloqueados.
+**Estado atual:** o código v0.8.6 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.5 — Ubuntu Recovery & Documentation Integrity (em desenvolvimento)
+# v0.8.5 — Ubuntu Recovery & Documentation Integrity (código integrado; release pendente)
 
 O NEXUS CORE passa a disponibilizar uma **ferramenta de recuperação offline independente do seu próprio ambiente Python**, instalada no Ubuntu como `~/.local/bin/nexus-core-recover`. Quando uma atualização deixa a versão atual inutilizável, o operador pode escolher a **versão anterior já preservada**, após fechar o assistente e confirmar expressamente a reversão.
 
@@ -380,11 +368,11 @@ A v0.8.5 inclui uma [auditoria da documentação](docs/DOCUMENTATION_AUDIT_v0.8.
 
 **Diretrizes preservadas:** Ubuntu Desktop **24.04 LTS** é a plataforma de instalação prioritária; futuras distros dependem de homologação; aplicativo nativo Tk e identidade visual inalterados; PostgreSQL e Ollama locais; segurança e consentimento por ação; nenhuma tag/release sem CI exata e aceite físico. Leia as [notas da v0.8.5](docs/RELEASE_NOTES_v0.8.5.md).
 
-**Status:** v0.8.5 é desenvolvida sobre o PR #16 (v0.8.4), que depende de #15 (v0.8.3). Ambas versões ainda são draft; v0.7.3–v0.8.2 já estão integradas como código na `main`. Última release pública: **v0.7.2**.
+**Estado atual:** o código v0.8.5 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.4 — Ubuntu Readiness Preflight (em desenvolvimento)
+# v0.8.4 — Ubuntu Readiness Preflight (código integrado; release pendente)
 
 Esta versão acrescenta ao Ubuntu Desktop 24.04 LTS o comando **`nexus-core --ubuntu-preflight`**, que avalia requisitos básicos para executar a conversa por texto e voz, **sem iniciar conversas, gravar áudio ou alterar dados**. Complementa o `--ubuntu-doctor` da versão anterior.
 
@@ -398,13 +386,13 @@ O preflight autentica no PostgreSQL já configurado usando `SELECT 1` e sessão 
 
 `text_chat_dependencies_ready_to_try` e `voice_chat_dependencies_ready_to_try` indicam apenas pré-requisitos. Não certificam inferência, áudio, estabilidade, desempenho ou hardware. A linha principal segue **Ubuntu Desktop 24.04 LTS**, mantendo compatibilidade futura com outras distribuições como meta, não como capacidade já homologada. Leia as [notas v0.8.4](docs/RELEASE_NOTES_v0.8.4.md).
 
-**Status:** os PRs #11–#14 já foram integrados como código; a v0.8.3 permanece em [PR #15](https://github.com/ricardogomesbarreto/Nexus-Core/pull/15) aguardando homologação. Esta v0.8.4 é construída sobre essa branch sem antecipar a publicação. A última release estável publicada continua **v0.7.2**.
+**Estado atual:** o código v0.8.4 foi integrado à `main` em ordem. A última release estável segue v0.7.2; a publicação posterior exige homologação física e revisão do workflow bloqueado.
 
 ---
 
-# v0.8.3 — Ubuntu First-Run Doctor (em desenvolvimento)
+# v0.8.3 — Ubuntu First-Run Doctor (código integrado; release pendente)
 
-A próxima versão do NEXUS CORE oferece o diagnóstico local e limitado `nexus-core --ubuntu-doctor`. Ele consulta **somente** o PostgreSQL no endereço `127.0.0.1:5432` por `pg_isready` e o Ollama no `127.0.0.1:11434/api/version` (resposta limitada, timeout, sem redirects ou downloads). A ferramenta separa indisponibilidade dos serviços de ausência de pacotes e apresenta recomendações sem executar alterações. **Não autentica no banco, não verifica modelos Ollama instalados, não inicia microfone/câmera e não garante funcionalidade completa do assistente.**
+O marco v0.8.3 oferece o diagnóstico local e limitado `nexus-core --ubuntu-doctor`. Ele consulta **somente** o PostgreSQL no endereço `127.0.0.1:5432` por `pg_isready` e o Ollama no `127.0.0.1:11434/api/version` (resposta limitada, timeout, sem redirects ou downloads). A ferramenta separa indisponibilidade dos serviços de ausência de pacotes e apresenta recomendações sem executar alterações. **Não autentica no banco, não verifica modelos Ollama instalados, não inicia microfone/câmera e não garante funcionalidade completa do assistente.**
 
 ```bash
 nexus-core --platform-check  # inventário passivo, nenhuma conexão
@@ -437,7 +425,7 @@ O código de voz, visão, integrações, atualizações verificadas e interface 
 
 ---
 
-# v0.8.1 — Linux Bootstrap & Verified Self-Update (em desenvolvimento)
+# v0.8.1 — Linux Bootstrap & Verified Self-Update (código integrado; release pendente)
 
 A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. **O suporte atual do instalador foi posteriormente restringido na v0.8.2 ao Ubuntu Desktop 24.04 LTS com Python 3.12+**; o instalador é capaz de verificar dependências do sistema e propor sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. O instalador pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
 
@@ -464,7 +452,7 @@ Essas capacidades estão **em desenvolvimento** no PR da v0.8.1 e **não foram p
 
 ---
 
-# v0.8.0 — Device Registry Foundation (em desenvolvimento)
+# v0.8.0 — Device Registry Foundation (código integrado; release pendente)
 
 A primeira entrega da linha **Devices & Distributed Architecture** estabelece um catálogo declarativo de dispositivos Arduino e ESP32, **sem conexão física, descoberta ou comunicação de rede**. O pacote `nexus.devices` valida manifestos `nexus.devices.v1`, limitados a **32 itens e 16 KiB**, e implementa um registro atômico e efêmero em memória. Os dados são declarações do usuário, não leituras de sensores nem dispositivos emparelhados.
 
@@ -893,23 +881,23 @@ rastreáveis no GitHub:
 | v0.8.0 | Device Registry Foundation — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.0.md) |
 | v0.8.1 | Linux Bootstrap & Verified Self-Update — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.1.md) |
 | v0.8.2 | Ubuntu Desktop Baseline & Portability — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.2.md) |
-| v0.8.3 | Ubuntu First-Run Doctor — PR de desenvolvimento; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.3.md) |
-| v0.8.4 | Ubuntu Readiness Preflight — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.4.md) |
-| v0.8.5 | Ubuntu Recovery & Documentation Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.5.md) |
-| v0.8.6 | Ubuntu Maintenance Coordination — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.6.md) |
-| v0.8.7 | Ubuntu Pre-Activation Validation — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.7.md) |
-| v0.8.8 | Managed Launcher Integrity — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.8.md) |
-| v0.8.9 | Ubuntu Activation Journal & Offline Repair — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.9.md) |
-| v0.9.0 | Multimodal Privacy & Accessibility Status — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.0.md) |
-| v0.9.1 | On-Demand Privacy Status — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.1.md) |
-| v0.9.2 | Spoken Privacy Status — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.2.md) |
-| v0.9.3 | Typed Privacy Status — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.3.md) |
-| v0.9.4 | Accessible Cancellation Shortcut — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.4.md) |
-| v0.9.5 | Spoken Reply Interruption — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.5.md) |
-| v0.9.6 | TTS Startup Cancellation Safety — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.6.md) |
-| v0.9.7 | Keyboard-Gated Vision Requests — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.7.md) |
-| v0.9.8 | Accessible Speech Output Toggle — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.8.md) |
-| v0.9.9 | Spoken Desktop Controls — PR empilhado; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.9.md) |
+| v0.8.3 | Ubuntu First-Run Doctor — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.3.md) |
+| v0.8.4 | Ubuntu Readiness Preflight — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.4.md) |
+| v0.8.5 | Ubuntu Recovery & Documentation Integrity — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.5.md) |
+| v0.8.6 | Ubuntu Maintenance Coordination — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.6.md) |
+| v0.8.7 | Ubuntu Pre-Activation Validation — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.7.md) |
+| v0.8.8 | Managed Launcher Integrity — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.8.md) |
+| v0.8.9 | Ubuntu Activation Journal & Offline Repair — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.8.9.md) |
+| v0.9.0 | Multimodal Privacy & Accessibility Status — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.0.md) |
+| v0.9.1 | On-Demand Privacy Status — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.1.md) |
+| v0.9.2 | Spoken Privacy Status — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.2.md) |
+| v0.9.3 | Typed Privacy Status — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.3.md) |
+| v0.9.4 | Accessible Cancellation Shortcut — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.4.md) |
+| v0.9.5 | Spoken Reply Interruption — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.5.md) |
+| v0.9.6 | TTS Startup Cancellation Safety — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.6.md) |
+| v0.9.7 | Keyboard-Gated Vision Requests — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.7.md) |
+| v0.9.8 | Accessible Speech Output Toggle — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.8.md) |
+| v0.9.9 | Spoken Desktop Controls — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.9.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -1512,10 +1500,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na branch de desenvolvimento: `v0.9.9`; a `main` contém código v0.8.2. A última release estável publicada é v0.7.2.** As subseções sobre
+**Versão do código na `main`: `v0.9.9`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais da `v0.9.9` em desenvolvimento. Para as funcionalidades disponíveis,
+dependências atuais do código `v0.9.9` na `main`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -4556,13 +4544,13 @@ ações permitidas e limites de digitação/consentimento. Testes cobrem
 as variantes X11 local, Wayland, display remoto e dependência ausente.
 Não afirma compatibilidade física com aplicativos específicos.
 
-### v0.7.3 — Desktop Target Integrity (em desenvolvimento; não publicada)
+### v0.7.3 — Desktop Target Integrity (código integrado; não publicada)
 
 Consulta e confirmação apresentam ID, título, PID e classe da janela.
 Digitação/navegação exigem os quatro atributos e os revalidam após o
 consentimento. Metadados ausentes ou divergentes impedem o envio do
 evento. Testes com subprocessos simulados foram acrescentados;
-CI completa e validação em desktop X11 físico permanecem pendentes.
+a validação em desktop X11 físico permanece pendente.
 
 ---
 
@@ -4570,7 +4558,7 @@ CI completa e validação em desktop X11 físico permanecem pendentes.
 
 ## v0.8.x — Devices & Distributed Architecture
 
-**v0.8.0 (em desenvolvimento):** catálogo local validado de Arduino/ESP32, registro em memória e prévia sem comunicação física. **v0.8.1 (em desenvolvimento):** instalador Linux guiado e atualizações estáveis verificadas na inicialização. **v0.8.2 (em desenvolvimento):** Ubuntu 24.04 LTS como baseline, diagnóstico passivo multi-distro e matriz de compatibilidade. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
+**v0.8.0–v0.8.2 (código integrado; sem release estável):** catálogo local validado de Arduino/ESP32, instalador Linux guiado, atualizações verificadas, Ubuntu 24.04 LTS como baseline e diagnóstico passivo multi-distro. **Futuro:** descoberta expressamente autorizada, provisionamento de nós, autenticação, transporte seguro, telemetria real e comunicação distribuída. Nenhuma dessas extensões futuras está disponível hoje.
 
 Para microcontroladores:
 
@@ -4586,7 +4574,9 @@ C / C++
 
 ## v0.9.x — Multimodal Interface
 
-Planejado:
+O código v0.9.0–v0.9.9 já integra privacidade multimodal, atalhos,
+comandos falados locais e análise visual por ação autorizada. A homologação
+física e publicação estável continuam pendentes. Evoluções futuras incluem:
 
 * interfaces acessíveis e multimodais avançadas;
 * visão;
@@ -4907,7 +4897,7 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Release Target:        v0.9.9 (STACKED DEVELOPMENT PR)
+Code Version:          v0.9.9 (INTEGRATED IN MAIN; NOT RELEASED)
 Release Name:          Spoken Desktop Controls
 Release Tag:          v0.9.9 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
 Implementation:        LOCAL VOICE COMMANDS; PER-SHOT VISUAL CONSENT
