@@ -10,6 +10,7 @@ from nexus.agent import AgentOutcome
 from nexus.config.settings import PROJECT_ROOT, settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
+from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.wake import extract_utterance
 from nexus.vision import LocalVision, VisionError, VisionInputError
@@ -62,6 +63,8 @@ class DesktopWindow:
         self._vision_events: Queue[tuple[str, str, str]] = Queue()
         self.vision = vision
         self._vision_buttons = []
+        self._vision_source = None
+        self._privacy_last = None
         self._busy = False
         self._operation_kind = None
         self._cancel_requested = False
@@ -152,6 +155,16 @@ class DesktopWindow:
             button.pack(side="left", padx=(0, 6))
             self._vision_buttons.append(button)
 
+        # These are factual SOFTWARE states only. They do not imply hardware
+        # certification, continuous video access or persistent camera consent.
+        privacy_row = ttk.Frame(frame)
+        privacy_row.pack(fill="x", pady=(7, 0))
+        self._privacy_labels = []
+        for text in ("Escuta: aguardando", "Voz: habilitada", "Visão: sem captura"):
+            widget = ttk.Label(privacy_row, text=text)
+            widget.pack(side="left", padx=(0, 12))
+            self._privacy_labels.append(widget)
+
         ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
         )
@@ -185,6 +198,7 @@ class DesktopWindow:
         )
         self.cancel_button.pack(side="right", padx=(0, 6))
         root.protocol("WM_DELETE_WINDOW", self._close)
+        root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         self._append(
             "Nexus Core",
             "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
@@ -194,8 +208,32 @@ class DesktopWindow:
             "assistant",
         )
         self.input.focus_set()
+        self._refresh_privacy_status()
         root.after(80, self._poll)
         root.after(120, self._start_listening)
+
+    def _refresh_privacy_status(self) -> None:
+        """Update only labels for changed state; run exclusively on Tk thread."""
+        labels = MultimodalStatus(
+            listening_allowed=self._voice_active,
+            listening_requested=self._listening,
+            speech_enabled=self.speech_enabled.get(),
+            speech_requested=self._speaking,
+            vision_busy=self._busy and self._operation_kind == "vision",
+            vision_source=self._vision_source,
+            cancellation_requested=self._cancel_requested,
+            closing=self._closing,
+        ).labels()
+        if labels != self._privacy_last:
+            for widget, label in zip(self._privacy_labels, labels):
+                widget.configure(text=label)
+            self._privacy_last = labels
+
+    def _shortcut_toggle_listening(self, event=None):
+        """Keyboard access to the same mic toggle, never to visual capture."""
+        if not self._closing:
+            self._toggle_listening()
+        return "break"
 
     def _append(self, speaker: str, message: str, tag: str) -> None:
         self.transcript.configure(state="normal")
@@ -222,6 +260,7 @@ class DesktopWindow:
         self._brand_image = None
         self._workers.clear()
         self._vision_buttons.clear()
+        self._privacy_labels.clear()
         self.vision = None
         self.app.shutdown()
         self.root.destroy()
@@ -255,6 +294,7 @@ class DesktopWindow:
         self._busy = False
         self._cancel_requested = False
         self._operation_kind = None
+        self._vision_source = None
         self.send_button.configure(state="normal")
         self.suggest_button.configure(state="normal")
         self.cancel_button.configure(state="disabled")
@@ -427,6 +467,7 @@ class DesktopWindow:
             return
         self._busy = True
         self._operation_kind = "vision"
+        self._vision_source = source
         self._cancel_requested = False
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
@@ -642,6 +683,7 @@ class DesktopWindow:
                 and not self._speaking and not self._workers_running()):
             self._finish_close()
             return
+        self._refresh_privacy_status()
         self.root.after(80, self._poll)
 
     def _close(self) -> None:
