@@ -61,8 +61,8 @@ def validate_current(home: Path) -> Path:
     return executable
 
 
-def load_local_password(credentials: Path | None) -> str | None:
-    """Read only one small owner-private credential file; never print it."""
+def load_local_database_config(credentials: Path | None) -> dict | None:
+    """Read validated local PostgreSQL connection settings from a private file."""
     if credentials is None or credentials.is_symlink() or not credentials.is_file():
         return None
     if credentials.parent.is_symlink():
@@ -75,11 +75,23 @@ def load_local_password(credentials: Path | None) -> str | None:
         payload = json.loads(credentials.read_text(encoding="utf-8"))
         if type(payload) is dict and type(payload.get("database_password")) is str:
             password = payload["database_password"]
-            if 0 < len(password) <= 1024:
-                return password
+            name = payload.get("database_name", "nexus")
+            user = payload.get("database_user", "nexus")
+            if (0 < len(password) <= 1024
+                    and type(name) is str and 0 < len(name) <= 128
+                    and type(user) is str and 0 < len(user) <= 128
+                    and all(c not in name + user for c in "\x00\r\n")):
+                return {"database_password": password, "database_name": name,
+                        "database_user": user}
     except (OSError, ValueError, UnicodeError):
         pass
     return None
+
+
+def load_local_password(credentials: Path | None) -> str | None:
+    """Compatibility helper for existing private password-only files."""
+    config = load_local_database_config(credentials)
+    return config["database_password"] if config is not None else None
 
 
 def launch(argv=None, *, home=None, credentials=None, execv=None) -> None:
@@ -95,9 +107,10 @@ def launch(argv=None, *, home=None, credentials=None, execv=None) -> None:
     python = validate_current(home)
     secret = (Path(_CREDENTIALS_PATH) if credentials is None
               and _CREDENTIALS_PATH is not None else credentials)
-    password = load_local_password(Path(secret)) if secret is not None else None
-    if password is not None:
-        os.environ.setdefault("NEXUS_DATABASE_PASSWORD", password)
+    config = load_local_database_config(Path(secret)) if secret is not None else None
+    if config is not None:
+        for key, value in config.items():
+            os.environ.setdefault("NEXUS_" + key.upper(), value)
     os.environ["NEXUS_RUNNING_MANAGED"] = "1"
     os.environ["NEXUS_MANAGED_HOME"] = str(home)
     args = sys.argv[1:] if argv is None else list(argv)

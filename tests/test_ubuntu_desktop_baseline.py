@@ -271,6 +271,49 @@ def test_existing_postgresql_role_is_preserved_until_manually_configured(
 
     monkeypatch.setattr(install_linux, "_run", query)
     assert install_linux.provision_postgresql() is False
+    assert len(statements) == 3
+    assert all(sql.startswith("SELECT 1") for sql in statements)
+
+
+def test_existing_nexus_database_creates_separate_core_database(
+    tmp_path, monkeypatch,
+):
+    file = tmp_path / "nexus-core" / "credentials.json"
+    monkeypatch.setattr(install_linux, "_credentials_file", lambda: file)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "installed", lambda _: True)
+    monkeypatch.setattr(install_linux, "confirm", lambda _: True)
+    statements = []
+
+    def query(argv, **kwargs):
+        sql = kwargs["input_text"]
+        statements.append(sql)
+        return SimpleNamespace(stdout="1" if "rolname='nexus'" in sql else "")
+
+    monkeypatch.setattr(install_linux, "_run", query)
+    assert install_linux.provision_postgresql() is True
+    assert not any(sql.startswith("CREATE ROLE nexus LOGIN") for sql in statements)
+    assert not any(sql.startswith("CREATE DATABASE nexus OWNER") for sql in statements)
+    assert any(sql.startswith("CREATE ROLE nexus_core LOGIN") for sql in statements)
+    assert "CREATE DATABASE nexus_core OWNER nexus_core;" in statements
+    assert json.loads(file.read_text())["database_name"] == "nexus_core"
+    assert file.stat().st_mode & 0o077 == 0
+
+
+def test_existing_nexus_collision_refusal_does_not_change_database(monkeypatch):
+    monkeypatch.setattr(install_linux, "_existing_credentials", lambda: False)
+    monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.setattr(install_linux, "installed", lambda _: True)
+    answers = iter((True, False))
+    monkeypatch.setattr(install_linux, "confirm", lambda _: next(answers))
+    statements = []
+
+    def query(argv, **kwargs):
+        statements.append(kwargs["input_text"])
+        return SimpleNamespace(stdout="1")
+
+    monkeypatch.setattr(install_linux, "_run", query)
+    assert install_linux.provision_postgresql() is False
     assert len(statements) == 2
     assert all(sql.startswith("SELECT 1") for sql in statements)
 
@@ -328,6 +371,11 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
     from nexus.config.settings import settings
     import subprocess
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "private-manual-password")
+    monkeypatch.setenv("NEXUS_DATABASE_NAME", "nexus_core")
+    monkeypatch.setenv("NEXUS_DATABASE_USER", "nexus_core")
+    credential = tmp_path / "config" / "credentials.json"
+    monkeypatch.setattr(install_linux, "_credentials_file", lambda: credential)
     calls = []
 
     def virtual_environment(target, **kwargs):
@@ -367,6 +415,11 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
     assert calls[-1][0] == "verified"
     assert all("-I" in cmd for cmd, kw in calls if isinstance(cmd, list) and "nexus.main" in cmd)
     assert any(isinstance(cmd, list) and cmd[-2:] == ["pip", "check"] for cmd, kw in calls)
+    assert json.loads(credential.read_text()) == {
+        "database_name": "nexus_core", "database_user": "nexus_core",
+        "database_password": "private-manual-password",
+    }
+    assert credential.stat().st_mode & 0o077 == 0
 
 
 def test_postgresql_login_uses_child_environment_and_read_only_preflight(
@@ -415,13 +468,20 @@ def test_postgresql_login_loads_private_file_when_environment_is_missing(
     tmp_path, monkeypatch,
 ):
     credential = tmp_path / "credentials.json"
-    credential.write_text('{"database_password": "from-private-file"}')
+    credential.write_text(json.dumps({
+        "database_password": "from-private-file",
+        "database_name": "nexus_core", "database_user": "nexus_core",
+    }))
     credential.chmod(0o600)
     monkeypatch.delenv("NEXUS_DATABASE_PASSWORD", raising=False)
+    monkeypatch.delenv("NEXUS_DATABASE_NAME", raising=False)
+    monkeypatch.delenv("NEXUS_DATABASE_USER", raising=False)
     monkeypatch.setattr(install_linux, "_credentials_file", lambda: credential)
 
     def fake_run(argv, **kwargs):
         assert kwargs["env"]["NEXUS_DATABASE_PASSWORD"] == "from-private-file"
+        assert kwargs["env"]["NEXUS_DATABASE_NAME"] == "nexus_core"
+        assert kwargs["env"]["NEXUS_DATABASE_USER"] == "nexus_core"
         return SimpleNamespace(stdout=json.dumps({
             "schema": "nexus.ubuntu-preflight.v1",
             "checks": {"postgresql_authenticated": True},

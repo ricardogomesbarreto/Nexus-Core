@@ -70,9 +70,16 @@ python3 scripts/install_linux.py  # usuário comum; sudo apenas após confirmaç
 ~/.local/bin/nexus-core --desktop
 ```
 
-Se já houver um usuário ou banco `nexus`, o instalador preserva os dados e
-solicita uma configuração manual de senha antes de continuar. O Ollama e o
-modelo Vosk em português têm preparação e testes próprios descritos abaixo.
+Se já houver um usuário ou banco `nexus`, o instalador preserva esses dados
+e oferece criar um usuário e banco separados, `nexus_core`, após confirmação.
+Se `nexus_core` também existir, ele interrompe sem alterar nenhum dos dois:
+configure credenciais manualmente após verificar a finalidade do banco.
+A senha gerada, o nome do banco e o usuário ficam em
+`~/.config/nexus-core/credentials.json` com permissão `0600`, carregados pelo
+launcher gerenciado. Se você informar uma senha pelo ambiente, ela só é salva
+nesse arquivo **depois** de o login PostgreSQL ser comprovado, preservando
+qualquer arquivo de credenciais anterior. O Ollama e o modelo Vosk em português
+têm preparação e testes próprios descritos abaixo.
 
 ---
 
@@ -511,7 +518,7 @@ O código de voz, visão, integrações, atualizações verificadas e interface 
 
 # v0.8.1 — Linux Bootstrap & Verified Self-Update (código integrado; release pendente)
 
-A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. A v0.8.2 o restringiu temporariamente ao Ubuntu Desktop 24.04 LTS; a seção atual de compatibilidade descreve a ampliação posterior. O instalador verifica dependências do sistema e propõe sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. Pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário já existente, não o altera e requer configuração manual para preservar dados.
+A implementação original da v0.8.1 iniciou um instalador guiado para a família Debian/Ubuntu. A v0.8.2 o restringiu temporariamente ao Ubuntu Desktop 24.04 LTS; a seção atual de compatibilidade descreve a ampliação posterior. O instalador verifica dependências do sistema e propõe sua instalação por **sudo apt-get com autorização**. Prepara ambiente Python virtual **exclusivo e isolado por versão**, instala as dependências Python (voz/visão) e disponibiliza o comando gerenciado `~/.local/bin/nexus-core`. Pode configurar o PostgreSQL local com credencial aleatória protegida em arquivo 0600; se detectar banco ou usuário `nexus` já existente, não o altera e oferece criar o banco separado `nexus_core` após confirmação.
 
 **Correção na v0.9.9:** a instalação para antes de criar o ambiente Python e
 o launcher se não houver senha PostgreSQL local utilizável. Após uma recusa
