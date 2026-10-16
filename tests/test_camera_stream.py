@@ -1,0 +1,52 @@
+"""A webcam preview reads only bounded frames and stops on request."""
+
+import os
+import time
+
+import pytest
+
+from nexus.vision.camera_stream import CameraStream
+from nexus.vision.local import VisionInputError
+import nexus.vision.camera_stream as camera_module
+
+
+@pytest.mark.parametrize("index", [-1, 256, True, "0"])
+def test_invalid_camera_never_opens_a_process(index):
+    with pytest.raises(VisionInputError):
+        CameraStream(index)
+
+
+def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
+    read_fd, write_fd = os.pipe()
+
+    class Process:
+        def __init__(self):
+            self.stdout = os.fdopen(read_fd, "rb", buffering=0)
+            self.stopped = False
+        def poll(self): return 0 if self.stopped else None
+        def terminate(self): self.stopped = True
+        def wait(self, timeout=None): return 0
+        def kill(self): self.stopped = True
+
+    process = Process()
+    commands = []
+    monkeypatch.setattr(camera_module.shutil, "which", lambda name: "/usr/bin/ffmpeg")
+    monkeypatch.setattr(camera_module.subprocess, "Popen",
+                        lambda args, **kwargs: commands.append(args) or process)
+    stream = CameraStream(10)
+    stream.start()
+    try:
+        assert "/dev/video10" in commands[0]
+        assert "pipe:1" in commands[0]
+        os.write(write_fd, b"junk\xff")
+        time.sleep(0.05)
+        os.write(write_fd, b"\xd8first\xff\xd9\xff\xd8last\xff\xd9")
+        deadline = time.monotonic() + 2
+        while stream.latest()[0] < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert stream.latest() == (2, b"\xff\xd8last\xff\xd9", None)
+    finally:
+        stream.stop()
+        os.close(write_fd)
+    assert process.stopped
+    assert stream.latest()[1] is None
