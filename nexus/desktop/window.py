@@ -429,6 +429,82 @@ class DesktopWindow:
         root.after(80, self._poll)
         root.after(120, self._start_spoken_welcome)
 
+    def _save_desktop_preferences(self, event=None) -> None:
+        """Persist only user choices on this Linux account, never credentials."""
+        if self._preference_store is None or self._closing:
+            return
+        backend = {
+            "Automático": "auto", "PipeWire": "pipewire", "ALSA": "alsa",
+        }.get(self.audio_input_choice.get(), "auto")
+        geometry = self.root.geometry().split("+", 1)[0].split("-", 1)[0]
+        try:
+            preferences = DesktopPreferences(
+                voice=self.voice_choice.get(),
+                speech_enabled=self.speech_enabled.get(),
+                wake_required=self.wake_required.get(),
+                audio_backend=backend,
+                listening_enabled=self._voice_active,
+                geometry=geometry,
+                remember_history=self.archive_enabled.get(),
+            )
+            # In the brief period before the Tk window is mapped, geometry
+            # may still be 1x1. Never destroy a valid stored size for that.
+            try:
+                preferences.validate()
+            except PreferenceStoreError:
+                from dataclasses import replace
+                preferences = replace(
+                    preferences,
+                    geometry=(self._saved_preferences.geometry
+                              if self._saved_preferences is not None else "980x720"),
+                )
+            self._preference_store.save(preferences)
+            self._saved_preferences = preferences
+        except PreferenceStoreError:
+            self.status.configure(
+                text="Não foi possível salvar configurações. Confira a pasta local."
+            )
+
+    def _toggle_archive(self) -> None:
+        if self._closing:
+            return
+        if self._chat_archive_store is None:
+            self.archive_enabled.set(False)
+            self.status.configure(text="Histórico local indisponível nesta sessão.")
+            return
+        self.session.set_archive(
+            self._chat_archive_store if self.archive_enabled.get() else None
+        )
+        self._save_desktop_preferences()
+        self.status.configure(
+            text=("Salvamento local de conversas ativado."
+                  if self.archive_enabled.get()
+                  else "Salvamento de novas conversas desativado.")
+        )
+
+    def _clear_saved_history(self) -> None:
+        """Explicit, one-time consent; never delete history on app startup."""
+        if self._closing or self._busy or self._chat_archive_store is None:
+            return
+        if not self.messagebox.askyesno(
+            "Apagar histórico do Nexus Core",
+            "Apagar permanentemente as conversas textuais salvas neste "
+            "computador? A operação não pode ser desfeita.",
+            parent=self.root,
+        ):
+            return
+        try:
+            self._chat_archive_store.clear()
+        except ChatArchiveError:
+            self.status.configure(text="Não foi possível apagar o histórico local.")
+            return
+        self.session.forget_context()
+        self.transcript.configure(state="normal")
+        self.transcript.delete("1.0", "end")
+        self.transcript.configure(state="disabled")
+        self._append("Nexus Core", "Histórico de conversas locais apagado.", "assistant")
+        self.status.configure(text="Histórico local apagado.")
+
     def _privacy_snapshot(self) -> MultimodalStatus:
         """Capture presentation state on the Tk thread, without probing devices."""
         return MultimodalStatus(
