@@ -3,11 +3,12 @@
 import sys
 import re
 import unicodedata
+from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
 
 from nexus.agent import AgentOutcome
-from nexus.config.settings import PROJECT_ROOT, settings
+from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.multimodal_status import MultimodalStatus
@@ -83,22 +84,28 @@ class DesktopWindow:
         root.configure(bg="#f7f4f5")
         style = ttk.Style(root)
         style.configure("Nexus.TButton", padding=(14, 9))
+        style.configure("Nexus.Header.TFrame", background="#241c24")
+        style.configure("Nexus.Header.TLabel", background="#241c24", foreground="#ffffff")
 
         frame = ttk.Frame(root, padding=18)
         frame.pack(fill="both", expand=True)
         # Keep visual assets local. Tk can display the bundled transparent PNG
         # without requiring a browser, SVG runtime or third-party GUI package.
         self._brand_image = None
-        brand = PROJECT_ROOT / "assets" / "brand" / "nexus-core-logo.png"
+        brand = Path(__file__).resolve().parents[1] / "assets" / "brand" / "nexus-core-logo.png"
         if brand.is_file():
             try:
-                self._brand_image = tk.PhotoImage(file=str(brand)).subsample(12, 12)
+                self._brand_image = tk.PhotoImage(file=str(brand)).subsample(8, 8)
             except tk.TclError:
                 self._brand_image = None
+        header = ttk.Frame(frame, style="Nexus.Header.TFrame")
+        header.pack(fill="x", pady=(0, 8))
         if self._brand_image is not None:
-            ttk.Label(frame, image=self._brand_image).pack(anchor="w")
+            ttk.Label(header, image=self._brand_image,
+                      style="Nexus.Header.TLabel").pack(anchor="w", padx=14, pady=5)
         else:
-            ttk.Label(frame, text="Nexus Core", font=("Sans", 20, "bold")).pack(anchor="w")
+            ttk.Label(header, text="Nexus Core", font=("Sans", 20, "bold"),
+                      style="Nexus.Header.TLabel").pack(anchor="w", padx=14, pady=12)
         ttk.Label(
             frame,
             text="Conversa local · ações mediadas · PostgreSQL no computador",

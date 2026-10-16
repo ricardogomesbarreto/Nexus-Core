@@ -139,6 +139,15 @@ def test_ollama_provider_requests_json_only_when_required():
     assert "format" not in transport.calls[1]["payload"]
 
 
+def test_ollama_provider_passes_strict_agent_schema():
+    transport = FakeTransport(make_response())
+    schema = {"type": "object", "properties": {"content": {"type": "string"}}}
+    OllamaProvider(model="qwen3:1.7b", transport=transport).generate(
+        ModelRequest(prompt="Responda", json_mode=True, response_schema=schema)
+    )
+    assert transport.calls[0]["payload"]["format"] == schema
+
+
 @pytest.mark.parametrize(
     "model",
     [

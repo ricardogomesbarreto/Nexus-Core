@@ -13,6 +13,31 @@ class ProposalError(ValueError):
     """A saída do modelo não representa uma única ação válida."""
 
 
+AGENT_RESPONSE_SCHEMA = {
+    "oneOf": [
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "message"},
+                "content": {"type": "string", "minLength": 1},
+            },
+            "required": ["type", "content"],
+            "additionalProperties": False,
+        },
+        {
+            "type": "object",
+            "properties": {
+                "type": {"const": "tool_call"},
+                "tool_name": {"type": "string", "minLength": 1},
+                "arguments": {"type": "object"},
+            },
+            "required": ["type", "tool_name", "arguments"],
+            "additionalProperties": False,
+        },
+    ],
+}
+
+
 @dataclass(frozen=True)
 class AgentProposal:
     type: str
@@ -75,8 +100,10 @@ class AgentPlanner:
                 + json.dumps(self.registry.contracts(), ensure_ascii=False)
             ),
             temperature=0.0,
+            context_length=4096,
             think=False,
             json_mode=True,
+            response_schema=AGENT_RESPONSE_SCHEMA,
         )
         response = self.model_router.generate(request)
         if not isinstance(response, ModelResponse) or not response.done:
@@ -95,6 +122,13 @@ class AgentPlanner:
             raise ProposalError("A proposta deve ser um único objeto JSON.")
         if value.get("type") == "message" and value.keys() == {"type", "content"}:
             content = value["content"]
+            if type(content) is str and content.strip():
+                return AgentProposal(type="message", content=content)
+        # Small local models sometimes use a single answer field despite a
+        # schema. Such an envelope can only become displayed text, never a
+        # tool call. Extra fields or nested payloads remain invalid.
+        if value.keys() in ({"answer"}, {"response"}, {"content"}):
+            content = next(iter(value.values()))
             if type(content) is str and content.strip():
                 return AgentProposal(type="message", content=content)
         if value.get("type") == "tool_call" and value.keys() == {

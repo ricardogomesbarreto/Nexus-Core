@@ -54,6 +54,10 @@ def test_desktop_conversation_and_confirmation_on_graphical_display():
             speaker=FakeSpeaker(), recognizer=FakeRecognizer(),
         )
         root.update()
+        from tkinter import ttk
+        assert ttk.Style(root).lookup("Nexus.Header.TFrame", "background") == "#241c24"
+        assert window._brand_image is not None
+        assert window._brand_image.width() >= 250
         assert window.input.winfo_ismapped()
         assert window.send_button.winfo_ismapped()
         assert (window.input.winfo_rooty() + window.input.winfo_height()

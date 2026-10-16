@@ -117,7 +117,7 @@ class OllamaProvider:
             },
         }
         if request.json_mode:
-            payload["format"] = "json"
+            payload["format"] = request.response_schema or "json"
 
         try:
             raw_response = self.transport.chat(

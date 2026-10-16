@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from typing import Any
 
 
 class ModelError(Exception):
@@ -122,6 +123,7 @@ class ModelRequest:
     context_length: int = 2048
     think: bool = False
     json_mode: bool = False
+    response_schema: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         _validate_non_blank_text(
@@ -153,6 +155,9 @@ class ModelRequest:
             "json_mode",
             self.json_mode,
         )
+        if self.response_schema is not None:
+            if not self.json_mode or type(self.response_schema) is not dict:
+                raise ModelValidationError("response_schema requer json_mode e um objeto")
 
 
 @dataclass(frozen=True)

@@ -79,6 +79,8 @@ def test_message_does_not_use_tool(tmp_path):
     assert medium.calls == []
     assert router.requests[0].prompt == "bom dia"
     assert router.requests[0].json_mode is True
+    assert router.requests[0].context_length == 4096
+    assert len(router.requests[0].response_schema["oneOf"]) == 2
     assert "medium_action" in router.requests[0].system_prompt
 
 
@@ -88,6 +90,14 @@ def test_safe_tool_runs_through_executor_and_is_audited(tmp_path):
     assert outcome.success and outcome.tool_result.data["system"]
     assert medium.calls == []
     assert "DECISION=ALLOW" in (tmp_path / "agent-audit.log").read_text()
+
+
+@pytest.mark.parametrize("field", ["answer", "response", "content"])
+def test_single_text_envelope_is_only_displayed_not_executed(tmp_path, field):
+    agent, _, medium = planner(tmp_path, json.dumps({field: "Estou funcionando."}))
+    outcome = agent.run("Você funciona?")
+    assert outcome.success and outcome.content == "Estou funcionando."
+    assert medium.calls == []
 
 
 def test_medium_tool_requires_confirmation_for_each_call(tmp_path):

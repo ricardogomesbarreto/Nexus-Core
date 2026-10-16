@@ -27,3 +27,6 @@ vision = ["Pillow>=11,<13"]
 
 [tool.setuptools.packages.find]
 include = ["nexus*"]
+
+[tool.setuptools.package-data]
+nexus = ["assets/brand/*.png"]

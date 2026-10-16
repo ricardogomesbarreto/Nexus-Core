@@ -81,19 +81,34 @@ nesse arquivo **depois** de o login PostgreSQL ser comprovado, preservando
 qualquer arquivo de credenciais anterior. O Ollama e o modelo Vosk em português
 têm preparação e testes próprios descritos abaixo.
 
+**Instalação guiada atual:** além dos pacotes Ubuntu, ambiente Python e PostgreSQL,
+`python3 scripts/install_linux.py` confere o Ollama e os modelos locais antes de
+ativar o aplicativo. Caso o binário Ollama não exista, pode baixar o pacote Linux
+oficial para uma pasta privada do usuário e iniciar um serviço `systemd --user`,
+sem executar um script remoto com privilégios de administrador. Em seguida,
+oferece baixar `qwen3:1.7b` pelo próprio Ollama e o modelo Vosk de português
+da fonte oficial, apenas se estiverem ausentes. Cada download exige confirmação,
+e o instalador interrompe se o serviço ou os modelos necessários falharem. No
+computador que já tem Ollama e Vosk, ele preserva ambos. `--check` continua
+passivo; a instalação não abre microfone, câmera nem comprova a inferência real.
+Docker continua opcional para o sandbox de comandos e automação de janelas
+de terceiros com `xdotool` exige sessão X11.
+
 ### Janela sem campo de mensagem ou resposta no Ubuntu
 
 Depois de atualizar o código e executar novamente `python3 scripts/install_linux.py`,
 abra `~/.local/bin/nexus-core --desktop`: o campo **Sua mensagem** e o botão
 **Enviar** ficam visíveis abaixo da transcrição. Teste primeiro a resposta sem
 microfone com `~/.local/bin/nexus-core --agent-prompt 'Responda em uma frase: você está funcionando?'`.
-O Agent agora solicita `format: json` à API local do Ollama, além de conferir o
-JSON e as permissões antes de qualquer ação. `--status` indica componentes
+O Agent solicita um esquema JSON com as duas ações aceitas à API local do Ollama,
+além de conferir a proposta e as permissões antes de qualquer ação. A marca da
+janela está embutida no pacote instalado, ampliada sobre cabeçalho escuro para
+dar contraste à palavra clara “Nexus”. `--status` indica componentes
 inicializados, não comprova que houve uma inferência ou que o microfone funciona.
 Se o prompt ainda falhar, verifique `ollama list` e o serviço Ollama no próprio
 computador; nenhuma resposta de modelo inválida autoriza a execução de ferramentas.
-Se `--voice-check` mostrar `vosk_local_model: false`, a conversa digitada ainda
-funciona, mas a escuta automática fica indisponível até instalar o modelo abaixo.
+Se `--voice-check` mostrar `vosk_local_model: false`, execute novamente o
+instalador guiado para baixar o modelo; a conversa digitada continua disponível.
 
 ---
 
@@ -3049,8 +3064,9 @@ Cada turno faz no máximo uma chamada de ferramenta, sem loop autônomo.
 
 ## Voz local na janela
 
-Para ativar a saída e a entrada de voz no Linux, instale os utilitários de
-áudio do sistema e o extra Python opcional:
+O instalador guiado Ubuntu inclui os utilitários de áudio, o extra Python de
+voz e o modelo Vosk português após confirmação do download. Para quem usa
+instalação manual ou deseja reparar um componente isolado:
 
 ```bash
 # Debian/Ubuntu
