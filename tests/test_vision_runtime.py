@@ -135,9 +135,9 @@ def test_camera_skips_initial_exposure_frames(monkeypatch):
     commands = []
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/usr/bin/ffmpeg")
     service._capture = lambda args: commands.append(args) or image_bytes()
-    assert service.camera(0).startswith(b"\\x89PNG")
+    assert service.camera(0).startswith(b"\x89PNG")
     assert len(commands) == 1  # One authorized still photo, no continuous preview.
-    assert commands[0][commands[0].index("-vf") + 1] == r"select=gte(n\\,8)"
+    assert commands[0][commands[0].index("-vf") + 1] == r"select=gte(n\,8)"
     assert commands[0][commands[0].index("-frames:v") + 1] == "1"
 
 
