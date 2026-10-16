@@ -776,6 +776,7 @@ class DesktopWindow:
             )
         else:
             self.status.configure(text="Seleção de entrada indisponível neste reconhecedor.")
+        self._save_desktop_preferences()
 
     def _toggle_listening(self) -> None:
         if self._closing:
@@ -793,6 +794,7 @@ class DesktopWindow:
             self._mic_last_signal = 0.0
             self._audio_level_label.configure(text="Entrada: pausada")
             self.status.configure(text="Escuta pausada; use Retomar escuta")
+        self._save_desktop_preferences()
 
     @staticmethod
     def _voice_command(text: str) -> str | None:
@@ -863,6 +865,7 @@ class DesktopWindow:
         """Change only the local TTS choice; preserve microphone and mute state."""
         voice = "Feminina" if command == "voice_female" else "Masculina"
         self.voice_choice.set(voice)
+        self._save_desktop_preferences()
         answer = f"Voz {voice.lower()} selecionada."
         self._append("Você", utterance, "user")
         self._append("Nexus Core", answer, "assistant")
@@ -877,6 +880,7 @@ class DesktopWindow:
             self.status.configure(text='Diga "Nexus, ..." antes de cada pergunta')
         else:
             self.status.configure(text="Conversa contínua sem palavra de ativação")
+        self._save_desktop_preferences()
 
     def _stop_speaking(self) -> None:
         """Invalidate a superseded TTS worker before its completion event."""
@@ -885,6 +889,7 @@ class DesktopWindow:
         self.speaker.stop()
 
     def _toggle_speech(self) -> None:
+        self._save_desktop_preferences()
         if not self.speech_enabled.get() and self._speaking:
             self._stop_speaking()
             self.status.configure(text="Leitura em voz desativada")
@@ -1325,8 +1330,9 @@ class DesktopWindow:
                 else:
                     self._append("Nexus Core", reply.text, "assistant")
                     self.status.configure(
-                        text="Escuta pausada" if not self._voice_active
-                        else "Pronto para conversar"
+                        text=(self.session.last_archive_error
+                              or ("Escuta pausada" if not self._voice_active
+                                  else "Pronto para conversar"))
                     )
                     if not (reply.outcome.success and self._say_response(reply.text)):
                         self._start_listening()
@@ -1377,6 +1383,7 @@ class DesktopWindow:
     def _close(self) -> None:
         if self._closing:
             return
+        self._save_desktop_preferences()
         self._closing = True
         self._audio_level_label.configure(text="Entrada: desligada")
         self.microphone_indicator.show_peak(0, listening=False)
