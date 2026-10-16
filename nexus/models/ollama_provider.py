@@ -116,6 +116,8 @@ class OllamaProvider:
                 "temperature": request.temperature,
             },
         }
+        if request.json_mode:
+            payload["format"] = "json"
 
         try:
             raw_response = self.transport.chat(

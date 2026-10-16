@@ -76,6 +76,7 @@ class AgentPlanner:
             ),
             temperature=0.0,
             think=False,
+            json_mode=True,
         )
         response = self.model_router.generate(request)
         if not isinstance(response, ModelResponse) or not response.done:

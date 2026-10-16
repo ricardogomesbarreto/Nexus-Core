@@ -81,6 +81,20 @@ nesse arquivo **depois** de o login PostgreSQL ser comprovado, preservando
 qualquer arquivo de credenciais anterior. O Ollama e o modelo Vosk em português
 têm preparação e testes próprios descritos abaixo.
 
+### Janela sem campo de mensagem ou resposta no Ubuntu
+
+Depois de atualizar o código e executar novamente `python3 scripts/install_linux.py`,
+abra `~/.local/bin/nexus-core --desktop`: o campo **Sua mensagem** e o botão
+**Enviar** ficam visíveis abaixo da transcrição. Teste primeiro a resposta sem
+microfone com `~/.local/bin/nexus-core --agent-prompt 'Responda em uma frase: você está funcionando?'`.
+O Agent agora solicita `format: json` à API local do Ollama, além de conferir o
+JSON e as permissões antes de qualquer ação. `--status` indica componentes
+inicializados, não comprova que houve uma inferência ou que o microfone funciona.
+Se o prompt ainda falhar, verifique `ollama list` e o serviço Ollama no próprio
+computador; nenhuma resposta de modelo inválida autoriza a execução de ferramentas.
+Se `--voice-check` mostrar `vosk_local_model: false`, a conversa digitada ainda
+funciona, mas a escuta automática fica indisponível até instalar o modelo abaixo.
+
 ---
 
 # v0.9.11 — First-Run PostgreSQL Authentication (código integrado; release pendente)
@@ -3052,7 +3066,21 @@ Descompacte-o em
 diretório absoluto já descompactado:
 
 ```bash
+mkdir -p "$HOME/.local/share/nexus-core/voice" "$HOME/Downloads"
+curl -fL --retry 3 -o "$HOME/Downloads/vosk-model-small-pt-0.3.zip" \
+  "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip"
+unzip -q "$HOME/Downloads/vosk-model-small-pt-0.3.zip" \
+  -d "$HOME/.local/share/nexus-core/voice"
+~/.local/bin/nexus-core --voice-check | python3 -m json.tool
+```
+
+Se o modelo já estiver em outra pasta, use o caminho da pasta que contém os
+arquivos do modelo e inicie o programa no mesmo terminal:
+
+```bash
 export NEXUS_VOSK_MODEL_PATH="$HOME/modelos/vosk-model-small-pt-0.3"
+~/.local/bin/nexus-core --voice-check | python3 -m json.tool
+~/.local/bin/nexus-core --desktop
 ```
 
 Ao abrir a janela, o assistente começa a escutar automaticamente. O Vosk detecta

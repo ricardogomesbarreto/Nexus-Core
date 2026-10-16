@@ -53,6 +53,13 @@ def test_desktop_conversation_and_confirmation_on_graphical_display():
             root, FakeApplication(), confirmation,
             speaker=FakeSpeaker(), recognizer=FakeRecognizer(),
         )
+        root.update()
+        assert window.input.winfo_ismapped()
+        assert window.send_button.winfo_ismapped()
+        assert (window.input.winfo_rooty() + window.input.winfo_height()
+                <= root.winfo_rooty() + root.winfo_height())
+        assert (window.send_button.winfo_rooty() + window.send_button.winfo_height()
+                <= root.winfo_rooty() + root.winfo_height())
         window.voice_choice.set("Masculina")
         window._confirm = lambda request: True
         window.input.insert("1.0", "Olá")
@@ -73,6 +80,63 @@ def test_desktop_conversation_and_confirmation_on_graphical_display():
             root.update()
             time.sleep(0.01)
         assert calls == [True, ("Olá pela janela", "Masculina"), "shutdown"]
+    finally:
+        confirmation.close()
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
+
+
+@pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Requer display Linux")
+def test_missing_voice_model_is_visible_without_blocking_text_chat():
+    import tkinter as tk
+    from nexus.voice import VoiceError
+
+    root = tk.Tk()
+    confirmation = DesktopConfirmation()
+
+    class FakeAgent:
+        def run(self, prompt, is_cancelled=None):
+            return AgentOutcome(True, content="Resposta por texto")
+
+    class FakeApplication:
+        agent = FakeAgent()
+        def shutdown(self):
+            pass
+
+    class MissingRecognizer:
+        def recognize_continuous(self, cancelled):
+            raise VoiceError("Modelo Vosk local ausente. Configure NEXUS_VOSK_MODEL_PATH.")
+        def stop(self):
+            pass
+
+    class FakeSpeaker:
+        def speak(self, text, voice):
+            pass
+        def stop(self):
+            pass
+
+    try:
+        window = DesktopWindow(root, FakeApplication(), confirmation,
+                               speaker=FakeSpeaker(), recognizer=MissingRecognizer())
+        window.speech_enabled.set(False)
+        deadline = time.monotonic() + 5
+        while window._voice_active and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
+        assert not window._voice_active
+        assert "Escuta indisponível: Modelo Vosk local ausente" in window.transcript.get("1.0", "end")
+        window.input.insert("1.0", "Olá")
+        window._send()
+        while window._busy and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
+        assert "Resposta por texto" in window.transcript.get("1.0", "end")
+        window._close()
+        while root.winfo_exists() and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
     finally:
         confirmation.close()
         try:

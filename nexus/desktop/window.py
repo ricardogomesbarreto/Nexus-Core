@@ -104,10 +104,14 @@ class DesktopWindow:
             text="Conversa local · ações mediadas · PostgreSQL no computador",
         ).pack(anchor="w", pady=(0, 12))
 
+        # Reserve the bottom controls before allowing the transcript to expand.
+        # The default Text height otherwise hides the entry and Send button.
+        footer = ttk.Frame(frame)
+        footer.pack(side="bottom", fill="x")
         transcript_frame = ttk.Frame(frame)
         transcript_frame.pack(fill="both", expand=True)
         self.transcript = tk.Text(
-            transcript_frame, wrap="word", state="disabled", padx=14, pady=12,
+            transcript_frame, height=6, wrap="word", state="disabled", padx=14, pady=12,
             bg="#ffffff", fg="#252025", font=("Sans", 11), relief="flat",
         )
         scrollbar = ttk.Scrollbar(transcript_frame, command=self.transcript.yview)
@@ -117,7 +121,7 @@ class DesktopWindow:
         self.transcript.tag_configure("user", foreground="#722F37", font=("Sans", 11, "bold"))
         self.transcript.tag_configure("assistant", foreground="#242424", font=("Sans", 11, "bold"))
 
-        voice_controls = ttk.Frame(frame)
+        voice_controls = ttk.Frame(footer)
         voice_controls.pack(fill="x", pady=(10, 0))
         self.speech_toggle = ttk.Checkbutton(
             voice_controls, text="Ler respostas em voz alta",
@@ -141,7 +145,7 @@ class DesktopWindow:
         )
         self.wake_toggle.pack(side="left", padx=(12, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
-        vision_controls = ttk.Frame(frame)
+        vision_controls = ttk.Frame(footer)
         vision_controls.pack(fill="x", pady=(8, 0))
         ttk.Label(vision_controls, text="Visão local sob autorização:").pack(side="left", padx=(0, 8))
         for title, callback in (
@@ -157,7 +161,7 @@ class DesktopWindow:
 
         # These are factual SOFTWARE states only. They do not imply hardware
         # certification, continuous video access or persistent camera consent.
-        privacy_row = ttk.Frame(frame)
+        privacy_row = ttk.Frame(footer)
         privacy_row.pack(fill="x", pady=(7, 0))
         self._privacy_labels = []
         for text in ("Escuta: aguardando", "Voz: habilitada", "Visão: sem captura"):
@@ -165,13 +169,13 @@ class DesktopWindow:
             widget.pack(side="left", padx=(0, 12))
             self._privacy_labels.append(widget)
 
-        ttk.Label(frame, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
+        ttk.Label(footer, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
             anchor="w", pady=(12, 4)
         )
-        self.input = tk.Text(frame, height=3, wrap="word", font=("Sans", 11))
+        self.input = tk.Text(footer, height=3, wrap="word", font=("Sans", 11))
         self.input.pack(fill="x")
         self.input.bind("<Control-Return>", self._send)
-        controls = ttk.Frame(frame)
+        controls = ttk.Frame(footer)
         controls.pack(fill="x", pady=(8, 0))
         self.status = ttk.Label(controls, text="Pronto para conversar")
         self.status.pack(side="left")
@@ -738,6 +742,10 @@ class DesktopWindow:
                     self._voice_active = False
                     self.mic_button.configure(text="Retomar escuta")
                     self.status.configure(text=value)
+                    self._append(
+                        "Nexus Core", f"Escuta indisponível: {value} "
+                        "A conversa por texto continua disponível.", "assistant",
+                    )
                 elif self._voice_active and not self._busy:
                     utterance = (
                         extract_utterance(value, require_wake=self.wake_required.get())

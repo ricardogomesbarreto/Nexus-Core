@@ -121,6 +121,7 @@ class ModelRequest:
     temperature: float = 0.0
     context_length: int = 2048
     think: bool = False
+    json_mode: bool = False
 
     def __post_init__(self) -> None:
         _validate_non_blank_text(
@@ -147,6 +148,10 @@ class ModelRequest:
         _validate_boolean(
             "think",
             self.think,
+        )
+        _validate_boolean(
+            "json_mode",
+            self.json_mode,
         )
 
 
