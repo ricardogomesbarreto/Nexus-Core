@@ -223,8 +223,23 @@ class DesktopWindow:
                   justify="right", style="Nexus.HeaderHint.TLabel").pack(
                       side="right", anchor="center", padx=(8, 0))
 
-        ttk.Label(frame, text=readiness_caption,
-                  style="Nexus.Subtitle.TLabel").pack(anchor="w", pady=(0, 8))
+        readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
+        readiness_row.pack(fill="x", pady=(0, 5))
+        ttk.Label(readiness_row, text=readiness_caption,
+                  style="Nexus.Subtitle.TLabel").pack(side="left")
+        self.clear_history_button = ttk.Button(
+            readiness_row, text="Apagar histórico",
+            command=self._clear_saved_history, style="Nexus.Quiet.TButton")
+        self.clear_history_button.pack(side="right", padx=(5, 0))
+        self.archive_toggle = ttk.Checkbutton(
+            readiness_row, text="Salvar conversas",
+            command=self._toggle_archive, style="Nexus.TCheckbutton")
+        if (self._saved_preferences is not None
+                and self._saved_preferences.remember_history):
+            self.archive_toggle.state(("selected",))
+        self.archive_toggle.pack(side="right", padx=(8, 0))
+        self.archive_enabled = _WidgetBoolean(self.archive_toggle)
+
 
         # Pack footer before the expanding transcript. All actions have their
         # own equal-width grid row; status never competes for button space.
@@ -258,6 +273,9 @@ class DesktopWindow:
         self.speech_toggle.state(("selected",))
         self.speech_toggle.pack(side="left")
         self.speech_enabled = _WidgetBoolean(self.speech_toggle)
+        if (self._saved_preferences is not None
+                and not self._saved_preferences.speech_enabled):
+            self.speech_enabled.set(False)
         ttk.Label(voice_controls, text="Voz:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(15, 5))
         self.voice_selector = ttk.Combobox(
@@ -265,17 +283,29 @@ class DesktopWindow:
             state="readonly", width=12,
         )
         self.voice_selector.set(
-            "Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina"
+            self._saved_preferences.voice
+            if self._saved_preferences is not None
+            else ("Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina")
         )
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
+        self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
         ttk.Label(voice_controls, text="Microfone:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
             voice_controls, values=("Automático", "PipeWire", "ALSA"),
             state="readonly", width=10,
         )
-        self.audio_input_choice.set("Automático")
+        preferred_backend = (
+            self._saved_preferences.audio_backend
+            if self._saved_preferences is not None else "auto"
+        )
+        self.audio_input_choice.set({
+            "auto": "Automático", "pipewire": "PipeWire",
+            "alsa": "ALSA",
+        }[preferred_backend])
+        if isinstance(self.recognizer, LocalRecognizer):
+            self.recognizer.audio_backend = preferred_backend
         self.audio_input_choice.pack(side="left")
         self.audio_input_choice.bind("<<ComboboxSelected>>", self._select_audio_input)
         self.wake_toggle = ttk.Checkbutton(
@@ -284,6 +314,8 @@ class DesktopWindow:
         )
         self.wake_toggle.pack(side="left", padx=(9, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
+        if self._saved_preferences is not None and self._saved_preferences.wake_required:
+            self.wake_required.set(True)
 
         # Three uniform-width capture actions; no camera access until consent.
         vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
@@ -357,7 +389,8 @@ class DesktopWindow:
             style="Nexus.TButton", state="disabled")
         self.cancel_button.grid(row=0, column=2, sticky="ew", padx=(0, 6))
         self.mic_button = ttk.Button(
-            controls, text="Pausar escuta", command=self._toggle_listening,
+            controls, text=("Pausar escuta" if self._voice_active else "Retomar escuta"),
+            command=self._toggle_listening,
             style="Nexus.TButton")
         self.mic_button.grid(row=0, column=3, sticky="ew", padx=(0, 6))
         self.shutdown_button = ttk.Button(
@@ -381,7 +414,16 @@ class DesktopWindow:
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
         # Welcome text is displayed immediately. Its short spoken version
         # uses the existing local TTS worker before microphone listening starts.
+        # Restore only normal text conversation. Never replay raw device
+        # captures, tool outputs, consent decisions or microphone recordings.
+        for saved_question, saved_answer in self.session.history:
+            self._append("Você", saved_question, "user")
+            self._append("Nexus Core", saved_answer, "assistant")
         self._append("Nexus Core", welcome_text, "assistant")
+        if self._preference_load_warning:
+            self._append("Nexus Core", self._preference_load_warning, "assistant")
+        if self._history_load_warning:
+            self._append("Nexus Core", self._history_load_warning, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
         root.after(80, self._poll)
