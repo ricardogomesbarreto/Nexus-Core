@@ -115,8 +115,11 @@ class TextAgent:
         self.calls = []
 
     def run(self, prompt, **kwargs):
-        self.calls.append(json.loads(prompt))
-        return AgentOutcome(True, content="Explicação local do modelo.")
+        request = json.loads(prompt)
+        self.calls.append(request)
+        return AgentOutcome(
+            True, content="Explicação local: " + request["mensagem_atual"] + "."
+        )
 
 
 class ToolAgent:
@@ -134,7 +137,7 @@ def test_chat_restarts_with_history_but_without_tool_outputs_or_vision_pixels(tm
     first.note_visual("imagem", "informação da câmera")
     first.close()
     assert archive.load() == [
-        ("Explique redes locais", "Explicação local do modelo.")
+        ("Explique redes locais", "Explicação local: Explique redes locais.")
     ]
     second = ChatSession(TextAgent(), archive=archive)
     assert second.history == archive.load()
