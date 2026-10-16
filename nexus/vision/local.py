@@ -45,7 +45,11 @@ class LocalVision:
     FORMATS = frozenset({"PNG", "JPEG", "WEBP", "BMP", "GIF", "TIFF", "AVIF"})
     FILE_SUFFIXES = (".png", ".jpg", ".jpeg", ".jpe", ".jfif", ".webp",
                      ".bmp", ".gif", ".tif", ".tiff", ".avif")
-    DEFAULT_PROMPT = "Descreva esta imagem objetivamente em português brasileiro."
+    DEFAULT_PROMPT = ("Analise a imagem realmente enviada. Identifique os objetos, textos "
+                      "ou elementos visíveis com precisão e responda em português brasileiro. "
+                      "Se estiver ilegível ou incerto, informe a limitação; não invente.")
+    VISION_MODEL_PREFIXES = ("gemma3:", "llava:", "llama3.2-vision:",
+                             "qwen2.5vl:", "qwen3-vl:", "moondream:", "minicpm-v:")
     MODEL_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,127}$")
 
     def __init__(self, settings: Settings, path_security: PathSecurity | None = None,
@@ -270,10 +274,44 @@ class LocalVision:
                 "Verifique permissões, se ela está em uso e o formato V4L2."
             ) from exc
 
+    def _installed_vision_model(self, requested: str) -> str:
+        """Require a real local vision model; never infer vision from a text LLM."""
+        query = getattr(self.transport, "list_models", None)
+        if not callable(query):
+            # Injected test transports keep their explicit model contract.
+            return requested
+        try:
+            installed = query()
+        except OllamaTransportError as exc:
+            raise VisionError(
+                "Ollama local indisponível. Inicie o Ollama e confira o modelo visual."
+            ) from exc
+        if not isinstance(installed, list):
+            raise VisionError("Não foi possível consultar os modelos do Ollama.")
+        names = [name for name in installed if isinstance(name, str)]
+        explicit = os.environ.get("NEXUS_VISION_MODEL", "").strip()
+        candidate = self.validate_model(explicit) if explicit else requested
+        if candidate in names:
+            if not candidate.startswith(self.VISION_MODEL_PREFIXES):
+                raise VisionError(
+                    f"O modelo '{candidate}' não possui capacidade visual confirmada. "
+                    "Use um modelo visual local, como gemma3:4b."
+                )
+            return candidate
+        if not explicit:
+            for name in names:
+                if name.startswith(self.VISION_MODEL_PREFIXES):
+                    return self.validate_model(name)
+        raise VisionError(
+            f"Modelo visual '{candidate}' não está instalado no Ollama local. "
+            "Instale com: ollama pull gemma3:4b. Depois reinicie a análise. "
+            "A imagem não foi enviada a outro serviço."
+        )
+
     def describe(self, image: bytes, *, question: str | None = None,
                  model: str = "gemma3:4b") -> dict:
         prompt = self.validate_question(question)
-        model_name = self.validate_model(model)
+        model_name = self._installed_vision_model(self.validate_model(model))
         normalized = self._normalize_image(image)
         payload = {
             "model": model_name,
@@ -288,7 +326,11 @@ class LocalVision:
                 payload=payload, timeout=self.settings.local_model_timeout
             )
         except OllamaTransportError as exc:
-            raise VisionError("Falha no modelo visual Ollama local.") from exc
+            raise VisionError(
+                f"O modelo visual '{model_name}' não conseguiu analisar a imagem. "
+                "Confira se o Ollama está ativo e se o modelo aceita imagens. "
+                "Execute: ollama list."
+            ) from exc
         if not isinstance(response, dict) or response.get("done") is not True:
             raise VisionError("Resposta visual incompleta do Ollama.")
         message = response.get("message")
