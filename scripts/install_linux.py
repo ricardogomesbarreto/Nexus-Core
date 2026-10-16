@@ -308,6 +308,58 @@ def prepare_local_models() -> bool:
     return True
 
 
+def prepare_neural_voice(home: Path) -> bool:
+    """Optional local neural TTS; its failure cannot invalidate text chat."""
+    from nexus.config.settings import settings
+    from scripts.local_models import PIPER_VOICE, install_piper_voice
+
+    destination = settings.data_dir / "voice" / "piper" / (PIPER_VOICE + ".onnx")
+    python = home / "current" / "bin" / "python"
+    binary = home / "current" / "bin" / "piper"
+    if destination.is_file() and destination.with_suffix(".onnx.json").is_file() and binary.is_file():
+        print("Voz neural masculina Piper já instalada.")
+        return True
+    if not confirm("Instalar voz neural masculina em português (Piper, download adicional)?"):
+        print("Voz neural dispensada; síntese eSpeak NG continua disponível.")
+        return False
+    try:
+        _run([str(python), "-m", "pip", "install", "--disable-pip-version-check",
+              "--no-input", "piper-tts>=1.3,<2"], timeout=600, cwd=home,
+             progress=True)
+        install_piper_voice(destination)
+        print("Voz neural masculina instalada; selecione Masculina na janela.")
+        return True
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        print("Voz neural indisponível neste Ubuntu/Python; "
+              "a instalação de conversa e eSpeak NG foi preservada.")
+        return False
+
+
+def prepare_female_voice() -> bool:
+    """Install Ubuntu's open RHVoice Leticia voice when explicitly selected."""
+    from nexus.voice.local import LocalSpeaker
+    if LocalSpeaker.female_voice_ready():
+        print("Voz feminina RHVoice Letícia já instalada.")
+        return True
+    if not installed("sudo") or not confirm(
+        "Instalar voz feminina RHVoice Letícia pelos pacotes Ubuntu (multiverse)?"
+    ):
+        print("Voz feminina eSpeak NG continua disponível.")
+        return False
+    try:
+        _run(["sudo", "apt-get", "install", "-y", "rhvoice",
+              "rhvoice-brazilian-portuguese"], timeout=600, progress=True)
+    except (OSError, subprocess.SubprocessError):
+        print("RHVoice indisponível nos repositórios habilitados; "
+              "a voz feminina eSpeak NG continua disponível.")
+        return False
+    if not LocalSpeaker.female_voice_ready():
+        print("Voz RHVoice não foi encontrada após a instalação dos pacotes.")
+        return False
+    print("Voz feminina RHVoice Letícia instalada.")
+    return True
+
+
 class PostgreSQLAuthenticationError(RuntimeError):
     """The configured local credentials were not proved by a read-only login."""
 
@@ -518,6 +570,8 @@ def main(argv: list[str] | None = None) -> int:
         home = install_managed_python()
         executable = write_launcher(home)
         recovery = write_recovery_launcher(home)
+        female_voice = prepare_female_voice()
+        neural_voice = prepare_neural_voice(home)
         from nexus.updates.manager import set_autoupdate
         enabled = confirm("Ativar verificação automática de releases estáveis?")
         set_autoupdate(enabled, home)
@@ -541,6 +595,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Docker não detectado; recursos de sandbox exigem instalação/configuração independente.")
     print("Modelo Vosk em português encontrado. Permissões de áudio/câmera "
           "e operação física exigem teste no desktop.")
+    if neural_voice:
+        print("Voz masculina neural local pronta; voz feminina eSpeak NG disponível.")
+    if female_voice:
+        print("Voz feminina RHVoice Letícia pronta para seleção na janela.")
+    print("Teste físico do microfone: ~/.local/bin/nexus-core --microphone-test")
     return 0
 
 

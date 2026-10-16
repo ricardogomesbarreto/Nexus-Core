@@ -73,6 +73,8 @@ class DesktopWindow:
         self._voice_active = True
         self._listen_generation = 0
         self._listen_pending_generations: set[int] = set()
+        self._audio_peaks = 0
+        self._audio_level_samples = 0
         self._speak_generation = 0
         self._speaking = False
         self._closing = False
@@ -142,7 +144,9 @@ class DesktopWindow:
             voice_controls,
             values=("Feminina", "Masculina"), state="readonly", width=12,
         )
-        self.voice_selector.set("Feminina")
+        self.voice_selector.set(
+            "Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina"
+        )
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
         # Optional activation never changes default continuous listening.
@@ -369,6 +373,8 @@ class DesktopWindow:
         """Speak normal and visual answers through the same local TTS channel."""
         if not self.speech_enabled.get() or not text.strip():
             return False
+        if " executada.\n{" in text or " executada.\n[" in text:
+            text = "A ação foi concluída. Confira os detalhes na conversa."
         self._speak_generation += 1
         generation = self._speak_generation
         self._speaking = True
@@ -434,6 +440,8 @@ class DesktopWindow:
         self._listen_generation += 1
         generation = self._listen_generation
         self._listen_pending_generations.add(generation)
+        self._audio_peaks = 0
+        self._audio_level_samples = 0
         self.status.configure(text="Ouvindo… diga sua pergunta")
         self._start_worker(self._listen, generation)
 
@@ -643,10 +651,16 @@ class DesktopWindow:
 
     def _listen(self, generation: int) -> None:
         try:
-            text = self.recognizer.recognize_continuous(
-                lambda: self._closing or self._busy or not self._voice_active
-                or generation != self._listen_generation
-            )
+            cancelled = (lambda: self._closing or self._busy or not self._voice_active
+                         or generation != self._listen_generation)
+            if isinstance(self.recognizer, LocalRecognizer):
+                text = self.recognizer.recognize_continuous(
+                    cancelled, on_audio_level=lambda level: self._audio_events.put(
+                        ("input_level", str(level), generation)
+                    ),
+                )
+            else:
+                text = self.recognizer.recognize_continuous(cancelled)
             self._audio_events.put(("transcript" if text else "silence", text, generation))
         except VoiceError as exc:
             self._audio_events.put(("listen_error", str(exc), generation))
@@ -735,6 +749,16 @@ class DesktopWindow:
                 kind, value, generation = self._audio_events.get_nowait()
             except Empty:
                 break
+            if kind == "input_level":
+                if (generation == self._listen_generation and self._listening
+                        and not self._closing):
+                    self._audio_level_samples += 1
+                    self._audio_peaks = max(self._audio_peaks, int(value))
+                    if int(value) >= 2:
+                        self.status.configure(text="Microfone com sinal; reconhecendo fala…")
+                    elif self._audio_level_samples >= 4 and self._audio_peaks < 2:
+                        self.status.configure(text="Microfone sem sinal; confira a entrada de áudio")
+                continue
             if kind in ("transcript", "silence", "listen_error"):
                 if generation not in self._listen_pending_generations:
                     continue

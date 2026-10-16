@@ -41,6 +41,43 @@ integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
+## Correções do chat e áudio no código atual
+
+Perguntas como **“O que é uma IA?”** geram respostas de texto pelo Ollama;
+o planejador não recebe contratos de ferramentas nesse turno e rejeita
+propostas de `system_info`. Pedidos explícitos para consultar o computador
+continuam a passar pelo `SecurityGate`. A janela mostra o nível de sinal do
+microfone e usa o dispositivo padrão do PipeWire quando há uma sessão ativa;
+o ALSA permanece disponível. Para forçar ALSA, execute
+`NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --desktop`.
+
+O instalador oferece a voz neural **masculina** em português brasileiro do
+[Piper](https://github.com/OHF-Voice/piper1-gpl) com o modelo aberto
+[`pt_BR-faber-medium`](https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0/pt/pt_BR/faber/medium).
+Ela fica como seleção inicial quando instalada. A opção **Feminina** usa
+[RHVoice Letícia](https://packages.ubuntu.com/resolute/rhvoice-brazilian-portuguese)
+dos pacotes Ubuntu, com eSpeak NG como alternativa. Não há modelo feminino
+neural com licença aberta integrado nesta versão. O áudio é gerado e reproduzido apenas no
+computador. A instalação do Piper é opcional e um erro nela não impede o
+chat de texto. A CI simula áudio: teste o microfone e as duas vozes no Ubuntu
+físico antes de considerar esta correção homologada.
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+python3 scripts/install_linux.py
+~/.local/bin/nexus-core --microphone-test | python3 -m json.tool
+~/.local/bin/nexus-core --voice-check | python3 -m json.tool
+~/.local/bin/nexus-core --desktop
+```
+
+O teste de microfone **grava três segundos após este comando explícito**,
+informa a entrada usada e o pico do sinal e descarta o áudio. Se informar
+`no_signal`, selecione o microfone correto nas configurações de som do Ubuntu,
+desative o mudo e execute o teste novamente. `--voice-check` apenas verifica
+dependências; não abre microfone ou alto-falante. Um pico detectado ainda não
+certifica transcrição correta pelo modelo Vosk.
+
 ## Compatibilidade do instalador Ubuntu
 
 O bloqueio exclusivo da versão 24.04 foi removido do código após a v0.9.11.
@@ -1427,7 +1464,9 @@ chamada mediada pelo executor.
 Na janela, confirmações surgem em um diálogo local; um turno pode produzir uma
 resposta ou propor uma ação, com histórico curto mantido apenas em memória.
 Com o modo de voz ativo, o Vosk transcreve o microfone sem botão de fala; as respostas
-podem ser lidas em voz feminina ou masculina pelo eSpeak NG. O Ollama continua
+podem ser lidas em voz masculina neural Piper (quando instalada) ou voz
+feminina RHVoice Letícia (se disponível), com eSpeak NG como alternativa.
+O Ollama continua
 a interpretar as perguntas e propor ações, sujeito aos contratos e à política.
 Não há aplicação ou servidor web na arquitetura do produto.
 
@@ -2965,8 +3004,10 @@ o pytest.
 - **Ollama e modelo `qwen3:1.7b`:** inferência local, instalados à parte.
 - **Tk / sessão gráfica Linux:** janela desktop; em Debian/Ubuntu,
   instalar `python3-tk`.
-- **eSpeak NG e ALSA (`arecord`):** saída e captura de áudio locais,
-  utilizados com o modelo Vosk de português previamente baixado.
+- **eSpeak NG, RHVoice Letícia, PipeWire/ALSA:** vozes locais e captura pelo
+  dispositivo padrão do PipeWire (`pw-record`) ou ALSA (`arecord`), com Vosk.
+- **Piper e voz `pt_BR-faber-medium`:** síntese masculina neural local
+  opcional, oferecida pelo instalador após as dependências principais.
 - **Docker:** execução opcional de comandos isolados, com aprovação
   humana, sem rede e com limites de recursos.
 - **Git e pytest:** ferramentas de desenvolvimento e validação.
@@ -3065,7 +3106,9 @@ Cada turno faz no máximo uma chamada de ferramenta, sem loop autônomo.
 ## Voz local na janela
 
 O instalador guiado Ubuntu inclui os utilitários de áudio, o extra Python de
-voz e o modelo Vosk português após confirmação do download. Para quem usa
+voz e o modelo Vosk português após confirmação do download. Oferece ainda
+Piper e o modelo neural masculino em download separado, além da voz feminina
+RHVoice nos pacotes Ubuntu `multiverse`. Para quem usa
 instalação manual ou deseja reparar um componente isolado:
 
 ```bash
@@ -3115,7 +3158,9 @@ Selecione **Feminina** ou **Masculina** para a saída sintetizada em português
 brasileiro, ou diga **“Use voz feminina”** / **“Use voz masculina”** enquanto
 a escuta estiver ativa. Desligue **Ler respostas em voz alta** quando quiser
 apenas texto; escolher outra voz não reativa a saída falada.
-As variantes do eSpeak NG são sintéticas. O texto funciona mesmo sem os
+A opção masculina usa Piper quando o modelo está instalado; a feminina usa
+RHVoice Letícia quando instalado. Na ausência dos respectivos componentes,
+ambas usam eSpeak NG. O texto funciona mesmo sem os
 componentes de voz; a interface mostra uma mensagem se faltar o microfone,
 o executável de áudio ou o modelo de reconhecimento.
 

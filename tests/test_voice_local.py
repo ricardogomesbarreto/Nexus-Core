@@ -1,5 +1,6 @@
 import io
 import json
+import os
 import subprocess
 import sys
 import types
@@ -191,6 +192,79 @@ def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path
         "Microfone aberto após pausa"
     ))
     assert LocalRecognizer(model_dir).recognize_continuous(lambda: True) == ""
+
+
+def test_pipewire_is_selected_on_active_desktop_and_can_be_overridden(monkeypatch, tmp_path):
+    from pathlib import Path
+    monkeypatch.setattr(Path, "is_socket", lambda path: path.name == "pipewire-0")
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(voice_module.shutil, "which",
+                        lambda name: "/usr/bin/" + name)
+    assert LocalRecognizer.capture_command()[0] == "/usr/bin/pw-record"
+    assert LocalRecognizer.capture_command()[-1] == "-"
+    monkeypatch.setenv("NEXUS_AUDIO_INPUT", "alsa")
+    assert LocalRecognizer.capture_command()[0] == "/usr/bin/arecord"
+
+
+def test_audio_level_detects_signal_without_retaining_recording():
+    from array import array
+    assert LocalRecognizer.peak_level(b"\0" * 8000) == 0
+    assert LocalRecognizer.peak_level(array("h", [5000, -5000]).tobytes()) >= 10
+
+
+def test_neural_male_voice_uses_local_model_and_player(monkeypatch, tmp_path):
+    model = tmp_path / "pt_BR-faber-medium.onnx"
+    model.write_bytes(b"model")
+    model.with_suffix(".onnx.json").write_text("{}")
+    monkeypatch.setattr(LocalSpeaker, "neural_model_path", staticmethod(lambda: model))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/" + name)
+    calls = []
+
+    class Process(FakeProcess):
+        def __init__(self, args, **kwargs):
+            super().__init__(args, **kwargs)
+            self.returncode = None
+            if args[0].endswith("piper"):
+                from pathlib import Path
+                Path(args[args.index("--output_file") + 1]).write_bytes(b"RIFF" + b"0" * 50)
+        def communicate(self, input=None, timeout=None):
+            self.returncode = 0
+            return super().communicate(input=input, timeout=timeout)
+
+    def start(args, **kwargs):
+        calls.append((args, kwargs))
+        return Process(args, **kwargs)
+
+    monkeypatch.setattr(voice_module.subprocess, "Popen", start)
+    LocalSpeaker().speak("Olá", "Masculina")
+    assert "--model" in calls[0][0]
+    assert calls[1][0][0].endswith("pw-play")
+
+
+def test_female_rhvoice_is_used_when_installed(monkeypatch, tmp_path):
+    monkeypatch.setattr(LocalSpeaker, "female_voice_ready", staticmethod(lambda: True))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/" + name)
+    calls = []
+
+    class Process(FakeProcess):
+        def __init__(self, args, **kwargs):
+            super().__init__(args, **kwargs)
+            self.returncode = None
+            if args[0].endswith("RHVoice-test"):
+                from pathlib import Path
+                Path(args[args.index("-o") + 1]).write_bytes(b"RIFF" + b"0" * 50)
+        def communicate(self, input=None, timeout=None):
+            self.returncode = 0
+            return super().communicate(input=input, timeout=timeout)
+
+    def start(args, **kwargs):
+        calls.append(args)
+        return Process(args, **kwargs)
+
+    monkeypatch.setattr(voice_module.subprocess, "Popen", start)
+    LocalSpeaker().speak("Olá", "Feminina")
+    assert calls[0][:3] == ["/usr/bin/RHVoice-test", "-p", "Leticia-F123"]
+    assert calls[1][0] == "/usr/bin/pw-play"
 
 
 @pytest.mark.parametrize("voice", ("pt-br+f3", "pt-br+m3"))

@@ -52,7 +52,7 @@ def main(
 
         print()
         print("╔" + "═" * WIDTH + "╗")
-        print("║" + " N E X U S ".center(WIDTH) + "║")
+        print("║" + " NEXUS CORE ".center(WIDTH) + "║")
         print("║" + f"v{settings.version}".center(WIDTH) + "║")
         print("╠" + "═" * WIDTH + "╣")
 
@@ -234,6 +234,10 @@ def cli(argv: list[str] | None = None) -> None:
         "--voice-check", action="store_true",
         help="diagnostica dependências locais de voz sem gravar áudio",
     )
+    actions.add_argument(
+        "--microphone-test", action="store_true",
+        help="grava três segundos, mede sinal e descarta o áudio (consentimento explícito)",
+    )
     actions.add_argument("--desktop-check", action="store_true",
                          help="diagnostica suporte X11/xdotool sem interagir com janelas")
     actions.add_argument("--devices-check", action="store_true",
@@ -383,6 +387,12 @@ def cli(argv: list[str] | None = None) -> None:
             parser.error("--voice-check não pode ser combinado com memória ou conhecimento")
         from nexus.voice.diagnostics import inspect_voice
         print(json.dumps(inspect_voice(), ensure_ascii=False))
+        return
+    if args.microphone_test:
+        from nexus.voice.diagnostics import test_microphone
+        print("Nexus Core: gravando por três segundos; fale no microfone...",
+              file=sys.stderr)
+        print(json.dumps(test_microphone(), ensure_ascii=False))
         return
     if has_memory_action:
         from nexus.memory.cli import execute_memory_command
