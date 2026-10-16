@@ -107,3 +107,26 @@ class OllamaTransport:
             raise OllamaInvalidJSONError(
                 "Ollama retornou JSON inválido"
             ) from exc
+
+    def list_models(self, *, timeout: float = 5.0) -> list[str]:
+        """Read installed Ollama model names on loopback only (no pulls)."""
+        request = Request(f"{self.base_url}/api/tags", method="GET")
+        try:
+            with self.opener(request, timeout=timeout) as response:
+                raw = response.read(512 * 1024 + 1)
+        except HTTPError as exc:
+            raise OllamaHTTPError(f"Ollama respondeu HTTP {exc.code}") from exc
+        except (TimeoutError, URLError, OSError) as exc:
+            raise OllamaUnavailableError("Ollama local indisponível.") from exc
+        if len(raw) > 512 * 1024:
+            raise OllamaInvalidJSONError("Lista de modelos excedeu o limite.")
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, JSONDecodeError) as exc:
+            raise OllamaInvalidJSONError("Resposta dos modelos é inválida.") from exc
+        if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+            raise OllamaInvalidJSONError("Ollama não retornou a lista de modelos.")
+        return [
+            entry["name"] for entry in payload["models"]
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+        ]
