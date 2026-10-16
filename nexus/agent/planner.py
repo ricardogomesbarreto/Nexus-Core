@@ -243,6 +243,13 @@ class AgentPlanner:
                 risk_level="UNTRUSTED", decision=PermissionDecision.DENY.value,
                 reason=str(exc),
             )
+            if not allow_tools:
+                # Even malformed local model proposals must remain inert in
+                # advisory mode; retain its stable security error contract.
+                return AgentOutcome(
+                    False, error="Modo sugestão não executa ferramentas.",
+                    error_code="ADVISORY_ONLY",
+                )
             return AgentOutcome(False, error=str(exc), error_code="INVALID_PROPOSAL")
         except ModelProviderTimeoutError:
             return AgentOutcome(
