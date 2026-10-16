@@ -225,6 +225,21 @@ class LocalVision:
             devices.append((index, label[:100] or "Câmera"))
         return sorted(devices)
 
+    @staticmethod
+    def _camera_frame_is_dark(image: bytes) -> bool:
+        """Detect near-black captures without storing or changing image data.
+
+        Returning a black first frame is common while a UVC device adjusts
+        exposure. A closed privacy shutter may produce the same result.
+        """
+        from PIL import Image, ImageStat
+        with Image.open(io.BytesIO(image)) as frame:
+            sample = frame.convert("L")
+            sample.thumbnail((96, 96))
+            mean = ImageStat.Stat(sample).mean[0]
+            _low, high = sample.getextrema()
+            return mean < 10 and high < 28
+
     def camera(self, index: int) -> bytes:
         if type(index) is not int or not 0 <= index <= 9:
             raise VisionInputError("Câmera deve ter índice de 0 a 9.")
@@ -232,12 +247,24 @@ class LocalVision:
         if not binary:
             raise VisionError("Captura de câmera exige FFmpeg.")
         try:
-            return self._capture([
+            # Let the webcam settle its automatic exposure; only the later
+            # frame is retained. No continuous preview or disk recording.
+            image = self._capture([
                 binary, "-hide_banner", "-loglevel", "error", "-nostdin",
                 "-f", "video4linux2", "-i", f"/dev/video{index}",
+                "-vf", r"select=gte(n\,8)",
                 "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
             ])
+            if self._camera_frame_is_dark(image):
+                raise VisionError(
+                    f"A câmera {index} retornou uma imagem praticamente preta. "
+                    "Verifique a tampa/tecla de privacidade, a iluminação "
+                    "e se outro aplicativo está usando a webcam."
+                )
+            return image
         except VisionError as exc:
+            if "praticamente preta" in str(exc):
+                raise
             raise VisionError(
                 f"A câmera {index} não conseguiu capturar uma foto. "
                 "Verifique permissões, se ela está em uso e o formato V4L2."
