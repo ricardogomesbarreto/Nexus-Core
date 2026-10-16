@@ -43,6 +43,60 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Persistência automática do assistente e preferências do usuário (v0.9.11)
+
+O NEXUS CORE conserva as escolhas do usuário **entre reinicializações**,
+sem internet e sem depender da disponibilidade do Ollama. A gravação é
+automática quando uma preferência muda e durante o encerramento normal;
+não é necessário reconfigurar o assistente a cada abertura.
+
+| Configuração | Comportamento após reiniciar |
+| --- | --- |
+| **Voz** | Mantém **Masculina** ou **Feminina**, inclusive quando trocada por comando de voz |
+| **Leitura de respostas em voz alta** | Mantém ativada/desativada; a saudação inicial obedece a essa escolha |
+| **Palavra de ativação** | Mantém a exigência opcional de dizer "Nexus" |
+| **Microfone** | Mantém **Automático / PipeWire / ALSA**, sem alterar o áudio global do Ubuntu |
+| **Escuta** | Respeita a escolha de **Pausar escuta** mesmo depois de fechar e reabrir |
+| **Janela** | Restaura a última largura e altura usadas, respeitando limites seguros |
+| **Salvar conversas** | Preserva a decisão de manter ou não o histórico textual local |
+
+A configuração é um documento JSON versionado em
+`$XDG_CONFIG_HOME/nexus-core/preferences.json` (ou
+`~/.config/nexus-core/preferences.json`). É gravado por
+**substituição atômica**, com arquivo de permissões **0600** e pasta
+privada **0700**, sem transmissão para a internet. Chaves desconhecidas,
+valores inválidos, arquivos malformados ou links simbólicos inseguros
+não são carregados silenciosamente. Caso o salvamento falhe, a janela
+avisa o usuário; nenhuma alteração no banco de dados ou no SO é exigida.
+
+**Histórico textual local:** a opção visível **Salvar conversas** inicia
+selecionada para novas instalações, mas pode ser desmarcada a qualquer
+momento. São armazenadas até **200 trocas de mensagens textuais comuns**
+em `$XDG_DATA_HOME/nexus-core/chat-history.json` (ou
+`~/.local/share/nexus-core/chat-history.json`), com as mesmas
+permissões privadas e gravação atômica. As últimas **6 conversas**
+compõem o contexto curto ao reiniciar e aparecem no histórico da
+janela. É possível usar **Apagar histórico** após uma confirmação.
+Desativar novos salvamentos **não apaga dados antigos**; use o botão
+para excluir o histórico existente.
+
+**Limites importantes de privacidade:** o arquivo de histórico contém
+texto legível pelo próprio usuário Linux, não criptografia de ponta a
+ponta. Não arquiva áudio, imagens, frames de tela ou câmera, conteúdo
+bruto de ferramentas/arquivos, autorizações temporárias ou senhas
+do PostgreSQL. O banco de **memórias explícitas** continua separado,
+com seu próprio ciclo de retenção e comandos de gerenciamento.
+Operações autorizadas e auditoria permanecem sob `SecurityGate`;
+reabrir o programa **nunca restaura permissões de captura anteriores**.
+
+A persistência foi implementada em
+`nexus/desktop/preferences.py` e `nexus/desktop/chat_archive.py`,
+integrada à janela e ao contexto de `ChatSession`, com testes de
+gravação/recuperação, permissões, reinicialização Tk/Xvfb, exclusão,
+arquivos corrompidos, e distinção entre conversa comum e saídas
+sensíveis de ferramentas. A **v0.9.11** permanece sem tag/release
+estável até homologação física no Ubuntu.
+
 ### Diagnóstico e recuperação de visão e voz no Ubuntu (v0.9.11)
 
 Esta rodada corrige falhas observadas em **capturas reais do notebook**:
