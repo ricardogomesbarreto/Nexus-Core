@@ -43,6 +43,64 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Operação totalmente local: respostas novas e voz natural (v0.9.11)
+
+O NEXUS CORE executa as conversas pelo **Ollama instalado no próprio
+computador**, usando exclusivamente o endereço de loopback
+`http://127.0.0.1:11434`. O padrão `NEXUS_OFFLINE_MODE=true` mantém o
+runtime offline e não depende de acesso externo para inferência, transcrição
+Vosk, síntese de voz ou processamento visual, **desde que os modelos
+necessários já estejam instalados**. A aquisição inicial dos modelos
+e atualizações são processos separados que exigem conexão e consentimento.
+
+- **Correção de repetições:** quando duas perguntas diferentes resultarem
+  literalmente na mesma resposta do modelo conversacional local, o
+  assistente fará **uma única tentativa de resposta sem histórico e sem
+  permissão de ferramentas**. Se a nova resposta continuar idêntica,
+  exibirá um diagnóstico claro, em vez de apresentar a resposta anterior
+  como se ela atendesse ao novo pedido. Uma pergunta idêntica pode
+  legitimamente produzir a mesma resposta. Erros de serviço não serão
+  confundidos com respostas válidas nem adicionados ao histórico.
+- **Voz natural:** Markdown gerado pelo modelo (como
+  `**negrito**`, `*itálico*`, listas e títulos) é convertido em
+  frases antes de chamar o Piper, RHVoice ou eSpeak NG. Trechos de código
+  extensos não são recitados; o chat conserva os detalhes. A narração
+  usa pontuação e tem limite de extensão para não prender o áudio por
+  um tempo excessivo.
+- **Câmera, imagem e tela:** o resultado visual aparece em texto sem
+  asteriscos decorativos; a mesma resposta é narrada **sem pronunciar
+  marcadores Markdown**. A captura permanece única e autorizada, sem
+  gravação persistente ou serviços de IA remotos.
+- **Indisponibilidade local:** se o Ollama não estiver acessível,
+  a interface informa a falha do serviço local; não reutiliza uma
+  resposta salva, não consulta modelo externo e não inventa conteúdo.
+
+**Validação no Ubuntu, com a internet desligada:**
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main
+git pull --ff-only
+python3 scripts/install_linux.py
+ollama list
+curl --noproxy '*' -fsS http://127.0.0.1:11434/api/tags
+~/.local/bin/nexus-core --desktop
+```
+
+Os comandos `git pull` e a instalação/atualização de modelos exigem
+conexão quando há itens a baixar; **execute-os antes** de desligar a
+internet. No teste offline, use somente `ollama list`, a consulta local
+`curl` e a janela do assistente. Se o Ollama não responder em loopback,
+confira `systemctl --user status nexus-core-ollama.service` quando usa
+a instalação gerenciada ou `systemctl status ollama` para uma
+instalação global. Teste duas perguntas **diferentes** e uma captura
+visual já com modelo multimodal instalado. O status físico de webcam,
+áudio e síntese deve ser verificado no notebook.
+
+A CI usa modelos/alto-falantes simulados e não substitui essa homologação
+no hardware. Não há mudança de versão, tag, release estável, dados
+armazenados nem permissões de segurança nesta correção.
+
 ### Conversa, imagens, câmera, tela e microfone — aperfeiçoamentos v0.9.11
 
 O NEXUS CORE é um **assistente conversacional local**: responde perguntas,

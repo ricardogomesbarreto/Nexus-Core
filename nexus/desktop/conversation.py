@@ -25,6 +25,7 @@ class ChatSession:
     def __init__(self, agent):
         self.agent = agent
         self.history: list[tuple[str, str]] = []
+        self._previous_was_advisory = False
         self._closed = Event()
         self._cancelled = Event()
         self._lock = Lock()
@@ -84,12 +85,43 @@ class ChatSession:
                     AgentOutcome(False, error_code="CANCELLED"),
                 )
             reply = self._describe(outcome)
-            if not self._closed.is_set() and not self._cancelled.is_set():
+            if (not advisory_only and not self._previous_was_advisory
+                    and outcome.success and outcome.content
+                    and self.history and 30 <= len(reply) < self.MAX_CONTEXT_ITEM
+                    and " " in reply[:100]):
+                old_question, old_reply = self.history[-1]
+                if (message.casefold() != old_question.casefold()
+                        and reply.strip().casefold() == old_reply.strip().casefold()):
+                    retry = self.agent.run(
+                        json.dumps({"historico": [], "mensagem_atual": message},
+                                   ensure_ascii=False),
+                        is_cancelled=cancelled, allow_tools=False,
+                    )
+                    if cancelled():
+                        return ChatReply(
+                            "Solicitação cancelada.",
+                            AgentOutcome(False, error_code="CANCELLED"),
+                        )
+                    if retry.success and retry.content and (
+                            retry.content.strip().casefold()
+                            != old_reply.strip().casefold()):
+                        outcome = retry
+                        reply = self._describe(outcome)
+                    else:
+                        outcome = AgentOutcome(
+                            False, error="O modelo local não produziu uma resposta "
+                                         "nova. Tente outra pergunta ou verifique o Ollama.",
+                            error_code="STALE_REPLY",
+                        )
+                        reply = outcome.error
+            if (outcome.success and not self._closed.is_set()
+                    and not self._cancelled.is_set()):
                 self.history.append((
                     message[:self.MAX_CONTEXT_ITEM],
                     reply[:self.MAX_CONTEXT_ITEM],
                 ))
                 self.history = self.history[-self.MAX_TURNS:]
+                self._previous_was_advisory = advisory_only
             return ChatReply(reply, outcome)
 
     def note_visual(self, question: str, description: str) -> None:
