@@ -16,7 +16,7 @@ from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.multimodal_status import MultimodalStatus
-from nexus.desktop.welcome import desktop_startup_message
+from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
@@ -89,6 +89,7 @@ class DesktopWindow:
         self._recognition_failures = 0
         self._speak_generation = 0
         self._speaking = False
+        self._startup_welcome_generation = None
         self._closing = False
         self._workers: list[Thread] = []
 
@@ -313,12 +314,13 @@ class DesktopWindow:
         root.bind("<Control-Shift-F>", self._shortcut_vision_file)
         root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
-        # Welcome is informational: no model calls, hardware claims or TTS.
+        # Welcome text is displayed immediately. Its short spoken version
+        # uses the existing local TTS worker before microphone listening starts.
         self._append("Nexus Core", welcome_text, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
         root.after(80, self._poll)
-        root.after(120, self._start_listening)
+        root.after(120, self._start_spoken_welcome)
 
     def _privacy_snapshot(self) -> MultimodalStatus:
         """Capture presentation state on the Tk thread, without probing devices."""
@@ -531,6 +533,21 @@ class DesktopWindow:
                 AgentOutcome(False, error_code="SESSION_ERROR"),
             )
         self._replies.put(reply)
+
+    def _start_spoken_welcome(self) -> None:
+        """Say the startup welcome once using the chosen local voice.
+
+        Tk schedules this after the window appears, never during __init__.
+        Keep microphone recognition stopped until synthesis/playback ends, so
+        it cannot recognize its own speech. Respect user mute and active work.
+        """
+        if self._closing or self._busy or self._speaking or self._listening:
+            return
+        if self._say_response(desktop_spoken_welcome()):
+            self._startup_welcome_generation = self._speak_generation
+            self.status.configure(text="Reproduzindo boas-vindas em voz…")
+        else:
+            self._start_listening()
 
     def _start_listening(self) -> None:
         if (not self._voice_active or self._busy or self._listening
@@ -1022,6 +1039,16 @@ class DesktopWindow:
                 if not self._closing and not self._busy:
                     if kind == "speak_error" and self.speech_enabled.get():
                         self.status.configure(text=value)
+                        if generation == self._startup_welcome_generation:
+                            # TTS cannot fail silently: keep textual access.
+                            self._append(
+                                "Nexus Core",
+                                f"Não foi possível falar as boas-vindas: {value} "
+                                "Você pode continuar usando a conversa por texto.",
+                                "assistant",
+                            )
+                    if generation == self._startup_welcome_generation:
+                        self._startup_welcome_generation = None
                     self._start_listening()
         while True:
             try:
