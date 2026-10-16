@@ -13,7 +13,7 @@ def _normalize_question(message: str) -> str:
     normalized = unicodedata.normalize("NFKD", message).encode(
         "ascii", "ignore"
     ).decode("ascii").lower().strip()
-    return re.sub(r"\\s+", " ", normalized).rstrip(" ?!.")
+    return re.sub(r"\s+", " ", normalized).rstrip(" ?!.")
 
 
 def local_conversation_answer(message: str, *, now: datetime | None = None) -> str | None:
