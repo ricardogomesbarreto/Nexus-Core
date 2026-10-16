@@ -15,6 +15,10 @@ from nexus.agent import AgentOutcome
 from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
+from nexus.desktop.preferences import (
+    DesktopPreferences, DesktopPreferenceStore, PreferenceStoreError,
+)
+from nexus.desktop.chat_archive import ChatArchive, ChatArchiveError
 from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
@@ -56,6 +60,8 @@ class DesktopWindow:
         self, root, app, confirmation: DesktopConfirmation,
         speaker=None, recognizer=None, vision=None,
         startup_voice: bool | None = None,
+        preference_store: DesktopPreferenceStore | None = None,
+        chat_archive: ChatArchive | None = None,
     ):
         import tkinter as tk
         from tkinter import messagebox, ttk
@@ -63,7 +69,39 @@ class DesktopWindow:
         self.root = root
         self.app = app
         self.confirmation = confirmation
-        self.session = ChatSession(app.agent)
+        # Production uses XDG config/state on this Linux account; injected
+        # test speakers retain ephemeral behavior unless a store is supplied.
+        self._preference_store = (
+            preference_store if preference_store is not None
+            else (DesktopPreferenceStore() if speaker is None else None)
+        )
+        self._preference_load_warning = None
+        self._history_load_warning = None
+        self._saved_preferences = None
+        if self._preference_store is not None:
+            try:
+                self._saved_preferences = self._preference_store.load()
+            except PreferenceStoreError:
+                self._preference_load_warning = (
+                    "As configurações locais não puderam ser restauradas."
+                )
+        self._chat_archive_store = (
+            chat_archive if chat_archive is not None else (
+                ChatArchive() if self._preference_store is not None else None
+            )
+        )
+        chosen_archive = (
+            self._chat_archive_store
+            if self._saved_preferences is not None
+            and self._saved_preferences.remember_history else None
+        )
+        try:
+            self.session = ChatSession(app.agent, archive=chosen_archive)
+        except ChatArchiveError:
+            self._history_load_warning = (
+                "O histórico local está inválido; as conversas anteriores não foram apagadas."
+            )
+            self.session = ChatSession(app.agent)
         self.tk = tk
         self.messagebox = messagebox
         self.speaker = speaker if speaker is not None else LocalSpeaker()
@@ -88,7 +126,10 @@ class DesktopWindow:
         self._operation_started = 0.0
         self._cancel_requested = False
         self._listening = False
-        self._voice_active = True
+        self._voice_active = (
+            self._saved_preferences.listening_enabled
+            if self._saved_preferences is not None else True
+        )
         self._listen_generation = 0
         self._listen_pending_generations: set[int] = set()
         self._audio_peaks = 0
@@ -103,7 +144,10 @@ class DesktopWindow:
         self._workers: list[Thread] = []
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
-        root.geometry("980x720")
+        root.geometry(
+            self._saved_preferences.geometry
+            if self._saved_preferences is not None else "980x720"
+        )
         root.minsize(770, 570)
         root.configure(bg="#f5f1f3")
         welcome_text, readiness_caption = desktop_startup_message(app)
@@ -179,8 +223,23 @@ class DesktopWindow:
                   justify="right", style="Nexus.HeaderHint.TLabel").pack(
                       side="right", anchor="center", padx=(8, 0))
 
-        ttk.Label(frame, text=readiness_caption,
-                  style="Nexus.Subtitle.TLabel").pack(anchor="w", pady=(0, 8))
+        readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
+        readiness_row.pack(fill="x", pady=(0, 5))
+        ttk.Label(readiness_row, text=readiness_caption,
+                  style="Nexus.Subtitle.TLabel").pack(side="left")
+        self.clear_history_button = ttk.Button(
+            readiness_row, text="Apagar histórico",
+            command=self._clear_saved_history, style="Nexus.Quiet.TButton")
+        self.clear_history_button.pack(side="right", padx=(5, 0))
+        self.archive_toggle = ttk.Checkbutton(
+            readiness_row, text="Salvar conversas",
+            command=self._toggle_archive, style="Nexus.TCheckbutton")
+        if (self._saved_preferences is not None
+                and self._saved_preferences.remember_history):
+            self.archive_toggle.state(("selected",))
+        self.archive_toggle.pack(side="right", padx=(8, 0))
+        self.archive_enabled = _WidgetBoolean(self.archive_toggle)
+
 
         # Pack footer before the expanding transcript. All actions have their
         # own equal-width grid row; status never competes for button space.
@@ -214,6 +273,9 @@ class DesktopWindow:
         self.speech_toggle.state(("selected",))
         self.speech_toggle.pack(side="left")
         self.speech_enabled = _WidgetBoolean(self.speech_toggle)
+        if (self._saved_preferences is not None
+                and not self._saved_preferences.speech_enabled):
+            self.speech_enabled.set(False)
         ttk.Label(voice_controls, text="Voz:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(15, 5))
         self.voice_selector = ttk.Combobox(
@@ -221,17 +283,29 @@ class DesktopWindow:
             state="readonly", width=12,
         )
         self.voice_selector.set(
-            "Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina"
+            self._saved_preferences.voice
+            if self._saved_preferences is not None
+            else ("Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina")
         )
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
+        self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
         ttk.Label(voice_controls, text="Microfone:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
             voice_controls, values=("Automático", "PipeWire", "ALSA"),
             state="readonly", width=10,
         )
-        self.audio_input_choice.set("Automático")
+        preferred_backend = (
+            self._saved_preferences.audio_backend
+            if self._saved_preferences is not None else "auto"
+        )
+        self.audio_input_choice.set({
+            "auto": "Automático", "pipewire": "PipeWire",
+            "alsa": "ALSA",
+        }[preferred_backend])
+        if isinstance(self.recognizer, LocalRecognizer):
+            self.recognizer.audio_backend = preferred_backend
         self.audio_input_choice.pack(side="left")
         self.audio_input_choice.bind("<<ComboboxSelected>>", self._select_audio_input)
         self.wake_toggle = ttk.Checkbutton(
@@ -240,6 +314,8 @@ class DesktopWindow:
         )
         self.wake_toggle.pack(side="left", padx=(9, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
+        if self._saved_preferences is not None and self._saved_preferences.wake_required:
+            self.wake_required.set(True)
 
         # Three uniform-width capture actions; no camera access until consent.
         vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
@@ -282,7 +358,7 @@ class DesktopWindow:
                   style="Nexus.Section.TLabel").pack(
                       anchor="w", pady=(7, 3))
         self.input = tk.Text(
-            footer, height=3, wrap="word", font=("Sans", 11),
+            footer, height=2, wrap="word", font=("Sans", 11),
             bg="#ffffff", fg="#292127", relief="flat",
             padx=11, pady=8, borderwidth=0,
             highlightthickness=1, highlightbackground="#d7c5cd",
@@ -313,7 +389,8 @@ class DesktopWindow:
             style="Nexus.TButton", state="disabled")
         self.cancel_button.grid(row=0, column=2, sticky="ew", padx=(0, 6))
         self.mic_button = ttk.Button(
-            controls, text="Pausar escuta", command=self._toggle_listening,
+            controls, text=("Pausar escuta" if self._voice_active else "Retomar escuta"),
+            command=self._toggle_listening,
             style="Nexus.TButton")
         self.mic_button.grid(row=0, column=3, sticky="ew", padx=(0, 6))
         self.shutdown_button = ttk.Button(
@@ -337,11 +414,96 @@ class DesktopWindow:
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
         # Welcome text is displayed immediately. Its short spoken version
         # uses the existing local TTS worker before microphone listening starts.
+        # Restore only normal text conversation. Never replay raw device
+        # captures, tool outputs, consent decisions or microphone recordings.
+        for saved_question, saved_answer in self.session.history:
+            self._append("Você", saved_question, "user")
+            self._append("Nexus Core", saved_answer, "assistant")
         self._append("Nexus Core", welcome_text, "assistant")
+        if self._preference_load_warning:
+            self._append("Nexus Core", self._preference_load_warning, "assistant")
+        if self._history_load_warning:
+            self._append("Nexus Core", self._history_load_warning, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
         root.after(80, self._poll)
         root.after(120, self._start_spoken_welcome)
+
+    def _save_desktop_preferences(self, event=None) -> None:
+        """Persist only user choices on this Linux account, never credentials."""
+        if self._preference_store is None or self._closing:
+            return
+        backend = {
+            "Automático": "auto", "PipeWire": "pipewire", "ALSA": "alsa",
+        }.get(self.audio_input_choice.get(), "auto")
+        geometry = self.root.geometry().split("+", 1)[0].split("-", 1)[0]
+        try:
+            preferences = DesktopPreferences(
+                voice=self.voice_choice.get(),
+                speech_enabled=self.speech_enabled.get(),
+                wake_required=self.wake_required.get(),
+                audio_backend=backend,
+                listening_enabled=self._voice_active,
+                geometry=geometry,
+                remember_history=self.archive_enabled.get(),
+            )
+            # In the brief period before the Tk window is mapped, geometry
+            # may still be 1x1. Never destroy a valid stored size for that.
+            try:
+                preferences.validate()
+            except PreferenceStoreError:
+                from dataclasses import replace
+                preferences = replace(
+                    preferences,
+                    geometry=(self._saved_preferences.geometry
+                              if self._saved_preferences is not None else "980x720"),
+                )
+            self._preference_store.save(preferences)
+            self._saved_preferences = preferences
+        except PreferenceStoreError:
+            self.status.configure(
+                text="Não foi possível salvar configurações. Confira a pasta local."
+            )
+
+    def _toggle_archive(self) -> None:
+        if self._closing:
+            return
+        if self._chat_archive_store is None:
+            self.archive_enabled.set(False)
+            self.status.configure(text="Histórico local indisponível nesta sessão.")
+            return
+        self.session.set_archive(
+            self._chat_archive_store if self.archive_enabled.get() else None
+        )
+        self._save_desktop_preferences()
+        self.status.configure(
+            text=("Salvamento local de conversas ativado."
+                  if self.archive_enabled.get()
+                  else "Salvamento de novas conversas desativado.")
+        )
+
+    def _clear_saved_history(self) -> None:
+        """Explicit, one-time consent; never delete history on app startup."""
+        if self._closing or self._busy or self._chat_archive_store is None:
+            return
+        if not self.messagebox.askyesno(
+            "Apagar histórico do Nexus Core",
+            "Apagar permanentemente as conversas textuais salvas neste "
+            "computador? A operação não pode ser desfeita.",
+            parent=self.root,
+        ):
+            return
+        try:
+            self._chat_archive_store.clear()
+        except ChatArchiveError:
+            self.status.configure(text="Não foi possível apagar o histórico local.")
+            return
+        self.session.forget_context()
+        self.transcript.configure(state="normal")
+        self.transcript.delete("1.0", "end")
+        self.transcript.configure(state="disabled")
+        self._append("Nexus Core", "Histórico de conversas locais apagado.", "assistant")
+        self.status.configure(text="Histórico local apagado.")
 
     def _privacy_snapshot(self) -> MultimodalStatus:
         """Capture presentation state on the Tk thread, without probing devices."""
@@ -614,6 +776,7 @@ class DesktopWindow:
             )
         else:
             self.status.configure(text="Seleção de entrada indisponível neste reconhecedor.")
+        self._save_desktop_preferences()
 
     def _toggle_listening(self) -> None:
         if self._closing:
@@ -631,6 +794,7 @@ class DesktopWindow:
             self._mic_last_signal = 0.0
             self._audio_level_label.configure(text="Entrada: pausada")
             self.status.configure(text="Escuta pausada; use Retomar escuta")
+        self._save_desktop_preferences()
 
     @staticmethod
     def _voice_command(text: str) -> str | None:
@@ -701,6 +865,7 @@ class DesktopWindow:
         """Change only the local TTS choice; preserve microphone and mute state."""
         voice = "Feminina" if command == "voice_female" else "Masculina"
         self.voice_choice.set(voice)
+        self._save_desktop_preferences()
         answer = f"Voz {voice.lower()} selecionada."
         self._append("Você", utterance, "user")
         self._append("Nexus Core", answer, "assistant")
@@ -715,6 +880,7 @@ class DesktopWindow:
             self.status.configure(text='Diga "Nexus, ..." antes de cada pergunta')
         else:
             self.status.configure(text="Conversa contínua sem palavra de ativação")
+        self._save_desktop_preferences()
 
     def _stop_speaking(self) -> None:
         """Invalidate a superseded TTS worker before its completion event."""
@@ -723,6 +889,7 @@ class DesktopWindow:
         self.speaker.stop()
 
     def _toggle_speech(self) -> None:
+        self._save_desktop_preferences()
         if not self.speech_enabled.get() and self._speaking:
             self._stop_speaking()
             self.status.configure(text="Leitura em voz desativada")
@@ -1163,8 +1330,9 @@ class DesktopWindow:
                 else:
                     self._append("Nexus Core", reply.text, "assistant")
                     self.status.configure(
-                        text="Escuta pausada" if not self._voice_active
-                        else "Pronto para conversar"
+                        text=(self.session.last_archive_error
+                              or ("Escuta pausada" if not self._voice_active
+                                  else "Pronto para conversar"))
                     )
                     if not (reply.outcome.success and self._say_response(reply.text)):
                         self._start_listening()
@@ -1215,6 +1383,7 @@ class DesktopWindow:
     def _close(self) -> None:
         if self._closing:
             return
+        self._save_desktop_preferences()
         self._closing = True
         self._audio_level_label.configure(text="Entrada: desligada")
         self.microphone_indicator.show_peak(0, listening=False)

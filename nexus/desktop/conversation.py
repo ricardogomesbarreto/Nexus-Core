@@ -6,6 +6,7 @@ from threading import Event, Lock
 
 from nexus.agent import AgentOutcome
 from nexus.desktop.local_replies import local_conversation_answer
+from nexus.desktop.chat_archive import ChatArchive, ChatArchiveError
 
 
 @dataclass(frozen=True)
@@ -15,20 +16,36 @@ class ChatReply:
 
 
 class ChatSession:
-    """Conserva um contexto curto na memória do processo, sem persistência."""
+    """Keeps six-turn context; optional local archive stores ordinary text only."""
 
     MAX_TURNS = 6
     MAX_MESSAGE = 4000
     MAX_CONTEXT_ITEM = 1200
     MAX_DISPLAY = 4000
 
-    def __init__(self, agent):
+    def __init__(self, agent, archive: ChatArchive | None = None):
         self.agent = agent
-        self.history: list[tuple[str, str]] = []
+        self._archive = archive
+        self.history: list[tuple[str, str]] = (
+            archive.load()[-self.MAX_TURNS:] if archive is not None else []
+        )
+        self.last_archive_error: str | None = None
         self._previous_was_advisory = False
         self._closed = Event()
         self._cancelled = Event()
         self._lock = Lock()
+
+    def set_archive(self, archive: ChatArchive | None) -> None:
+        """Enable/disable future text storage without replaying old turns."""
+        with self._lock:
+            self._archive = archive
+            self.last_archive_error = None
+
+    def forget_context(self) -> None:
+        """Clear volatile LLM context after the user clears stored history."""
+        with self._lock:
+            self.history.clear()
+            self._previous_was_advisory = False
 
     def close(self) -> None:
         self._closed.set()
@@ -122,6 +139,16 @@ class ChatSession:
                 ))
                 self.history = self.history[-self.MAX_TURNS:]
                 self._previous_was_advisory = advisory_only
+                if self._archive is not None and outcome.tool_result is None:
+                    try:
+                        self._archive.append(message, reply)
+                        self.last_archive_error = None
+                    except ChatArchiveError:
+                        # A disk fault must not turn a valid response into
+                        # a failure; report the unsaved state in the GUI.
+                        self.last_archive_error = (
+                            "Não foi possível salvar esta conversa no disco local."
+                        )
             return ChatReply(reply, outcome)
 
     def note_visual(self, question: str, description: str) -> None:
