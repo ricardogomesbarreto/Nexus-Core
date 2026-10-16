@@ -192,6 +192,7 @@ class LocalRecognizer(_StoppableProcess):
             settings.data_dir / "voice" / "vosk-model-small-pt-0.3"
         )).expanduser()
         self._model = None
+        self.audio_backend = "auto"  # Per-recognizer setting, never modifies OS audio.
 
     def _load_model(self):
         if not self.model_path.is_dir():
@@ -215,13 +216,18 @@ class LocalRecognizer(_StoppableProcess):
         return self._model
 
     @classmethod
-    def capture_command(cls, *, duration: int = 0, wav: bool = False) -> list[str]:
+    def capture_command(cls, *, duration: int = 0, wav: bool = False,
+                        backend: str | None = None) -> list[str]:
         """Use the active desktop's PipeWire default input before ALSA's default."""
+        selected = backend if backend is not None else os.environ.get("NEXUS_AUDIO_INPUT", "auto")
+        if selected not in ("auto", "pipewire", "alsa"):
+            raise VoiceError("Entrada de áudio deve ser automática, PipeWire ou ALSA.")
         runtime = os.environ.get("XDG_RUNTIME_DIR", "")
         pipewire = shutil.which("pw-record")
-        if (pipewire and os.environ.get("NEXUS_AUDIO_INPUT") != "alsa"
-                and runtime and Path(runtime, "pipewire-0").is_socket()
-                and not wav):
+        ready = bool(pipewire and runtime and Path(runtime, "pipewire-0").is_socket())
+        if selected == "pipewire" and not ready:
+            raise VoiceError("PipeWire não está disponível nesta sessão Ubuntu.")
+        if (ready and selected != "alsa" and not wav):
             # Newer PipeWire writes an AU container to stdout by default.
             # Vosk consumes headerless signed 16-bit LE mono PCM instead.
             return [pipewire, "--raw", "--rate", str(cls.SAMPLE_RATE), "--channels", "1",
@@ -299,7 +305,8 @@ class LocalRecognizer(_StoppableProcess):
         """
         cancelled = cancelled or (lambda: False)
         model = self._load_model()
-        command = self.capture_command()
+        command = (self.capture_command(backend=self.audio_backend)
+                   if self.audio_backend != "auto" else self.capture_command())
         if cancelled():
             return ""
         try:

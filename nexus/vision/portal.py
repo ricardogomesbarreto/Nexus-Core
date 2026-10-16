@@ -24,10 +24,21 @@ async def _choose(target: int) -> Path:
             interface="org.freedesktop.DBus.Properties", member="Get",
             signature="ss", body=["org.freedesktop.portal.Screenshot", "AvailableTargets"],
         ))
-        if properties.message_type == MessageType.ERROR or not properties.body:
-            raise PortalError("Portal de captura não oferece seleção de janelas/telas.")
-        if not properties.body[0].value & target:
+        supports_target = (
+            properties.message_type != MessageType.ERROR and bool(properties.body)
+            and hasattr(properties.body[0], "value")
+        )
+        if supports_target and not properties.body[0].value & target:
             raise PortalError("Este ambiente não oferece esse tipo de captura pelo portal.")
+        if not supports_target and target == 2:
+            # Older portals cannot guarantee window-only selection. Do not
+            # silently widen a sensitive window request to the whole screen.
+            raise PortalError(
+                "O portal da sessão não oferece seleção exclusiva de janela. "
+                "Use Tela e selecione manualmente a área no diálogo do sistema."
+            )
+        # v2 Screenshot has interactive mode but no AvailableTargets/target.
+        # A screen request may still display the desktop's native chooser.
 
         import secrets
         token = "nexus_" + secrets.token_hex(12)
@@ -57,7 +68,7 @@ async def _choose(target: int) -> Path:
             signature="sa{sv}", body=["", {
                 "handle_token": Variant("s", token),
                 "interactive": Variant("b", True),
-                "target": Variant("u", target),
+                **({"target": Variant("u", target)} if supports_target else {}),
             }],
         ))
         if reply.message_type == MessageType.ERROR or not reply.body:

@@ -171,7 +171,7 @@ def test_microphone_turn_uses_same_conversation_path():
         def recognize_continuous(self, cancelled):
             if not self.said and not cancelled():
                 self.said = True
-                return "Que horas são?"
+                return "Explique redes de computadores"
             while not cancelled():
                 time.sleep(0.01)
             return ""
@@ -197,7 +197,7 @@ def test_microphone_turn_uses_same_conversation_path():
             root.update()
             time.sleep(0.01)
         assert calls
-        assert "Que horas são?" in window.transcript.get("1.0", "end")
+        assert "Explique redes de computadores" in window.transcript.get("1.0", "end")
         assert "Entendi sua pergunta" in window.transcript.get("1.0", "end")
         assert window._voice_active
         window._close()

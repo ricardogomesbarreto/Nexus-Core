@@ -43,6 +43,74 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Conversa, imagens, câmera, tela e microfone — aperfeiçoamentos v0.9.11
+
+O NEXUS CORE é um **assistente conversacional local**: responde perguntas,
+propõe ideias úteis e oferece ações do computador **somente quando solicitadas,
+mediadas pelo SecurityGate e pelas permissões aplicáveis**. Não é uma
+implementação da personalidade nem das capacidades fictícias de um filme.
+
+- **Enviar:** pressione **Enter** para enviar; **Shift+Enter** insere
+  uma quebra de linha; **Ctrl+Enter** continua disponível. Botão Enviar
+  e atalho percorrem o mesmo caminho de validação e cancelamento.
+- **Conversa:** perguntas cotidianas e o modo Sugerir seguem a resposta
+  de texto natural, sem gerar propostas de ferramentas. Perguntas exatas
+  sobre hora/data usam o relógio do próprio computador, sem consultar
+  Ollama nem executar `system_info`. Informações do sistema solicitadas
+  explicitamente são apresentadas em linguagem legível, não JSON bruto.
+- **Imagem:** após seleção e autorização, exibe uma **prévia da imagem
+  realmente carregada**. A descrição requer um **modelo multimodal Ollama**
+  instalado, como `gemma3:4b`; o modelo de texto `qwen3:1.7b`
+  isoladamente **não analisa imagens**. A aplicação consulta a lista de
+  modelos locais, prefere o modelo visual solicitado quando instalado e
+  pode usar outro modelo visual instalado. Sem modelo disponível informa
+  a instalação necessária em vez de inventar uma descrição. Nenhuma
+  imagem é enviada a serviço remoto.
+- **Ativar análise visual no Ubuntu** (download grande, só com decisão
+  consciente do usuário):
+
+  ```bash
+  ollama list
+  ollama pull gemma3:4b
+  ~/.local/bin/nexus-core --desktop
+  ```
+
+  Se desejar fixar um modelo visual compatível já instalado, configure
+  `NEXUS_VISION_MODEL`. Somente modelos locais com famílias visuais
+  reconhecidas são aceitos; não há download automático silencioso.
+- **Câmera e tela:** o clique e a autorização por análise geram **uma
+  única foto/captura**, exibida na janela de prévia e depois interpretada
+  pelo Ollama multimodal. Não existe streaming permanente. No Wayland,
+  **Tela** solicita o alvo tela/monitor ao portal XDG. Sessões antigas
+  que não possuem `AvailableTargets` ainda podem usar o diálogo
+  interativo de captura de tela; solicitações de **janela exclusiva**
+  continuam bloqueadas onde não é possível garantir a restrição.
+  A prévia representa o quadro capturado, não vídeo ao vivo.
+- **Microfone:** a GUI oferece **Automático / PipeWire / ALSA**.
+  A escolha afeta apenas o reconhecedor do NEXUS CORE, não troca a
+  entrada global do Ubuntu. Use a opção ALSA quando a entrada padrão
+  PipeWire não resultar em transcrição e compare o indicador de sinal.
+  Sem áudio recebido, a animação permanece parada; a intensidade
+  sonora por si só não garante que o Vosk reconheça palavras.
+- **Boas-vindas faladas:** preserva a função integrada na PR #46,
+  com síntese local antes de ativar a escuta, evitando o retorno
+  acústico. As mensagens nunca declaram os dispositivos "100%
+  funcionais" antes da homologação física.
+
+Para investigar hardware sem enviar gravações:
+
+```bash
+~/.local/bin/nexus-core --microphone-test
+~/.local/bin/nexus-core --recognition-test
+NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --recognition-test
+```
+
+**Limites de aceite:** CI Ubuntu/Python 3.12/PostgreSQL/Xvfb valida código,
+autorização, renderização e integrações simuladas; somente testes no
+computador físico validam câmera, portal Wayland, sinal acústico e
+reconhecimento real. A versão **v0.9.11** permanece sem nova
+tag/release estável até esse aceite.
+
 ### Interface desktop renovada e boas-vindas verificáveis
 
 A interface Tkinter do **NEXUS CORE v0.9.11** recebeu uma reorganização

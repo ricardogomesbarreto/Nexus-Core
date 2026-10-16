@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from threading import Event, Lock
 
 from nexus.agent import AgentOutcome
+from nexus.desktop.local_replies import local_conversation_answer
 
 
 @dataclass(frozen=True)
@@ -59,7 +60,11 @@ class ChatSession:
                 ensure_ascii=False,
             )
             cancelled = lambda: self._closed.is_set() or self._cancelled.is_set()
-            if advisory_only:
+            local_reply = None if advisory_only else local_conversation_answer(message)
+            if local_reply is not None:
+                # Read-only time/date never invoke the model or a system tool.
+                outcome = AgentOutcome(True, content=local_reply)
+            elif advisory_only:
                 # Independent hard authorization gate: even if the model proposes
                 # a tool despite the prompt, AgentPlanner must refuse execution.
                 prompt = json.dumps({
@@ -113,6 +118,14 @@ class ChatSession:
         if not result.success:
             return f"{result.tool_name}: {result.error}"
         data = result.data
+        if result.tool_name == "system_info" and isinstance(data, dict):
+            parts = [
+                f"Sistema operacional: {data.get('system', 'desconhecido')}",
+                f"Kernel: {data.get('release', 'desconhecido')}",
+                f"Arquitetura: {data.get('machine', 'desconhecida')}",
+                f"Python: {data.get('python', 'desconhecido')}",
+            ]
+            return "Informações deste computador:\n" + "\n".join(parts)
         if result.tool_name == "terminal_sandbox" and isinstance(data, dict):
             output = "".join(str(data.get(key) or "") for key in ("stdout", "stderr"))
         else:
