@@ -95,7 +95,8 @@ def test_capabilities_reply_is_local_and_does_not_claim_unimplemented_actions():
     answer = local_conversation_answer("O que você pode fazer?")
     assert "Ollama local" in answer
     assert "com autorização" in answer
-    assert "criar pastas por comando ainda não estão disponíveis" in answer
+    assert "criar uma pasta por comando" in answer
+    assert "Abrir arquivos em aplicativos" in answer
     assert local_conversation_answer("O que você pode fazer no meu navegador?") is None
 
 

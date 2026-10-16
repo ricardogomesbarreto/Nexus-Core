@@ -209,6 +209,41 @@ def test_continuous_recognizer_flushes_short_utterance_after_pause(monkeypatch, 
     assert process.terminated
 
 
+def test_continuous_recognizer_finishes_when_pipewire_becomes_quiet(monkeypatch, tmp_path):
+    from array import array
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+
+    class Decoder:
+        def __init__(self, model, rate):
+            pass
+        def AcceptWaveform(self, frames):
+            return False
+        def FinalResult(self):
+            return json.dumps({"text": "abra o navegador"})
+
+    class PollableAudio(io.BytesIO):
+        def fileno(self):
+            return 11
+
+    process = FakeProcess(["pw-record"])
+    process.stdout = PollableAudio()
+    process.returncode = None
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
+        Model=lambda path: object(), KaldiRecognizer=Decoder))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
+    monkeypatch.setattr(voice_module.subprocess, "Popen", lambda *a, **k: process)
+    calls = iter([([11], [], []), ([], [], []), ([], [], []), ([], [], []),
+                  ([], [], []), ([], [], []), ([], [], [])])
+    monkeypatch.setattr(voice_module.select, "select", lambda *a: next(calls))
+    monkeypatch.setattr(voice_module.os, "read",
+                        lambda fd, size: array("h", [12000] * 1000).tobytes())
+    tick = iter(i * .25 for i in range(200))
+    monkeypatch.setattr(voice_module, "monotonic", lambda: next(tick))
+    assert LocalRecognizer(model_dir).recognize_continuous() == "abra o navegador"
+    assert process.terminated
+
+
 def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):
     model_dir = tmp_path / "model"
     model_dir.mkdir()

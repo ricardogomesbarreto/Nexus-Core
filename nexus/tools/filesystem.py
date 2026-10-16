@@ -8,6 +8,44 @@ from nexus.tools.base import NexusTool, ToolResult
 from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKind
 
 
+class CreateDirectoryTool(NexusTool):
+    """Create one directory inside the allowed home, with no symlink traversal."""
+
+    name = "create_directory"
+    description = "Cria uma única pasta em um caminho permitido do usuário."
+    risk_level = RiskLevel.MEDIUM
+    path_security = None
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("path", ValueKind.STRING, nonempty=True),),
+        resources=(ResourceSpec("directory", "path"),),
+        outputs=(FieldSpec("path", ValueKind.STRING),),
+    )
+
+    def sensitive_resources(self, **kwargs) -> tuple[SensitiveResource, ...]:
+        return (SensitiveResource("directory", kwargs["path"]),)
+
+    def execute(self, path: str, **kwargs) -> ToolResult:
+        try:
+            policy = self.path_security or PathSecurity()
+            # The parent descriptor is pinned, and mkdirat never follows a
+            # pre-existing destination symlink. No recursive creation.
+            raw, _ = policy._components(path)
+            if raw == policy.home or raw.name in ("", ".", ".."):
+                raise PermissionError("Escolha uma nova pasta dentro da área autorizada.")
+            with policy.open_directory(raw.parent) as (parent_fd, _):
+                os.mkdir(raw.name, mode=0o700, dir_fd=parent_fd)
+            return ToolResult(True, self.name, data={"path": str(raw)})
+        except FileExistsError:
+            return ToolResult(False, self.name, error="Já existe um item nesse caminho.")
+        except FileNotFoundError:
+            return ToolResult(False, self.name, error="A pasta principal não existe.")
+        except (PermissionError, NotADirectoryError):
+            return ToolResult(False, self.name, error="Pasta principal não autorizada ou contém link simbólico.")
+        except OSError as exc:
+            return ToolResult(False, self.name, error=f"Não foi possível criar a pasta: {type(exc).__name__}.")
+
+
 class ListDirectoryTool(NexusTool):
     """
     Lista o conteúdo de um diretório.
