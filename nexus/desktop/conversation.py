@@ -125,7 +125,7 @@ class ChatSession:
                 f"Arquitetura: {data.get('machine', 'desconhecida')}",
                 f"Python: {data.get('python', 'desconhecido')}",
             ]
-            return "Informações deste computador:\\n" + "\\n".join(parts)
+            return "Informações deste computador:\n" + "\n".join(parts)
         if result.tool_name == "terminal_sandbox" and isinstance(data, dict):
             output = "".join(str(data.get(key) or "") for key in ("stdout", "stderr"))
         else:
