@@ -27,9 +27,11 @@ class OllamaTimeoutError(OllamaTransportError):
 
 
 class OllamaHTTPError(OllamaTransportError):
-    """
-    O Ollama respondeu com erro HTTP.
-    """
+    """Ollama local returned HTTP failure without exposing private response data."""
+
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class OllamaInvalidJSONError(OllamaTransportError):
@@ -77,7 +79,8 @@ class OllamaTransport:
                 body = response.read()
         except HTTPError as exc:
             raise OllamaHTTPError(
-                f"Ollama respondeu HTTP {exc.code}"
+                f"Ollama respondeu HTTP {exc.code}",
+                status_code=exc.code,
             ) from exc
         except TimeoutError as exc:
             raise OllamaTimeoutError(
@@ -115,7 +118,7 @@ class OllamaTransport:
             with self.opener(request, timeout=timeout) as response:
                 raw = response.read(512 * 1024 + 1)
         except HTTPError as exc:
-            raise OllamaHTTPError(f"Ollama respondeu HTTP {exc.code}") from exc
+            raise OllamaHTTPError(f"Ollama respondeu HTTP {exc.code}", status_code=exc.code) from exc
         except (TimeoutError, URLError, OSError) as exc:
             raise OllamaUnavailableError("Ollama local indisponível.") from exc
         if len(raw) > 512 * 1024:
