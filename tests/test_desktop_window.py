@@ -134,9 +134,6 @@ def test_missing_voice_model_is_visible_without_blocking_text_chat():
             time.sleep(0.01)
         assert "Resposta por texto" in window.transcript.get("1.0", "end")
         window._close()
-        while root.winfo_exists() and time.monotonic() < deadline:
-            root.update()
-            time.sleep(0.01)
     finally:
         confirmation.close()
         try:
