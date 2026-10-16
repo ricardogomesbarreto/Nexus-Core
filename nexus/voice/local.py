@@ -184,6 +184,7 @@ class LocalRecognizer(_StoppableProcess):
     SAMPLE_RATE = 16000
     DURATION = 8
     STREAM_LIMIT = 30
+    END_OF_SPEECH_SECONDS = 1.2
 
     def __init__(self, model_path: str | Path | None = None):
         super().__init__()
@@ -314,17 +315,46 @@ class LocalRecognizer(_StoppableProcess):
                 return ""
             deadline = monotonic() + self.STREAM_LIMIT
             next_level = 0.0
+            speech_started = False
+            last_voice = 0.0
+            partial_text = ""
+            last_partial_change = 0.0
             while not cancelled() and monotonic() < deadline:
                 frames = process.stdout.read(8000)
                 if not frames:
                     break
+                now = monotonic()
+                level = self.peak_level(frames)
                 if on_audio_level is not None and monotonic() >= next_level:
-                    on_audio_level(self.peak_level(frames))
+                    on_audio_level(level)
                     next_level = monotonic() + 0.8
+                if level >= 3:
+                    speech_started = True
+                    last_voice = now
                 if decoder.AcceptWaveform(frames):
                     text = json.loads(decoder.Result()).get("text", "")
                     if isinstance(text, str) and text.strip():
                         return text.strip()[:4000]
+                partial_result = getattr(decoder, "PartialResult", None)
+                if partial_result is not None:
+                    partial = json.loads(partial_result()).get("partial", "")
+                    if isinstance(partial, str) and partial.strip() and partial != partial_text:
+                        partial_text = partial
+                        last_partial_change = now
+                # Some microphones and Vosk models never emit an endpoint for
+                # short questions. Flush after a measured pause instead of
+                # leaving the user waiting for the 30 second stream limit.
+                if speech_started and now - last_voice >= self.END_OF_SPEECH_SECONDS:
+                    text = json.loads(decoder.FinalResult()).get("text", "")
+                    if isinstance(text, str) and text.strip():
+                        return text.strip()[:4000]
+                    return partial_text[:4000]
+                # A noisy default input can stay above the peak threshold even
+                # through pauses. A stable recognized partial is still useful.
+                if partial_text and now - last_partial_change >= 2.5:
+                    text = json.loads(decoder.FinalResult()).get("text", "")
+                    return (text.strip() if isinstance(text, str) and text.strip()
+                            else partial_text)[:4000]
             if cancelled():
                 return ""
             if process.poll() is not None and process.returncode != 0:

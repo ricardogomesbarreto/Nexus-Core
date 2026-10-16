@@ -73,10 +73,13 @@ def pump(root, until, timeout=5):
 
 
 @pytest.fixture
-def ui():
+def ui(monkeypatch):
     if not os.environ.get("DISPLAY"):
         pytest.skip("Requer Xvfb")
     import tkinter as tk
+    from nexus.vision.local import LocalVision
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(
+        lambda: [(0, "Câmera integrada"), (1, "USB")]))
     root = tk.Tk()
     confirmation = DesktopConfirmation()
     speaker = Speaker()

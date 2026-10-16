@@ -43,6 +43,54 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+No desktop Ubuntu, perguntas comuns agora usam uma resposta curta de texto
+direta do `qwen3:1.7b`, sem exigir JSON de planejamento. Perguntas sobre
+capacidade, como “Vai poder arrumar meus arquivos?”, permanecem no modo de
+conversa; pedidos explícitos de ação ainda usam contratos, `SecurityGate` e
+confirmação. O limite de tokens impede que uma resposta simples se prolongue
+indefinidamente. O primeiro uso do Ollama ou um computador com poucos recursos
+ainda pode demorar; o estado da janela indica quando o modelo está processando.
+
+Na escuta, a fala curta é enviada ao Vosk quando há uma pausa de cerca de
+1,2 segundo, mesmo se o detector de fim de frase do modelo não disparar. Um
+medidor de sinal do microfone **não comprova transcrição**. Teste as duas
+etapas separadamente:
+
+```bash
+~/.local/bin/nexus-core --microphone-test | python3 -m json.tool
+~/.local/bin/nexus-core --recognition-test | python3 -m json.tool
+~/.local/bin/nexus-core --desktop
+```
+
+O segundo comando abre o microfone por até dez segundos, solicita uma frase
+em português e retorna a transcrição (ou `no_transcript`). A gravação não é
+salva. Se houver sinal mas nenhuma transcrição, confira a entrada padrão do
+PipeWire nas configurações de som, aguarde o Vosk carregar, fale com uma pausa
+ao final e teste o modelo com uma frase clara. A janela informa quando detecta
+sinal repetidamente sem reconhecer palavras. Este fluxo foi testado com áudio
+simulado; a transcrição e a latência reais ainda precisam ser verificadas no
+seu notebook.
+
+**Câmera e Tela:** o botão **Câmera** procura dispositivos `/dev/video*` sem
+abrir a câmera durante a busca. Se houver apenas um, pede autorização para
+uma captura e abre a foto local na janela, enquanto tenta descrevê-la no
+Ollama. Se não houver câmera, informa isso em texto e na voz escolhida. Com
+vários dispositivos, mostra seus nomes para escolha. A captura é uma foto,
+não vídeo contínuo; sua análise precisa de um modelo visual local compatível,
+como `gemma3:4b` instalado separadamente. Erros de captura ou do modelo
+também são lidos em voz alta quando essa opção está ativada.
+
+No **Wayland**, o botão **Tela** e os comandos “analisar a tela” ou “analisar
+a janela” abrem o seletor do portal do desktop para escolher **uma janela**.
+“Analisar a tela inteira” pede a escolha de um monitor. O portal precisa
+oferecer esse alvo; se não oferecer, o aplicativo informa a limitação e não
+captura a tela inteira por engano. O seletor mostra as janelas permitidas pelo
+ambiente, mas não lista abas internas do navegador nem lê nomes de páginas em
+segundo plano. No X11, o botão Tela continua capturando uma foto da tela após
+autorização. Para o Wayland, a instalação `.[vision]` inclui `dbus-next` e o
+desktop precisa disponibilizar `xdg-desktop-portal` com backend de captura.
+Essas rotas ainda precisam de teste físico no seu Ubuntu 26.04/Wayland.
+
 Perguntas como **“O que é uma IA?”** geram respostas de texto pelo Ollama;
 o planejador não recebe contratos de ferramentas nesse turno e rejeita
 propostas de `system_info`. Pedidos explícitos para consultar o computador
@@ -137,8 +185,8 @@ Depois de atualizar o código e executar novamente `python3 scripts/install_linu
 abra `~/.local/bin/nexus-core --desktop`: o campo **Sua mensagem** e o botão
 **Enviar** ficam visíveis abaixo da transcrição. Teste primeiro a resposta sem
 microfone com `~/.local/bin/nexus-core --agent-prompt 'Responda em uma frase: você está funcionando?'`.
-O Agent solicita um esquema JSON com as duas ações aceitas à API local do Ollama,
-além de conferir a proposta e as permissões antes de qualquer ação. A marca da
+O Agent responde perguntas comuns diretamente; pedidos de ação usam o esquema
+de propostas JSON e passam pelas permissões antes de qualquer execução. A marca da
 janela está embutida no pacote instalado, ampliada sobre cabeçalho escuro para
 dar contraste à palavra clara “Nexus”. `--status` indica componentes
 inicializados, não comprova que houve uma inferência ou que o microfone funciona.

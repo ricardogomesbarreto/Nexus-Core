@@ -124,6 +124,8 @@ class ModelRequest:
     think: bool = False
     json_mode: bool = False
     response_schema: dict[str, Any] | None = None
+    max_output_tokens: int | None = None
+    timeout_seconds: float | None = None
 
     def __post_init__(self) -> None:
         _validate_non_blank_text(
@@ -158,6 +160,13 @@ class ModelRequest:
         if self.response_schema is not None:
             if not self.json_mode or type(self.response_schema) is not dict:
                 raise ModelValidationError("response_schema requer json_mode e um objeto")
+        if self.max_output_tokens is not None:
+            _validate_positive_integer("max_output_tokens", self.max_output_tokens)
+        if self.timeout_seconds is not None:
+            if (isinstance(self.timeout_seconds, bool) or
+                    not isinstance(self.timeout_seconds, (int, float)) or
+                    not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0):
+                raise ModelValidationError("timeout_seconds deve ser positivo e finito")
 
 
 @dataclass(frozen=True)

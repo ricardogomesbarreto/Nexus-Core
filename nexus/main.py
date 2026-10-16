@@ -238,6 +238,10 @@ def cli(argv: list[str] | None = None) -> None:
         "--microphone-test", action="store_true",
         help="grava três segundos, mede sinal e descarta o áudio (consentimento explícito)",
     )
+    actions.add_argument(
+        "--recognition-test", action="store_true",
+        help="grava uma fala de até dez segundos e exibe transcrição Vosk (consentimento explícito)",
+    )
     actions.add_argument("--desktop-check", action="store_true",
                          help="diagnostica suporte X11/xdotool sem interagir com janelas")
     actions.add_argument("--devices-check", action="store_true",
@@ -393,6 +397,21 @@ def cli(argv: list[str] | None = None) -> None:
         print("Nexus Core: gravando por três segundos; fale no microfone...",
               file=sys.stderr)
         print(json.dumps(test_microphone(), ensure_ascii=False))
+        return
+    if args.recognition_test:
+        from nexus.voice import LocalRecognizer, VoiceError
+        print("Nexus Core: escutando uma frase por até dez segundos; fale e faça uma pausa...",
+              file=sys.stderr)
+        recognizer = LocalRecognizer()
+        recognizer.STREAM_LIMIT = 10
+        try:
+            transcript = recognizer.recognize_continuous()
+            result = {"recognition_tested": True,
+                      "status": "transcribed" if transcript else "no_transcript",
+                      "transcript": transcript}
+        except VoiceError as exc:
+            result = {"recognition_tested": False, "status": "error", "message": str(exc)}
+        print(json.dumps(result, ensure_ascii=False))
         return
     if has_memory_action:
         from nexus.memory.cli import execute_memory_command

@@ -84,15 +84,25 @@ def test_message_does_not_use_tool(tmp_path):
     assert "medium_action" in router.requests[0].system_prompt
 
 
-def test_general_question_uses_text_schema_and_cannot_run_system_info(tmp_path):
+def test_general_question_uses_plain_text_and_cannot_run_system_info(tmp_path):
     agent, router, _ = planner(tmp_path, proposal("system_info", {}))
     prompt = json.dumps({"historico": [{"usuario": "mostre meu sistema"}],
                          "mensagem_atual": "O que é uma IA?"})
     outcome = agent.run(prompt)
     assert outcome.error_code == "INVALID_PROPOSAL"
-    assert router.requests[0].response_schema["properties"]["type"] == {"const": "message"}
+    assert router.requests[0].response_schema is None
+    assert router.requests[0].json_mode is False
+    assert router.requests[0].max_output_tokens == 192
     assert "Ferramentas disponíveis" not in router.requests[0].system_prompt
     assert "DECISION=DENY" in (tmp_path / "agent-audit.log").read_text()
+
+
+def test_capability_question_does_not_trigger_tool_schema(tmp_path):
+    agent, router, medium = planner(tmp_path, "Posso ajudar a organizar os arquivos.")
+    outcome = agent.run(json.dumps({"mensagem_atual": "Vai poder arrumar meus arquivos?"}))
+    assert outcome.success and outcome.content.startswith("Posso ajudar")
+    assert not router.requests[0].json_mode
+    assert not medium.calls
 
 
 def test_explicit_computer_request_can_still_use_tool(tmp_path):

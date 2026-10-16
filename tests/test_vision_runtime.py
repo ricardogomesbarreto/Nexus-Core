@@ -70,12 +70,14 @@ def test_capture_backends_use_fixed_arguments(monkeypatch):
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/bin/" + n)
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
     service._capture = lambda args: calls.append(args) or image_bytes()
+    monkeypatch.setattr(service, "selected_screen", lambda *, window: calls.append(
+        ("portal", window)) or image_bytes())
     service.screen()
     monkeypatch.delenv("WAYLAND_DISPLAY")
     monkeypatch.setenv("DISPLAY", ":1")
     service.screen()
     service.camera(2)
-    assert calls[0] == ["/bin/grim", "-"]
+    assert calls[0] == ("portal", True)
     assert calls[1] == ["/bin/import", "-window", "root", "png:-"]
     assert calls[2][-1] == "pipe:1"
     assert "/dev/video2" in calls[2]

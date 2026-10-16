@@ -118,11 +118,13 @@ class OllamaProvider:
         }
         if request.json_mode:
             payload["format"] = request.response_schema or "json"
+        if request.max_output_tokens is not None:
+            payload["options"]["num_predict"] = request.max_output_tokens
 
         try:
             raw_response = self.transport.chat(
                 payload=payload,
-                timeout=self.timeout,
+                timeout=request.timeout_seconds or self.timeout,
             )
 
         except OllamaUnavailableError as exc:

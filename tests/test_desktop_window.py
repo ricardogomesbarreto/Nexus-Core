@@ -294,3 +294,6 @@ def test_spoken_shutdown_command_is_explicit():
     assert DesktopWindow._voice_command("Nexus, desligue o assistente") == "shutdown"
     assert DesktopWindow._voice_command("pause a escuta") == "pause"
     assert DesktopWindow._voice_command("Explique como desligar o assistente") is None
+    assert DesktopWindow._voice_command("Nexus, abra a câmera") == "vision_camera"
+    assert DesktopWindow._voice_command("Analise a janela do Firefox") == "vision_window"
+    assert DesktopWindow._voice_command("Analise a tela inteira") == "vision_display"
