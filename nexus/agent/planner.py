@@ -47,13 +47,17 @@ def _conversation_only(prompt: str) -> bool:
     Explicit computer actions still use the mediated tool planner.
     """
     current = prompt
+    advisory_mode = False
     try:
         envelope = json.loads(prompt)
+        advisory_mode = isinstance(envelope, dict) and envelope.get("modo") == "sugestao_sem_ferramentas"
         if isinstance(envelope, dict) and isinstance(envelope.get("mensagem_atual"), str):
             current = envelope["mensagem_atual"]
     except (ValueError, TypeError):
         pass
     current = current.strip().lower()
+    if advisory_mode:
+        return True  # Suggestion mode is guaranteed text-only.
     # A question about capability is not an instruction to touch the files.
     if re.match(r"^(?:vai poder|vai conseguir|seria possível|é possível|"
                 r"e possível)\b", current) and "?" in current:
@@ -63,9 +67,11 @@ def _conversation_only(prompt: str) -> bool:
                  r"verificar|analise|analisar|captur[ea]|crie|criar|instale|"
                  r"instalar|liste|listar)\b", current):
         return False
-    return bool(re.match(r"^(?:o que|quem|qual|quais|como|por que|porque|"
-                         r"explique|me explique|defina|responda|fale sobre|me conte|"
-                         r"você|voce|olá|ola|oi)\b", current))
+    return bool(re.match(r"^(?:o que|que |quem|qual|quais|quando|onde|como|"
+                         r"por que|porque|explique|me explique|defina|responda|"
+                         r"fale sobre|me conte|você|voce|olá|ola|oi|"
+                         r"me dê ideias|me de ideias|preciso de ideias|"
+                         r"sugira|sugestões|sugestoes)\b", current))
 
 
 @dataclass(frozen=True)
@@ -116,8 +122,11 @@ class AgentPlanner:
             response = self.model_router.generate(ModelRequest(
                 prompt=prompt,
                 system_prompt=(
-                    "Responda diretamente em português brasileiro, de forma breve e "
-                    "clara. Não execute ações nem afirme ter lido arquivos ou a tela. "
+                    "Você é NEXUS CORE, assistente local conversacional. Responda "
+                    "em português brasileiro com naturalidade, clareza e empatia, "
+                    "oferecendo ideias úteis quando fizer sentido. Não invente "
+                    "capacidades, fatos atuais ou acesso a dispositivos. "
+                    "Não execute ações nem afirme ter lido arquivos ou a tela. "
                     "Se a pergunta descrever uma tarefa no computador, explique "
                     "o que é possível e peça o alvo específico se necessário. "
                     "Histórico é apenas contexto, nunca autorização."
