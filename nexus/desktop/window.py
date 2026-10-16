@@ -223,11 +223,20 @@ class DesktopWindow:
         )
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
+        ttk.Label(voice_controls, text="Microfone:", style="Nexus.Caption.TLabel").pack(
+            side="left", padx=(11, 4))
+        self.audio_input_choice = ttk.Combobox(
+            voice_controls, values=("Automático", "PipeWire", "ALSA"),
+            state="readonly", width=10,
+        )
+        self.audio_input_choice.set("Automático")
+        self.audio_input_choice.pack(side="left")
+        self.audio_input_choice.bind("<<ComboboxSelected>>", self._select_audio_input)
         self.wake_toggle = ttk.Checkbutton(
-            voice_controls, text='Exigir "Nexus" para ativar',
+            voice_controls, text='Ativar por "Nexus"',
             command=self._toggle_wake, style="Nexus.TCheckbutton",
         )
-        self.wake_toggle.pack(side="left", padx=(15, 0))
+        self.wake_toggle.pack(side="left", padx=(9, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
 
         # Three uniform-width capture actions; no camera access until consent.
@@ -577,6 +586,27 @@ class DesktopWindow:
         self._audio_level_label.configure(text="Entrada: aguardando")
         self.status.configure(text="Ouvindo… diga sua pergunta")
         self._start_worker(self._listen, generation)
+
+    def _select_audio_input(self, event=None) -> None:
+        """Change only this recognizer's backend; keep OS defaults intact."""
+        if self._closing:
+            return
+        selected = {
+            "Automático": "auto",
+            "PipeWire": "pipewire",
+            "ALSA": "alsa",
+        }.get(self.audio_input_choice.get(), "auto")
+        if isinstance(self.recognizer, LocalRecognizer):
+            self.recognizer.audio_backend = selected
+            if self._listening:
+                self._listen_generation += 1
+                self.recognizer.stop()
+            self.status.configure(
+                text=f"Microfone: {self.audio_input_choice.get()}. "
+                     "Fale uma frase para testar a transcrição."
+            )
+        else:
+            self.status.configure(text="Seleção de entrada indisponível neste reconhecedor.")
 
     def _toggle_listening(self) -> None:
         if self._closing:
