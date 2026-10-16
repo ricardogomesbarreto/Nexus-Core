@@ -523,6 +523,8 @@ class DesktopWindow:
             vision_busy=self._busy and self._operation_kind == "vision",
             vision_source=self._vision_source,
             camera_active=self._live_camera is not None,
+            camera_starting=(self._live_camera is not None
+                             and self._live_camera_sequence == 0),
             cancellation_requested=self._cancel_requested,
             closing=self._closing,
         )
@@ -1006,6 +1008,10 @@ class DesktopWindow:
             self.tk.Button(preview, text="Analisar foto deste vídeo",
                            command=self._vision_camera_photo).pack(pady=(0, 8))
             preview.protocol("WM_DELETE_WINDOW", self._stop_live_camera)
+        except VisionError as exc:
+            stream.stop()
+            self._vision_notice(str(exc))
+            return
         except Exception:
             stream.stop()
             self._vision_notice("Não foi possível abrir a prévia da câmera.")
@@ -1015,7 +1021,8 @@ class DesktopWindow:
         self._live_camera_label = label
         self._live_camera_sequence = 0
         self._vision_buttons[3].configure(text="Desligar câmera")
-        self._vision_notice("Câmera ligada. Pergunte: 'Na câmera, o que você vê?'")
+        self._append("Nexus Core", "Abrindo câmera. Aguarde a primeira imagem na prévia.", "assistant")
+        self.status.configure(text="Abrindo câmera; aguardando a primeira imagem…")
 
     def _stop_live_camera(self) -> None:
         stream = self._live_camera
@@ -1042,13 +1049,16 @@ class DesktopWindow:
         normalized = unicodedata.normalize("NFKD", text).encode(
             "ascii", "ignore").decode("ascii").lower()
         return bool(re.search(r"\b(?:na camera|pela camera|da camera|no video|"
-                              r"voce ve|esta vendo|aparece|visivel|mostrando)\b", normalized))
+                              r"voce ve|voce enxerga|esta vendo|consegue ver|"
+                              r"aparece|visivel|mostrando|o que tem ai|"
+                              r"o que estou segurando|na minha mao|nas minhas maos|"
+                              r"quantos dedos|que cor e isso)\b", normalized))
 
     def _ask_live_camera(self, question: str, *, still: bool = False) -> None:
         stream = self._live_camera
         if stream is None or self._busy or self._closing:
             return
-        _, frame, error = stream.latest()
+        _, frame, error = stream.latest(max_age=3.0)
         if error or frame is None:
             self._vision_notice(error or "A câmera ainda está iniciando. Pergunte novamente em instantes.")
             return
@@ -1389,6 +1399,7 @@ class DesktopWindow:
                 self._stop_live_camera()
                 self._vision_notice(error)
             elif frame is not None and sequence != self._live_camera_sequence:
+                first_frame = self._live_camera_sequence == 0
                 self._live_camera_sequence = sequence
                 try:
                     from PIL import Image, ImageTk
@@ -1398,6 +1409,8 @@ class DesktopWindow:
                     photo = ImageTk.PhotoImage(picture, master=self._live_camera_window)
                     self._live_camera_label.configure(image=photo, text="", width=0, height=0)
                     self._live_camera_label.image = photo
+                    if first_frame:
+                        self.status.configure(text="Câmera ao vivo pronta · pergunte sobre o vídeo")
                 except (ImportError, OSError, ValueError, self.tk.TclError):
                     self._stop_live_camera()
                     self._vision_notice("Não foi possível exibir o vídeo local da câmera.")

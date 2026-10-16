@@ -11,12 +11,10 @@ from nexus.desktop.welcome import desktop_spoken_welcome
 
 
 def test_short_spoken_greeting_is_truthful_and_local():
-    greeting = desktop_spoken_welcome()
-    assert greeting.startswith("Olá! Bem-vindo ao Nexus Core.")
-    assert len(greeting) < 350
-    assert "100%" not in greeting
-    assert "verificações" in greeting
-    assert "câmera" in greeting
+    assert desktop_spoken_welcome("Ricardo") == "Bem-vindo ao Nexus Core, Ricardo."
+    assert desktop_spoken_welcome("Nome <comando>") == "Bem-vindo ao Nexus Core."
+    assert desktop_spoken_welcome("A" * 61) == "Bem-vindo ao Nexus Core."
+    assert len(desktop_spoken_welcome()) <= 90
 
 
 @pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Requer Tk/Xvfb")

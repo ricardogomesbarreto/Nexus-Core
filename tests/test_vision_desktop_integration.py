@@ -102,7 +102,7 @@ def desktop(monkeypatch):
             self.stopped = False
         def start(self): pass
         def stop(self): self.stopped = True
-        def latest(self): return (1, frame.getvalue(), None)
+        def latest(self, *, max_age=None): return (1, frame.getvalue(), None)
     monkeypatch.setattr(window_module, "CameraStream", FakeCameraStream)
 
     root = tk.Tk()
@@ -311,7 +311,7 @@ def test_camera_shortcut_opens_live_video_without_automatic_inference(desktop, m
     monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
     root.update()
     root.event_generate("<Control-Shift-K>")
-    spin(root, lambda: window._live_camera is not None)
+    spin(root, lambda: window._live_camera_sequence > 0)
     assert vision.calls == []
     assert window._privacy_snapshot().labels()[2] == "Visão: câmera ligada"
     root.event_generate("<Control-Shift-K>")
@@ -332,6 +332,34 @@ def test_spoken_question_uses_latest_frame_while_preview_remains_open(desktop, m
     assert vision.calls[0][0] == "describe"
     assert window._live_camera is not None
     assert "Um diagrama de redes" in window.transcript.get("1.0", "end")
+
+
+def test_natural_visual_followup_uses_camera_only_during_live_session(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(0, "Integrada")]))
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    spin(root, lambda: window._live_camera_sequence > 0)
+    window.input.insert("1.0", "O que estou segurando?")
+    window._send()
+    spin(root, lambda: not window._busy and len(vision.calls) == 1)
+    assert vision.calls[0][0] == "describe"
+    assert not app.agent.requests
+
+
+def test_stale_live_camera_frame_is_reported_without_model_call(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(0, "Integrada")]))
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    monkeypatch.setattr(window._live_camera, "latest", lambda *, max_age=None: (
+        1, None, "A câmera não enviou uma imagem recente."))
+    window._ask_live_camera("O que você vê?")
+    assert vision.calls == []
+    assert not window._busy
+    assert "imagem recente" in window.transcript.get("1.0", "end")
 
 
 def test_photo_button_keeps_still_capture_when_camera_is_off(desktop, monkeypatch):

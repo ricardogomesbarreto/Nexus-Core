@@ -25,6 +25,7 @@ class CameraStream:
         self._process = None
         self._thread = None
         self._frame: bytes | None = None
+        self._frame_at = 0.0
         self._sequence = 0
         self._error: str | None = None
         self._diagnostics = None
@@ -94,6 +95,7 @@ class CameraStream:
                     if len(frame) <= self.MAX_FRAME_BYTES:
                         with self._lock:
                             self._frame = frame
+                            self._frame_at = monotonic()
                             self._sequence += 1
                         frame_deadline = monotonic() + 12
             if not self._stop.is_set():
@@ -129,8 +131,15 @@ class CameraStream:
             return "O formato de vídeo da câmera não é compatível com a captura atual. Confira os formatos V4L2."
         return "A transmissão da câmera parou. Confira o dispositivo, formato e permissões."
 
-    def latest(self) -> tuple[int, bytes | None, str | None]:
+    def latest(self, *, max_age: float | None = None) -> tuple[int, bytes | None, str | None]:
         with self._lock:
+            if self._error is not None:
+                return self._sequence, self._frame, self._error
+            if (max_age is not None and self._frame is not None
+                    and monotonic() - self._frame_at > max_age):
+                return (self._sequence, None,
+                        "A câmera não enviou uma imagem recente. Aguarde o vídeo atualizar "
+                        "ou desligue e ligue a câmera.")
             return self._sequence, self._frame, self._error
 
     def stop(self) -> None:
@@ -145,3 +154,4 @@ class CameraStream:
             self._thread.join(timeout=0.3)
         with self._lock:
             self._frame = None
+            self._frame_at = 0.0

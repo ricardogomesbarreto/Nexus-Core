@@ -250,6 +250,10 @@ def cli(argv: list[str] | None = None) -> None:
                          help="valida manifesto JSON de dispositivos por entrada padrão (sem conexão)")
     actions.add_argument("--vision-check", action="store_true",
                          help="diagnostica dependências de visão sem capturar nada")
+    actions.add_argument("--camera-list", action="store_true",
+                         help="lista câmeras V4L2 acessíveis sem capturar imagens")
+    actions.add_argument("--camera-test", type=int, metavar="INDEX",
+                         help="testa um quadro da câmera local sem salvar ou consultar Ollama")
     actions.add_argument("--vision-image", metavar="PATH",
                          help="analisa imagem raster (PNG/JPEG/WEBP/BMP/GIF/TIFF/AVIF) autorizada no HOME")
     actions.add_argument("--vision-screen", action="store_true",
@@ -366,7 +370,8 @@ def cli(argv: list[str] | None = None) -> None:
         print(json.dumps(data, ensure_ascii=False))
         return
     vision_actions = (
-        args.vision_check, args.vision_image is not None,
+        args.vision_check, args.camera_list, args.camera_test is not None,
+        args.vision_image is not None,
         args.vision_screen, args.vision_camera is not None,
     )
     if any(vision_actions) and (has_memory_action or any(knowledge_actions)
@@ -376,10 +381,10 @@ def cli(argv: list[str] | None = None) -> None:
         args.vision_question is not None or args.vision_model != "gemma3:4b"
     ):
         parser.error("--vision-question e --vision-model exigem fonte visual")
-    if args.vision_check and (
+    if (args.vision_check or args.camera_list or args.camera_test is not None) and (
         args.vision_question is not None or args.vision_model != "gemma3:4b"
     ):
-        parser.error("--vision-check não aceita pergunta ou modelo")
+        parser.error("Diagnósticos de visão/câmera não aceitam pergunta ou modelo")
     if any(vision_actions):
         from nexus.vision.cli import execute_vision
         code = execute_vision(args)

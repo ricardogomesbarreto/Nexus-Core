@@ -45,6 +45,8 @@ class OllamaTransport:
     Transporte HTTP para a API local do Ollama.
     """
 
+    MAX_CHAT_RESPONSE_BYTES = 8 * 1024 * 1024
+
     def __init__(
         self,
         *,
@@ -76,7 +78,7 @@ class OllamaTransport:
                 request,
                 timeout=timeout,
             ) as response:
-                body = response.read()
+                body = response.read(self.MAX_CHAT_RESPONSE_BYTES + 1)
         except HTTPError as exc:
             raise OllamaHTTPError(
                 f"Ollama respondeu HTTP {exc.code}",
@@ -98,6 +100,9 @@ class OllamaTransport:
             raise OllamaUnavailableError(
                 "Ollama indisponível"
             ) from exc
+
+        if len(body) > self.MAX_CHAT_RESPONSE_BYTES:
+            raise OllamaInvalidJSONError("Resposta do Ollama excedeu o limite de tamanho")
 
         try:
             return json.loads(

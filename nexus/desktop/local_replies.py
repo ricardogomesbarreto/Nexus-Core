@@ -31,4 +31,17 @@ def local_conversation_answer(message: str, *, now: datetime | None = None) -> s
         "qual e a data atual",
     }:
         return f"Hoje é {current:%d/%m/%Y}, conforme a data deste computador."
+    if question in {
+        "o que voce pode fazer", "o que voce consegue fazer",
+        "quais sao suas capacidades", "como posso usar voce",
+    }:
+        return (
+            "Posso conversar e responder perguntas com o Ollama local, quando o "
+            "modelo estiver disponível. Posso ouvir com Vosk, falar com a voz "
+            "selecionada e analisar uma imagem, tela ou câmera com autorização "
+            "e um modelo visual instalado. Também posso consultar informações "
+            "e arquivos permitidos e executar ações limitadas no X11, com as "
+            "confirmações exigidas. A automação de aplicativos no Wayland, "
+            "abrir programas e criar pastas por comando ainda não estão disponíveis."
+        )
     return None

@@ -63,3 +63,17 @@ def test_ffmpeg_error_is_reported_without_exposing_stderr(diagnostic, expected):
     stream._diagnostics = io.BytesIO(diagnostic)
     assert expected in stream._exit_error()
     assert diagnostic.decode() not in stream._exit_error()
+
+
+def test_stalled_camera_never_presents_an_old_frame_as_live(monkeypatch):
+    stream = CameraStream(0)
+    stream._sequence = 3
+    stream._frame = b"old-private-frame"
+    stream._frame_at = 100.0
+    monkeypatch.setattr(camera_module, "monotonic", lambda: 105.0)
+    assert stream.latest() == (3, b"old-private-frame", None)
+    sequence, frame, error = stream.latest(max_age=3.0)
+    assert sequence == 3 and frame is None
+    assert "não enviou uma imagem recente" in error
+    stream._frame_at = 104.0
+    assert stream.latest(max_age=3.0) == (3, b"old-private-frame", None)

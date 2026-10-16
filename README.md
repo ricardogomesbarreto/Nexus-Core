@@ -43,6 +43,46 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções e auditoria do código atual
 
+### Prontidão e conversa mais clara na versão de código v0.9.11
+
+- **Início mais rápido da escuta:** a saudação falada agora se limita a
+  **"Bem-vindo ao Nexus Core, [nome]"**. O nome vem da conta Linux local
+  quando é seguro pronunciá-lo; se não houver nome válido, a frase termina
+  em **"Nexus Core"**. O diagnóstico completo continua no texto da janela.
+  Como o microfone não escuta a própria síntese, a frase curta reduz a
+  espera antes do primeiro turno de voz.
+- **O que posso fazer?** Pergunte **"O que você pode fazer?"** por texto ou
+  voz. A resposta imediata, gerada localmente sem consulta ao modelo, lista
+  as capacidades efetivamente implementadas e limitações do Wayland.
+- **Prontidão da webcam:** a interface indica **câmera iniciando** até chegar
+  o primeiro quadro. Perguntas e fotos durante a prévia aceitam apenas um
+  quadro com até três segundos de idade; se o vídeo parar, o assistente
+  informa a falha em vez de descrever uma imagem antiga como atual.
+  Perguntas como **"O que estou segurando?"** podem usar o vídeo já
+  autorizado. Outros assuntos continuam no chat de texto.
+- **Diagnóstico físico separado do modelo:** `--camera-list` enumera os
+  dispositivos V4L2 acessíveis sem obter imagem; `--camera-test INDEX`
+  captura um único quadro com consentimento implícito no comando explícito,
+  informa resolução ou erro em JSON e descarta os pixels. O teste não abre
+  PostgreSQL, não grava imagem e não consulta o Ollama. Execute primeiro:
+
+  ```bash
+  ~/.local/bin/nexus-core --camera-list | python3 -m json.tool
+  ~/.local/bin/nexus-core --camera-test 0 | python3 -m json.tool
+  ```
+
+  Substitua `0` pelo índice listado. O segundo comando abre a câmera de
+  verdade e falha com código de saída 1 se ela não entregar uma foto.
+- **Limite do transporte local:** respostas HTTP do Ollama são lidas até
+  8 MiB; uma resposta maior produz erro controlado, sem leitura ilimitada
+  na memória. Esse limite é distinto do tamanho das imagens enviadas.
+
+Essas melhorias foram verificadas em testes de código e CI. A interação
+física de microfone, alto-falantes, webcam e tempo de inferência exige
+validação no Ubuntu do usuário. O vídeo é contínuo somente como prévia:
+as análises são quadros pontuais durante perguntas, sem interpretação
+automática de cada quadro, conversa full-duplex ou automação livre do PC.
+
 ### Webcam ao vivo e perguntas faladas (código v0.9.11)
 
 O botão **Câmera ao vivo** e `Ctrl+Shift+K` ligam uma prévia contínua local da
@@ -50,7 +90,8 @@ webcam, após selecionar o dispositivo e autorizar a sessão. O mesmo botão,
 o controle da prévia ou o comando **"Feche a câmera"** interrompem a
 captura. O FFmpeg gera quadros JPEG em memória; o aplicativo mantém só o
 último quadro e não grava o vídeo em arquivo nem no PostgreSQL. A janela
-mostra **Visão: câmera ligada** enquanto o vídeo está ativo.
+mostra **Visão: câmera iniciando** até receber uma imagem e, depois,
+**Visão: câmera ligada** enquanto a prévia está ativa.
 
 O microfone pode continuar ouvindo durante a prévia. Diga **"Abra a câmera"**,
 depois **"Na câmera, o que você vê?"** ou faça outra pergunta que mencione
@@ -347,7 +388,7 @@ se aplica somente à apresentação, sem alterar a autorização das ações.
   `Cancelar`, `Pausar escuta` e `Desligar assistente` em **cinco colunas
   de larguras iguais**. O texto de status fica em uma faixa própria, abaixo
   das ações, não comprimindo mais os botões.
-- **Visão:** `Imagem`, `Tela` e `Câmera` recebem a mesma largura
+- **Visão:** `Imagem`, `Tela`, `Foto da câmera` e `Câmera ao vivo` recebem a mesma largura
   disponível e continuam exigindo consentimento por análise. Ícone animado
   de microfone, porcentagem PCM, estado de escuta, saída de voz e visão
   continuam visíveis e não implicam funcionamento físico comprovado.
@@ -355,8 +396,8 @@ se aplica somente à apresentação, sem alterar a autorização das ações.
   inclusive `Ctrl+Enter` para enviar e `Ctrl+Shift+M` para pausar/retomar
   escuta. As cores de botões usam `ttk` com tema `clam` quando disponível.
 - **Boas-vindas faladas:** ao abrir a janela, a conversa exibe uma saudação
-  detalhada; o assistente também fala **uma versão curta em português
-  brasileiro, automaticamente**, utilizando a voz masculina/feminina
+  detalhada; o assistente também fala **uma saudação curta e personalizada
+  em português brasileiro, automaticamente**, utilizando a voz masculina/feminina
   selecionada no menu e a síntese local Piper/RHVoice/eSpeak NG já
   existente. Não consulta Ollama nem executa ações. A fala só é iniciada
   quando **Ler respostas em voz alta** está habilitado.

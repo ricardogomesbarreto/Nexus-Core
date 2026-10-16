@@ -42,16 +42,26 @@ def desktop_startup_message(app) -> tuple[str, str]:
     return message, caption
 
 
-def desktop_spoken_welcome() -> str:
-    """Short, truthful spoken greeting; never claims hardware was tested.
+def desktop_spoken_welcome(name: str | None = None) -> str:
+    """Greet briefly so the microphone can start listening sooner.
 
-    The GUI already displays detailed startup status. Spoken greetings are
-    deliberately concise and don't contain private device information.
+    Linux account information is only read locally. The detailed operational
+    caveats remain in the written welcome, rather than holding the microphone
+    for a long spoken introduction.
     """
-    return (
-        "Olá! Bem-vindo ao Nexus Core. " 
-        "O assistente foi iniciado. " 
-        "Você pode conversar comigo ou solicitar tarefas autorizadas. " 
-        "O funcionamento de microfone, câmera e outros recursos " 
-        "depende das verificações no seu computador."
-    )
+    if name is None:
+        try:
+            import os
+            import pwd
+            account = pwd.getpwuid(os.getuid())
+            name = account.pw_gecos.partition(",")[0].strip() or account.pw_name
+        except (KeyError, OSError, ImportError):
+            name = ""
+    # Treat display names as text, never markup or voice-engine instructions.
+    if not isinstance(name, str):
+        name = ""
+    name = " ".join(name.split())
+    if (len(name) > 60 or not name or
+            any(not (character.isalpha() or character in " '-") for character in name)):
+        name = ""
+    return f"Bem-vindo ao Nexus Core{', ' + name if name else ''}."
