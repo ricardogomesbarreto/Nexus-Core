@@ -42,16 +42,35 @@ def desktop_startup_message(app) -> tuple[str, str]:
     return message, caption
 
 
-def desktop_spoken_welcome() -> str:
-    """Short, truthful spoken greeting; never claims hardware was tested.
+def _local_user_first_name() -> str:
+    """Get a spoken first name from the Linux account, without networking.
 
-    The GUI already displays detailed startup status. Spoken greetings are
-    deliberately concise and don't contain private device information.
+    Prefer the full name shown by the OS account; otherwise use its login
+    name. Never pass punctuation, newlines or control characters into TTS.
     """
-    return (
-        "Olá! Bem-vindo ao Nexus Core. " 
-        "O assistente foi iniciado. " 
-        "Você pode conversar comigo ou solicitar tarefas autorizadas. " 
-        "O funcionamento de microfone, câmera e outros recursos " 
-        "depende das verificações no seu computador."
-    )
+    import getpass
+    import os
+    import re
+
+    try:
+        import pwd
+        account = pwd.getpwuid(os.getuid())
+        full_name = account.pw_gecos.split(",", 1)[0].strip()
+        login = account.pw_name
+    except (ImportError, KeyError, OSError, AttributeError):
+        full_name = ""
+        try:
+            login = getpass.getuser()
+        except (KeyError, OSError):
+            login = ""
+
+    candidate = full_name or login
+    candidate = candidate.split(maxsplit=1)[0] if candidate else ""
+    if not re.fullmatch(r"[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[-'][A-Za-zÀ-ÖØ-öø-ÿ]+)?", candidate):
+        return "usuário"
+    return candidate[:40]
+
+
+def desktop_spoken_welcome() -> str:
+    """Speak precisely one greeting with the OS user's local first name."""
+    return f"Bem-vindo ao Nexus Core, {_local_user_first_name()}."
