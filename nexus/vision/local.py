@@ -5,6 +5,7 @@ network egress, agent actions or screenshot uploads to third-party services.
 """
 
 import base64
+import fcntl
 import glob
 import io
 import json
@@ -12,6 +13,7 @@ import os
 import re
 import resource
 import shutil
+import stat
 import subprocess
 import tempfile
 import warnings
@@ -38,7 +40,11 @@ class LocalVision:
     MAX_PROMPT = 2000
     MAX_RESPONSE = 12000
     CAPTURE_TIMEOUT = 20
-    FORMATS = frozenset({"PNG", "JPEG", "WEBP"})
+    # Common raster inputs are converted to metadata-free PNG for the model.
+    # AVIF decoding depends on the Pillow build; unsupported codecs fail closed.
+    FORMATS = frozenset({"PNG", "JPEG", "WEBP", "BMP", "GIF", "TIFF", "AVIF"})
+    FILE_SUFFIXES = (".png", ".jpg", ".jpeg", ".jpe", ".jfif", ".webp",
+                     ".bmp", ".gif", ".tif", ".tiff", ".avif")
     DEFAULT_PROMPT = "Descreva esta imagem objetivamente em português brasileiro."
     MODEL_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,127}$")
 
@@ -80,7 +86,7 @@ class LocalVision:
                 warnings.simplefilter("error", Image.DecompressionBombWarning)
                 with Image.open(io.BytesIO(data)) as raw:
                     if raw.format not in cls.FORMATS:
-                        raise VisionInputError("Formato não suportado (PNG/JPEG/WEBP).")
+                        raise VisionInputError("Formato não suportado (PNG/JPEG/WEBP/BMP/GIF/TIFF/AVIF).")
                     width, height = raw.size
                     if (width <= 0 or height <= 0 or width > cls.MAX_DIMENSION
                             or height > cls.MAX_DIMENSION
@@ -105,8 +111,8 @@ class LocalVision:
         if not isinstance(source, (str, Path)) or not os.fspath(source).strip():
             raise VisionInputError("Caminho de imagem inválido.")
         path = Path(source).expanduser()
-        if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
-            raise VisionInputError("Somente PNG, JPEG ou WEBP.")
+        if path.suffix.lower() not in self.FILE_SUFFIXES:
+            raise VisionInputError("Somente PNG, JPEG, WEBP, BMP, GIF, TIFF ou AVIF.")
         try:
             with self.path_security.open_regular_file(path) as (fd, _):
                 if os.fstat(fd).st_size > self.MAX_INPUT_BYTES:
@@ -176,15 +182,41 @@ class LocalVision:
             raise VisionError("Imagem do portal não pôde ser lida.") from exc
 
     @staticmethod
+    def _camera_supports_capture(path: Path) -> bool:
+        """Check V4L2 capture capability, not merely /dev/video* existence.
+
+        Some integrated webcams have two nodes: a video capture node and a
+        metadata-only node. A QUERYCAP ioctl does not capture any frames.
+        """
+        try:
+            flags = (os.O_RDONLY | os.O_NONBLOCK |
+                     getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0))
+            fd = os.open(path, flags)
+            try:
+                if not stat.S_ISCHR(os.fstat(fd).st_mode):
+                    return False
+                capability = bytearray(104)  # struct v4l2_capability
+                fcntl.ioctl(fd, 0x80685600, capability, True)  # VIDIOC_QUERYCAP
+                flags = int.from_bytes(capability[84:88], "little")
+                device_caps = int.from_bytes(capability[88:92], "little")
+                effective = device_caps if flags & 0x80000000 else flags
+                return bool(effective & (0x00000001 | 0x00001000))
+            finally:
+                os.close(fd)
+        except (OSError, ValueError):
+            # An inaccessible/unsupported V4L2 device must not be offered.
+            return False
+
+    @staticmethod
     def cameras() -> list[tuple[int, str]]:
-        """List local V4L2 nodes without opening a camera or taking a picture."""
+        """Discover actual V4L2 video capture devices without taking photos."""
         devices = []
         for path in glob.glob("/dev/video[0-9]*"):
             name = Path(path).name
             if not re.fullmatch(r"video[0-9]", name):
                 continue
             index = int(name[5:])
-            if not Path(path).exists():
+            if not LocalVision._camera_supports_capture(Path(path)):
                 continue
             try:
                 label = Path(f"/sys/class/video4linux/{name}/name").read_text().strip()
@@ -199,11 +231,17 @@ class LocalVision:
         binary = shutil.which("ffmpeg")
         if not binary:
             raise VisionError("Captura de câmera exige FFmpeg.")
-        return self._capture([
-            binary, "-hide_banner", "-loglevel", "error", "-nostdin",
-            "-f", "video4linux2", "-i", f"/dev/video{index}",
-            "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
-        ])
+        try:
+            return self._capture([
+                binary, "-hide_banner", "-loglevel", "error", "-nostdin",
+                "-f", "video4linux2", "-i", f"/dev/video{index}",
+                "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
+            ])
+        except VisionError as exc:
+            raise VisionError(
+                f"A câmera {index} não conseguiu capturar uma foto. "
+                "Verifique permissões, se ela está em uso e o formato V4L2."
+            ) from exc
 
     def describe(self, image: bytes, *, question: str | None = None,
                  model: str = "gemma3:4b") -> dict:
