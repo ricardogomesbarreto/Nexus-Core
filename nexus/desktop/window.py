@@ -196,7 +196,7 @@ class DesktopWindow:
 
         # Compact first row: speech preferences are distinct from listening.
         voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        voice_controls.pack(fill="x", pady=(9, 0))
+        voice_controls.pack(fill="x", pady=(7, 0))
         self.speech_toggle = ttk.Checkbutton(
             voice_controls, text="Ler respostas em voz alta",
             command=self._toggle_speech, style="Nexus.TCheckbutton",
@@ -224,7 +224,7 @@ class DesktopWindow:
 
         # Three uniform-width capture actions; no camera access until consent.
         vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        vision_controls.pack(fill="x", pady=(9, 0))
+        vision_controls.pack(fill="x", pady=(7, 0))
         ttk.Label(vision_controls, text="VISÃO SOB AUTORIZAÇÃO",
                   style="Nexus.Section.TLabel").pack(side="left", padx=(0, 10))
         vision_actions = ttk.Frame(vision_controls, style="Nexus.App.TFrame")
@@ -244,7 +244,7 @@ class DesktopWindow:
 
         # Signals describe SOFTWARE activity, never hardware certification.
         privacy_row = ttk.Frame(footer, style="Nexus.App.TFrame")
-        privacy_row.pack(fill="x", pady=(7, 0))
+        privacy_row.pack(fill="x", pady=(5, 0))
         self.microphone_indicator = MicrophoneIndicator(privacy_row)
         self.microphone_indicator.widget.pack(side="left", padx=(0, 7))
         self._audio_level_label = ttk.Label(
@@ -261,7 +261,7 @@ class DesktopWindow:
 
         ttk.Label(footer, text="SUA MENSAGEM  ·  Ctrl+Enter para enviar",
                   style="Nexus.Section.TLabel").pack(
-                      anchor="w", pady=(9, 5))
+                      anchor="w", pady=(7, 3))
         self.input = tk.Text(
             footer, height=3, wrap="word", font=("Sans", 11),
             bg="#ffffff", fg="#292127", relief="flat",
@@ -275,7 +275,7 @@ class DesktopWindow:
         # Each action gets an equal, responsive column. Keep original
         # attributes, shortcuts and state transitions for compatibility.
         controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        controls.pack(fill="x", pady=(9, 0))
+        controls.pack(fill="x", pady=(7, 0))
         for column in range(5):
             controls.columnconfigure(column, weight=1, uniform="actions")
         self.suggest_button = ttk.Button(
@@ -303,7 +303,7 @@ class DesktopWindow:
         self.status = ttk.Label(
             footer, text="Inicializando a escuta local…",
             style="Nexus.Status.TLabel", anchor="w")
-        self.status.pack(fill="x", pady=(8, 0))
+        self.status.pack(fill="x", pady=(6, 0))
         root.protocol("WM_DELETE_WINDOW", self._close)
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         root.bind("<Control-Shift-I>", self._show_privacy_status)
