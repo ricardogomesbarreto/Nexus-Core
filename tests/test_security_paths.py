@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from nexus.security import (
     PathSecurity,
     PermissionDecision,
@@ -7,6 +9,11 @@ from nexus.security import (
     SecurityGate,
     SecurityRequest,
 )
+
+
+@pytest.fixture(autouse=True)
+def isolated_user_home(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
 
 
 def test_home_is_allowed():

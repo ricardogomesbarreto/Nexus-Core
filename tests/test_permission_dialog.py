@@ -106,3 +106,64 @@ def test_modal_spoken_consent_and_cancellation():
         root.destroy()
         for worker in workers:
             worker.join(timeout=1)
+
+
+@pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Requer Tk/Xvfb")
+def test_question_is_spoken_before_microphone_can_accept_consent():
+    import tkinter as tk
+
+    class Speaker:
+        def __init__(self):
+            self.started = Event()
+            self.release = Event()
+            self.calls = []
+
+        def speak(self, text, voice):
+            self.calls.append((text, voice))
+            self.started.set()
+            self.release.wait(timeout=3)
+
+        def stop(self):
+            self.release.set()
+
+    root = tk.Tk()
+    recognizer = Recognizer()
+    speaker = Speaker()
+    workers = []
+
+    def start_worker(target):
+        worker = Thread(target=target, daemon=True)
+        workers.append(worker)
+        worker.start()
+
+    try:
+        dialog = PermissionDialog(
+            root, "Ação: criar pasta\nAlvo: /home/user/Teste",
+            recognizer=recognizer, listen=True, ready_to_listen=lambda: True,
+            start_worker=start_worker, cancelled=lambda: False,
+            speaker=speaker, voice="Masculina",
+            spoken_question="Nexus Core pede autorização para criar uma pasta.",
+        )
+
+        def verify_order():
+            if not speaker.started.is_set():
+                root.after(20, verify_order)
+                return
+            assert not recognizer.started.is_set()
+            assert dialog.window.winfo_exists()
+            description = next(widget for widget in dialog.window.winfo_children()[0].winfo_children()
+                               if isinstance(widget, tk.Text))
+            assert "Ação: criar pasta" in description.get("1.0", "end")
+            recognizer.phrases.put("Nexus, autorizo esta ação")
+            speaker.release.set()
+
+        root.after(100, verify_order)
+        root.after(4000, lambda: dialog._finish(False))
+        assert dialog.ask() is True
+        assert speaker.calls == [("Nexus Core pede autorização para criar uma pasta.", "Masculina")]
+        assert recognizer.started.is_set()
+    finally:
+        speaker.release.set()
+        root.destroy()
+        for worker in workers:
+            worker.join(timeout=1)

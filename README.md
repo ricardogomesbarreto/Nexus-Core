@@ -59,6 +59,13 @@ estiver ativa, diga exatamente **"Nexus, autorizo esta ação"** ou
 não autorizam nada. Se a escuta estiver pausada ou o reconhecimento falhar,
 as opções de texto e botões permanecem disponíveis.
 
+Com a leitura em voz alta habilitada, o assistente pergunta pela autorização
+em voz, informa a ação resumida e orienta a conferir alvo e risco na janela.
+O microfone da confirmação só inicia depois que a pergunta falada termina,
+para não reconhecer a própria voz do assistente. Desligar a leitura em voz
+alta mantém a janela e os meios de resposta por texto, botão e voz ativa.
+Se a reprodução falhar, a decisão pela janela continua disponível.
+
 A escuta da confirmação é separada da conversa normal, não aciona o Ollama,
 não grava áudio nem amplia o escopo da permissão. Cada decisão vale para uma
 única operação; **Esc**, fechar a janela, cancelamento ou tempo esgotado

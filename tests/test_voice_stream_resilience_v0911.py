@@ -34,6 +34,8 @@ def test_recognizer_polls_real_pcm_fd_and_produces_words(monkeypatch, tmp_path):
     model_dir = tmp_path / "vosk"
     model_dir.mkdir()
     fake_vosk(monkeypatch)
+    monkeypatch.setattr(LocalRecognizer, "capture_command",
+                        classmethod(lambda cls, **kwargs: ["mock-recorder"]))
     read_fd, write_fd = os.pipe()
     os.write(write_fd, b"\x00\x10" * 2048)
     os.close(write_fd)
@@ -62,6 +64,8 @@ def test_no_pcm_data_does_not_hold_voice_worker_after_pause(monkeypatch, tmp_pat
     model_dir = tmp_path / "vosk"
     model_dir.mkdir()
     fake_vosk(monkeypatch)
+    monkeypatch.setattr(LocalRecognizer, "capture_command",
+                        classmethod(lambda cls, **kwargs: ["mock-recorder"]))
 
     class Reader:
         def fileno(self): return 109  # Only passed to mocked select

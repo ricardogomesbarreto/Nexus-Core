@@ -1387,6 +1387,15 @@ class DesktopWindow:
             ready_to_listen=lambda: not self._listening and not self._listen_pending_generations,
             start_worker=self._start_worker,
             cancelled=lambda: self._closing or self._cancel_requested,
+            speaker=self.speaker if self.speech_enabled.get() else None,
+            voice=self.voice_choice.get(),
+            spoken_question=(
+                "Nexus Core precisa da sua autorização para: "
+                f"{' '.join(str(request.description).split())[:140]}. "
+                "Confira a ação, o alvo e o risco na janela. "
+                "Você pode usar os botões, digitar sua decisão ou dizer: "
+                "Nexus, autorizo esta ação; ou Nexus, nego esta ação."
+            ),
         )
         self._permission_dialog = dialog
         try:
