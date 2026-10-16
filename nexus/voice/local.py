@@ -4,6 +4,7 @@ from array import array
 import io
 import json
 import os
+import select
 import shutil
 import subprocess
 import sys
@@ -328,8 +329,33 @@ class LocalRecognizer(_StoppableProcess):
             last_voice = 0.0
             partial_text = ""
             last_partial_change = 0.0
+            # PipeWire streams have no fixed end time. Buffered .read(8000)
+            # can stall while waiting for exactly 8000 bytes, ignoring pause,
+            # timeout or a changed input source. A pollable Linux fd permits
+            # short reads and checking cancellation every quarter-second.
+            fd = None
+            try:
+                fd = process.stdout.fileno()
+            except (AttributeError, OSError, io.UnsupportedOperation):
+                pass  # Test doubles/older APIs without file descriptors.
             while not cancelled() and monotonic() < deadline:
-                frames = process.stdout.read(8000)
+                if fd is not None:
+                    try:
+                        readable, _, _ = select.select([fd], [], [], 0.25)
+                        if not readable:
+                            if process.poll() is not None:
+                                break
+                            continue
+                        frames = os.read(fd, 4096)
+                    except (OSError, ValueError) as exc:
+                        if cancelled():
+                            return ""
+                        raise VoiceError(
+                            "Fluxo de áudio interrompido. Confira a entrada "
+                            "PipeWire/ALSA e retome a escuta."
+                        ) from exc
+                else:
+                    frames = process.stdout.read(8000)
                 if not frames:
                     break
                 now = monotonic()

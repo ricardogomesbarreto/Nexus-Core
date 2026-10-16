@@ -43,6 +43,71 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Diagnóstico e recuperação de visão e voz no Ubuntu (v0.9.11)
+
+Esta rodada corrige falhas observadas em **capturas reais do notebook**:
+o modelo multimodal `gemma3:4b` aparece instalado, porém a requisição
+visual falha; e a escuta reconhece fala inicialmente, depois parece parar.
+
+**Visão local (Ollama).** Um modelo estar listado não comprova que a
+inferência caiba na RAM do computador. O processamento agora reduz
+imagens grandes para um limite de 1536 pixels no maior lado e, se o
+PNG expandir excessivamente, emprega JPEG sem EXIF/metadados, apenas
+para a inferência no Ollama local. Mantém a política existente de 6 MiB
+de entrada, 4096 px e 8 MP. As requisições multimodais usam contexto
+delimitado, temperatura baixa e resposta de tamanho limitado. Em
+vez do antigo erro genérico `não conseguiu analisar`, agora distingue:
+
+- **HTTP 400/413/422:** requisição ou formato/modelo incompatível;
+- **HTTP 404:** modelo visual não encontrado;
+- **HTTP 500/502/503/507:** falha interna ou recursos insuficientes;
+- **Timeout:** o modelo não respondeu dentro do limite configurado;
+- **Ollama desconectado:** serviço local indisponível, mesmo sem
+  necessidade de conexão à internet.
+
+**Voz contínua (PipeWire/ALSA + Vosk).** A gravação PCM no Ubuntu passa
+a verificar a entrada do gravador em intervalos curtos, em vez de esperar
+até receber um bloco inteiro de 8000 bytes. A pausa, o encerramento e
+as trocas de backend podem, assim, interromper a escuta em tempo hábil.
+Falhas transitórias de abertura/leitura podem tentar reconectar até duas
+vezes, sem loops ilimitados. Se continuar falhando, o programa explicita
+o erro e mantém o chat por teclado disponível. Ao ocorrer silêncio
+repetido, o assistente diferencia **sem sinal** de **sinal captado, mas
+sem transcrição Vosk**.
+
+Para confirmar a causa do erro visual, execute **sem abrir a webcam**
+(estes comandos não enviam fotos):
+
+```bash
+ollama list
+ollama ps
+free -h
+systemctl status ollama --no-pager
+```
+
+Se o Ollama foi instalado como serviço do usuário, confira também
+`systemctl --user status nexus-core-ollama.service --no-pager`.
+O código não consegue diagnosticar a RAM nem o driver da webcam
+remotamente apenas a partir de uma captura de tela; **o usuário deve
+verificar esses resultados no próprio Ubuntu**. Se estiver usando o
+ambiente virtual gerenciado, os comandos devem ser executados como
+usuário comum e sem `sudo` para iniciar o aplicativo.
+
+**Teste da escuta local, sem internet:**
+
+```bash
+~/.local/bin/nexus-core --microphone-test
+~/.local/bin/nexus-core --recognition-test
+NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --recognition-test
+~/.local/bin/nexus-core --desktop
+```
+
+As correções preservam os consentimentos por captura, operação local-first,
+o histórico temporário e a identidade visual. A CI verifica mocks de
+Ollama, PCM local e desktop Tk/Xvfb, **não substitui a homologação de
+RAM, PipeWire, Vosk, webcam e GPU no notebook físico**. Sem alteração
+de versão/tag/release estável antes do teste físico.
+
 ### Operação totalmente local: respostas novas e voz natural (v0.9.11)
 
 O NEXUS CORE executa as conversas pelo **Ollama instalado no próprio
