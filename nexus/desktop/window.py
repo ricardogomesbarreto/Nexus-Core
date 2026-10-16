@@ -95,6 +95,7 @@ class DesktopWindow:
         self._audio_level_samples = 0
         self._mic_last_signal = 0.0
         self._recognition_failures = 0
+        self._listen_retries = 0
         self._speak_generation = 0
         self._speaking = False
         self._startup_welcome_generation = None
@@ -1058,13 +1059,28 @@ class DesktopWindow:
                     self._start_listening()
                     continue
                 if kind == "listen_error":
-                    self._voice_active = False
-                    self.mic_button.configure(text="Retomar escuta")
-                    self.status.configure(text=value)
-                    self._append(
-                        "Nexus Core", f"Escuta indisponível: {value} "
-                        "A conversa por texto continua disponível.", "assistant",
+                    transient = (
+                        "capturar áudio" in value
+                        or "Fluxo de áudio interrompido" in value
+                        or "iniciar a gravação" in value
                     )
+                    if (transient and self._voice_active and not self._busy
+                            and self._listen_retries < 2):
+                        self._listen_retries += 1
+                        self.status.configure(
+                            text="Reconectando o microfone local "
+                                 f"({self._listen_retries}/2)…"
+                        )
+                        self.root.after(450, self._start_listening)
+                    else:
+                        self._voice_active = False
+                        self.mic_button.configure(text="Retomar escuta")
+                        self.status.configure(text=value)
+                        self._append(
+                            "Nexus Core", f"Escuta indisponível: {value} "
+                            "Teste PipeWire ou ALSA no seletor de microfone; "
+                            "a conversa por texto continua disponível.", "assistant",
+                        )
                 elif self._voice_active and not self._busy:
                     utterance = (
                         extract_utterance(value, require_wake=self.wake_required.get())
@@ -1090,20 +1106,28 @@ class DesktopWindow:
                         if not self._busy:
                             self._start_listening()
                     elif kind == "transcript" and utterance:
+                        self._listen_retries = 0
                         self._recognition_failures = 0
                         self.input.delete("1.0", "end")
                         self.input.insert("1.0", utterance)
                         self._send()
                     else:
-                        if kind == "silence" and self._audio_peaks >= 2:
+                        if kind == "silence":
                             self._recognition_failures += 1
                             if self._recognition_failures == 2:
-                                self._append(
-                                    "Nexus Core",
-                                    "O microfone recebe som, mas o Vosk não transcreveu a fala. "
-                                    "Teste uma frase com nexus-core --recognition-test e "
-                                    "confira a entrada de áudio do Ubuntu.", "assistant",
-                                )
+                                if self._audio_peaks >= 2:
+                                    note = (
+                                        "O microfone recebeu áudio, mas o Vosk "
+                                        "não transcreveu. Teste --recognition-test "
+                                        "e confirme o modelo de português."
+                                    )
+                                else:
+                                    note = (
+                                        "A captura está sem sinal. Verifique a "
+                                        "entrada do Ubuntu ou alterne entre "
+                                        "Automático, PipeWire e ALSA."
+                                    )
+                                self._append("Nexus Core", note, "assistant")
                         self._start_listening()
             elif kind in ("speak_done", "speak_error"):
                 # A cancelled/disabled older voice must not clobber new TTS.
