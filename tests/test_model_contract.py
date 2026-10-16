@@ -26,6 +26,7 @@ def test_model_request_has_safe_defaults_and_is_immutable():
     assert request.context_length == 2048
     assert request.think is False
     assert request.json_mode is False
+    assert request.response_schema is None
 
     with pytest.raises(FrozenInstanceError):
         request.prompt = "alterado"
@@ -147,6 +148,12 @@ def test_model_request_rejects_non_boolean_think(think):
 def test_model_request_rejects_non_boolean_json_mode(json_mode):
     with pytest.raises(ModelValidationError):
         ModelRequest(prompt="Teste", json_mode=json_mode)
+
+
+@pytest.mark.parametrize("json_mode,schema", [(False, {}), (True, []), (True, "json")])
+def test_model_request_rejects_incompatible_schema(json_mode, schema):
+    with pytest.raises(ModelValidationError):
+        ModelRequest(prompt="Teste", json_mode=json_mode, response_schema=schema)
 
 
 def test_model_response_is_typed_and_immutable():

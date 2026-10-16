@@ -14,8 +14,10 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import venv
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,11 +51,11 @@ def installed(command: str) -> bool:
 
 
 def _run(args: list[str], *, input_text=None, timeout=300,
-         capture=False, cwd=None, env=None) -> subprocess.CompletedProcess:
+         capture=False, progress=False, cwd=None, env=None) -> subprocess.CompletedProcess:
     return subprocess.run(
         args, input=input_text, text=True,
-        stdout=subprocess.PIPE if capture else subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL, timeout=timeout, check=True,
+        stdout=subprocess.PIPE if capture else (None if progress else subprocess.DEVNULL),
+        stderr=None if progress else subprocess.DEVNULL, timeout=timeout, check=True,
         cwd=cwd, env=env,
     )
 
@@ -185,6 +187,125 @@ def provision_postgresql() -> bool:
         print("Provisionamento do PostgreSQL incompleto; confira a configuração "
               "antes de usar o assistente. Nenhuma senha foi exibida.")
         return False
+
+
+def _user_ollama_service(binary: Path) -> None:
+    """Keep a user-scoped Ollama install available after the next login."""
+    unit_dir = Path.home() / ".config" / "systemd" / "user"
+    if unit_dir.is_symlink():
+        raise RuntimeError("Pasta de serviços do usuário insegura.")
+    unit_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
+    unit = unit_dir / "nexus-core-ollama.service"
+    if unit.exists() or unit.is_symlink():
+        raise RuntimeError("Serviço Ollama do Nexus já existe; confira manualmente.")
+    executable = str(binary).replace("%", "%%").replace("\\", "\\\\").replace('"', '\\"')
+    content = ("[Unit]\nDescription=Ollama local do Nexus Core\n"
+               "[Service]\nType=simple\nExecStart=\"" + executable + "\" serve\n"
+               "Environment=OLLAMA_HOST=127.0.0.1:11434\nRestart=on-failure\n"
+               "[Install]\nWantedBy=default.target\n")
+    unit.write_text(content, encoding="utf-8")
+    unit.chmod(0o600)
+    _run(["systemctl", "--user", "daemon-reload"], timeout=30)
+    _run(["systemctl", "--user", "enable", "--now", unit.name], timeout=30)
+
+
+def prepare_local_models() -> bool:
+    """Ensure local LLM and Portuguese recognition assets before activation."""
+    from nexus.config.settings import settings
+    from nexus.platforms.preflight import ollama_model_probe
+    from scripts.local_models import install_ollama_runtime, install_portuguese_voice_model
+    from time import monotonic, sleep
+
+    binary = shutil.which("ollama")
+    managed = settings.data_dir / "runtime" / "ollama" / "bin" / "ollama"
+    if binary is None and managed.is_file() and not managed.is_symlink():
+        binary = str(managed)
+        if installed("systemctl"):
+            try:
+                _run(["systemctl", "--user", "start", "nexus-core-ollama.service"], timeout=30)
+            except (OSError, subprocess.SubprocessError):
+                print("Não foi possível iniciar o serviço Ollama do usuário.")
+                return False
+    if binary is None:
+        if not confirm("Instalar Ollama oficial no diretório privado do usuário (download grande)?"):
+            print("Ollama necessário para conversar; instalação incompleta.")
+            return False
+        if not installed("systemctl"):
+            print("systemd de usuário indisponível; instale/inicie Ollama e tente novamente.")
+            return False
+        if not installed("zstd"):
+            if not installed("sudo") or not confirm("Instalar zstd pelos pacotes Ubuntu?"):
+                print("zstd é necessário para descompactar o pacote oficial Ollama.")
+                return False
+            try:
+                _run(["sudo", "apt-get", "update"], timeout=300)
+                _run(["sudo", "apt-get", "install", "-y", "zstd"], timeout=600)
+            except (OSError, subprocess.SubprocessError):
+                print("Não foi possível instalar zstd.")
+                return False
+        try:
+            print("Baixando Ollama do site oficial para o usuário atual…")
+            binary = str(install_ollama_runtime(managed.parents[1]))
+            _user_ollama_service(Path(binary))
+        except (OSError, ValueError, RuntimeError, tarfile.TarError,
+                subprocess.SubprocessError):
+            print("Instalação Ollama incompleta; confira o serviço do usuário e tente novamente.")
+            return False
+
+    probe = ollama_model_probe(model_name=settings.local_model_name)
+    if (probe["status"] == "service_unavailable" and binary != str(managed)
+            and installed("sudo") and installed("systemctl")
+            and confirm("Iniciar o serviço Ollama existente via sudo systemctl?")):
+        try:
+            _run(["sudo", "systemctl", "start", "ollama"], timeout=30)
+        except (OSError, subprocess.SubprocessError):
+            print("Serviço Ollama não pôde ser iniciado.")
+            return False
+    if probe["status"] == "service_unavailable":
+        deadline = monotonic() + 15
+        while probe["status"] == "service_unavailable" and monotonic() < deadline:
+            sleep(1)
+            probe = ollama_model_probe(model_name=settings.local_model_name)
+    if not probe["installed"]:
+        if probe["status"] == "service_unavailable":
+            print("Serviço Ollama não responde em 127.0.0.1:11434.")
+            return False
+        if not confirm(f"Baixar modelo Ollama {settings.local_model_name} (aprox. 1,4 GB)?"):
+            print("Modelo de conversa ausente; instalação incompleta.")
+            return False
+        try:
+            print("Baixando o modelo de conversa com Ollama…")
+            _run([binary, "pull", settings.local_model_name], timeout=3600, progress=True)
+        except (OSError, subprocess.SubprocessError):
+            print("Download do modelo Ollama falhou; pode ser retomado ao reinstalar.")
+            return False
+        deadline = monotonic() + 15
+        while not ollama_model_probe(model_name=settings.local_model_name)["installed"]:
+            if monotonic() >= deadline:
+                print("Ollama não confirmou a presença do modelo baixado.")
+                return False
+            sleep(1)
+    else:
+        print(f"Modelo Ollama {settings.local_model_name} já disponível; download dispensado.")
+
+    default = settings.data_dir / "voice" / "vosk-model-small-pt-0.3"
+    voice_path = settings.voice_model_path or default
+    if not voice_path.is_dir():
+        if voice_path != default:
+            print("Modelo Vosk configurado em caminho personalizado ausente.")
+            return False
+        if not confirm("Baixar o modelo Vosk oficial em português (31 MB)?"):
+            print("Modelo de voz ausente; instalação incompleta.")
+            return False
+        try:
+            print("Baixando modelo Vosk em português…")
+            install_portuguese_voice_model(default)
+        except (OSError, ValueError, zipfile.BadZipFile):
+            print("Download do modelo Vosk falhou; tente novamente.")
+            return False
+    else:
+        print("Modelo Vosk em português já disponível; download dispensado.")
+    return True
 
 
 class PostgreSQLAuthenticationError(RuntimeError):
@@ -389,6 +510,10 @@ def main(argv: list[str] | None = None) -> int:
         print("Instalação interrompida: configure credenciais PostgreSQL locais "
               "e tente novamente.", file=sys.stderr)
         return 2
+    if not prepare_local_models():
+        print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
+              file=sys.stderr)
+        return 2
     try:
         home = install_managed_python()
         executable = write_launcher(home)
@@ -411,16 +536,11 @@ def main(argv: list[str] | None = None) -> int:
     print("Diagnóstico adicional: ~/.local/bin/nexus-core --ubuntu-preflight "
           "(sem teste físico de áudio, câmera ou inferência).")
     print("Atualizações automáticas: " + ("ativadas" if enabled else "desativadas"))
-    if not installed("ollama"):
-        print("Ollama ainda ausente: instale pelo canal oficial; nunca executamos curl|bash.")
-    else:
-        print("Binário Ollama detectado; disponibilidade do serviço/modelo "
-              "depende do diagnóstico. Se necessário: ollama pull qwen3:1.7b")
+    print("Ollama e modelo de conversa encontrados; inferência real depende do teste local.")
     if not installed("docker"):
         print("Docker não detectado; recursos de sandbox exigem instalação/configuração independente.")
-    print("Instale separadamente um modelo Vosk em português no diretório "
-          "indicado no README ou configure NEXUS_VOSK_MODEL_PATH. "
-          "Permissões de áudio/câmera e operação física exigem teste no desktop.")
+    print("Modelo Vosk em português encontrado. Permissões de áudio/câmera "
+          "e operação física exigem teste no desktop.")
     return 0
 
 
