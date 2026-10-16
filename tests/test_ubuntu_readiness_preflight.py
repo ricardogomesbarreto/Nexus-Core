@@ -190,6 +190,9 @@ def test_preflight_can_show_voice_degradation_separately():
     assert result["text_chat_dependencies_ready_to_try"] is True
     assert result["voice_chat_dependencies_ready_to_try"] is False
     assert result["unmet"] == ["voice_input_dependencies"]
+    assert result["recommendations"] == [
+        "Check Vosk model/audio tools and Linux device permissions manually."
+    ]
 
 
 def test_preflight_returns_no_secrets_or_model_list():

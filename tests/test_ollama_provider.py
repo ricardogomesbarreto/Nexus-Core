@@ -130,6 +130,15 @@ def test_ollama_provider_preserves_system_prompt_order():
     }
 
 
+def test_ollama_provider_requests_json_only_when_required():
+    transport = FakeTransport(make_response())
+    provider = OllamaProvider(model="qwen3:1.7b", transport=transport)
+    provider.generate(ModelRequest(prompt="Converse", json_mode=True))
+    provider.generate(ModelRequest(prompt="Descreva livremente"))
+    assert transport.calls[0]["payload"]["format"] == "json"
+    assert "format" not in transport.calls[1]["payload"]
+
+
 @pytest.mark.parametrize(
     "model",
     [

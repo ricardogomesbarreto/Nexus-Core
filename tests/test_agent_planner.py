@@ -78,6 +78,7 @@ def test_message_does_not_use_tool(tmp_path):
     assert outcome.success and outcome.content == "Olá"
     assert medium.calls == []
     assert router.requests[0].prompt == "bom dia"
+    assert router.requests[0].json_mode is True
     assert "medium_action" in router.requests[0].system_prompt
 
 

@@ -141,14 +141,14 @@ def ubuntu_preflight(*, doctor=None, database=None, model=None, voice=None) -> d
             platform_ready, pg_ready, model_ready, stt_ready, tts_ready,
         )),
         "unmet": [key for key, ok in checks.items() if not ok],
-        "recommendations": [
+        "recommendations": [recommendation for recommendation in (
             "Validate PostgreSQL user/password locally without exposing credentials."
             if not pg_ready else "",
             "Download a trusted Ollama model manually if missing; no automatic pull."
             if not model_ready else "",
             "Check Vosk model/audio tools and Linux device permissions manually."
             if not (stt_ready and tts_ready) else "",
-        ],
+        ) if recommendation],
         "postgresql_data_modified": False,
         "external_network_used": False,
         "model_downloaded": False,
