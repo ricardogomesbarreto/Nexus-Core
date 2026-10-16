@@ -64,12 +64,20 @@ se aplica somente à apresentação, sem alterar a autorização das ações.
 - **Acessibilidade e atalhos:** comandos e atalhos anteriores permanecem,
   inclusive `Ctrl+Enter` para enviar e `Ctrl+Shift+M` para pausar/retomar
   escuta. As cores de botões usam `ttk` com tema `clam` quando disponível.
-- **Boas-vindas:** ao abrir a janela, a conversa exibe uma saudação
-  acolhedora preparada localmente, **sem solicitar inferência ao modelo,
-  ativar dispositivos adicionais, executar ações ou disparar TTS**. Caso
-  `app.status().database` confirme a inicialização do PostgreSQL, a
-  mensagem informa especificamente esse fato; do contrário, informa
-  apenas que a interface foi aberta.
+- **Boas-vindas faladas:** ao abrir a janela, a conversa exibe uma saudação
+  detalhada; o assistente também fala **uma versão curta em português
+  brasileiro, automaticamente**, utilizando a voz masculina/feminina
+  selecionada no menu e a síntese local Piper/RHVoice/eSpeak NG já
+  existente. Não consulta Ollama nem executa ações. A fala só é iniciada
+  quando **Ler respostas em voz alta** está habilitado.
+  A escuta do microfone **começa somente após a fala terminar**,
+  evitando reconhecer a própria voz do assistente. Se TTS estiver
+  desativado, a escuta começa normalmente; se a reprodução falhar, um
+  aviso textual é exibido e a conversa permanece disponível.
+  A reprodução não é repetida automaticamente na mesma sessão.
+  Caso `app.status().database` confirme a inicialização do PostgreSQL,
+  o texto apresenta especificamente esse estado; de outro modo,
+  informa apenas que a janela abriu.
 
 **O texto de boas-vindas não declara que o Nexus Core está “100%
 funcional”.** Iniciar o banco e a janela não valida Ollama, Vosk, câmera,

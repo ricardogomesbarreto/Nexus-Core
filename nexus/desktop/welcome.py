@@ -40,3 +40,18 @@ def desktop_startup_message(app) -> tuple[str, str]:
         )
         caption = "Interface iniciada  •  Serviços e dispositivos a verificar"
     return message, caption
+
+
+def desktop_spoken_welcome() -> str:
+    """Short, truthful spoken greeting; never claims hardware was tested.
+
+    The GUI already displays detailed startup status. Spoken greetings are
+    deliberately concise and don't contain private device information.
+    """
+    return (
+        "Olá! Bem-vindo ao Nexus Core. " 
+        "O assistente foi iniciado. " 
+        "Você pode conversar comigo ou solicitar tarefas autorizadas. " 
+        "O funcionamento de microfone, câmera e outros recursos " 
+        "depende das verificações no seu computador."
+    )
