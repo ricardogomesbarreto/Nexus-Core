@@ -1,11 +1,14 @@
 """Janela de conversa nativa para o desktop Linux."""
 
 import sys
+import io
+import os
 import re
 import unicodedata
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
+from time import monotonic
 
 from nexus.agent import AgentOutcome
 from nexus.config.settings import settings
@@ -62,12 +65,15 @@ class DesktopWindow:
         self._replies: Queue[ChatReply] = Queue()
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
         self._vision_events: Queue[tuple[str, str, str]] = Queue()
+        self._camera_frames: Queue[bytes] = Queue()
+        self._camera_preview = None
         self.vision = vision
         self._vision_buttons = []
         self._vision_source = None
         self._privacy_last = None
         self._busy = False
         self._operation_kind = None
+        self._operation_started = 0.0
         self._cancel_requested = False
         self._listening = False
         self._voice_active = True
@@ -75,6 +81,7 @@ class DesktopWindow:
         self._listen_pending_generations: set[int] = set()
         self._audio_peaks = 0
         self._audio_level_samples = 0
+        self._recognition_failures = 0
         self._speak_generation = 0
         self._speaking = False
         self._closing = False
@@ -330,6 +337,9 @@ class DesktopWindow:
         self._vision_buttons.clear()
         self._privacy_labels.clear()
         self.vision = None
+        if self._camera_preview is not None:
+            self._camera_preview.destroy()
+            self._camera_preview = None
         self.app.shutdown()
         self.root.destroy()
 
@@ -407,6 +417,7 @@ class DesktopWindow:
         self.session.prepare_turn()
         self._busy = True
         self._operation_kind = "chat"
+        self._operation_started = monotonic()
         self._cancel_requested = False
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
@@ -489,9 +500,24 @@ class DesktopWindow:
         if normalized in {"analisar imagem", "analise uma imagem",
                           "analisar arquivo de imagem"}:
             return "vision_file"
-        if normalized in {"analisar tela", "analise a tela"}:
+        if normalized in {"analisar tela", "analise a tela", "mostre a tela"}:
             return "vision_screen"
-        if normalized in {"analisar camera", "analise a camera"}:
+        if normalized in {"analisar tela inteira", "analise a tela inteira",
+                          "analisar monitor", "analise o monitor"}:
+            return "vision_display"
+        if normalized in {"analisar janela", "analise a janela", "analisar pagina",
+                          "analise a pagina", "listar janelas", "mostre as janelas"}:
+            return "vision_window"
+        # Named capture requests require an explicit target. Do not turn
+        # compound speech (e.g. "analisar tela e executar comando") into a
+        # capture request; actions must remain under the normal SecurityGate.
+        if (" e " not in normalized and re.fullmatch(
+            r"(?:analise|analisar|mostre) (?:a |uma )?(?:janela|pagina|tela) "
+            r"(?:do|da|de) [a-z0-9][a-z0-9 ._-]{0,79}", normalized
+        )):
+            return "vision_window"
+        if normalized in {"analisar camera", "analise a camera", "abra a camera",
+                          "abrir camera", "mostre a camera", "ligue a camera"}:
             return "vision_camera"
         return None
 
@@ -546,6 +572,9 @@ class DesktopWindow:
     def _vision_screen(self) -> None:
         self._request_vision("screen")
 
+    def _vision_window(self) -> None:
+        self._request_vision("window")
+
     def _vision_camera(self) -> None:
         self._request_vision("camera")
 
@@ -563,12 +592,13 @@ class DesktopWindow:
 
     def _request_vision(self, source: str) -> None:
         """Capture once only following user action and explicit per-shot consent."""
-        if self._closing or self._busy or source not in ("file", "screen", "camera"):
+        if self._closing or self._busy or source not in ("file", "screen", "display", "window", "camera"):
             return
         from tkinter import filedialog, simpledialog
 
         selection = None
         label = {"file": "imagem selecionada", "screen": "tela atual",
+                 "display": "monitor selecionado", "window": "janela selecionada",
                  "camera": "câmera"}[source]
         if source == "file":
             selection = filedialog.askopenfilename(
@@ -578,17 +608,34 @@ class DesktopWindow:
             if not selection:
                 return
         elif source == "camera":
-            selection = simpledialog.askinteger(
-                "Selecionar câmera", "Índice da câmera (0 a 9):",
-                parent=self.root, initialvalue=0, minvalue=0, maxvalue=9,
-            )
-            if selection is None:
+            devices = LocalVision.cameras()
+            if not devices:
+                self._vision_notice("Nenhuma câmera local foi encontrada. "
+                                    "Conecte uma câmera e confira as permissões de /dev/video.")
                 return
+            if len(devices) == 1:
+                selection = devices[0][0]
+            else:
+                choices = "\n".join(f"{index}: {name}" for index, name in devices)
+                selection = simpledialog.askinteger(
+                    "Selecionar câmera", f"Câmeras encontradas:\n{choices}\n\nNúmero da câmera:",
+                    parent=self.root, initialvalue=devices[0][0], minvalue=0, maxvalue=9,
+                )
+                if selection is None:
+                    return
+                if selection not in dict(devices):
+                    self._vision_notice("A câmera escolhida não está mais disponível.")
+                    return
             label = f"câmera {selection}"
-        question = simpledialog.askstring(
-            "Pergunta sobre a imagem", "Qual pergunta deseja fazer ao modelo visual?",
-            parent=self.root, initialvalue=LocalVision.DEFAULT_PROMPT,
-        )
+        elif source in ("screen", "window") and os.environ.get("WAYLAND_DISPLAY"):
+            label = "janela selecionada pelo portal"
+        # The Camera button is a direct request to open a camera. Use a
+        # useful default question so it does not stall behind a text dialog.
+        question = (LocalVision.DEFAULT_PROMPT if source == "camera" else
+                    simpledialog.askstring(
+                        "Pergunta sobre a imagem", "Qual pergunta deseja fazer ao modelo visual?",
+                        parent=self.root, initialvalue=LocalVision.DEFAULT_PROMPT,
+                    ))
         if question is None:
             return
         try:
@@ -610,6 +657,7 @@ class DesktopWindow:
             return
         self._busy = True
         self._operation_kind = "vision"
+        self._operation_started = monotonic()
         self._vision_source = source
         self._cancel_requested = False
         self.send_button.configure(state="disabled")
@@ -626,6 +674,36 @@ class DesktopWindow:
         self._append("Você", f"[Visão autorizada: {label}] {question}", "user")
         self._start_worker(self._analyze_vision, source, selection, question)
 
+    def _vision_notice(self, message: str) -> None:
+        self._append("Nexus Core", message, "assistant")
+        self.status.configure(text=message[:90])
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
+        if not self._say_response(message):
+            self._start_listening()
+
+    def _show_camera_frame(self, frame: bytes) -> None:
+        """Display the authorized single camera frame without saving it."""
+        try:
+            from PIL import Image, ImageTk
+            with Image.open(io.BytesIO(frame)) as raw:
+                picture = raw.copy()
+            picture.thumbnail((620, 400))
+            photo = ImageTk.PhotoImage(picture, master=self.root)
+        except (ImportError, OSError, ValueError):
+            return
+        if self._camera_preview is not None:
+            self._camera_preview.destroy()
+        preview = self.tk.Toplevel(self.root)
+        preview.title("Nexus Core — câmera local (uma foto)")
+        label = self.tk.Label(preview, image=photo)
+        label.image = photo
+        label.pack(padx=12, pady=12)
+        self.tk.Label(preview, text="Foto local única; análise em andamento.").pack()
+        self.tk.Button(preview, text="Fechar foto", command=preview.destroy).pack(pady=8)
+        self._camera_preview = preview
+
     def _analyze_vision(self, source: str, selection, question: str) -> None:
         """Worker only: never touch Tk from this thread or persist image bytes."""
         try:
@@ -634,6 +712,11 @@ class DesktopWindow:
                 image = service.image_from_file(selection)
             elif source == "camera":
                 image = service.camera(selection)
+                self._camera_frames.put(image)
+            elif source == "window":
+                image = service.selected_screen(window=True)
+            elif source == "display":
+                image = service.selected_screen(window=False)
             else:
                 image = service.screen()
             result = service.describe(image, question=question)
@@ -743,6 +826,10 @@ class DesktopWindow:
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
         self._workers_running()
+        if self._busy and not self._cancel_requested:
+            elapsed = int(monotonic() - self._operation_started)
+            if elapsed >= 10:
+                self.status.configure(text=f"Ollama processando há {elapsed} s · Cancelar disponível")
         self.confirmation.process(self._confirm)
         while True:
             try:
@@ -795,17 +882,27 @@ class DesktopWindow:
                         self._spoken_speech_control(command, utterance)
                     elif command in ("voice_female", "voice_male"):
                         self._spoken_voice_selection(command, utterance)
-                    elif command in ("vision_file", "vision_screen", "vision_camera"):
+                    elif command in ("vision_file", "vision_screen", "vision_display", "vision_window", "vision_camera"):
                         self._request_vision(command.removeprefix("vision_"))
                         # Selection or consent may be cancelled. Only then
                         # resume listening; a running analysis will resume it.
                         if not self._busy:
                             self._start_listening()
                     elif kind == "transcript" and utterance:
+                        self._recognition_failures = 0
                         self.input.delete("1.0", "end")
                         self.input.insert("1.0", utterance)
                         self._send()
                     else:
+                        if kind == "silence" and self._audio_peaks >= 2:
+                            self._recognition_failures += 1
+                            if self._recognition_failures == 2:
+                                self._append(
+                                    "Nexus Core",
+                                    "O microfone recebe som, mas o Vosk não transcreveu a fala. "
+                                    "Teste uma frase com nexus-core --recognition-test e "
+                                    "confira a entrada de áudio do Ubuntu.", "assistant",
+                                )
                         self._start_listening()
             elif kind in ("speak_done", "speak_error"):
                 # A cancelled/disabled older voice must not clobber new TTS.
@@ -840,6 +937,13 @@ class DesktopWindow:
                 self._busy = False
         while True:
             try:
+                frame = self._camera_frames.get_nowait()
+            except Empty:
+                break
+            if not self._closing and not self._cancel_requested:
+                self._show_camera_frame(frame)
+        while True:
+            try:
                 kind, question, result = self._vision_events.get_nowait()
             except Empty:
                 break
@@ -860,9 +964,7 @@ class DesktopWindow:
                 if not self._say_response(result):
                     self._start_listening()
             else:
-                self._append("Nexus Core", f"Análise visual indisponível: {result}", "assistant")
-                self.status.configure(text="Falha na análise visual")
-                self._start_listening()
+                self._vision_notice(f"Análise visual indisponível: {result}")
         if (self._closing and not self._busy and not self._listening
                 and not self._speaking and not self._workers_running()):
             self._finish_close()
@@ -877,6 +979,9 @@ class DesktopWindow:
         # The original photo asset must be released on the Tk thread even
         # when tests or users destroy the root before audio workers exit.
         self._brand_image = None
+        if self._camera_preview is not None:
+            self._camera_preview.destroy()
+            self._camera_preview = None
         self._voice_active = False
         self._listen_generation += 1
         self.session.close()

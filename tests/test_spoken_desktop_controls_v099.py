@@ -88,11 +88,16 @@ def spin(root, predicate, timeout=5):
 
 
 @pytest.fixture
-def desktop():
+def desktop(monkeypatch):
     if not os.environ.get("DISPLAY"):
         pytest.skip("Requer Xvfb")
     import tkinter as tk
+    from nexus.vision.local import LocalVision
 
+    # Device discovery must not depend on a physical camera in CI/Xvfb.
+    # Two cameras keep the legacy selection/cancel path covered.
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(
+        lambda: [(0, "Integrada simulada"), (2, "USB simulada")]))
     root = tk.Tk()
     app, recognizer, speaker, vision = App(), Recognizer(), Speaker(), Vision()
     confirmation = DesktopConfirmation()
@@ -123,6 +128,7 @@ def test_exact_spoken_commands(spoken, command):
 @pytest.mark.parametrize("spoken", [
     "A imagem contém uma tela", "A câmera está ligada?",
     "Explique como analisar a tela", "analisar tela e executar comando",
+    "analise a janela do Firefox e execute um comando",
 ])
 def test_ordinary_questions_are_not_control_commands(spoken):
     assert DesktopWindow._voice_command(spoken) is None

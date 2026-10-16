@@ -92,6 +92,14 @@ def test_ollama_provider_generates_generic_model_response():
     ]
 
 
+def test_short_conversation_can_bound_generation_and_timeout():
+    transport = FakeTransport(make_response())
+    provider = OllamaProvider(model="qwen3:1.7b", transport=transport, timeout=120)
+    provider.generate(ModelRequest(prompt="Olá", max_output_tokens=192, timeout_seconds=45))
+    assert transport.calls[0]["timeout"] == 45
+    assert transport.calls[0]["payload"]["options"]["num_predict"] == 192
+
+
 def test_ollama_provider_preserves_system_prompt_order():
     transport = FakeTransport(make_response())
 

@@ -156,6 +156,12 @@ def test_model_request_rejects_incompatible_schema(json_mode, schema):
         ModelRequest(prompt="Teste", json_mode=json_mode, response_schema=schema)
 
 
+@pytest.mark.parametrize("value", [0, -1, True, float("inf")])
+def test_model_request_rejects_invalid_conversation_timeout(value):
+    with pytest.raises(ModelValidationError):
+        ModelRequest(prompt="Teste", timeout_seconds=value)
+
+
 def test_model_response_is_typed_and_immutable():
     response = ModelResponse(
         content="NEXUS_OK",

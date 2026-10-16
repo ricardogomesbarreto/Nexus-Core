@@ -5,6 +5,7 @@ network egress, agent actions or screenshot uploads to third-party services.
 """
 
 import base64
+import glob
 import io
 import json
 import os
@@ -151,16 +152,46 @@ class LocalVision:
 
     def screen(self) -> bytes:
         if os.environ.get("WAYLAND_DISPLAY"):
-            binary = shutil.which("grim")
-            if not binary:
-                raise VisionError("Wayland exige o utilitário grim instalado.")
-            return self._capture([binary, "-"])
+            return self.selected_screen(window=True)
         if os.environ.get("DISPLAY"):
             binary = shutil.which("import")
             if not binary:
                 raise VisionError("X11 exige ImageMagick (comando import).")
             return self._capture([binary, "-window", "root", "png:-"])
         raise VisionError("Não há sessão gráfica Wayland/X11 disponível.")
+
+    def selected_screen(self, *, window: bool = True) -> bytes:
+        """Select a window (or monitor) in the compositor, then read one frame."""
+        from nexus.vision.portal import PortalError, choose_screenshot
+        try:
+            selected = choose_screenshot(window=window)
+            # Portal files may be outside HOME. Treat the URI as a one-shot
+            # capability, with a bounded read and the normal image sanitizer.
+            with selected.open("rb") as stream:
+                data = stream.read(self.MAX_INPUT_BYTES + 1)
+            return self._normalize_image(data)
+        except PortalError as exc:
+            raise VisionError(str(exc)) from exc
+        except OSError as exc:
+            raise VisionError("Imagem do portal não pôde ser lida.") from exc
+
+    @staticmethod
+    def cameras() -> list[tuple[int, str]]:
+        """List local V4L2 nodes without opening a camera or taking a picture."""
+        devices = []
+        for path in glob.glob("/dev/video[0-9]*"):
+            name = Path(path).name
+            if not re.fullmatch(r"video[0-9]", name):
+                continue
+            index = int(name[5:])
+            if not Path(path).exists():
+                continue
+            try:
+                label = Path(f"/sys/class/video4linux/{name}/name").read_text().strip()
+            except OSError:
+                label = "Câmera"
+            devices.append((index, label[:100] or "Câmera"))
+        return sorted(devices)
 
     def camera(self, index: int) -> bytes:
         if type(index) is not int or not 0 <= index <= 9:
@@ -216,7 +247,7 @@ def vision_dependencies() -> dict:
         "ollama_vision_tested": False,
         "checks": {
             "pillow": find_spec("PIL") is not None,
-            "wayland_grim": bool(shutil.which("grim")),
+            "wayland_portal_client": find_spec("dbus_next") is not None,
             "x11_import": bool(shutil.which("import")),
             "camera_ffmpeg": bool(shutil.which("ffmpeg")),
         },

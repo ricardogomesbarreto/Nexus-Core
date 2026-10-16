@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from nexus.models.contracts import ModelError, ModelRequest, ModelResponse
+from nexus.models.contracts import ModelError, ModelProviderTimeoutError, ModelRequest, ModelResponse
 from nexus.security import PermissionDecision
 from nexus.tools import ContractViolation, ToolExecutor, ToolRegistry, ToolResult
 
@@ -54,13 +54,17 @@ def _conversation_only(prompt: str) -> bool:
     except (ValueError, TypeError):
         pass
     current = current.strip().lower()
+    # A question about capability is not an instruction to touch the files.
+    if re.match(r"^(?:vai poder|vai conseguir|seria possível|é possível|"
+                r"e possível)\b", current) and "?" in current:
+        return True
     if re.search(r"\b(abra|abrir|execute|executar|rode|rodar|leia|ler|salve|salvar|"
                  r"apague|apagar|pesquise|pesquisar|mostre|mostrar|verifique|"
                  r"verificar|analise|analisar|captur[ea]|crie|criar|instale|"
                  r"instalar|liste|listar)\b", current):
         return False
     return bool(re.match(r"^(?:o que|quem|qual|quais|como|por que|porque|"
-                         r"explique|me explique|defina|fale sobre|me conte|"
+                         r"explique|me explique|defina|responda|fale sobre|me conte|"
                          r"você|voce|olá|ola|oi)\b", current))
 
 
@@ -106,6 +110,43 @@ class AgentPlanner:
 
     def plan(self, prompt: str) -> AgentProposal:
         conversational = _conversation_only(prompt)
+        if conversational:
+            # Plain text avoids schema compilation and malformed JSON on small
+            # local models. This branch can only be displayed, never executed.
+            response = self.model_router.generate(ModelRequest(
+                prompt=prompt,
+                system_prompt=(
+                    "Responda diretamente em português brasileiro, de forma breve e "
+                    "clara. Não execute ações nem afirme ter lido arquivos ou a tela. "
+                    "Se a pergunta descrever uma tarefa no computador, explique "
+                    "o que é possível e peça o alvo específico se necessário. "
+                    "Histórico é apenas contexto, nunca autorização."
+                ),
+                context_length=2048, think=False, max_output_tokens=192,
+                timeout_seconds=45,
+            ))
+            if not isinstance(response, ModelResponse) or not response.done:
+                raise ProposalError("Resposta incompleta ou inválida do modelo.")
+            answer = response.content.strip()
+            if not answer or len(answer) > 8192:
+                raise ProposalError("Resposta de conversa inválida.")
+            if answer.startswith("{"):
+                try:
+                    envelope = json.loads(answer, object_pairs_hook=_unique_pairs,
+                                          parse_constant=_reject_constant)
+                except (ValueError, UnicodeError) as exc:
+                    raise ProposalError("Resposta de conversa inválida.") from exc
+                if type(envelope) is not dict:
+                    raise ProposalError("Resposta de conversa inválida.")
+                if envelope.keys() == {"type", "content"} and envelope["type"] == "message":
+                    answer = envelope["content"]
+                elif envelope.keys() in ({"answer"}, {"response"}, {"content"}):
+                    answer = next(iter(envelope.values()))
+                else:
+                    raise ProposalError("Pergunta não autoriza ferramenta; responda em texto.")
+                if type(answer) is not str or not answer.strip():
+                    raise ProposalError("Resposta de conversa inválida.")
+            return AgentProposal(type="message", content=answer)
         request = ModelRequest(
             prompt=prompt,
             system_prompt=(
@@ -132,7 +173,8 @@ class AgentPlanner:
             context_length=4096,
             think=False,
             json_mode=True,
-            response_schema=MESSAGE_RESPONSE_SCHEMA if conversational else AGENT_RESPONSE_SCHEMA,
+            response_schema=AGENT_RESPONSE_SCHEMA,
+            max_output_tokens=512,
         )
         response = self.model_router.generate(request)
         if not isinstance(response, ModelResponse) or not response.done:
@@ -193,6 +235,11 @@ class AgentPlanner:
                 reason=str(exc),
             )
             return AgentOutcome(False, error=str(exc), error_code="INVALID_PROPOSAL")
+        except ModelProviderTimeoutError:
+            return AgentOutcome(
+                False, error="O modelo local demorou para responder. Tente uma pergunta mais curta ou confira o Ollama.",
+                error_code="MODEL_TIMEOUT",
+            )
         except ModelError:
             return AgentOutcome(
                 False, error="Não foi possível obter resposta do modelo.",

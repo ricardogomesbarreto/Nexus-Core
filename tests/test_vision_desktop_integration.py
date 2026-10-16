@@ -83,10 +83,13 @@ def spin(root, condition, timeout=6):
 
 
 @pytest.fixture
-def desktop():
+def desktop(monkeypatch):
     if not os.environ.get("DISPLAY"):
         pytest.skip("Requer Xvfb")
     import tkinter as tk
+    from nexus.vision.local import LocalVision
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(
+        lambda: [(0, "Câmera integrada"), (1, "USB"), (2, "Teste")]))
 
     root = tk.Tk()
     app = FakeApp()
@@ -177,6 +180,34 @@ def test_dialog_cancellation_is_side_effect_free(desktop, monkeypatch):
     assert not window._busy
 
 
+def test_missing_camera_is_reported_in_text_and_voice(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    window.speech_enabled.set(True)
+    spoken = []
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: []))
+    monkeypatch.setattr(window, "_say_response", lambda message: spoken.append(message) or True)
+    window._vision_camera()
+    assert "Nenhuma câmera local" in window.transcript.get("1.0", "end")
+    assert "Nenhuma câmera local" in spoken[0]
+    assert vision.calls == []
+    assert not window._busy
+
+
+def test_single_camera_is_chosen_without_index_dialog(desktop, monkeypatch):
+    from tkinter import simpledialog
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(3, "USB")]))
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: pytest.fail(
+        "Uma câmera não precisa de índice manual"))
+    monkeypatch.setattr(simpledialog, "askstring", lambda *a, **kw: "O que vê?")
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    spin(root, lambda: not window._busy)
+    assert vision.calls[0] == ("camera", 3)
+
+
 def test_local_vision_error_cannot_crash_gui_or_trigger_agent(desktop, monkeypatch):
     from tkinter import simpledialog
     root, app, window, vision = desktop
@@ -233,7 +264,10 @@ def test_vision_shortcut_uses_single_shot_consent(
     assert len(approvals) == 1
     assert "UMA captura/leitura" in approvals[0]
     assert "Ollama local" in approvals[0]
-    assert vision.calls == [capture, ("describe", image, "O que aparece?")]
+    from nexus.vision.local import LocalVision
+    question = (LocalVision.DEFAULT_PROMPT if binding == "<Control-Shift-K>"
+                else "O que aparece?")
+    assert vision.calls == [capture, ("describe", image, question)]
     assert not app.agent.requests
 
 

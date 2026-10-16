@@ -183,6 +183,32 @@ def test_continuous_recognizer_returns_at_vosk_speech_endpoint(monkeypatch, tmp_
     assert processes[0].terminated
 
 
+def test_continuous_recognizer_flushes_short_utterance_after_pause(monkeypatch, tmp_path):
+    from array import array
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+
+    class Decoder:
+        def __init__(self, model, rate):
+            pass
+        def AcceptWaveform(self, frames):
+            return False
+        def FinalResult(self):
+            return json.dumps({"text": "abra a câmera"})
+
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
+        Model=lambda path: object(), KaldiRecognizer=Decoder))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
+    audio = array("h", [12000] * 4000).tobytes() + b"\0" * 8000 * 12
+    process = FakeProcess(["arecord"], audio=audio)
+    process.returncode = None
+    monkeypatch.setattr(voice_module.subprocess, "Popen", lambda *a, **k: process)
+    tick = iter(i * .25 for i in range(1000))
+    monkeypatch.setattr(voice_module, "monotonic", lambda: next(tick))
+    assert LocalRecognizer(model_dir).recognize_continuous() == "abra a câmera"
+    assert process.terminated
+
+
 def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):
     model_dir = tmp_path / "model"
     model_dir.mkdir()
