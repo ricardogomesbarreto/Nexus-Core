@@ -121,6 +121,7 @@ def test_activation_refuses_second_maintainer_before_starting_pip(tmp_path, monk
 @pytest.mark.parametrize("argv", [
     ["--help"], ["-h"], ["--version"],
     ["--platform-check"], ["--desktop-check"], ["--vision-check"],
+    ["--camera-list"], ["--camera-test", "0"],
     ["--voice-check"], ["--ubuntu-doctor"], ["--ubuntu-preflight"],
     ["--devices-check"], ["--devices-preview-stdin"],
     ["--version", "--invalid-combination"],

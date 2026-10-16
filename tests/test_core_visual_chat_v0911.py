@@ -91,6 +91,14 @@ def test_strict_local_time_and_date_do_not_guess():
     assert local_conversation_answer("Me mostre os arquivos", now=fixed) is None
 
 
+def test_capabilities_reply_is_local_and_does_not_claim_unimplemented_actions():
+    answer = local_conversation_answer("O que você pode fazer?")
+    assert "Ollama local" in answer
+    assert "com autorização" in answer
+    assert "criar pastas por comando ainda não estão disponíveis" in answer
+    assert local_conversation_answer("O que você pode fazer no meu navegador?") is None
+
+
 def test_chat_local_time_does_not_contact_ollama_or_system_info():
     from nexus.desktop.conversation import ChatSession
     class Agent:

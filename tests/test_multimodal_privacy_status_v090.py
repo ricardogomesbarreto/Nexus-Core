@@ -53,6 +53,15 @@ def test_visual_source_requires_busy_authorized_state_to_appear():
     assert state.labels()[2] == "Visão: sem captura"
 
 
+def test_camera_status_waits_for_first_real_frame():
+    assert snapshot(camera_active=True, camera_starting=True).labels()[2] == (
+        "Visão: câmera iniciando"
+    )
+    assert snapshot(camera_active=True, camera_starting=False).labels()[2] == (
+        "Visão: câmera ligada"
+    )
+
+
 def test_cancellation_is_not_falsely_reported_as_capture_stopped():
     assert snapshot(
         vision_busy=True, vision_source="camera", cancellation_requested=True,

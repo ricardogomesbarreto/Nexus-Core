@@ -22,8 +22,8 @@ class FakeResponse:
         self.body = body
         self.status = status
 
-    def read(self):
-        return self.body
+    def read(self, size=-1):
+        return self.body if size < 0 else self.body[:size]
 
     def __enter__(self):
         return self
@@ -213,6 +213,13 @@ def test_ollama_transport_rejects_invalid_json():
             payload={"model": "test"},
             timeout=10.0,
         )
+
+
+def test_ollama_transport_bounds_chat_response_in_memory():
+    response = FakeResponse(b"x" * (OllamaTransport.MAX_CHAT_RESPONSE_BYTES + 100))
+    transport = OllamaTransport(opener=FakeOpener(response=response))
+    with pytest.raises(OllamaInvalidJSONError, match="limite de tamanho"):
+        transport.chat(payload={"model": "test"}, timeout=10.0)
 
 
 @pytest.mark.parametrize(
