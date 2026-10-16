@@ -45,7 +45,7 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ### Webcam ao vivo e perguntas faladas (código v0.9.11)
 
-O botão **Câmera** e `Ctrl+Shift+K` ligam uma prévia contínua local da
+O botão **Câmera ao vivo** e `Ctrl+Shift+K` ligam uma prévia contínua local da
 webcam, após selecionar o dispositivo e autorizar a sessão. O mesmo botão,
 o controle da prévia ou o comando **"Feche a câmera"** interrompem a
 captura. O FFmpeg gera quadros JPEG em memória; o aplicativo mantém só o
@@ -60,6 +60,18 @@ mostra a resposta no chat e a lê em voz alta quando a voz está habilitada.
 O vídeo permanece aberto para outras perguntas. Não há análise automática
 de todos os quadros: a latência da resposta depende do modelo e do hardware.
 O comando `--vision-camera INDEX` continua sendo uma captura única no terminal.
+
+**Foto da câmera** (`Ctrl+Shift+P`) restaura a captura única com prévia e
+análise após autorização específica. Com vídeo desligado, abre a webcam só
+para a foto; com vídeo ligado, usa o quadro mais recente da mesma sessão,
+sem disputar o dispositivo com outro FFmpeg. A janela de prévia contínua
+também tem **Analisar foto deste vídeo**. Por voz, **"Tire uma foto"** ou
+**"Analise uma foto da câmera"** solicita a mesma autorização. Se FFmpeg
+falhar por câmera ocupada, permissão negada ou formato incompatível, a
+janela informa o motivo em texto e, quando habilitada, por voz. A busca
+sem dispositivo diferencia ausência de `/dev/video`, falta de permissão e
+nós sem captura V4L2. Uma pergunta visual demanda um modelo Ollama visual
+instalado; a prévia contínua sozinha não produz inferência em tempo real.
 
 **Estado das ações por voz:** a transcrição de Vosk pode encaminhar pedidos
 ao mesmo planejador e às mesmas permissões do chat. O código atual lista
@@ -542,7 +554,7 @@ sinal repetidamente sem reconhecer palavras. Este fluxo foi testado com áudio
 simulado; a transcrição e a latência reais ainda precisam ser verificadas no
 seu notebook.
 
-**Câmera e Tela:** o botão **Câmera** procura dispositivos `/dev/video*` sem
+**Câmera e Tela:** os botões **Foto da câmera** e **Câmera ao vivo** procuram dispositivos `/dev/video*` sem
 abrir a câmera durante a busca. Se houver apenas um, pede autorização para
 vídeo contínuo local; com vários dispositivos, mostra seus nomes para escolha.
 Se não houver câmera, informa isso em texto e na voz escolhida. Perguntas
@@ -580,6 +592,11 @@ neural com licença aberta integrado nesta versão. O áudio é gerado e reprodu
 computador. A instalação do Piper é opcional e um erro nela não impede o
 chat de texto. A CI simula áudio: teste o microfone e as duas vozes no Ubuntu
 físico antes de considerar esta correção homologada.
+Na síntese, espaços extras são reduzidos e frases curtas recebem pontuação
+quando ausente. A voz Piper usa uma cadência ligeiramente mais lenta. São
+ajustes de prosódia e legibilidade; o timbre e o nível de naturalidade
+continuam limitados pelos modelos locais. A fala física precisa ser ouvida
+no computador para avaliar o resultado.
 
 ```bash
 cd "$HOME/Projetos/Nexus-Core"

@@ -1,6 +1,7 @@
 """A webcam preview reads only bounded frames and stops on request."""
 
 import os
+import io
 import time
 
 import pytest
@@ -50,3 +51,15 @@ def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
         os.close(write_fd)
     assert process.stopped
     assert stream.latest()[1] is None
+
+
+@pytest.mark.parametrize("diagnostic,expected", [
+    (b"Device or resource busy", "uso por outro aplicativo"),
+    (b"Permission denied", "Acesso à câmera negado"),
+    (b"Invalid argument", "formato de vídeo"),
+])
+def test_ffmpeg_error_is_reported_without_exposing_stderr(diagnostic, expected):
+    stream = CameraStream(0)
+    stream._diagnostics = io.BytesIO(diagnostic)
+    assert expected in stream._exit_error()
+    assert diagnostic.decode() not in stream._exit_error()

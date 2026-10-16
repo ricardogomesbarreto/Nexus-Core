@@ -64,7 +64,7 @@ def test_speaker_selects_female_or_male_without_shell(monkeypatch):
     assert processes[0].args == [
         "/usr/bin/espeak-ng", "-v", "pt-br+f3", "-b", "1", "--stdin"
     ]
-    assert processes[0].input == "Olá"
+    assert processes[0].input == "Olá."
     assert processes[1].args[2] == "pt-br+m3"
 
 
@@ -296,6 +296,33 @@ def test_female_rhvoice_is_used_when_installed(monkeypatch, tmp_path):
     LocalSpeaker().speak("Olá", "Feminina")
     assert calls[0][:3] == ["/usr/bin/RHVoice-test", "-p", "Leticia-F123"]
     assert calls[1][0] == "/usr/bin/pw-play"
+
+
+def test_male_piper_uses_gentle_pacing_and_local_player(monkeypatch, tmp_path):
+    model = tmp_path / "voice.onnx"
+    model.write_bytes(b"model")
+    model.with_suffix(".onnx.json").write_text("{}")
+    monkeypatch.setattr(LocalSpeaker, "neural_voice_ready", classmethod(lambda cls: True))
+    monkeypatch.setattr(LocalSpeaker, "neural_model_path", classmethod(lambda cls: model))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/" + name)
+    commands = []
+
+    class Process(FakeProcess):
+        def __init__(self, args, **kwargs):
+            super().__init__(args, **kwargs)
+            self.returncode = None
+            if "--output_file" in args:
+                from pathlib import Path
+                Path(args[args.index("--output_file") + 1]).write_bytes(b"RIFF" + b"0" * 50)
+        def communicate(self, input=None, timeout=None):
+            self.returncode = 0
+            return super().communicate(input=input, timeout=timeout)
+
+    monkeypatch.setattr(voice_module.subprocess, "Popen",
+                        lambda args, **kw: commands.append((args, kw)) or Process(args, **kw))
+    LocalSpeaker().speak("  Olá   mundo  ", "Masculina")
+    assert commands[0][0][-2:] == ["--length-scale", "1.05"]
+    assert commands[1][0][0] == "/usr/bin/pw-play"
 
 
 @pytest.mark.parametrize("voice", ("pt-br+f3", "pt-br+m3"))

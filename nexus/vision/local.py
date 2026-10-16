@@ -251,6 +251,17 @@ class LocalVision:
         return sorted(devices)
 
     @staticmethod
+    def camera_discovery_hint() -> str:
+        """Explain why discovery is empty without opening or capturing a device."""
+        nodes = glob.glob("/dev/video[0-9]*")
+        if not nodes:
+            return "Nenhum dispositivo /dev/video foi encontrado. Conecte a webcam e confira a tecla/tampa de privacidade."
+        if all(not os.access(path, os.R_OK) for path in nodes):
+            return "Dispositivos /dev/video existem, mas o usuário não tem acesso de leitura. Confira permissões e grupos."
+        return ("Dispositivos /dev/video encontrados, mas nenhum oferece captura V4L2 acessível. "
+                "Confira permissões, se a webcam está em uso e o driver da câmera.")
+
+    @staticmethod
     def _camera_frame_is_dark(image: bytes) -> bool:
         """Detect near-black captures without storing or changing image data.
 

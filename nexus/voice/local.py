@@ -4,6 +4,7 @@ from array import array
 import io
 import json
 import os
+import re
 import select
 import shutil
 import subprocess
@@ -54,6 +55,14 @@ class LocalSpeaker(_StoppableProcess):
     NEURAL_MODEL = "pt_BR-faber-medium"
 
     @classmethod
+    def _spoken_text(cls, text: str) -> str:
+        """Give local engines conversational punctuation without altering the chat."""
+        clean = re.sub(r"\s+", " ", text[:cls.MAX_SPEECH - 1]).strip()
+        if clean and clean[-1].isalnum():
+            clean += "."
+        return clean
+
+    @classmethod
     def neural_model_path(cls) -> Path:
         return settings.data_dir / "voice" / "piper" / (cls.NEURAL_MODEL + ".onnx")
 
@@ -88,11 +97,12 @@ class LocalSpeaker(_StoppableProcess):
             raise VoiceError("Instale PipeWire ou alsa-utils para reproduzir áudio.")
         with tempfile.TemporaryDirectory(prefix="nexus-speech-") as temp:
             wav = Path(temp) / "reply.wav"
-            synth = ([binary, "--model", str(model), "--output_file", str(wav)]
+            synth = ([binary, "--model", str(model), "--output_file", str(wav),
+                      "--length-scale", "1.05"]
                      if voice == "Masculina" else
                      [binary, "-p", "Leticia-F123", "-o", str(wav)])
             for command, payload in (
-                (synth, text[:self.MAX_SPEECH]),
+                (synth, self._spoken_text(text)),
                 ([player, str(wav)] if Path(player).name == "pw-play"
                  else [player, "-q", str(wav)], None),
             ):
@@ -168,7 +178,7 @@ class LocalSpeaker(_StoppableProcess):
                     process.communicate()
                 return
             try:
-                process.communicate(input=text[:self.MAX_SPEECH], timeout=60)
+                process.communicate(input=self._spoken_text(text), timeout=60)
             except subprocess.TimeoutExpired as exc:
                 process.kill()
                 process.communicate()
