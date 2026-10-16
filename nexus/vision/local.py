@@ -20,7 +20,10 @@ import warnings
 from pathlib import Path
 
 from nexus.config.settings import Settings
-from nexus.models.ollama_transport import OllamaTransport, OllamaTransportError
+from nexus.models.ollama_transport import (
+    OllamaHTTPError, OllamaTimeoutError, OllamaUnavailableError,
+    OllamaTransport, OllamaTransportError,
+)
 from nexus.security.paths import PathSecurity
 
 
@@ -35,6 +38,7 @@ class VisionInputError(VisionError, ValueError):
 class LocalVision:
     MAX_INPUT_BYTES = 6 * 1024 * 1024
     MAX_OUTPUT_BYTES = 6 * 1024 * 1024
+    MODEL_IMAGE_EDGE = 1536  # Reduce base64, decoding latency and RAM usage.
     MAX_PIXELS = 8_000_000
     MAX_DIMENSION = 4096
     MAX_PROMPT = 2000
@@ -99,9 +103,21 @@ class LocalVision:
                     raw.load()
                     # Re-encode to PNG and discard EXIF/location/metadata.
                     normalized = ImageOps.exif_transpose(raw).convert("RGB")
+                    if max(normalized.size) > cls.MODEL_IMAGE_EDGE:
+                        normalized.thumbnail(
+                            (cls.MODEL_IMAGE_EDGE, cls.MODEL_IMAGE_EDGE),
+                            Image.Resampling.LANCZOS,
+                        )
                     buffer = io.BytesIO()
-                    normalized.save(buffer, format="PNG")
+                    normalized.save(buffer, format="PNG", optimize=True)
                     image = buffer.getvalue()
+                    # For detailed photos, PNG may expand to several megabytes.
+                    # JPEG is accepted by Ollama and uses fewer local resources.
+                    if len(image) > 1024 * 1024:
+                        buffer = io.BytesIO()
+                        normalized.save(buffer, format="JPEG", quality=84,
+                                        optimize=True, progressive=False)
+                        image = buffer.getvalue()
         except VisionInputError:
             raise
         except (OSError, ValueError, Image.DecompressionBombWarning,
@@ -322,16 +338,45 @@ class LocalVision:
                 "images": [base64.b64encode(normalized).decode("ascii")],
             }],
             "stream": False,
+            "options": {"num_ctx": 2048, "num_predict": 320, "temperature": 0.2},
         }
         try:
             response = self.transport.chat(
                 payload=payload, timeout=self.settings.local_model_timeout
             )
+        except OllamaTimeoutError as exc:
+            raise VisionError(
+                f"O modelo visual '{model_name}' excedeu o tempo de resposta "
+                f"({self.settings.local_model_timeout:g} s). Tente uma imagem "
+                "menor ou um modelo visual mais leve. Use 'ollama ps' e 'free -h' "
+                "para conferir os recursos locais."
+            ) from exc
+        except OllamaUnavailableError as exc:
+            raise VisionError(
+                "O Ollama não está acessível em 127.0.0.1:11434. "
+                "A análise visual funciona sem internet, mas exige que "
+                "o serviço Ollama esteja iniciado localmente."
+            ) from exc
+        except OllamaHTTPError as exc:
+            code = exc.status_code
+            if code in (500, 502, 503, 507):
+                detail = ("O Ollama retornou erro interno ou falta de recursos "
+                          f"(HTTP {code}). Confira 'ollama ps' e 'free -h'; "
+                          "um modelo visual mais leve pode ajudar.")
+            elif code in (400, 413, 422):
+                detail = ("O Ollama rejeitou a requisição visual "
+                          f"(HTTP {code}). Verifique a versão do Ollama e "
+                          "a compatibilidade do modelo com imagens.")
+            elif code == 404:
+                detail = ("O modelo visual indicado não foi encontrado no "
+                          "Ollama (HTTP 404). Confira 'ollama list'.")
+            else:
+                detail = f"Ollama local respondeu HTTP {code or 'desconhecido'}."
+            raise VisionError(detail) from exc
         except OllamaTransportError as exc:
             raise VisionError(
-                f"O modelo visual '{model_name}' não conseguiu analisar a imagem. "
-                "Confira se o Ollama está ativo e se o modelo aceita imagens. "
-                "Execute: ollama list."
+                "A resposta do Ollama visual local está inválida. "
+                "Verifique os logs do serviço e 'ollama ps'."
             ) from exc
         if not isinstance(response, dict) or response.get("done") is not True:
             raise VisionError("Resposta visual incompleta do Ollama.")
