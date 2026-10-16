@@ -603,7 +603,16 @@ class DesktopWindow:
         if source == "file":
             selection = filedialog.askopenfilename(
                 parent=self.root, title="Escolher imagem local para análise",
-                filetypes=[("Imagens", "*.png *.jpg *.jpeg *.webp")],
+                # Linux file dialogs filter by extension (case-sensitive).
+                # Offer common raster formats and a fallback for other suffixes;
+                # LocalVision will still validate the actual file contents.
+                filetypes=[
+                    ("Imagens", " ".join(
+                        "*"+ext for suffix in LocalVision.FILE_SUFFIXES
+                        for ext in (suffix, suffix.upper())
+                    )),
+                    ("Todos os arquivos", "*"),
+                ],
             )
             if not selection:
                 return
