@@ -20,6 +20,7 @@ from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_messag
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
+from nexus.voice.speech_text import readable_model_text, speech_from_model_text
 from nexus.voice.wake import extract_utterance
 from nexus.vision import LocalVision, VisionError, VisionInputError
 
@@ -493,6 +494,11 @@ class DesktopWindow:
             return False
         if " executada.\n{" in text or " executada.\n[" in text:
             text = "A ação foi concluída. Confira os detalhes na conversa."
+        # Model outputs may contain Markdown (bold, bullets, links, code).
+        # Convert only the TTS copy; do not modify the source turn or logs.
+        text = speech_from_model_text(text)
+        if not text:
+            return False
         self._speak_generation += 1
         generation = self._speak_generation
         self._speaking = True
@@ -1165,11 +1171,13 @@ class DesktopWindow:
                 self.status.configure(text="Análise visual cancelada")
                 self._start_listening()
             elif kind == "success":
-                self.session.note_visual(question, result)
-                self._append("Nexus Core", result, "assistant")
+                # Show natural Portuguese rather than raw Markdown markers.
+                natural = readable_model_text(result) or result
+                self.session.note_visual(question, natural)
+                self._append("Nexus Core", natural, "assistant")
                 self.status.configure(text="Análise visual concluída")
                 # File, screen and camera all use the same voice output path.
-                if not self._say_response(result):
+                if not self._say_response(natural):
                     self._start_listening()
             else:
                 self._vision_notice(f"Análise visual indisponível: {result}")
