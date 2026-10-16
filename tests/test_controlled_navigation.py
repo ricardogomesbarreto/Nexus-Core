@@ -220,14 +220,25 @@ def test_backend_failures_return_denial_and_audit(tmp_path):
     assert "OUTCOME=ERROR" in (tmp_path / "navigation.log").read_text()
 
 
-def test_gui_confirmation_previews_exact_navigation():
+def test_gui_confirmation_previews_exact_navigation(monkeypatch):
     window = object.__new__(DesktopWindow)
     captured = []
     window.root = object()
-    window.messagebox = SimpleNamespace(
-        askyesno=lambda heading, message, **kw:
-        captured.append((heading, message)) or True
-    )
+    window.recognizer = object()
+    window._voice_active = False
+    window._listening = False
+    window._listen_pending_generations = set()
+    window._closing = False
+    window._cancel_requested = False
+    window._start_worker = lambda target: None
+
+    class FakeDialog:
+        def __init__(self, root, details, **kwargs):
+            captured.append(details)
+        def ask(self):
+            return True
+
+    monkeypatch.setattr("nexus.desktop.window.PermissionDialog", FakeDialog)
     request = SecurityRequest(
         action="desktop_navigate", description="Navegar uma tecla",
         risk_level=RiskLevel.MEDIUM, tool_name="desktop_navigate",
@@ -237,11 +248,11 @@ def test_gui_confirmation_previews_exact_navigation():
     )
     assert window._confirm(request) is True
     assert len(captured) == 1
-    assert "Notas" in captured[0][1]
-    assert "12" in captured[0][1]
-    assert "page_down" in captured[0][1]
-    assert "321" in captured[0][1]
-    assert "NotesClass" in captured[0][1]
+    assert "Notas" in captured[0]
+    assert "12" in captured[0]
+    assert "page_down" in captured[0]
+    assert "321" in captured[0]
+    assert "NotesClass" in captured[0]
 
 
 def test_injected_extra_key_is_rejected_by_contract(tmp_path):

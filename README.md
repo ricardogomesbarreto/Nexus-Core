@@ -48,6 +48,24 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções e auditoria do código atual
 
+### Autorização por voz, texto ou botão (código em desenvolvimento)
+
+As permissões de ferramentas com confirmação individual aparecem em uma
+janela com **ação, risco, alvo e recursos**. A janela agora inclui uma caixa
+de texto: digite **AUTORIZAR** ou **NEGAR** e pressione Enter. Também é
+possível usar os botões **Autorizar esta ação** e **Negar**. Quando a escuta
+estiver ativa, diga exatamente **"Nexus, autorizo esta ação"** ou
+**"Nexus, nego esta ação"**. Respostas isoladas como "sim" ou texto ambíguo
+não autorizam nada. Se a escuta estiver pausada ou o reconhecimento falhar,
+as opções de texto e botões permanecem disponíveis.
+
+A escuta da confirmação é separada da conversa normal, não aciona o Ollama,
+não grava áudio nem amplia o escopo da permissão. Cada decisão vale para uma
+única operação; **Esc**, fechar a janela, cancelamento ou tempo esgotado
+negam a execução. O `SecurityGate` revalida alvo e política depois de uma
+aprovação. O reconhecimento de voz precisa de validação física no Ubuntu;
+esta alteração não muda a versão 0.9.11 nem publica release estável.
+
 ### Ações locais autorizadas e resposta de voz (código em desenvolvimento)
 
 - **Criar pasta:** pedidos por texto ou voz podem propor `create_directory`

@@ -14,6 +14,7 @@ from time import monotonic
 from nexus.agent import AgentOutcome
 from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
+from nexus.desktop.permission_dialog import PermissionDialog
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.preferences import (
     DesktopPreferences, DesktopPreferenceStore, PreferenceStoreError,
@@ -146,6 +147,7 @@ class DesktopWindow:
         self._speaking = False
         self._startup_welcome_generation = None
         self._closing = False
+        self._permission_dialog: PermissionDialog | None = None
         self._workers: list[Thread] = []
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
@@ -648,6 +650,8 @@ class DesktopWindow:
             self.session.cancel_current()
             # Release threads blocked on tool consent immediately.
             self.confirmation.cancel_pending()
+            if self._permission_dialog is not None:
+                self._permission_dialog._finish(False)
         self.cancel_button.configure(state="disabled")
         self.status.configure(text="Cancelamento solicitado; finalizando operação…")
 
@@ -1376,10 +1380,19 @@ class DesktopWindow:
             details.append(
                 f"Recurso {self._display(resource.name)}: {self._display(resource.path)}"
             )
-        details.append("\nAutorizar somente esta execução?")
-        return self.messagebox.askyesno(
-            "Nexus Core — autorização necessária", "\n".join(details), parent=self.root
+        details.append("\nEsta autorização vale somente para a ação acima.")
+        dialog = PermissionDialog(
+            self.root, "\n".join(details), recognizer=self.recognizer,
+            listen=self._voice_active,
+            ready_to_listen=lambda: not self._listening and not self._listen_pending_generations,
+            start_worker=self._start_worker,
+            cancelled=lambda: self._closing or self._cancel_requested,
         )
+        self._permission_dialog = dialog
+        try:
+            return dialog.ask()
+        finally:
+            self._permission_dialog = None
 
     def _poll(self) -> None:
         # Prune completed workers on every GUI tick; otherwise a long-running
@@ -1642,6 +1655,8 @@ class DesktopWindow:
         self._listen_generation += 1
         self.session.close()
         self.confirmation.close()
+        if self._permission_dialog is not None:
+            self._permission_dialog._finish(False)
         self.recognizer.stop()
         self._stop_speaking()
         self.send_button.configure(state="disabled")

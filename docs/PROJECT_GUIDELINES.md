@@ -26,6 +26,9 @@ iniciar qualquer teste que interaja com outra máquina ou serviço.
 - Captura de câmera, tela, áudio, leitura de arquivos e tráfego de rede são
   recursos distintos. Abrir um aplicativo ou autorizar uma fotografia não
   autoriza automaticamente acesso aos demais recursos.
+- A decisão sobre cada permissão pode ser dada pelos botões, digitada na
+  janela de confirmação ou falada com frase explícita; transcrição incerta,
+  escuta pausada e silêncio não concedem autorização.
 - Ferramentas de reconhecimento de rede e pentest exigem uma implementação
   futura que valide o escopo autorizado. A existência de Docker ou de uma
   sessão de terminal **não significa** que varreduras de rede ou exploração
