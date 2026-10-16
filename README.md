@@ -43,6 +43,72 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Diagnóstico físico da webcam, microfone e arquivos (Ubuntu)
+
+A **v0.9.11** inclui correções de uso a partir de testes físicos no notebook,
+sem alterar o design ou publicar uma nova versão/tag:
+
+- **Câmera V4L2:** a captura autorizada de **uma única foto** agora ignora
+  os oito primeiros quadros do FFmpeg, permitindo que a exposição automática
+  estabilize. Quando a imagem permanecer quase totalmente preta, a análise
+  visual é interrompida e a janela informa que pode existir tampa física de
+  privacidade fechada, câmera ocupada por outro aplicativo ou iluminação
+  inadequada. O programa não deve atribuir uma captura preta ao modelo como
+  se fosse uma foto válida. **Não** existe vídeo contínuo nem abertura
+  automática sem autorização explícita.
+- **Áudio/indicador:** a animação existente acompanha os níveis reais da
+  captação, agora atualizados a cada ~0,25 s durante a escuta. O rótulo
+  `Entrada: N%` ajuda a perceber o sinal e distinguir o ícone parado de
+  problemas de entrada. Sem entrada PCM, o ícone permanece no estado
+  inativo — nunca simula uma voz que o microfone não captou.
+- **Diagnóstico de transcrição:** `--recognition-test` acrescenta
+  `backend`, `peak_percent`, `level_samples` e `diagnosis` ao JSON.
+  **Pico acima de zero não prova que o Vosk entendeu palavras.** Uma
+  gravação `--microphone-test` com sinal e o `--recognition-test`
+  sem sinal exigem verificação da entrada padrão ou do backend de áudio
+  usado pela aplicação.
+- **Imagens e pastas:** o diálogo nativo abre preferencialmente
+  `~/Imagens`, `~/Pictures` ou `~/Downloads` (se existirem) e exibe
+  formatos em filtros separados: PNG, JPEG/JPG, WEBP, BMP, GIF, TIFF,
+  AVIF (se o Pillow suportar), além de **Todos os arquivos**. Ao mostrar
+  apenas pastas, navegue até a pasta onde as imagens realmente estão,
+  escolha o filtro **Todos os arquivos** quando necessário, ou selecione
+  um caminho de imagem pelo campo `Nome do arquivo`. Os formatos podem
+  não aparecer quando a pasta atual não contém arquivos correspondentes.
+
+**Testes após atualizar no Ubuntu:**
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+python3 scripts/install_linux.py
+~/.local/bin/nexus-core --microphone-test
+~/.local/bin/nexus-core --recognition-test
+NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --recognition-test
+~/.local/bin/nexus-core --desktop
+```
+
+O último comando com `NEXUS_AUDIO_INPUT=alsa` é um teste **alternativo**.
+Se ele receber a voz e o PipeWire não, é possível iniciar também o desktop
+com `NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --desktop`, sem alterar
+a configuração permanente do computador. Se ambos reportarem silêncio,
+revise em **Configurações do Ubuntu → Som → Entrada**, o dispositivo
+padrão, permissões e mudo físico. A câmera também depende do estado real
+do obturador/tecla de privacidade e dos drivers do notebook.
+
+**Permissões dos diretórios:** o aplicativo possui ferramentas mediadas
+`list_directory` e `read_file`, mas as regras `PathSecurity` limitam
+acessos à pasta pessoal e bloqueiam áreas sensíveis e links simbólicos.
+Escolher arquivos pela janela **Imagem** não significa dar permissão de
+escrita ou liberdade irrestrita sobre todas as pastas. O seletor gráfico
+pode navegar até outros diretórios, mas a análise recusa imagens fora da
+área autorizada ou inválidas. A leitura, alteração e execução de ações
+continuam sujeitas aos contratos e ao `SecurityGate` aplicável.
+
+Esses testes automatizados usam dispositivos simulados no CI/Xvfb. Nenhum
+resultado virtual garante que o microfone, a câmera ou o portal do Wayland
+estejam homologados **no hardware físico do usuário**.
+
 ### Ícone do microfone animado por atividade de voz
 
 A janela do NEXUS CORE inclui um **ícone de microfone da identidade vinho
