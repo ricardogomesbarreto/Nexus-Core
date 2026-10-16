@@ -1166,11 +1166,13 @@ sugestões pertinentes, sujeitas às mesmas regras de segurança.
 Na janela do NEXUS CORE, a linha discreta **Visão local sob autorização**
 oferece três botões: **Imagem**, **Tela** e **Câmera**. Cada acionamento:
 
-1. É iniciado por um clique explícito. Em Imagem, escolhe-se um arquivo
-   PNG/JPEG/WEBP permitido no HOME; em Câmera, um índice 0–9; em Tela,
-   a captura será do quadro da tela ativa.
-2. Solicita ao usuário uma **pergunta visual**, com limite de 2.000
-   caracteres.
+1. É iniciado por um clique explícito. Em **Imagem**, escolhe-se um raster
+   aceito no HOME (PNG/JPEG/WEBP/GIF/BMP/TIFF/AVIF, conforme decodificador).
+   Em **Câmera**, o aplicativo filtra os nós V4L2, escolhe automaticamente
+   a única câmera de captura disponível ou pede escolha se houver várias;
+   em **Tela**, solicita uma janela/monitor no portal Wayland quando possível.
+2. Solicita uma **pergunta visual** de até 2.000 caracteres para imagem/tela;
+   a câmera usa uma pergunta descritiva padrão sem diálogo adicional.
 3. Exibe confirmação **para aquela única captura/leitura e análise no
    Ollama local**. Cancelar qualquer diálogo impede a captação.
 4. Pausa temporariamente a escuta do microfone, executa a captura e
