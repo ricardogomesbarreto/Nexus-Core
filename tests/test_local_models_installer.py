@@ -127,3 +127,56 @@ def test_vendor_ollama_archive_installs_without_root(tmp_path, monkeypatch):
     )
     assert binary.read_bytes() == b"local ollama"
     assert binary.stat().st_mode & 0o111
+
+
+def test_neural_voice_model_downloads_fixed_pair_atomically(tmp_path):
+    destination = tmp_path / "piper" / (local_models.PIPER_VOICE + ".onnx")
+    calls = []
+
+    def open_voice(url, *, timeout):
+        calls.append(url)
+        body = (b'{"language":{"code":"pt_BR"}}' if url.endswith(".json")
+                else b"x" * 1_100_000)
+        return Source(body, url)
+
+    local_models.install_piper_voice(destination, opener=open_voice)
+    assert destination.stat().st_size == 1_100_000
+    assert destination.with_suffix(".onnx.json").is_file()
+    local_models.install_piper_voice(destination, opener=lambda *a, **k: pytest.fail())
+    assert calls == [local_models.PIPER_VOICE_URL, local_models.PIPER_VOICE_URL + ".json"]
+
+
+def test_neural_voice_rejects_wrong_language_without_installing(tmp_path):
+    destination = tmp_path / "piper" / (local_models.PIPER_VOICE + ".onnx")
+
+    def open_voice(url, *, timeout):
+        body = (b'{"language":{"code":"en_US"}}' if url.endswith(".json")
+                else b"x" * 1_100_000)
+        return Source(body, url)
+
+    with pytest.raises(ValueError, match="inválida"):
+        local_models.install_piper_voice(destination, opener=open_voice)
+    assert not destination.exists()
+
+
+def test_female_voice_package_is_installed_only_after_confirmation(monkeypatch):
+    from nexus.voice.local import LocalSpeaker
+    available = {"value": False}
+    monkeypatch.setattr(LocalSpeaker, "female_voice_ready",
+                        staticmethod(lambda: available["value"]))
+    monkeypatch.setattr(install_linux, "installed", lambda name: True)
+    calls = []
+    monkeypatch.setattr(install_linux, "confirm", lambda question: False)
+    monkeypatch.setattr(install_linux, "_run", lambda *a, **k: calls.append(a))
+    assert install_linux.prepare_female_voice() is False
+    assert calls == []
+    monkeypatch.setattr(install_linux, "confirm", lambda question: True)
+
+    def install(args, **kwargs):
+        calls.append(args)
+        available["value"] = True
+
+    monkeypatch.setattr(install_linux, "_run", install)
+    assert install_linux.prepare_female_voice() is True
+    assert calls == [["sudo", "apt-get", "install", "-y", "rhvoice",
+                      "rhvoice-brazilian-portuguese"]]

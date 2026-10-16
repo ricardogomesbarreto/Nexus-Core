@@ -1,6 +1,7 @@
 """Install locally required model assets during the opt-in Ubuntu setup."""
 
 import os
+import json
 from pathlib import Path
 import platform
 import shutil
@@ -22,6 +23,52 @@ OLLAMA_ARCHIVE = {
 }
 MAX_OLLAMA_ARCHIVE_BYTES = 3 * 1024 * 1024 * 1024
 MAX_OLLAMA_UNPACKED_BYTES = 8 * 1024 * 1024 * 1024
+PIPER_VOICE = "pt_BR-faber-medium"
+PIPER_VOICE_URL = (
+    "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/"
+    "pt/pt_BR/faber/medium/" + PIPER_VOICE + ".onnx"
+)
+MAX_PIPER_BYTES = 100 * 1024 * 1024
+
+
+def install_piper_voice(destination: Path, *, opener=urlopen) -> None:
+    """Fetch the fixed free pt-BR voice and config, then commit both together."""
+    destination = Path(destination)
+    config_path = destination.with_suffix(".onnx.json")
+    if destination.is_file() and config_path.is_file():
+        return
+    if destination.exists() or config_path.exists() or destination.is_symlink():
+        raise ValueError("Voz neural parcial: remova somente os arquivos incompletos.")
+    parent = destination.parent
+    parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if parent.is_symlink() or parent.stat().st_uid != os.getuid():
+        raise ValueError("Pasta da voz neural insegura.")
+    parent.chmod(0o700)
+    stage = Path(tempfile.mkdtemp(prefix=".piper-", dir=parent))
+    try:
+        for suffix, maximum in (("", MAX_PIPER_BYTES), (".json", 65536)):
+            with opener(PIPER_VOICE_URL + suffix, timeout=60) as response:
+                if urlsplit(response.geturl()).scheme != "https":
+                    raise ValueError("Redirecionamento inseguro da voz neural.")
+                with (stage / (PIPER_VOICE + ".onnx" + suffix)).open("wb") as output:
+                    size = 0
+                    for block in iter(lambda: response.read(1024 * 1024), b""):
+                        size += len(block)
+                        if size > maximum:
+                            raise ValueError("Modelo de voz maior que o limite.")
+                        output.write(block)
+        model_file = stage / destination.name
+        configuration = stage / config_path.name
+        if model_file.stat().st_size < 1024 * 1024:
+            raise ValueError("Modelo neural incompleto.")
+        payload = json.loads(configuration.read_text(encoding="utf-8"))
+        if (type(payload) is not dict or type(payload.get("language")) is not dict
+                or payload["language"].get("code") != "pt_BR"):
+            raise ValueError("Configuração da voz neural inválida.")
+        model_file.replace(destination)
+        configuration.replace(config_path)
+    finally:
+        shutil.rmtree(stage, ignore_errors=True)
 
 
 def install_portuguese_voice_model(destination: Path, *, opener=urlopen) -> None:

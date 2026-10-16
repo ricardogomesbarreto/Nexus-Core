@@ -1,9 +1,14 @@
-"""Áudio local: eSpeak NG para saída e Vosk/ALSA para conversa contínua."""
+"""Áudio local: saída eSpeak/Piper e reconhecimento Vosk via PipeWire ou ALSA."""
 
+from array import array
 import io
 import json
+import os
 import shutil
 import subprocess
+import sys
+import tempfile
+from time import monotonic
 import wave
 from pathlib import Path
 from threading import Lock
@@ -41,10 +46,84 @@ class _StoppableProcess:
 
 
 class LocalSpeaker(_StoppableProcess):
-    """Síntese limitada a variantes explícitas em português brasileiro."""
+    """Vozes locais PT-BR; Piper/RHVoice quando presentes, eSpeak como reserva."""
 
     VOICES = {"Feminina": "pt-br+f3", "Masculina": "pt-br+m3"}
     MAX_SPEECH = 2400
+    NEURAL_MODEL = "pt_BR-faber-medium"
+
+    @classmethod
+    def neural_model_path(cls) -> Path:
+        return settings.data_dir / "voice" / "piper" / (cls.NEURAL_MODEL + ".onnx")
+
+    @classmethod
+    def neural_voice_ready(cls) -> bool:
+        model = cls.neural_model_path()
+        return bool(model.is_file() and model.with_suffix(".onnx.json").is_file()
+                    and (Path(sys.executable).with_name("piper").is_file()
+                         or shutil.which("piper")))
+
+    @staticmethod
+    def female_voice_ready() -> bool:
+        return bool(shutil.which("RHVoice-test") and
+                    Path("/usr/share/RHVoice/voices/Leticia-F123").is_dir())
+
+    def _speak_natural(
+        self, text: str, cancelled: Callable[[], bool] | None, *, voice: str,
+    ) -> None:
+        managed_binary = Path(sys.executable).with_name("piper")
+        if voice == "Masculina":
+            binary = (str(managed_binary) if managed_binary.is_file()
+                      else shutil.which("piper"))
+            model = self.neural_model_path()
+            if binary is None or not model.is_file() or not model.with_suffix(".onnx.json").is_file():
+                raise VoiceError("Voz neural Piper indisponível. Reinstale o assistente.")
+        else:
+            binary = shutil.which("RHVoice-test")
+            if binary is None or not self.female_voice_ready():
+                raise VoiceError("Voz feminina RHVoice indisponível.")
+        player = shutil.which("pw-play") or shutil.which("aplay")
+        if player is None:
+            raise VoiceError("Instale PipeWire ou alsa-utils para reproduzir áudio.")
+        with tempfile.TemporaryDirectory(prefix="nexus-speech-") as temp:
+            wav = Path(temp) / "reply.wav"
+            synth = ([binary, "--model", str(model), "--output_file", str(wav)]
+                     if voice == "Masculina" else
+                     [binary, "-p", "Leticia-F123", "-o", str(wav)])
+            for command, payload in (
+                (synth, text[:self.MAX_SPEECH]),
+                ([player, str(wav)] if Path(player).name == "pw-play"
+                 else [player, "-q", str(wav)], None),
+            ):
+                if cancelled is not None and cancelled():
+                    return
+                if payload is None and (not wav.is_file() or wav.stat().st_size < 44):
+                    raise VoiceError("A voz neural não produziu áudio válido.")
+                try:
+                    process = subprocess.Popen(
+                        command, stdin=subprocess.PIPE if payload is not None else subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        text=payload is not None, encoding="utf-8" if payload is not None else None,
+                    )
+                except OSError as exc:
+                    raise VoiceError("Não foi possível iniciar a síntese ou reprodução local.") from exc
+                self._set_process(process)
+                try:
+                    if cancelled is not None and cancelled():
+                        self.stop()
+                    try:
+                        process.communicate(input=payload if process.poll() is None else None,
+                                            timeout=60)
+                    except subprocess.TimeoutExpired as exc:
+                        process.kill()
+                        process.communicate()
+                        raise VoiceError("A voz neural excedeu o tempo limite.") from exc
+                    if cancelled is not None and cancelled():
+                        return
+                    if process.returncode != 0:
+                        raise VoiceError("A síntese ou reprodução neural falhou.")
+                finally:
+                    self._clear_process(process)
 
     def speak(
         self, text: str, voice: str = "Feminina",
@@ -55,6 +134,12 @@ class LocalSpeaker(_StoppableProcess):
         if not isinstance(text, str) or not text.strip():
             raise VoiceError("Não há texto para falar.")
         if cancelled is not None and cancelled():
+            return
+        if voice == "Masculina" and self.neural_voice_ready():
+            self._speak_natural(text, cancelled, voice=voice)
+            return
+        if voice == "Feminina" and self.female_voice_ready():
+            self._speak_natural(text, cancelled, voice=voice)
             return
         binary = shutil.which("espeak-ng")
         if binary is None:
@@ -118,20 +203,48 @@ class LocalRecognizer(_StoppableProcess):
             raise VoiceError("Instale o extra Python de voz: pip install -e '.[voice]'.") from exc
         if self._model is None:
             try:
+                from vosk import SetLogLevel
+                SetLogLevel(-1)
+            except ImportError:
+                pass  # Mocked or older Vosk; recognition still works.
+            try:
                 self._model = Model(str(self.model_path))
             except Exception as exc:
                 raise VoiceError("Não foi possível abrir o modelo Vosk local.") from exc
         return self._model
 
-    def recognize(self) -> str:
-        model = self._load_model()
+    @classmethod
+    def capture_command(cls, *, duration: int = 0, wav: bool = False) -> list[str]:
+        """Use the active desktop's PipeWire default input before ALSA's default."""
+        runtime = os.environ.get("XDG_RUNTIME_DIR", "")
+        pipewire = shutil.which("pw-record")
+        if (pipewire and os.environ.get("NEXUS_AUDIO_INPUT") != "alsa"
+                and runtime and Path(runtime, "pipewire-0").is_socket()
+                and not wav):
+            return [pipewire, "--rate", str(cls.SAMPLE_RATE), "--channels", "1",
+                    "--format", "s16", "-"]
         binary = shutil.which("arecord")
         if binary is None:
-            raise VoiceError("Instale alsa-utils para usar o microfone.")
+            raise VoiceError("Instale alsa-utils ou PipeWire para usar o microfone.")
+        return [binary, "-q", "-d", str(duration or cls.STREAM_LIMIT),
+                "-f", "S16_LE", "-r", str(cls.SAMPLE_RATE), "-c", "1",
+                "-t", "wav" if wav else "raw"]
+
+    @staticmethod
+    def peak_level(frames: bytes) -> int:
+        """Peak percentage, used only for local feedback, never retained."""
+        samples = array("h")
+        samples.frombytes(frames[:len(frames) // 2 * 2])
+        if sys.byteorder != "little":
+            samples.byteswap()
+        return min(100, int(100 * max((abs(value) for value in samples), default=0) / 32768))
+
+    def recognize(self) -> str:
+        model = self._load_model()
+        command = self.capture_command(duration=self.DURATION, wav=True)
         try:
             process = subprocess.Popen(
-                [binary, "-q", "-d", str(self.DURATION), "-f", "S16_LE",
-                 "-r", str(self.SAMPLE_RATE), "-c", "1", "-t", "wav"],
+                command,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             )
         except OSError as exc:
@@ -172,7 +285,10 @@ class LocalRecognizer(_StoppableProcess):
             raise VoiceError("Não reconheci fala. Tente novamente.")
         return text[:4000]
 
-    def recognize_continuous(self, cancelled: Callable[[], bool] | None = None) -> str:
+    def recognize_continuous(
+        self, cancelled: Callable[[], bool] | None = None,
+        on_audio_level: Callable[[int], None] | None = None,
+    ) -> str:
         """Retorna uma fala completa, ou vazio após silêncio/cancelamento.
 
         O processo de captura tem limite de tempo; a janela inicia outra captura
@@ -180,17 +296,14 @@ class LocalRecognizer(_StoppableProcess):
         """
         cancelled = cancelled or (lambda: False)
         model = self._load_model()
-        binary = shutil.which("arecord")
-        if binary is None:
-            raise VoiceError("Instale alsa-utils para usar o microfone.")
+        command = self.capture_command()
         if cancelled():
             return ""
         try:
             from vosk import KaldiRecognizer
             decoder = KaldiRecognizer(model, self.SAMPLE_RATE)
             process = subprocess.Popen(
-                [binary, "-q", "-d", str(self.STREAM_LIMIT), "-f", "S16_LE",
-                 "-r", str(self.SAMPLE_RATE), "-c", "1", "-t", "raw"],
+                command,
                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             )
         except OSError as exc:
@@ -199,17 +312,22 @@ class LocalRecognizer(_StoppableProcess):
         try:
             if cancelled():
                 return ""
-            while not cancelled():
+            deadline = monotonic() + self.STREAM_LIMIT
+            next_level = 0.0
+            while not cancelled() and monotonic() < deadline:
                 frames = process.stdout.read(8000)
                 if not frames:
                     break
+                if on_audio_level is not None and monotonic() >= next_level:
+                    on_audio_level(self.peak_level(frames))
+                    next_level = monotonic() + 0.8
                 if decoder.AcceptWaveform(frames):
                     text = json.loads(decoder.Result()).get("text", "")
                     if isinstance(text, str) and text.strip():
                         return text.strip()[:4000]
             if cancelled():
                 return ""
-            if process.wait(timeout=3) != 0:
+            if process.poll() is not None and process.returncode != 0:
                 raise VoiceError("Não foi possível capturar áudio do microfone.")
             text = json.loads(decoder.FinalResult()).get("text", "")
             return text.strip()[:4000] if isinstance(text, str) else ""

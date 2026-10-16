@@ -60,3 +60,24 @@ def test_diagnostics_reports_missing_dependencies_without_recording(monkeypatch,
     assert not checks["recognition_ready_to_try"]
     assert not checks["speech_ready_to_try"]
     assert not any(checks["checks"].values())
+
+
+def test_explicit_microphone_test_reports_signal_without_audio(monkeypatch):
+    from array import array
+    from nexus.voice.local import LocalRecognizer
+    monkeypatch.setattr(LocalRecognizer, "capture_command",
+                        classmethod(lambda cls, **kwargs: ["/usr/bin/arecord", "-d", "3"]))
+
+    class Process:
+        returncode = 0
+        def communicate(self, timeout=None):
+            return array("h", [0, 8000, 0]).tobytes(), b""
+        def poll(self):
+            return 0
+
+    monkeypatch.setattr(diagnostics.subprocess, "Popen", lambda *a, **k: Process())
+    result = diagnostics.test_microphone()
+    assert result["microphone_tested"] is True
+    assert result["backend"] == "alsa"
+    assert result["signal_detected"] is True
+    assert "audio" not in result
