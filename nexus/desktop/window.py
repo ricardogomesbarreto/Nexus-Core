@@ -508,7 +508,13 @@ class DesktopWindow:
         if normalized in {"analisar janela", "analise a janela", "analisar pagina",
                           "analise a pagina", "listar janelas", "mostre as janelas"}:
             return "vision_window"
-        if re.match(r"^(?:analise|analisar|mostre) (?:a |uma )?(?:janela|pagina|tela) (?:do |da |de )?.+", normalized):
+        # Named capture requests require an explicit target. Do not turn
+        # compound speech (e.g. "analisar tela e executar comando") into a
+        # capture request; actions must remain under the normal SecurityGate.
+        if (" e " not in normalized and re.fullmatch(
+            r"(?:analise|analisar|mostre) (?:a |uma )?(?:janela|pagina|tela) "
+            r"(?:do|da|de) [a-z0-9][a-z0-9 ._-]{0,79}", normalized
+        )):
             return "vision_window"
         if normalized in {"analisar camera", "analise a camera", "abra a camera",
                           "abrir camera", "mostre a camera", "ligue a camera"}:
