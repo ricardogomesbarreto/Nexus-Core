@@ -95,6 +95,11 @@ class ChatSession:
                                    ensure_ascii=False),
                         is_cancelled=cancelled, allow_tools=False,
                     )
+                    if cancelled():
+                        return ChatReply(
+                            "Solicitação cancelada.",
+                            AgentOutcome(False, error_code="CANCELLED"),
+                        )
                     if retry.success and retry.content and (
                             retry.content.strip().casefold()
                             != old_reply.strip().casefold()):
@@ -107,7 +112,8 @@ class ChatSession:
                             error_code="STALE_REPLY",
                         )
                         reply = outcome.error
-            if not self._closed.is_set() and not self._cancelled.is_set():
+            if (outcome.success and not self._closed.is_set()
+                    and not self._cancelled.is_set()):
                 self.history.append((
                     message[:self.MAX_CONTEXT_ITEM],
                     reply[:self.MAX_CONTEXT_ITEM],
