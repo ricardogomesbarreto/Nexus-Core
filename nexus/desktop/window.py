@@ -15,6 +15,10 @@ from nexus.agent import AgentOutcome
 from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
+from nexus.desktop.preferences import (
+    DesktopPreferences, DesktopPreferenceStore, PreferenceStoreError,
+)
+from nexus.desktop.chat_archive import ChatArchive, ChatArchiveError
 from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
@@ -56,6 +60,8 @@ class DesktopWindow:
         self, root, app, confirmation: DesktopConfirmation,
         speaker=None, recognizer=None, vision=None,
         startup_voice: bool | None = None,
+        preference_store: DesktopPreferenceStore | None = None,
+        chat_archive: ChatArchive | None = None,
     ):
         import tkinter as tk
         from tkinter import messagebox, ttk
@@ -63,7 +69,39 @@ class DesktopWindow:
         self.root = root
         self.app = app
         self.confirmation = confirmation
-        self.session = ChatSession(app.agent)
+        # Production uses XDG config/state on this Linux account; injected
+        # test speakers retain ephemeral behavior unless a store is supplied.
+        self._preference_store = (
+            preference_store if preference_store is not None
+            else (DesktopPreferenceStore() if speaker is None else None)
+        )
+        self._preference_load_warning = None
+        self._history_load_warning = None
+        self._saved_preferences = None
+        if self._preference_store is not None:
+            try:
+                self._saved_preferences = self._preference_store.load()
+            except PreferenceStoreError:
+                self._preference_load_warning = (
+                    "As configurações locais não puderam ser restauradas."
+                )
+        self._chat_archive_store = (
+            chat_archive if chat_archive is not None else (
+                ChatArchive() if self._preference_store is not None else None
+            )
+        )
+        chosen_archive = (
+            self._chat_archive_store
+            if self._saved_preferences is not None
+            and self._saved_preferences.remember_history else None
+        )
+        try:
+            self.session = ChatSession(app.agent, archive=chosen_archive)
+        except ChatArchiveError:
+            self._history_load_warning = (
+                "O histórico local está inválido; as conversas anteriores não foram apagadas."
+            )
+            self.session = ChatSession(app.agent)
         self.tk = tk
         self.messagebox = messagebox
         self.speaker = speaker if speaker is not None else LocalSpeaker()
@@ -88,7 +126,10 @@ class DesktopWindow:
         self._operation_started = 0.0
         self._cancel_requested = False
         self._listening = False
-        self._voice_active = True
+        self._voice_active = (
+            self._saved_preferences.listening_enabled
+            if self._saved_preferences is not None else True
+        )
         self._listen_generation = 0
         self._listen_pending_generations: set[int] = set()
         self._audio_peaks = 0
@@ -103,7 +144,10 @@ class DesktopWindow:
         self._workers: list[Thread] = []
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
-        root.geometry("980x720")
+        root.geometry(
+            self._saved_preferences.geometry
+            if self._saved_preferences is not None else "980x720"
+        )
         root.minsize(770, 570)
         root.configure(bg="#f5f1f3")
         welcome_text, readiness_caption = desktop_startup_message(app)
