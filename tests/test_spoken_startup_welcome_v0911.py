@@ -63,7 +63,8 @@ def test_spoken_welcome_uses_selected_voice_once_before_starting_microphone():
     app = App()
     try:
         window = DesktopWindow(root, app, confirmation,
-                               speaker=Speaker(), recognizer=Recognizer())
+                               speaker=Speaker(), recognizer=Recognizer(),
+                               startup_voice=True)
         window.voice_choice.set("Feminina")
         limit = time.monotonic() + 5
         while not any(isinstance(c, tuple) and c[0] == "speak" for c in calls) and time.monotonic() < limit:
@@ -131,7 +132,8 @@ def test_muted_startup_never_speaks_but_can_listen():
     app = App()
     try:
         window = DesktopWindow(root, app, confirmation,
-                               speaker=Speaker(), recognizer=Recognizer())
+                               speaker=Speaker(), recognizer=Recognizer(),
+                               startup_voice=True)
         window.speech_enabled.set(False)
         end = time.monotonic() + 5
         while "listen" not in calls and time.monotonic() < end:
@@ -190,7 +192,8 @@ def test_spoken_welcome_tts_error_is_reported_and_listening_resumes():
     app = App()
     try:
         window = DesktopWindow(root, app, confirmation,
-                               speaker=Speaker(), recognizer=Recognizer())
+                               speaker=Speaker(), recognizer=Recognizer(),
+                               startup_voice=True)
         end = time.monotonic() + 5
         while "listen" not in calls and time.monotonic() < end:
             root.update()
