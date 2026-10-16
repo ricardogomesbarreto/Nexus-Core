@@ -43,6 +43,46 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Ícone do microfone animado por atividade de voz
+
+A janela do NEXUS CORE inclui um **ícone de microfone da identidade vinho
+(`#722F37`)**, preparado a partir da arte original em quatro estados e
+exibido no rodapé, ao lado dos estados **Escuta / Voz / Visão**. A arte PNG
+é transparente e acompanha a instalação pelo pacote Python:
+
+<p align="center">
+  <img src="nexus/assets/ui/microphone_speaking.png"
+       alt="Microfone NEXUS CORE: repouso e três intensidades de atividade de áudio"
+       width="320">
+</p>
+
+O indicador é **dinâmico pelo áudio realmente recebido**, e não uma
+simulação sempre ativa. Os eventos `input_level` do reconhecedor Vosk,
+enviados do worker de captura à fila da interface Tk, são convertidos
+na própria thread gráfica para os seguintes quadros:
+
+| Pico de entrada PCM | Quadro visual |
+| --- | --- |
+| 0–3% ou escuta inativa | Repouso, sem ondas |
+| 4–19% | Ondas leves |
+| 20–49% | Ondas médias |
+| 50–100% | Ondas fortes/pulso máximo |
+
+O ícone retorna ao repouso em silêncio, pausa, encerramento, resposta
+do assistente ou quando deixa de receber eventos de nível por 1,4 s.
+A animação não abre microfone, não armazena som, não altera configurações
+de captura e **não indica transcrição bem-sucedida**: o som ambiente
+também pode movimentar as ondas. A fala continua sendo transcrita apenas
+pelo Vosk. O arquivo é
+`nexus/assets/ui/microphone_speaking.png` (sprite PNG de 320 × 80 px);
+o módulo `nexus/desktop/microphone_indicator.py` recorta os quatro
+quadros nativamente com Tkinter, sem depender do Pillow. A janela mostra
+um símbolo estático de reserva se a imagem estiver ausente ou corrompida.
+
+A versão de código permanece **v0.9.11**, sem nova tag/release estável.
+A animação tem testes unitários e de GUI na CI Linux/Xvfb, mas a intensidade
+real no microfone físico do Ubuntu ainda requer homologação.
+
 ### Compatibilidade de imagens, câmera V4L2 e reconhecimento no Ubuntu
 
 Correções adicionais da linha de código **v0.9.11**, sem criar release estável:
