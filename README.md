@@ -255,11 +255,12 @@ se aplica somente à apresentação, sem alterar a autorização das ações.
 - **Acessibilidade e atalhos:** comandos e atalhos anteriores permanecem,
   inclusive `Ctrl+Enter` para enviar e `Ctrl+Shift+M` para pausar/retomar
   escuta. As cores de botões usam `ttk` com tema `clam` quando disponível.
-- **Boas-vindas faladas:** ao abrir a janela, a conversa exibe uma saudação
-  detalhada; o assistente também fala **uma versão curta em português
-  brasileiro, automaticamente**, utilizando a voz masculina/feminina
-  selecionada no menu e a síntese local Piper/RHVoice/eSpeak NG já
-  existente. Não consulta Ollama nem executa ações. A fala só é iniciada
+- **Boas-vindas faladas:** ao abrir a janela, o assistente diz
+  **somente** "Bem-vindo ao Nexus Core, <nome do usuário>.", utilizando
+  o primeiro nome do perfil local Linux (ou o login como alternativa).
+  A voz usa a seleção masculina/feminina e a síntese local
+  Piper/RHVoice/eSpeak NG. Não utiliza internet, não consulta Ollama
+  nem executa ações. O texto informativo da janela permanece separado. A fala só é iniciada
   quando **Ler respostas em voz alta** está habilitado.
   A escuta do microfone **começa somente após a fala terminar**,
   evitando reconhecer a própria voz do assistente. Se TTS estiver
