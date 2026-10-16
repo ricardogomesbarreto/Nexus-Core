@@ -55,6 +55,7 @@ class LocalVision:
     VISION_MODEL_PREFIXES = ("gemma3:", "llava:", "llama3.2-vision:",
                              "qwen2.5vl:", "qwen3-vl:", "moondream:", "minicpm-v:")
     MODEL_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,127}$")
+    MAX_CAMERA_INDEX = 255
 
     def __init__(self, settings: Settings, path_security: PathSecurity | None = None,
                  transport=None):
@@ -235,9 +236,11 @@ class LocalVision:
         devices = []
         for path in glob.glob("/dev/video[0-9]*"):
             name = Path(path).name
-            if not re.fullmatch(r"video[0-9]", name):
+            if not re.fullmatch(r"video(?:0|[1-9][0-9]{0,2})", name):
                 continue
             index = int(name[5:])
+            if index > LocalVision.MAX_CAMERA_INDEX:
+                continue
             if not LocalVision._camera_supports_capture(Path(path)):
                 continue
             try:
@@ -263,8 +266,8 @@ class LocalVision:
             return mean < 10 and high < 28
 
     def camera(self, index: int) -> bytes:
-        if type(index) is not int or not 0 <= index <= 9:
-            raise VisionInputError("Câmera deve ter índice de 0 a 9.")
+        if type(index) is not int or not 0 <= index <= self.MAX_CAMERA_INDEX:
+            raise VisionInputError("Câmera deve ter índice de 0 a 255.")
         binary = shutil.which("ffmpeg")
         if not binary:
             raise VisionError("Captura de câmera exige FFmpeg.")
