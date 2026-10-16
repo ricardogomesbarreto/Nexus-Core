@@ -226,8 +226,13 @@ def test_pipewire_is_selected_on_active_desktop_and_can_be_overridden(monkeypatc
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(voice_module.shutil, "which",
                         lambda name: "/usr/bin/" + name)
-    assert LocalRecognizer.capture_command()[0] == "/usr/bin/pw-record"
-    assert LocalRecognizer.capture_command()[-1] == "-"
+    command = LocalRecognizer.capture_command()
+    assert command[0] == "/usr/bin/pw-record"
+    assert "--raw" in command  # Never decode AU container headers as speech samples.
+    assert command[command.index("--rate") + 1] == "16000"
+    assert command[command.index("--channels") + 1] == "1"
+    assert command[command.index("--format") + 1] == "s16"
+    assert command[-1] == "-"
     monkeypatch.setenv("NEXUS_AUDIO_INPUT", "alsa")
     assert LocalRecognizer.capture_command()[0] == "/usr/bin/arecord"
 
