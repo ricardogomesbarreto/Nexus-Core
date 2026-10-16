@@ -146,9 +146,13 @@ def test_recover_launcher_is_self_contained_and_works_without_checkout(tmp_path,
         [sys.executable, str(script), "--status"],
         cwd=tmp_path, env={"HOME": str(tmp_path), "PATH": os.environ.get("PATH", "")},
         stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=10,
-        check=True,
     )
-    assert json.loads(completed.stdout)["current"] == current.name
+    if os.geteuid() == 0:
+        assert completed.returncode == 2
+        assert "root" in completed.stderr
+    else:
+        assert completed.returncode == 0, completed.stderr
+        assert json.loads(completed.stdout)["current"] == current.name
     assert "Traceback" not in completed.stderr
 
 

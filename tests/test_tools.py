@@ -20,6 +20,14 @@ from nexus.tools import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_user_home(tmp_path, monkeypatch):
+    """Tool tests need a writable user home even when pytest runs as root."""
+    (tmp_path / "tests").mkdir()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+
+
 def create_executor(log_path=None):
     registry = ToolRegistry()
 

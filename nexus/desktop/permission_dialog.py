@@ -5,6 +5,7 @@ from queue import Empty, Queue
 from threading import Event
 
 from nexus.voice import VoiceError
+from nexus.voice.local import LocalSpeaker
 
 
 def permission_answer(text: str, *, spoken: bool = False) -> bool | None:
@@ -31,7 +32,8 @@ class PermissionDialog:
     """GUI-thread modal. Its worker transcribes only; the model cannot consent."""
 
     def __init__(self, root, details: str, *, recognizer, listen: bool,
-                 ready_to_listen, start_worker, cancelled):
+                 ready_to_listen, start_worker, cancelled, speaker=None,
+                 voice: str = "Feminina", spoken_question: str = ""):
         from tkinter import ttk
         import tkinter as tk
 
@@ -41,9 +43,13 @@ class PermissionDialog:
         self.ready_to_listen = ready_to_listen
         self.start_worker = start_worker
         self.cancelled = cancelled
+        self.speaker = speaker
+        self.voice = voice
+        self.spoken_question = spoken_question
         self.result = False
         self._closed = Event()
         self._voice_worker = False
+        self._announcement_pending = bool(speaker and spoken_question)
         self._voice_results: Queue[tuple[str, str]] = Queue()
         self._tick_id = None
         self._timeout_id = None
@@ -101,6 +107,21 @@ class PermissionDialog:
         except Exception:
             self._voice_results.put(("error", "Microfone indisponível nesta autorização."))
 
+    def _announce(self):
+        try:
+            if type(self.speaker) is LocalSpeaker:
+                self.speaker.speak(
+                    self.spoken_question, self.voice,
+                    cancelled=lambda: self._closed.is_set() or self.cancelled(),
+                )
+            else:
+                self.speaker.speak(self.spoken_question, self.voice)
+        except Exception:
+            # A falha do áudio não bloqueia a decisão por texto ou pelos botões.
+            self._voice_results.put(("announcement_error", ""))
+        finally:
+            self._voice_results.put(("announcement_done", ""))
+
     def _tick(self):
         if self._closed.is_set():
             return
@@ -112,6 +133,12 @@ class PermissionDialog:
                 kind, value = self._voice_results.get_nowait()
             except Empty:
                 break
+            if kind == "announcement_error":
+                self.status.configure(text="Áudio indisponível. Use voz, texto ou botões para decidir.")
+                continue
+            if kind == "announcement_done":
+                self._announcement_pending = False
+                continue
             self._voice_worker = False
             if kind == "error":
                 self.listen = False
@@ -122,7 +149,7 @@ class PermissionDialog:
                     self._finish(answer)
                     return
                 self.status.configure(text="Frase de voz não reconhecida. Use a frase exata ou digite a decisão.")
-        if self.listen and not self._voice_worker and self.ready_to_listen():
+        if self.listen and not self._announcement_pending and not self._voice_worker and self.ready_to_listen():
             self._voice_worker = True
             self.start_worker(self._listen_once)
         self._tick_id = self.window.after(100, self._tick)
@@ -137,12 +164,16 @@ class PermissionDialog:
                 self.window.after_cancel(scheduled)
         if self._voice_worker:
             self.recognizer.stop()
+        if self._announcement_pending and self.speaker is not None:
+            self.speaker.stop()
         self.window.destroy()
 
     def ask(self) -> bool:
         self.window.wait_visibility()
         self.window.grab_set()
         self.entry.focus_set()
+        if self._announcement_pending:
+            self.start_worker(self._announce)
         self._tick_id = self.window.after(100, self._tick)
         # The bridge waits at most 300 seconds; expire the dialog earlier.
         self._timeout_id = self.window.after(290000, lambda: self._finish(False))

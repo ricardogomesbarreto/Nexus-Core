@@ -244,9 +244,14 @@ def test_standalone_recovery_status_command_remains_import_free(
         cwd=tmp_path,
         env={"HOME": str(tmp_path), "PATH": os.environ.get("PATH", "")},
         stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        timeout=10, check=True,
+        timeout=10,
     )
-    assert json.loads(result.stdout)["status"] == "clear"
+    if os.geteuid() == 0:
+        assert result.returncode == 2
+        assert "root" in result.stderr
+    else:
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)["status"] == "clear"
     data = script.read_text(encoding="utf-8")
     assert "_INSTALL_HOME = " in data
     assert "from nexus" not in data

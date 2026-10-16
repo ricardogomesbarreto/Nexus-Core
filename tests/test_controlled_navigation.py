@@ -231,6 +231,8 @@ def test_gui_confirmation_previews_exact_navigation(monkeypatch):
     window._closing = False
     window._cancel_requested = False
     window._start_worker = lambda target: None
+    window.speech_enabled = type("Choice", (), {"get": lambda self: False})()
+    window.voice_choice = type("Choice", (), {"get": lambda self: "Feminina"})()
 
     class FakeDialog:
         def __init__(self, root, details, **kwargs):

@@ -37,6 +37,7 @@ def test_valid_runtime_is_owned_and_direct_version_slot(tmp_path):
 def test_launcher_records_pinned_home_before_exec_and_uses_isolated_python(
     tmp_path, monkeypatch
 ):
+    monkeypatch.setattr(entry.os, "geteuid", lambda: 1000)
     home, _, python = installed(tmp_path)
     executed = []
     def fake_exec(path, args):
@@ -128,6 +129,7 @@ def test_missing_runtime_denies_exec(tmp_path):
 
 
 def test_unprovisioned_launcher_refuses_default(monkeypatch):
+    monkeypatch.setattr(entry.os, "geteuid", lambda: 1000)
     monkeypatch.setattr(entry, "_INSTALL_HOME", None)
     with pytest.raises(entry.LauncherError, match="provisionado"):
         entry.launch(execv=lambda *args: pytest.fail("Must not exec"))
@@ -184,6 +186,7 @@ def test_launcher_rejects_public_or_malformed_database_identity(tmp_path):
 
 
 def test_launch_keeps_user_supplied_password_untouched(tmp_path, monkeypatch):
+    monkeypatch.setattr(entry.os, "geteuid", lambda: 1000)
     home, _, _ = installed(tmp_path)
     secret = tmp_path / "db_credentials.json"
     secret.write_text(json.dumps({"database_password": "local-password"}))
@@ -217,12 +220,17 @@ def test_installed_launcher_has_no_checkout_dependencies_and_honors_pinned_home(
             "HOME": str(tmp_path), "PATH": os.environ.get("PATH", ""),
             "XDG_DATA_HOME": str(other),
         },
-        capture_output=True, text=True, timeout=10, check=True,
+        capture_output=True, text=True, timeout=10,
     )
-    data = result.stdout.splitlines()
-    assert data == [
-        str(home), "1", "-I", "-m", "nexus.updates.launcher", "--platform-check",
-    ]
+    if os.geteuid() == 0:
+        assert result.returncode == 2  # Production launcher must refuse root.
+        assert not result.stdout
+    else:
+        assert result.returncode == 0, result.stderr
+        data = result.stdout.splitlines()
+        assert data == [
+            str(home), "1", "-I", "-m", "nexus.updates.launcher", "--platform-check",
+        ]
     assert not other.exists()
 
 
