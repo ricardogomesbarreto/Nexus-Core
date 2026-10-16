@@ -177,6 +177,10 @@ class ChatSession:
         if not result.success:
             return f"{result.tool_name}: {result.error}"
         data = result.data
+        if result.tool_name == "create_directory" and isinstance(data, dict):
+            return f"Pasta criada: {data['path']}"
+        if result.tool_name == "launch_application" and isinstance(data, dict):
+            return f"Solicitei a abertura de {data['application']} no desktop."
         if result.tool_name == "system_info" and isinstance(data, dict):
             parts = [
                 f"Sistema operacional: {data.get('system', 'desconhecido')}",

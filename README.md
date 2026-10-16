@@ -36,12 +36,41 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 >
 > [Identidade Nexus Line](docs/ICONOGRAFIA.md) · marca oficial, iconografia Core e fundação visual desktop nativa
 
+As [diretrizes do projeto](docs/PROJECT_GUIDELINES.md) incluem o uso como
+ambiente local para estudo de segurança, CTF e hacking autorizado, com escopo
+definido, confirmação de ações e auditoria. Essa finalidade não habilita
+automaticamente ferramentas de rede ou execução irrestrita no host.
+
 As seções de versões abaixo preservam a evolução da implementação. Código
 integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções e auditoria do código atual
+
+### Ações locais autorizadas e resposta de voz (código em desenvolvimento)
+
+- **Criar pasta:** pedidos por texto ou voz podem propor `create_directory`
+  para criar uma pasta por vez dentro da área autorizada do usuário. Exige
+  confirmação individual, pasta principal existente e caminho sem links
+  simbólicos. Não modifica pastas protegidas ou arquivos já existentes.
+- **Abrir aplicativos:** `Abra o navegador`, `Abra o gerenciador de arquivos`
+  e `Abra o terminal` são comandos exatos que dispensam espera pelo Ollama,
+  mas ainda exigem confirmação. O iniciador seleciona somente aplicativos
+  conhecidos instalados nos caminhos de sistema; não recebe argumentos ou
+  comandos do modelo. Pode ser chamado no Wayland com sessão gráfica ativa.
+  O resultado confirma o envio da solicitação de abertura, não a interação
+  subsequente com o aplicativo.
+- **Escuta após silêncio:** ao parar a entrega de bytes pelo PipeWire depois
+  de uma fala, o reconhecedor verifica o tempo de pausa e finaliza o turno;
+  antes podia esperar o limite total da captura. Testes simulados cobrem o
+  caso. Latência real e qualidade da transcrição exigem teste físico.
+
+Essas mudanças são de desenvolvimento dentro da versão de código **0.9.11**;
+não representam uma nova tag ou release. Abrir arquivos no aplicativo padrão,
+controlar aplicativos no Wayland, inferência de vídeo contínuo em tempo real,
+conversa simultânea durante a resposta de voz e um conjunto completo de
+ferramentas de pentest **permanecem pendentes**.
 
 ### Prontidão e conversa mais clara na versão de código v0.9.11
 
@@ -114,13 +143,14 @@ sem dispositivo diferencia ausência de `/dev/video`, falta de permissão e
 nós sem captura V4L2. Uma pergunta visual demanda um modelo Ollama visual
 instalado; a prévia contínua sozinha não produz inferência em tempo real.
 
-**Estado das ações por voz:** a transcrição de Vosk pode encaminhar pedidos
-ao mesmo planejador e às mesmas permissões do chat. O código atual lista
-diretórios, lê arquivos autorizados e oferece navegação/digitação restrita
-em janelas X11. **Criar diretórios, abrir arquivos no aplicativo padrão e
-iniciar aplicativos ou navegadores ainda não possuem ferramentas próprias**;
-o sandbox de terminal não altera o sistema do usuário. Essas capacidades
-não estão homologadas no Wayland e não devem ser anunciadas como prontas.
+**Estado das ações por voz:** a transcrição de Vosk encaminha pedidos ao
+mesmo planejador e às mesmas permissões do chat. O código lista diretórios,
+lê arquivos autorizados, cria uma pasta por operação e solicita a abertura
+de um aplicativo de uma lista limitada, sempre mediante confirmação nas
+ações de alteração/abertura. Navegação e digitação seguem restritas a X11;
+abrir arquivos no aplicativo padrão e controlar janelas no Wayland ainda
+não possuem ferramenta homologada. O sandbox de terminal não altera o
+sistema do usuário.
 
 **Auditoria de compatibilidade de câmera (código v0.9.11):** a busca V4L2
 inclui agora dispositivos numerados de `/dev/video0` até `/dev/video255`.
@@ -5357,7 +5387,7 @@ restantes, sujeitos aos resultados do aceite físico:
 | Marco proposto | Critério principal |
 | --- | --- |
 | v0.9.11 | Implementado no código: login PostgreSQL antes de ativar o instalador; diagnóstico e orientação Ollama/Vosk sem alegar teste físico. |
-| v0.9.12 | Ampliar ações desktop autorizadas por operação, com contratos e testes de segurança. |
+| v0.9.12 | Concluir e homologar ações desktop autorizadas por operação; código inicial para criar pastas e abrir aplicativos já integrado, com contratos e testes de segurança. |
 | v0.9.13 | Encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria; hoje cada turno executa no máximo uma ferramenta. |
 | v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
 

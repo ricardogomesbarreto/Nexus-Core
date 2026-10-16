@@ -355,6 +355,18 @@ class LocalRecognizer(_StoppableProcess):
                         if not readable:
                             if process.poll() is not None:
                                 break
+                            # A quiet PipeWire stream can stop providing
+                            # readable bytes after speech. Check the pause
+                            # timer even when select() times out.
+                            now = monotonic()
+                            if speech_started and now - last_voice >= self.END_OF_SPEECH_SECONDS:
+                                text = json.loads(decoder.FinalResult()).get("text", "")
+                                return (text.strip() if isinstance(text, str) and text.strip()
+                                        else partial_text)[:4000]
+                            if partial_text and now - last_partial_change >= 2.5:
+                                text = json.loads(decoder.FinalResult()).get("text", "")
+                                return (text.strip() if isinstance(text, str) and text.strip()
+                                        else partial_text)[:4000]
                             continue
                         frames = os.read(fd, 4096)
                     except (OSError, ValueError) as exc:

@@ -18,6 +18,7 @@ from nexus.tools import (
     ListDirectoryTool,
     ReadFileTool,
     FileMetadataTool,
+    CreateDirectoryTool, LaunchApplicationTool,
     SystemInfoTool,
     TerminalSandboxTool,
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
@@ -51,7 +52,7 @@ class NexusApplication:
 
         for tool in (
             SystemInfoTool(), ListDirectoryTool(), ReadFileTool(),
-            FileMetadataTool(),
+            FileMetadataTool(), CreateDirectoryTool(), LaunchApplicationTool(),
             TerminalSandboxTool(),
             DesktopWindowInfoTool(), DesktopTypeTextTool(), DesktopNavigateTool(),
         ):

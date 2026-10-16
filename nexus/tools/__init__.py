@@ -11,7 +11,9 @@ from nexus.tools.filesystem import (
     ListDirectoryTool,
     ReadFileTool,
     FileMetadataTool,
+    CreateDirectoryTool,
 )
+from nexus.tools.desktop_apps import LaunchApplicationTool
 from nexus.tools.registry import ToolRegistry
 from nexus.tools.system import SystemInfoTool
 from nexus.tools.terminal import TerminalSandboxTool
@@ -34,6 +36,8 @@ __all__ = [
     "ListDirectoryTool",
     "ReadFileTool",
     "FileMetadataTool",
+    "CreateDirectoryTool",
+    "LaunchApplicationTool",
     "TerminalSandboxTool",
     "DesktopWindowInfoTool",
     "DesktopTypeTextTool",

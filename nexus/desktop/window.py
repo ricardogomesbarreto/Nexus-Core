@@ -1346,6 +1346,8 @@ class DesktopWindow:
         ]
         if isinstance(request.data, dict) and "command" in request.data:
             details.append(f"Comando: {self._display(request.data['command'])}")
+        if request.tool_name == "launch_application" and isinstance(request.data, dict):
+            details.append(f"Aplicativo: {self._display(request.data.get('application', ''))}")
         if request.tool_name == "desktop_type_text" and isinstance(request.data, dict):
             # Display the exact target and bounded text before user consent.
             details.append(

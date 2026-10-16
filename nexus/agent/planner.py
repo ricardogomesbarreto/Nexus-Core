@@ -2,6 +2,7 @@
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -74,6 +75,24 @@ def _conversation_only(prompt: str) -> bool:
                          r"sugira|sugestões|sugestoes)\b", current))
 
 
+def _simple_app_request(prompt: str) -> str | None:
+    """Handle only exact, explicit requests; authorization remains in ToolExecutor."""
+    try:
+        envelope = json.loads(prompt)
+        current = envelope.get("mensagem_atual") if isinstance(envelope, dict) else prompt
+    except (ValueError, TypeError):
+        current = prompt
+    if not isinstance(current, str):
+        return None
+    normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii")
+    normalized = " ".join(normalized.lower().strip().rstrip(".!?").split())
+    return {
+        "abra o navegador": "browser", "abrir navegador": "browser",
+        "abra o gerenciador de arquivos": "files",
+        "abra o terminal": "terminal",
+    }.get(normalized)
+
+
 @dataclass(frozen=True)
 class AgentProposal:
     type: str
@@ -115,6 +134,10 @@ class AgentPlanner:
         self.executor = executor
 
     def plan(self, prompt: str) -> AgentProposal:
+        application = _simple_app_request(prompt)
+        if application and self.registry.exists("launch_application"):
+            return AgentProposal(type="tool_call", tool_name="launch_application",
+                                 arguments={"application": application})
         conversational = _conversation_only(prompt)
         if conversational:
             # Plain text avoids schema compilation and malformed JSON on small
