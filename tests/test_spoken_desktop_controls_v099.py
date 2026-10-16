@@ -152,7 +152,11 @@ def test_spoken_visual_request_still_requires_consent_and_resumes_on_refusal(
 
     recognizer.transcripts.put(spoken)
     spin(root, lambda: len(consents) == 1 and recognizer.calls >= 2)
-    assert "UMA captura/leitura" in consents[0]
+    if spoken == "analisar câmera":
+        assert "vídeo local" in consents[0]
+        assert window._live_camera is None
+    else:
+        assert "UMA captura/leitura" in consents[0]
     assert vision.calls == []
     assert speaker.spoken == []
     assert app.agent.requests == []
