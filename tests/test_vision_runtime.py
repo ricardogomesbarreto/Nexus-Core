@@ -77,7 +77,7 @@ def test_capture_backends_use_fixed_arguments(monkeypatch):
     monkeypatch.setenv("DISPLAY", ":1")
     service.screen()
     service.camera(2)
-    assert calls[0] == ("portal", True)
+    assert calls[0] == ("portal", False)  # Tela requests a screen, not a window.
     assert calls[1] == ["/bin/import", "-window", "root", "png:-"]
     assert calls[2][-1] == "pipe:1"
     assert "/dev/video2" in calls[2]
