@@ -54,6 +54,7 @@ class DesktopWindow:
     def __init__(
         self, root, app, confirmation: DesktopConfirmation,
         speaker=None, recognizer=None, vision=None,
+        startup_voice: bool | None = None,
     ):
         import tkinter as tk
         from tkinter import messagebox, ttk
@@ -65,6 +66,12 @@ class DesktopWindow:
         self.tk = tk
         self.messagebox = messagebox
         self.speaker = speaker if speaker is not None else LocalSpeaker()
+        # Production (real LocalSpeaker) welcomes by voice automatically.
+        # Injected speakers in existing UI tests retain their original
+        # quiet-start semantics; targeted voice tests opt in explicitly.
+        self._startup_voice_enabled = (
+            speaker is None if startup_voice is None else bool(startup_voice)
+        )
         self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
@@ -542,6 +549,9 @@ class DesktopWindow:
         it cannot recognize its own speech. Respect user mute and active work.
         """
         if self._closing or self._busy or self._speaking or self._listening:
+            return
+        if not self._startup_voice_enabled:
+            self._start_listening()
             return
         if self._say_response(desktop_spoken_welcome()):
             self._startup_welcome_generation = self._speak_generation
