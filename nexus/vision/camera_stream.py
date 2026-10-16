@@ -4,6 +4,7 @@ import os
 import select
 import shutil
 import subprocess
+import tempfile
 from threading import Event, Lock, Thread
 from time import monotonic
 
@@ -26,6 +27,7 @@ class CameraStream:
         self._frame: bytes | None = None
         self._sequence = 0
         self._error: str | None = None
+        self._diagnostics = None
 
     def start(self) -> None:
         if self._process is not None or self._stop.is_set():
@@ -34,16 +36,21 @@ class CameraStream:
         if binary is None:
             raise VisionError("Transmissão da câmera exige FFmpeg.")
         try:
+            # An anonymous file avoids both a blocked stderr pipe and losing
+            # FFmpeg's reason when a webcam refuses the requested stream.
+            self._diagnostics = tempfile.TemporaryFile(mode="w+b")
             self._process = subprocess.Popen(
                 [binary, "-hide_banner", "-loglevel", "error", "-nostdin",
                  "-f", "video4linux2", "-i", f"/dev/video{self.index}",
                  "-vf", "fps=5,scale=640:-2", "-f", "image2pipe",
                  "-vcodec", "mjpeg", "pipe:1"],
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL, bufsize=0,
+                stderr=self._diagnostics, bufsize=0,
             )
         except OSError as exc:
-            raise VisionError("Não foi possível iniciar a câmera local.") from exc
+            if self._diagnostics is not None:
+                self._diagnostics.close()
+            raise VisionError("Não foi possível iniciar a câmera local. Confira FFmpeg e permissões.") from exc
         self._thread = Thread(target=self._read_frames, name="nexus-camera", daemon=True)
         self._thread.start()
 
@@ -92,7 +99,7 @@ class CameraStream:
             if not self._stop.is_set():
                 with self._lock:
                     if self._error is None:
-                        self._error = "A transmissão da câmera parou. Confira o dispositivo e as permissões."
+                        self._error = self._exit_error()
         except (OSError, ValueError):
             if not self._stop.is_set():
                 with self._lock:
@@ -106,6 +113,21 @@ class CameraStream:
                 process.kill()
                 process.wait(timeout=2)
             process.stdout.close()
+            if self._diagnostics is not None:
+                self._diagnostics.close()
+
+    def _exit_error(self) -> str:
+        self._diagnostics.seek(0)
+        message = self._diagnostics.read(8192).decode("utf-8", "replace").lower()
+        if "permission denied" in message:
+            return "Acesso à câmera negado. Confira as permissões de /dev/video e a sessão do usuário."
+        if "device or resource busy" in message:
+            return "A câmera está em uso por outro aplicativo. Feche-o e tente novamente."
+        if "no such file" in message:
+            return "A câmera foi desconectada ou o dispositivo /dev/video não está disponível."
+        if "invalid argument" in message or "not supported" in message:
+            return "O formato de vídeo da câmera não é compatível com a captura atual. Confira os formatos V4L2."
+        return "A transmissão da câmera parou. Confira o dispositivo, formato e permissões."
 
     def latest(self) -> tuple[int, bytes | None, str | None]:
         with self._lock:

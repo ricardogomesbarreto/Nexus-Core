@@ -334,6 +334,32 @@ def test_spoken_question_uses_latest_frame_while_preview_remains_open(desktop, m
     assert "Um diagrama de redes" in window.transcript.get("1.0", "end")
 
 
+def test_photo_button_keeps_still_capture_when_camera_is_off(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(0, "Integrada")]))
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera_photo()
+    spin(root, lambda: not window._busy and len(vision.calls) == 2)
+    assert vision.calls[0] == ("camera", 0)
+    assert vision.calls[1][0] == "describe"
+    assert window._live_camera is None
+
+
+def test_photo_during_live_video_uses_existing_frame_not_second_device(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(0, "Integrada")]))
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    window._vision_camera_photo()
+    spin(root, lambda: not window._busy and len(vision.calls) == 1)
+    assert vision.calls[0][0] == "describe"
+    assert not any(call[0] == "camera" for call in vision.calls)
+    assert window._live_camera is not None
+    assert "Foto da câmera" in window.transcript.get("1.0", "end")
+
+
 @pytest.mark.parametrize(
     "shortcut", ["_shortcut_vision_file", "_shortcut_vision_screen",
                  "_shortcut_vision_camera"],

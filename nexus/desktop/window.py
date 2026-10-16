@@ -322,24 +322,26 @@ class DesktopWindow:
         if self._saved_preferences is not None and self._saved_preferences.wake_required:
             self.wake_required.set(True)
 
-        # Three uniform-width capture actions; no camera access until consent.
+        # Photo and live video are separate actions; neither opens a device
+        # before its own explicit authorization.
         vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
         vision_controls.pack(fill="x", pady=(7, 0))
         ttk.Label(vision_controls, text="VISÃO SOB AUTORIZAÇÃO",
                   style="Nexus.Section.TLabel").pack(side="left", padx=(0, 10))
         vision_actions = ttk.Frame(vision_controls, style="Nexus.App.TFrame")
         vision_actions.pack(side="left", fill="x", expand=True)
-        for column in range(3):
+        for column in range(4):
             vision_actions.columnconfigure(column, weight=1, uniform="vision")
         for column, (title, callback) in enumerate((
             ("Imagem", self._vision_file),
             ("Tela", self._vision_screen),
-            ("Câmera", self._vision_camera),
+            ("Foto da câmera", self._vision_camera_photo),
+            ("Câmera ao vivo", self._vision_camera),
         )):
             button = ttk.Button(vision_actions, text=title,
                                 command=callback, style="Nexus.TButton")
             button.grid(row=0, column=column, sticky="ew",
-                        padx=(0, 6) if column < 2 else (0, 0))
+                        padx=(0, 6) if column < 3 else (0, 0))
             self._vision_buttons.append(button)
 
         # Signals describe SOFTWARE activity, never hardware certification.
@@ -417,6 +419,7 @@ class DesktopWindow:
         root.bind("<Control-Shift-F>", self._shortcut_vision_file)
         root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
+        root.bind("<Control-Shift-P>", self._shortcut_camera_photo)
         # Welcome text is displayed immediately. Its short spoken version
         # uses the existing local TTS worker before microphone listening starts.
         # Restore only normal text conversation. Never replay raw device
@@ -684,6 +687,10 @@ class DesktopWindow:
             self.status.configure(text="Mensagem excede 4000 caracteres")
             return "break"
         command = self._voice_command(message) if not advisory_only else None
+        if command == "camera_photo":
+            self.input.delete("1.0", "end")
+            self._vision_camera_photo()
+            return "break"
         if command in ("camera_on", "camera_off"):
             self.input.delete("1.0", "end")
             self._append("Você", message, "user")
@@ -869,6 +876,10 @@ class DesktopWindow:
             return "camera_on"
         if normalized in {"analisar camera", "analise a camera"}:
             return "vision_camera"
+        if normalized in {"tire uma foto", "tire foto", "foto da camera",
+                          "fotografe a camera", "analise uma foto da camera",
+                          "tire um print da camera"}:
+            return "camera_photo"
         return None
 
     def _spoken_speech_control(self, command: str, utterance: str) -> None:
@@ -934,6 +945,20 @@ class DesktopWindow:
         else:
             self._start_live_camera()
 
+    def _vision_camera_photo(self) -> None:
+        if self._closing or self._busy:
+            return
+        if self._live_camera is None:
+            self._request_vision("camera")
+            return
+        if self.messagebox.askyesno(
+            "Nexus Core — foto da câmera",
+            "Usar um quadro da câmera ligada para analisar uma foto no Ollama local? "
+            "A imagem não será salva. Esta autorização vale somente para esta análise.",
+            parent=self.root,
+        ):
+            self._ask_live_camera(LocalVision.DEFAULT_PROMPT, still=True)
+
     def _start_live_camera(self) -> None:
         """Authorize one live session; each spoken question selects one frame."""
         if self._closing or self._busy:
@@ -941,7 +966,8 @@ class DesktopWindow:
         from tkinter import simpledialog
         devices = LocalVision.cameras()
         if not devices:
-            self._vision_notice("Nenhuma câmera local foi encontrada. Confira /dev/video e as permissões.")
+            self._vision_notice("Nenhuma câmera local foi encontrada. "
+                                + LocalVision.camera_discovery_hint())
             return
         index = devices[0][0]
         if len(devices) > 1:
@@ -977,6 +1003,8 @@ class DesktopWindow:
             label.pack(padx=8, pady=8)
             self.tk.Button(preview, text="Desligar câmera",
                            command=self._stop_live_camera).pack(pady=(0, 8))
+            self.tk.Button(preview, text="Analisar foto deste vídeo",
+                           command=self._vision_camera_photo).pack(pady=(0, 8))
             preview.protocol("WM_DELETE_WINDOW", self._stop_live_camera)
         except Exception:
             stream.stop()
@@ -986,7 +1014,7 @@ class DesktopWindow:
         self._live_camera_window = preview
         self._live_camera_label = label
         self._live_camera_sequence = 0
-        self._vision_buttons[2].configure(text="Desligar câmera")
+        self._vision_buttons[3].configure(text="Desligar câmera")
         self._vision_notice("Câmera ligada. Pergunte: 'Na câmera, o que você vê?'")
 
     def _stop_live_camera(self) -> None:
@@ -1003,7 +1031,7 @@ class DesktopWindow:
                 preview.destroy()
             except self.tk.TclError:
                 pass
-        self._vision_buttons[2].configure(text="Câmera")
+        self._vision_buttons[3].configure(text="Câmera ao vivo")
         if self._busy and self._vision_source == "camera_live":
             self._cancel_requested = True
         if not self._closing:
@@ -1016,7 +1044,7 @@ class DesktopWindow:
         return bool(re.search(r"\b(?:na camera|pela camera|da camera|no video|"
                               r"voce ve|esta vendo|aparece|visivel|mostrando)\b", normalized))
 
-    def _ask_live_camera(self, question: str) -> None:
+    def _ask_live_camera(self, question: str, *, still: bool = False) -> None:
         stream = self._live_camera
         if stream is None or self._busy or self._closing:
             return
@@ -1029,7 +1057,9 @@ class DesktopWindow:
         except VisionInputError:
             self._vision_notice("Pergunta visual inválida (máximo 2000 caracteres).")
             return
-        self._append("Você", f"[Câmera ao vivo] {question}", "user")
+        if still:
+            self._camera_frames.put(("camera", frame))
+        self._append("Você", f"[{'Foto da câmera' if still else 'Câmera ao vivo'}] {question}", "user")
         self._busy = True
         self._operation_kind = "vision"
         self._vision_source = "camera_live"
@@ -1038,7 +1068,7 @@ class DesktopWindow:
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
-        for button in self._vision_buttons[:2]:
+        for button in self._vision_buttons[:3]:
             button.configure(state="disabled")
         if self._listening:
             self._listen_generation += 1
@@ -1073,6 +1103,10 @@ class DesktopWindow:
         self._vision_camera()
         return "break"
 
+    def _shortcut_camera_photo(self, event=None):
+        self._vision_camera_photo()
+        return "break"
+
     def _request_vision(self, source: str) -> None:
         """Capture once only following user action and explicit per-shot consent."""
         if self._closing or self._busy or source not in ("file", "screen", "display", "window", "camera"):
@@ -1098,7 +1132,7 @@ class DesktopWindow:
             devices = LocalVision.cameras()
             if not devices:
                 self._vision_notice("Nenhuma câmera local foi encontrada. "
-                                    "Conecte uma câmera e confira as permissões de /dev/video.")
+                                    + LocalVision.camera_discovery_hint())
                 return
             if len(devices) == 1:
                 selection = devices[0][0]
@@ -1443,9 +1477,16 @@ class DesktopWindow:
                     elif command == "camera_off":
                         self._stop_live_camera()
                         self._start_listening()
+                    elif command == "camera_photo":
+                        self._vision_camera_photo()
+                        if not self._busy:
+                            self._start_listening()
                     elif command in ("camera_on", "vision_camera"):
                         if self._live_camera is None:
-                            self._start_live_camera()
+                            if command == "vision_camera":
+                                self._vision_camera_photo()
+                            else:
+                                self._start_live_camera()
                         elif command == "vision_camera":
                             self._ask_live_camera(LocalVision.DEFAULT_PROMPT)
                         if not self._busy:

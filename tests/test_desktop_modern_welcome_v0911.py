@@ -113,7 +113,7 @@ def test_desktop_layout_keeps_buttons_visible_and_equal_width_on_small_window():
                 root.winfo_rooty() + root.winfo_height() + 2
             )
         assert window.status.winfo_rooty() > window.send_button.winfo_rooty()
-        assert len(window._vision_buttons) == 3
+        assert len(window._vision_buttons) == 4
         vision_widths = [btn.winfo_width() for btn in window._vision_buttons]
         assert max(vision_widths) - min(vision_widths) <= 10
         assert window.input.winfo_ismapped()
