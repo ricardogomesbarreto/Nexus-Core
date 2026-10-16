@@ -25,6 +25,7 @@ class ChatSession:
     def __init__(self, agent):
         self.agent = agent
         self.history: list[tuple[str, str]] = []
+        self._previous_was_advisory = False
         self._closed = Event()
         self._cancelled = Event()
         self._lock = Lock()
@@ -84,7 +85,8 @@ class ChatSession:
                     AgentOutcome(False, error_code="CANCELLED"),
                 )
             reply = self._describe(outcome)
-            if (not advisory_only and outcome.success and outcome.content
+            if (not advisory_only and not self._previous_was_advisory
+                    and outcome.success and outcome.content
                     and self.history and 30 <= len(reply) < self.MAX_CONTEXT_ITEM
                     and " " in reply[:100]):
                 old_question, old_reply = self.history[-1]
@@ -119,6 +121,7 @@ class ChatSession:
                     reply[:self.MAX_CONTEXT_ITEM],
                 ))
                 self.history = self.history[-self.MAX_TURNS:]
+                self._previous_was_advisory = advisory_only
             return ChatReply(reply, outcome)
 
     def note_visual(self, question: str, description: str) -> None:
