@@ -313,3 +313,27 @@ def test_vision_shortcuts_respect_selection_cancellation_and_busy_state(
     assert vision.calls == []
     assert not app.agent.requests
     window._busy = False
+
+
+def test_image_file_dialog_offers_more_formats_with_safe_fallback(desktop, monkeypatch):
+    from tkinter import filedialog
+    root, app, window, vision = desktop
+    observed = []
+
+    def capture_picker(**kwargs):
+        observed.append(kwargs)
+        return ""  # Cancellation must never read image or call the agent.
+
+    monkeypatch.setattr(filedialog, "askopenfilename", capture_picker)
+    window._vision_file()
+    assert len(observed) == 1
+    filters = observed[0]["filetypes"]
+    patterns = filters[0][1].split()
+    for extension in (".png", ".jpg", ".jpeg", ".webp", ".gif",
+                      ".bmp", ".tif", ".tiff", ".avif"):
+        assert "*" + extension in patterns
+        assert "*" + extension.upper() in patterns
+    assert ("Todos os arquivos", "*") in filters
+    assert not window._busy
+    assert vision.calls == []
+    assert app.agent.requests == []

@@ -251,7 +251,7 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--vision-check", action="store_true",
                          help="diagnostica dependências de visão sem capturar nada")
     actions.add_argument("--vision-image", metavar="PATH",
-                         help="analisa imagem PNG/JPEG/WEBP autorizada no HOME")
+                         help="analisa imagem raster (PNG/JPEG/WEBP/BMP/GIF/TIFF/AVIF) autorizada no HOME")
     actions.add_argument("--vision-screen", action="store_true",
                          help="captura e analisa uma única imagem de tela")
     actions.add_argument("--vision-camera", type=int, metavar="INDEX",

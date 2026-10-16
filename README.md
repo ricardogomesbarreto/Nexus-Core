@@ -43,6 +43,46 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Compatibilidade de imagens, câmera V4L2 e reconhecimento no Ubuntu
+
+Correções adicionais da linha de código **v0.9.11**, sem criar release estável:
+
+- **Imagem:** o diálogo mostra PNG, JPG/JPEG/JPE/JFIF, WEBP, BMP, GIF,
+  TIF/TIFF e AVIF, incluindo nomes com extensão maiúscula. Também existe
+  “Todos os arquivos” para localizar arquivos com extensão atípica, mas o
+  programa **valida o conteúdo real** e rejeita dados que não sejam imagens
+  raster suportadas. AVIF depende de suporte de decodificação da versão
+  instalada do Pillow. GIF/TIFF usam somente o primeiro quadro/página.
+  Todas as imagens aceitas são limitadas a 6 MiB, 4096 px e 8 megapixels,
+  e convertidas para PNG sem metadados antes do modelo local.
+- **Microfone:** o PipeWire fornece PCM mono S16LE **sem cabeçalho** por meio
+  de `pw-record --raw`. Em versões recentes, a saída `-` sem `--raw`
+  pode carregar contêiner AU que o Vosk interpretava erroneamente como áudio.
+  O teste de microfone mede sinal, mas só `--recognition-test` confirma
+  transcrição. Nenhuma gravação é persistida.
+- **Câmera:** a descoberta verifica `VIDIOC_QUERYCAP` em cada nó V4L2,
+  evitando oferecer como câmera os nós auxiliares apenas de metadados
+  (`/dev/video1` em algumas webcams integradas). Continua exigindo
+  autorização **por captura**, sem vídeo contínuo. Falhas na captura mostram
+  orientação sobre permissão, dispositivo ocupado ou formato V4L2.
+- **Tela:** permanece sujeita ao diálogo de seleção e às permissões do portal
+  do desktop no Wayland. A seleção não acessa silenciosamente abas de navegador.
+
+Após atualizar `main` e reinstalar, valide no notebook:
+
+```bash
+~/.local/bin/nexus-core --microphone-test
+~/.local/bin/nexus-core --recognition-test
+~/.local/bin/nexus-core --vision-check
+~/.local/bin/nexus-core --desktop
+```
+
+Caso não haja transcrição, confira a entrada padrão no PipeWire e faça outro
+teste após uma pausa na fala. Se a câmera falhar, feche outros programas que
+possam utilizá-la e confira as permissões de `/dev/video*`. Os testes
+automatizados simulam dispositivos; **a homologação física Ubuntu/Wayland
+continua necessária** antes de uma tag ou release estável.
+
 No desktop Ubuntu, perguntas comuns agora usam uma resposta curta de texto
 direta do `qwen3:1.7b`, sem exigir JSON de planejamento. Perguntas sobre
 capacidade, como “Vai poder arrumar meus arquivos?”, permanecem no modo de
@@ -1126,11 +1166,13 @@ sugestões pertinentes, sujeitas às mesmas regras de segurança.
 Na janela do NEXUS CORE, a linha discreta **Visão local sob autorização**
 oferece três botões: **Imagem**, **Tela** e **Câmera**. Cada acionamento:
 
-1. É iniciado por um clique explícito. Em Imagem, escolhe-se um arquivo
-   PNG/JPEG/WEBP permitido no HOME; em Câmera, um índice 0–9; em Tela,
-   a captura será do quadro da tela ativa.
-2. Solicita ao usuário uma **pergunta visual**, com limite de 2.000
-   caracteres.
+1. É iniciado por um clique explícito. Em **Imagem**, escolhe-se um raster
+   aceito no HOME (PNG/JPEG/WEBP/GIF/BMP/TIFF/AVIF, conforme decodificador).
+   Em **Câmera**, o aplicativo filtra os nós V4L2, escolhe automaticamente
+   a única câmera de captura disponível ou pede escolha se houver várias;
+   em **Tela**, solicita uma janela/monitor no portal Wayland quando possível.
+2. Solicita uma **pergunta visual** de até 2.000 caracteres para imagem/tela;
+   a câmera usa uma pergunta descritiva padrão sem diálogo adicional.
 3. Exibe confirmação **para aquela única captura/leitura e análise no
    Ollama local**. Cancelar qualquer diálogo impede a captação.
 4. Pausa temporariamente a escuta do microfone, executa a captura e

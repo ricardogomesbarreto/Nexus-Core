@@ -1,6 +1,7 @@
 """Janela de conversa nativa para o desktop Linux."""
 
 import sys
+import gc
 import io
 import os
 import re
@@ -318,7 +319,11 @@ class DesktopWindow:
         self.transcript.see("end")
 
     def _start_worker(self, target, *args) -> None:
-        """Retain worker references until they exit, including during shutdown."""
+        """Retain workers; collect stale Tk widgets on the GUI thread first."""
+        # Tk/Tcl objects finalized by Python GC in a worker can abort the
+        # interpreter. Flush cycles from closed dialogs/windows on this Tk
+        # thread before starting a new voice or vision worker.
+        gc.collect()
         worker = Thread(target=target, args=args, daemon=True)
         self._workers.append(worker)
         worker.start()
@@ -342,6 +347,9 @@ class DesktopWindow:
             self._camera_preview = None
         self.app.shutdown()
         self.root.destroy()
+        # A destroyed Tcl interpreter must not be collected later on an audio
+        # or vision thread; finalize its remaining widget cycles here.
+        gc.collect()
 
     def _suggest(self):
         if self._busy or self._closing:
@@ -603,7 +611,16 @@ class DesktopWindow:
         if source == "file":
             selection = filedialog.askopenfilename(
                 parent=self.root, title="Escolher imagem local para análise",
-                filetypes=[("Imagens", "*.png *.jpg *.jpeg *.webp")],
+                # Linux file dialogs filter by extension (case-sensitive).
+                # Offer common raster formats and a fallback for other suffixes;
+                # LocalVision will still validate the actual file contents.
+                filetypes=[
+                    ("Imagens", " ".join(
+                        "*"+ext for suffix in LocalVision.FILE_SUFFIXES
+                        for ext in (suffix, suffix.upper())
+                    )),
+                    ("Todos os arquivos", "*"),
+                ],
             )
             if not selection:
                 return

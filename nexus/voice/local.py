@@ -222,7 +222,9 @@ class LocalRecognizer(_StoppableProcess):
         if (pipewire and os.environ.get("NEXUS_AUDIO_INPUT") != "alsa"
                 and runtime and Path(runtime, "pipewire-0").is_socket()
                 and not wav):
-            return [pipewire, "--rate", str(cls.SAMPLE_RATE), "--channels", "1",
+            # Newer PipeWire writes an AU container to stdout by default.
+            # Vosk consumes headerless signed 16-bit LE mono PCM instead.
+            return [pipewire, "--raw", "--rate", str(cls.SAMPLE_RATE), "--channels", "1",
                     "--format", "s16", "-"]
         binary = shutil.which("arecord")
         if binary is None:
