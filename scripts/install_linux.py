@@ -288,6 +288,34 @@ def prepare_local_models() -> bool:
     else:
         print(f"Modelo Ollama {settings.local_model_name} já disponível; download dispensado.")
 
+    # Text and vision models are distinct: qwen3:1.7b cannot inspect PNGs.
+    # A multi-gigabyte model is never pulled without an explicit decision.
+    vision_model = os.environ.get("NEXUS_VISION_MODEL", "gemma3:4b").strip()
+    from nexus.vision.local import LocalVision
+    try:
+        vision_model = LocalVision.validate_model(vision_model)
+    except (ValueError, TypeError):
+        print("NEXUS_VISION_MODEL inválido; escolha um identificador Ollama local.")
+        vision_model = "gemma3:4b"
+    vision_probe = ollama_model_probe(model_name=vision_model)
+    if not vision_probe.get("installed", False):
+        if confirm(
+            f"Instalar modelo visual Ollama {vision_model} (download de vários GB)? "
+            "Necessário para compreender imagens, webcam e tela."
+        ):
+            try:
+                _run([binary, "pull", vision_model], timeout=7200, progress=True)
+                if not ollama_model_probe(model_name=vision_model).get("installed", False):
+                    print("Modelo visual ainda não confirmado; verifique ollama list.")
+            except (OSError, subprocess.SubprocessError):
+                print("Download do modelo visual falhou; a conversa por texto continua disponível.")
+        else:
+            print(
+                f"Visão ficará indisponível até instalar o modelo: ollama pull {vision_model}"
+            )
+    else:
+        print(f"Modelo visual {vision_model} já instalado.")
+
     default = settings.data_dir / "voice" / "vosk-model-small-pt-0.3"
     voice_path = settings.voice_model_path or default
     if not voice_path.is_dir():
