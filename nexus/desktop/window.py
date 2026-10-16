@@ -16,6 +16,7 @@ from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.multimodal_status import MultimodalStatus
+from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.wake import extract_utterance
 from nexus.vision import LocalVision, VisionError, VisionInputError
@@ -82,6 +83,7 @@ class DesktopWindow:
         self._listen_pending_generations: set[int] = set()
         self._audio_peaks = 0
         self._audio_level_samples = 0
+        self._mic_last_signal = 0.0
         self._recognition_failures = 0
         self._speak_generation = 0
         self._speaking = False
@@ -182,6 +184,10 @@ class DesktopWindow:
         # certification, continuous video access or persistent camera consent.
         privacy_row = ttk.Frame(footer)
         privacy_row.pack(fill="x", pady=(7, 0))
+        # Voice-activity sprite is decorative feedback driven by real PCM peaks.
+        # It does not activate the microphone or indicate successful Vosk STT.
+        self.microphone_indicator = MicrophoneIndicator(privacy_row)
+        self.microphone_indicator.widget.pack(side="left", padx=(0, 7))
         self._privacy_labels = []
         for text in ("Escuta: aguardando", "Voz: habilitada", "Visão: sem captura"):
             widget = ttk.Label(privacy_row, text=text)
@@ -338,6 +344,7 @@ class DesktopWindow:
         self.voice_choice = None
         self.wake_required = None
         self._brand_image = None
+        self.microphone_indicator.release()
         self._workers.clear()
         self._vision_buttons.clear()
         self._privacy_labels.clear()
@@ -423,6 +430,8 @@ class DesktopWindow:
         self.input.delete("1.0", "end")
         self._append("Você", message, "user")
         self.session.prepare_turn()
+        self.microphone_indicator.show_peak(0, listening=False)
+        self._mic_last_signal = 0.0
         self._busy = True
         self._operation_kind = "chat"
         self._operation_started = monotonic()
@@ -461,6 +470,8 @@ class DesktopWindow:
         self._listen_pending_generations.add(generation)
         self._audio_peaks = 0
         self._audio_level_samples = 0
+        self._mic_last_signal = 0.0
+        self.microphone_indicator.show_peak(0, listening=True)
         self.status.configure(text="Ouvindo… diga sua pergunta")
         self._start_worker(self._listen, generation)
 
@@ -476,6 +487,8 @@ class DesktopWindow:
         else:
             self._listen_generation += 1
             self.recognizer.stop()
+            self.microphone_indicator.show_peak(0, listening=False)
+            self._mic_last_signal = 0.0
             self.status.configure(text="Escuta pausada; use Retomar escuta")
 
     @staticmethod
@@ -843,6 +856,10 @@ class DesktopWindow:
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
         self._workers_running()
+        # A stalled input stream must not leave an illuminated microphone.
+        if self._mic_last_signal and monotonic() - self._mic_last_signal > 1.4:
+            self.microphone_indicator.show_peak(0, listening=False)
+            self._mic_last_signal = 0.0
         if self._busy and not self._cancel_requested:
             elapsed = int(monotonic() - self._operation_started)
             if elapsed >= 10:
@@ -857,8 +874,11 @@ class DesktopWindow:
                 if (generation == self._listen_generation and self._listening
                         and not self._closing):
                     self._audio_level_samples += 1
-                    self._audio_peaks = max(self._audio_peaks, int(value))
-                    if int(value) >= 2:
+                    level = max(0, min(100, int(value)))
+                    self._audio_peaks = max(self._audio_peaks, level)
+                    self._mic_last_signal = monotonic()
+                    self.microphone_indicator.show_peak(level, listening=self._voice_active)
+                    if level >= 2:
                         self.status.configure(text="Microfone com sinal; reconhecendo fala…")
                     elif self._audio_level_samples >= 4 and self._audio_peaks < 2:
                         self.status.configure(text="Microfone sem sinal; confira a entrada de áudio")
@@ -868,6 +888,8 @@ class DesktopWindow:
                     continue
                 self._listen_pending_generations.discard(generation)
                 self._listening = False
+                self.microphone_indicator.show_peak(0, listening=False)
+                self._mic_last_signal = 0.0
                 if self._closing:
                     continue
                 if generation != self._listen_generation:
@@ -993,6 +1015,8 @@ class DesktopWindow:
         if self._closing:
             return
         self._closing = True
+        self.microphone_indicator.show_peak(0, listening=False)
+        self._mic_last_signal = 0.0
         # The original photo asset must be released on the Tk thread even
         # when tests or users destroy the root before audio workers exit.
         self._brand_image = None
