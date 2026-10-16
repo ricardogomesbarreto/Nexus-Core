@@ -83,3 +83,67 @@ def test_portal_waits_for_user_selected_window(monkeypatch, tmp_path):
     monkeypatch.setattr("dbus_next.aio.MessageBus", lambda: bus)
     assert asyncio.run(portal._choose(2)) == file
     assert bus.selected_target == 2
+
+
+def test_legacy_screenshot_portal_supports_interactive_screen_without_target(monkeypatch, tmp_path):
+    """v2 Screenshot lacks AvailableTargets but still offers interactive screen."""
+    pytest.importorskip("dbus_next")
+    from dbus_next import Message, MessageType, Variant
+
+    selected = tmp_path / "user-chosen.png"
+    selected.write_bytes(b"test-image")
+
+    class Bus:
+        unique_name = ":1.44"
+        handler = None
+        options = None
+        def disconnect(self): pass
+        async def connect(self): return self
+        def add_message_handler(self, handler): self.handler = handler
+        async def call(self, request):
+            if request.member == "Get":
+                return Message(message_type=MessageType.ERROR, reply_serial=1,
+                               error_name="org.freedesktop.DBus.Error.UnknownProperty")
+            if request.member == "AddMatch":
+                return Message(message_type=MessageType.METHOD_RETURN, reply_serial=1)
+            if request.member == "Screenshot":
+                self.options = request.body[1]
+                token = self.options["handle_token"].value
+                request_path = (
+                    "/org/freedesktop/portal/desktop/request/1_44/" + token
+                )
+                event = Message(
+                    path=request_path, interface="org.freedesktop.portal.Request",
+                    member="Response", message_type=MessageType.SIGNAL,
+                    signature="ua{sv}", body=[
+                        0, {"uri": Variant("s", selected.as_uri())}
+                    ],
+                )
+                asyncio.get_running_loop().call_soon(self.handler, event)
+                return Message(message_type=MessageType.METHOD_RETURN, reply_serial=1,
+                               body=[request_path])
+            raise AssertionError(request.member)
+
+    bus = Bus()
+    monkeypatch.setattr("dbus_next.aio.MessageBus", lambda: bus)
+    assert asyncio.run(portal._choose(1)) == selected
+    assert bus.options["interactive"].value is True
+    assert "target" not in bus.options  # v2 backend cannot accept target
+
+
+def test_legacy_portal_refuses_window_without_target_property(monkeypatch):
+    pytest.importorskip("dbus_next")
+    from dbus_next import Message, MessageType
+
+    class Bus:
+        unique_name = ":1.45"
+        def disconnect(self): pass
+        async def connect(self): return self
+        async def call(self, request):
+            assert request.member == "Get", "Do not capture screen silently"
+            return Message(message_type=MessageType.ERROR, reply_serial=1,
+                           error_name="org.freedesktop.DBus.Error.UnknownProperty")
+
+    monkeypatch.setattr("dbus_next.aio.MessageBus", Bus)
+    with pytest.raises(portal.PortalError, match="não oferece seleção exclusiva"):
+        asyncio.run(portal._choose(2))
