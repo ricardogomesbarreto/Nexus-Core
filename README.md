@@ -43,6 +43,32 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções e auditoria do código atual
 
+### Webcam ao vivo e perguntas faladas (código v0.9.11)
+
+O botão **Câmera** e `Ctrl+Shift+K` ligam uma prévia contínua local da
+webcam, após selecionar o dispositivo e autorizar a sessão. O mesmo botão,
+o controle da prévia ou o comando **"Feche a câmera"** interrompem a
+captura. O FFmpeg gera quadros JPEG em memória; o aplicativo mantém só o
+último quadro e não grava o vídeo em arquivo nem no PostgreSQL. A janela
+mostra **Visão: câmera ligada** enquanto o vídeo está ativo.
+
+O microfone pode continuar ouvindo durante a prévia. Diga **"Abra a câmera"**,
+depois **"Na câmera, o que você vê?"** ou faça outra pergunta que mencione
+a câmera; é possível escrever a pergunta no chat também. Cada pergunta
+explícita envia **um quadro recente** ao modelo visual do Ollama local,
+mostra a resposta no chat e a lê em voz alta quando a voz está habilitada.
+O vídeo permanece aberto para outras perguntas. Não há análise automática
+de todos os quadros: a latência da resposta depende do modelo e do hardware.
+O comando `--vision-camera INDEX` continua sendo uma captura única no terminal.
+
+**Estado das ações por voz:** a transcrição de Vosk pode encaminhar pedidos
+ao mesmo planejador e às mesmas permissões do chat. O código atual lista
+diretórios, lê arquivos autorizados e oferece navegação/digitação restrita
+em janelas X11. **Criar diretórios, abrir arquivos no aplicativo padrão e
+iniciar aplicativos ou navegadores ainda não possuem ferramentas próprias**;
+o sandbox de terminal não altera o sistema do usuário. Essas capacidades
+não estão homologadas no Wayland e não devem ser anunciadas como prontas.
+
 **Auditoria de compatibilidade de câmera (código v0.9.11):** a busca V4L2
 inclui agora dispositivos numerados de `/dev/video0` até `/dev/video255`.
 Os nós somente de metadados continuam excluídos por `VIDIOC_QUERYCAP`.
@@ -518,12 +544,12 @@ seu notebook.
 
 **Câmera e Tela:** o botão **Câmera** procura dispositivos `/dev/video*` sem
 abrir a câmera durante a busca. Se houver apenas um, pede autorização para
-uma captura e abre a foto local na janela, enquanto tenta descrevê-la no
-Ollama. Se não houver câmera, informa isso em texto e na voz escolhida. Com
-vários dispositivos, mostra seus nomes para escolha. A captura é uma foto,
-não vídeo contínuo; sua análise precisa de um modelo visual local compatível,
-como `gemma3:4b` instalado separadamente. Erros de captura ou do modelo
-também são lidos em voz alta quando essa opção está ativada.
+vídeo contínuo local; com vários dispositivos, mostra seus nomes para escolha.
+Se não houver câmera, informa isso em texto e na voz escolhida. Perguntas
+explícitas durante a prévia enviam um quadro recente ao modelo visual local,
+como `gemma3:4b` instalado separadamente. O vídeo não é gravado e a resposta
+é lida em voz alta quando essa opção está ativada. Erros de captura ou do
+modelo também são informados em texto e voz.
 
 No **Wayland**, o botão **Tela** e os comandos “analisar a tela” ou “analisar
 a janela” abrem o seletor do portal do desktop para escolher **uma janela**.

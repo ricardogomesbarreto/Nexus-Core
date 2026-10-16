@@ -27,6 +27,7 @@ from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.speech_text import readable_model_text, speech_from_model_text
 from nexus.voice.wake import extract_utterance
 from nexus.vision import LocalVision, VisionError, VisionInputError
+from nexus.vision.camera_stream import CameraStream
 
 
 class _WidgetBoolean:
@@ -117,6 +118,10 @@ class DesktopWindow:
         self._vision_events: Queue[tuple[str, str, str]] = Queue()
         self._camera_frames: Queue[bytes] = Queue()
         self._camera_preview = None
+        self._live_camera: CameraStream | None = None
+        self._live_camera_window = None
+        self._live_camera_label = None
+        self._live_camera_sequence = 0
         self.vision = vision
         self._vision_buttons = []
         self._vision_source = None
@@ -514,6 +519,7 @@ class DesktopWindow:
             speech_requested=self._speaking,
             vision_busy=self._busy and self._operation_kind == "vision",
             vision_source=self._vision_source,
+            camera_active=self._live_camera is not None,
             cancellation_requested=self._cancel_requested,
             closing=self._closing,
         )
@@ -677,7 +683,20 @@ class DesktopWindow:
         if len(message) > ChatSession.MAX_MESSAGE:
             self.status.configure(text="Mensagem excede 4000 caracteres")
             return "break"
-        if not advisory_only and self._voice_command(message) == "privacy_status":
+        command = self._voice_command(message) if not advisory_only else None
+        if command in ("camera_on", "camera_off"):
+            self.input.delete("1.0", "end")
+            self._append("Você", message, "user")
+            if command == "camera_off":
+                self._stop_live_camera()
+            elif self._live_camera is None:
+                self._start_live_camera()
+            return "break"
+        if not advisory_only and self._live_camera is not None and self._camera_question(message):
+            self.input.delete("1.0", "end")
+            self._ask_live_camera(message)
+            return "break"
+        if command == "privacy_status":
             # A typed status request is local, even while the microphone is
             # paused. Stop active recognition/playback before replying so TTS
             # cannot be picked up as a second user turn.
@@ -842,8 +861,13 @@ class DesktopWindow:
             r"(?:do|da|de) [a-z0-9][a-z0-9 ._-]{0,79}", normalized
         )):
             return "vision_window"
-        if normalized in {"analisar camera", "analise a camera", "abra a camera",
-                          "abrir camera", "mostre a camera", "ligue a camera"}:
+        if normalized in {"feche a camera", "desligue a camera", "pare a camera",
+                          "fechar camera", "desligar camera"}:
+            return "camera_off"
+        if normalized in {"abra a camera", "abrir camera", "mostre a camera",
+                          "ligue a camera"}:
+            return "camera_on"
+        if normalized in {"analisar camera", "analise a camera"}:
             return "vision_camera"
         return None
 
@@ -905,7 +929,137 @@ class DesktopWindow:
         self._request_vision("window")
 
     def _vision_camera(self) -> None:
-        self._request_vision("camera")
+        if self._live_camera is not None:
+            self._stop_live_camera()
+        else:
+            self._start_live_camera()
+
+    def _start_live_camera(self) -> None:
+        """Authorize one live session; each spoken question selects one frame."""
+        if self._closing or self._busy:
+            return
+        from tkinter import simpledialog
+        devices = LocalVision.cameras()
+        if not devices:
+            self._vision_notice("Nenhuma câmera local foi encontrada. Confira /dev/video e as permissões.")
+            return
+        index = devices[0][0]
+        if len(devices) > 1:
+            choices = "\n".join(f"{number}: {name}" for number, name in devices)
+            index = simpledialog.askinteger(
+                "Selecionar câmera", f"Câmeras encontradas:\n{choices}\n\nNúmero da câmera:",
+                parent=self.root, initialvalue=index, minvalue=0,
+                maxvalue=LocalVision.MAX_CAMERA_INDEX,
+            )
+            if index is None:
+                return
+            if index not in dict(devices):
+                self._vision_notice("A câmera escolhida não está mais disponível.")
+                return
+        if not self.messagebox.askyesno(
+            "Nexus Core — câmera contínua",
+            f"Ligar a câmera {index} e mostrar vídeo local até você desligá-la? "
+            "Quando você perguntar sobre a câmera, um quadro atual será "
+            "enviado somente ao Ollama local. Nenhum vídeo será gravado. "
+            "Use 'Feche a câmera' ou o botão para parar.", parent=self.root,
+        ) or self._closing:
+            return
+        stream = CameraStream(index)
+        try:
+            stream.start()
+            preview = self.tk.Toplevel(self.root)
+            preview.title(f"NEXUS CORE — câmera {index} ao vivo")
+            preview.configure(background="#241c24")
+            label = self.tk.Label(
+                preview, text="Iniciando câmera…", bg="#241c24", fg="white",
+                width=80, height=25,
+            )
+            label.pack(padx=8, pady=8)
+            self.tk.Button(preview, text="Desligar câmera",
+                           command=self._stop_live_camera).pack(pady=(0, 8))
+            preview.protocol("WM_DELETE_WINDOW", self._stop_live_camera)
+        except Exception:
+            stream.stop()
+            self._vision_notice("Não foi possível abrir a prévia da câmera.")
+            return
+        self._live_camera = stream
+        self._live_camera_window = preview
+        self._live_camera_label = label
+        self._live_camera_sequence = 0
+        self._vision_buttons[2].configure(text="Desligar câmera")
+        self._vision_notice("Câmera ligada. Pergunte: 'Na câmera, o que você vê?'")
+
+    def _stop_live_camera(self) -> None:
+        stream = self._live_camera
+        if stream is None:
+            return
+        self._live_camera = None
+        stream.stop()
+        preview = self._live_camera_window
+        self._live_camera_window = None
+        self._live_camera_label = None
+        if preview is not None:
+            try:
+                preview.destroy()
+            except self.tk.TclError:
+                pass
+        self._vision_buttons[2].configure(text="Câmera")
+        if self._busy and self._vision_source == "camera_live":
+            self._cancel_requested = True
+        if not self._closing:
+            self.status.configure(text="Câmera desligada")
+
+    @staticmethod
+    def _camera_question(text: str) -> bool:
+        normalized = unicodedata.normalize("NFKD", text).encode(
+            "ascii", "ignore").decode("ascii").lower()
+        return bool(re.search(r"\b(?:na camera|pela camera|da camera|no video|"
+                              r"voce ve|esta vendo|aparece|visivel|mostrando)\b", normalized))
+
+    def _ask_live_camera(self, question: str) -> None:
+        stream = self._live_camera
+        if stream is None or self._busy or self._closing:
+            return
+        _, frame, error = stream.latest()
+        if error or frame is None:
+            self._vision_notice(error or "A câmera ainda está iniciando. Pergunte novamente em instantes.")
+            return
+        try:
+            question = LocalVision.validate_question(question)
+        except VisionInputError:
+            self._vision_notice("Pergunta visual inválida (máximo 2000 caracteres).")
+            return
+        self._append("Você", f"[Câmera ao vivo] {question}", "user")
+        self._busy = True
+        self._operation_kind = "vision"
+        self._vision_source = "camera_live"
+        self._operation_started = monotonic()
+        self._cancel_requested = False
+        self.send_button.configure(state="disabled")
+        self.suggest_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
+        for button in self._vision_buttons[:2]:
+            button.configure(state="disabled")
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
+        if self._speaking:
+            self._stop_speaking()
+        self.status.configure(text="Analisando quadro atual no Ollama local…")
+        self._start_worker(self._describe_live_frame, frame, question)
+
+    def _describe_live_frame(self, frame: bytes, question: str) -> None:
+        try:
+            service = self.vision if self.vision is not None else LocalVision(settings)
+            result = service.describe(frame, question=question)
+            description = result.get("description") if isinstance(result, dict) else None
+            if not isinstance(description, str) or not description.strip():
+                raise VisionError("Resposta visual local inválida.")
+            self._vision_events.put(("success", question, description[:12000]))
+        except VisionError as exc:
+            self._vision_events.put(("error", question, str(exc)))
+        except Exception:
+            self._vision_events.put(("error", question, "Falha ao analisar quadro local."))
 
     def _shortcut_vision_file(self, event=None):
         self._vision_file()
@@ -1194,6 +1348,25 @@ class DesktopWindow:
             if elapsed >= 10:
                 self.status.configure(text=f"Ollama processando há {elapsed} s · Cancelar disponível")
         self.confirmation.process(self._confirm)
+        stream = self._live_camera
+        if stream is not None:
+            sequence, frame, error = stream.latest()
+            if error:
+                self._stop_live_camera()
+                self._vision_notice(error)
+            elif frame is not None and sequence != self._live_camera_sequence:
+                self._live_camera_sequence = sequence
+                try:
+                    from PIL import Image, ImageTk
+                    with Image.open(io.BytesIO(frame)) as original:
+                        picture = original.copy()
+                    picture.thumbnail((640, 480))
+                    photo = ImageTk.PhotoImage(picture, master=self._live_camera_window)
+                    self._live_camera_label.configure(image=photo, text="", width=0, height=0)
+                    self._live_camera_label.image = photo
+                except (ImportError, OSError, ValueError, self.tk.TclError):
+                    self._stop_live_camera()
+                    self._vision_notice("Não foi possível exibir o vídeo local da câmera.")
         while True:
             try:
                 kind, value, generation = self._audio_events.get_nowait()
@@ -1267,7 +1440,17 @@ class DesktopWindow:
                         self._spoken_speech_control(command, utterance)
                     elif command in ("voice_female", "voice_male"):
                         self._spoken_voice_selection(command, utterance)
-                    elif command in ("vision_file", "vision_screen", "vision_display", "vision_window", "vision_camera"):
+                    elif command == "camera_off":
+                        self._stop_live_camera()
+                        self._start_listening()
+                    elif command in ("camera_on", "vision_camera"):
+                        if self._live_camera is None:
+                            self._start_live_camera()
+                        elif command == "vision_camera":
+                            self._ask_live_camera(LocalVision.DEFAULT_PROMPT)
+                        if not self._busy:
+                            self._start_listening()
+                    elif command in ("vision_file", "vision_screen", "vision_display", "vision_window"):
                         self._request_vision(command.removeprefix("vision_"))
                         # Selection or consent may be cancelled. Only then
                         # resume listening; a running analysis will resume it.
@@ -1276,9 +1459,12 @@ class DesktopWindow:
                     elif kind == "transcript" and utterance:
                         self._listen_retries = 0
                         self._recognition_failures = 0
-                        self.input.delete("1.0", "end")
-                        self.input.insert("1.0", utterance)
-                        self._send()
+                        if self._live_camera is not None and self._camera_question(utterance):
+                            self._ask_live_camera(utterance)
+                        else:
+                            self.input.delete("1.0", "end")
+                            self.input.insert("1.0", utterance)
+                            self._send()
                     else:
                         if kind == "silence":
                             self._recognition_failures += 1
@@ -1395,6 +1581,7 @@ class DesktopWindow:
         if self._camera_preview is not None:
             self._camera_preview.destroy()
             self._camera_preview = None
+        self._stop_live_camera()
         self._voice_active = False
         self._listen_generation += 1
         self.session.close()

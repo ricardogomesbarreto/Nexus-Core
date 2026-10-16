@@ -1,5 +1,6 @@
 """v0.6.1: real Tk dispatch with fake Linux audio/vision hardware."""
 import json
+import io
 import os
 import time
 
@@ -88,8 +89,21 @@ def desktop(monkeypatch):
         pytest.skip("Requer Xvfb")
     import tkinter as tk
     from nexus.vision.local import LocalVision
+    from PIL import Image
+    import nexus.desktop.window as window_module
     monkeypatch.setattr(LocalVision, "cameras", staticmethod(
         lambda: [(0, "Câmera integrada"), (1, "USB"), (2, "Teste")]))
+
+    frame = io.BytesIO()
+    Image.new("RGB", (8, 8), "red").save(frame, format="JPEG")
+    class FakeCameraStream:
+        def __init__(self, index):
+            self.index = index
+            self.stopped = False
+        def start(self): pass
+        def stop(self): self.stopped = True
+        def latest(self): return (1, frame.getvalue(), None)
+    monkeypatch.setattr(window_module, "CameraStream", FakeCameraStream)
 
     root = tk.Tk()
     app = FakeApp()
@@ -204,8 +218,12 @@ def test_single_camera_is_chosen_without_index_dialog(desktop, monkeypatch):
     monkeypatch.setattr(simpledialog, "askstring", lambda *a, **kw: "O que vê?")
     monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
     window._vision_camera()
-    spin(root, lambda: not window._busy)
-    assert vision.calls[0] == ("camera", 3)
+    assert window._live_camera.index == 3
+    assert vision.calls == []
+    window._ask_live_camera("Na câmera, o que você vê?")
+    spin(root, lambda: not window._busy and len(vision.calls) == 1)
+    assert vision.calls[0][0] == "describe"
+    assert "Um diagrama de redes" in window.transcript.get("1.0", "end")
 
 
 def test_numbered_camera_above_nine_can_be_selected(desktop, monkeypatch):
@@ -221,8 +239,9 @@ def test_numbered_camera_above_nine_can_be_selected(desktop, monkeypatch):
     monkeypatch.setattr(simpledialog, "askinteger", choose_camera)
     monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
     window._vision_camera()
-    spin(root, lambda: not window._busy)
-    assert vision.calls[0] == ("camera", 10)
+    assert window._live_camera.index == 10
+    window._vision_camera()
+    assert window._live_camera is None
 
 
 def test_local_vision_error_cannot_crash_gui_or_trigger_agent(desktop, monkeypatch):
@@ -253,8 +272,6 @@ def test_closed_window_ignores_stale_vision_events(desktop):
          ("file", "/home/example/notes.png"), b"private-image"),
         ("<Control-Shift-T>",
          ("screen",), b"private-screen"),
-        ("<Control-Shift-K>",
-         ("camera", 2), b"private-camera"),
     ],
 )
 def test_vision_shortcut_uses_single_shot_consent(
@@ -282,10 +299,39 @@ def test_vision_shortcut_uses_single_shot_consent(
     assert "UMA captura/leitura" in approvals[0]
     assert "Ollama local" in approvals[0]
     from nexus.vision.local import LocalVision
-    question = (LocalVision.DEFAULT_PROMPT if binding == "<Control-Shift-K>"
-                else "O que aparece?")
+    question = "O que aparece?"
     assert vision.calls == [capture, ("describe", image, question)]
     assert not app.agent.requests
+
+
+def test_camera_shortcut_opens_live_video_without_automatic_inference(desktop, monkeypatch):
+    from tkinter import simpledialog
+    root, app, window, vision = desktop
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: 2)
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    root.update()
+    root.event_generate("<Control-Shift-K>")
+    spin(root, lambda: window._live_camera is not None)
+    assert vision.calls == []
+    assert window._privacy_snapshot().labels()[2] == "Visão: câmera ligada"
+    root.event_generate("<Control-Shift-K>")
+    spin(root, lambda: window._live_camera is None)
+
+
+def test_spoken_question_uses_latest_frame_while_preview_remains_open(desktop, monkeypatch):
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(lambda: [(0, "Integrada")]))
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    spin(root, lambda: window._listening)
+    assert vision.calls == []
+    generation = window._listen_generation
+    window._audio_events.put(("transcript", "Na câmera, o que aparece?", generation))
+    spin(root, lambda: len(vision.calls) == 1 and not window._busy)
+    assert vision.calls[0][0] == "describe"
+    assert window._live_camera is not None
+    assert "Um diagrama de redes" in window.transcript.get("1.0", "end")
 
 
 @pytest.mark.parametrize(

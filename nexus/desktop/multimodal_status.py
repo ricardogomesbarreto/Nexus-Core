@@ -15,6 +15,7 @@ class MultimodalStatus:
     speech_requested: bool
     vision_busy: bool = False
     vision_source: str | None = None
+    camera_active: bool = False
     cancellation_requested: bool = False
     closing: bool = False
 
@@ -42,8 +43,11 @@ class MultimodalStatus:
                     "file": "imagem",
                     "screen": "tela",
                     "camera": "câmera",
+                    "camera_live": "câmera",
                 }.get(self.vision_source, "visual")
                 vision = f"Visão: processando {source}"
+        elif self.camera_active:
+            vision = "Visão: câmera ligada"
         else:
             vision = "Visão: sem captura"
         return microphone, speech, vision
