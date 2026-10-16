@@ -85,6 +85,21 @@ def test_same_stale_answer_twice_is_reported_not_pretended():
     assert all(call[1].get("allow_tools") is False for call in agent.calls[2:])
 
 
+def test_followup_can_legitimately_repeat_advisory_answer():
+    repeated = "Sugiro começar identificando o problema com cuidado."
+    agent = SequenceAgent([
+        AgentOutcome(True, content=repeated),
+        AgentOutcome(True, content=repeated),
+    ])
+    session = ChatSession(agent)
+    suggestion = session.ask("Sugira próximos passos", advisory_only=True)
+    followup = session.ask("Explique sua sugestão")
+    assert suggestion.outcome.success
+    assert followup.outcome.success
+    assert followup.text == repeated
+    assert len(agent.calls) == 2  # No spurious duplicate retry.
+
+
 def test_same_question_may_give_same_answer_without_second_inference():
     old = "Uma rede conecta dispositivos para trocar dados."
     agent = SequenceAgent([AgentOutcome(True, content=old)] * 2)
