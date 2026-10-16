@@ -162,7 +162,9 @@ class LocalVision:
 
     def screen(self) -> bytes:
         if os.environ.get("WAYLAND_DISPLAY"):
-            return self.selected_screen(window=True)
+            # The Tela button asks for a screen/monitor, not a window-only
+            # capture. Legacy portals support the interactive chooser only.
+            return self.selected_screen(window=False)
         if os.environ.get("DISPLAY"):
             binary = shutil.which("import")
             if not binary:
