@@ -41,7 +41,14 @@ integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
-## Correções do chat e áudio no código atual
+## Correções e auditoria do código atual
+
+**Auditoria de compatibilidade de câmera (código v0.9.11):** a busca V4L2
+inclui agora dispositivos numerados de `/dev/video0` até `/dev/video255`.
+Os nós somente de metadados continuam excluídos por `VIDIOC_QUERYCAP`.
+O seletor da janela e `--vision-camera` aceitam esses índices; a captura
+continua a exigir autorização por foto. Esta correção foi validada por testes
+de código e ainda precisa de confirmação com webcam física no Ubuntu.
 
 ### Persistência automática do assistente e preferências do usuário (v0.9.11)
 

@@ -208,6 +208,23 @@ def test_single_camera_is_chosen_without_index_dialog(desktop, monkeypatch):
     assert vision.calls[0] == ("camera", 3)
 
 
+def test_numbered_camera_above_nine_can_be_selected(desktop, monkeypatch):
+    from tkinter import simpledialog
+    from nexus.vision.local import LocalVision
+    root, app, window, vision = desktop
+    monkeypatch.setattr(LocalVision, "cameras", staticmethod(
+        lambda: [(0, "Integrada"), (10, "USB")]
+    ))
+    def choose_camera(*args, **kwargs):
+        assert kwargs["maxvalue"] >= 10
+        return 10
+    monkeypatch.setattr(simpledialog, "askinteger", choose_camera)
+    monkeypatch.setattr(window.messagebox, "askyesno", lambda *a, **kw: True)
+    window._vision_camera()
+    spin(root, lambda: not window._busy)
+    assert vision.calls[0] == ("camera", 10)
+
+
 def test_local_vision_error_cannot_crash_gui_or_trigger_agent(desktop, monkeypatch):
     from tkinter import simpledialog
     root, app, window, vision = desktop

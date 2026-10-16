@@ -952,7 +952,8 @@ class DesktopWindow:
                 choices = "\n".join(f"{index}: {name}" for index, name in devices)
                 selection = simpledialog.askinteger(
                     "Selecionar câmera", f"Câmeras encontradas:\n{choices}\n\nNúmero da câmera:",
-                    parent=self.root, initialvalue=devices[0][0], minvalue=0, maxvalue=9,
+                    parent=self.root, initialvalue=devices[0][0], minvalue=0,
+                    maxvalue=LocalVision.MAX_CAMERA_INDEX,
                 )
                 if selection is None:
                     return

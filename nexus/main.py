@@ -255,7 +255,7 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--vision-screen", action="store_true",
                          help="captura e analisa uma única imagem de tela")
     actions.add_argument("--vision-camera", type=int, metavar="INDEX",
-                         help="captura um único quadro da câmera 0 a 9")
+                         help="captura um único quadro da câmera 0 a 255")
     parser.add_argument("--vision-question", metavar="TEXT",
                         help="pergunta para o modelo visual local")
     parser.add_argument("--vision-model", default="gemma3:4b",

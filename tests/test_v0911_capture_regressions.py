@@ -58,14 +58,14 @@ def test_v4l2_querycap_excludes_metadata_only_nodes(monkeypatch, device_caps, ex
 
 def test_camera_inventory_filters_metadata_nodes(monkeypatch):
     monkeypatch.setattr(vision_module.glob, "glob", lambda pattern: [
-        "/dev/video0", "/dev/video1", "/dev/video99", "/dev/video-other"
+        "/dev/video0", "/dev/video1", "/dev/video10", "/dev/video99",
+        "/dev/video256", "/dev/video-other"
     ])
     monkeypatch.setattr(LocalVision, "_camera_supports_capture", staticmethod(
-        lambda path: path.name == "video0"
+        lambda path: path.name in {"video0", "video10", "video256"}
     ))
     cameras = LocalVision.cameras()
-    assert len(cameras) == 1
-    assert cameras[0][0] == 0
+    assert [index for index, _ in cameras] == [0, 10]
 
 
 def test_camera_failure_explains_device_and_action_without_raw_ffmpeg_output(monkeypatch):

@@ -50,7 +50,7 @@ def test_model_response_must_be_finished_nonempty_text(response):
         LocalVision(Settings(), transport=Transport(response)).describe(image_bytes())
 
 
-@pytest.mark.parametrize("camera", [-1, 10, "0", True, None])
+@pytest.mark.parametrize("camera", [-1, 256, "0", True, None])
 def test_invalid_camera_index_fails_before_hardware(monkeypatch, camera):
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: None)
     with pytest.raises(VisionInputError):
@@ -77,11 +77,13 @@ def test_capture_backends_use_fixed_arguments(monkeypatch):
     monkeypatch.setenv("DISPLAY", ":1")
     service.screen()
     service.camera(2)
+    service.camera(10)
     assert calls[0] == ("portal", False)  # Tela requests a screen, not a window.
     assert calls[1] == ["/bin/import", "-window", "root", "png:-"]
     assert calls[2][-1] == "pipe:1"
     assert "/dev/video2" in calls[2]
     assert "-nostdin" in calls[2]
+    assert "/dev/video10" in calls[3]
 
 
 def test_capture_output_is_bounded(monkeypatch):
