@@ -267,7 +267,7 @@ class DesktopWindow:
             widget.pack(side="left", padx=(0, 10))
             self._privacy_labels.append(widget)
 
-        ttk.Label(footer, text="SUA MENSAGEM  ·  Ctrl+Enter para enviar",
+        ttk.Label(footer, text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
                   style="Nexus.Section.TLabel").pack(
                       anchor="w", pady=(7, 3))
         self.input = tk.Text(
@@ -279,6 +279,9 @@ class DesktopWindow:
         )
         self.input.pack(fill="x")
         self.input.bind("<Control-Return>", self._send)
+        self.input.bind("<Return>", self._send)
+        # Shift+Enter retains normal multiline text entry.
+        self.input.bind("<Shift-Return>", lambda event: None)
 
         # Each action gets an equal, responsive column. Keep original
         # attributes, shortcuts and state transitions for compatibility.
@@ -809,25 +812,48 @@ class DesktopWindow:
         if not self._say_response(message):
             self._start_listening()
 
-    def _show_camera_frame(self, frame: bytes) -> None:
-        """Display the authorized single camera frame without saving it."""
+    def _show_camera_frame(self, frame: bytes, source: str = "camera") -> None:
+        """Show the one-shot image selected with explicit user authorization.
+
+        This is not a live stream and does not persist captured pixels.
+        Preview works for file imports, screen screenshots and webcams.
+        """
         try:
             from PIL import Image, ImageTk
             with Image.open(io.BytesIO(frame)) as raw:
                 picture = raw.copy()
-            picture.thumbnail((620, 400))
+            picture.thumbnail((660, 420))
             photo = ImageTk.PhotoImage(picture, master=self.root)
         except (ImportError, OSError, ValueError):
             return
         if self._camera_preview is not None:
-            self._camera_preview.destroy()
+            try:
+                self._camera_preview.destroy()
+            except self.tk.TclError:
+                pass
+        label = {
+            "file": "imagem importada", "camera": "foto da câmera",
+            "screen": "tela capturada", "display": "monitor capturado",
+            "window": "janela selecionada",
+        }.get(source, "imagem autorizada")
         preview = self.tk.Toplevel(self.root)
-        preview.title("Nexus Core — câmera local (uma foto)")
-        label = self.tk.Label(preview, image=photo)
-        label.image = photo
-        label.pack(padx=12, pady=12)
-        self.tk.Label(preview, text="Foto local única; análise em andamento.").pack()
-        self.tk.Button(preview, text="Fechar foto", command=preview.destroy).pack(pady=8)
+        preview.title(f"NEXUS CORE — prévia de {label}")
+        preview.configure(background="#f5f1f3")
+        title = self.tk.Label(
+            preview, text=f"Prévia: {label}",
+            font=("Sans", 12, "bold"), fg="#722F37", bg="#f5f1f3",
+        )
+        title.pack(padx=12, pady=(12, 5))
+        holder = self.tk.Label(preview, image=photo, bd=0)
+        holder.image = photo
+        holder.pack(padx=12, pady=8)
+        self.tk.Label(
+            preview, text="Captura única autorizada. Análise no Ollama local em andamento.",
+            bg="#f5f1f3", fg="#503943",
+        ).pack(pady=(0, 5))
+        self.tk.Button(
+            preview, text="Fechar prévia", command=preview.destroy,
+        ).pack(pady=(4, 12))
         self._camera_preview = preview
 
     def _analyze_vision(self, source: str, selection, question: str) -> None:
@@ -838,13 +864,15 @@ class DesktopWindow:
                 image = service.image_from_file(selection)
             elif source == "camera":
                 image = service.camera(selection)
-                self._camera_frames.put(image)
             elif source == "window":
                 image = service.selected_screen(window=True)
             elif source == "display":
                 image = service.selected_screen(window=False)
             else:
                 image = service.screen()
+            # Only user-authorized captures reach the GUI preview queue.
+            # No image is retained in the conversation history.
+            self._camera_frames.put((source, image))
             result = service.describe(image, question=question)
             if not isinstance(result, dict) or not isinstance(
                 result.get("description"), str
@@ -1088,7 +1116,10 @@ class DesktopWindow:
             except Empty:
                 break
             if not self._closing and not self._cancel_requested:
-                self._show_camera_frame(frame)
+                if isinstance(frame, tuple) and len(frame) == 2:
+                    self._show_camera_frame(frame[1], frame[0])
+                else:
+                    self._show_camera_frame(frame)
         while True:
             try:
                 kind, question, result = self._vision_events.get_nowait()
