@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from nexus.models.contracts import ModelError, ModelProviderTimeoutError, ModelRequest, ModelResponse
+from nexus.models.contracts import ModelError, ModelProviderTimeoutError, ModelProviderUnavailableError, ModelRequest, ModelResponse
 from nexus.security import PermissionDecision
 from nexus.tools import ContractViolation, ToolExecutor, ToolRegistry, ToolResult
 
@@ -259,6 +259,14 @@ class AgentPlanner:
             return AgentOutcome(
                 False, error="O modelo local demorou para responder. Tente uma pergunta mais curta ou confira o Ollama.",
                 error_code="MODEL_TIMEOUT",
+            )
+        except ModelProviderUnavailableError:
+            return AgentOutcome(
+                False,
+                error="O Ollama local está indisponível. Verifique se o serviço "
+                      "está iniciado e se o modelo foi instalado. A internet "
+                      "não é necessária para conversar com o modelo local.",
+                error_code="MODEL_ERROR",
             )
         except ModelError:
             return AgentOutcome(
