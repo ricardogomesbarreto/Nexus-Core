@@ -26,7 +26,7 @@ class DesktopPreferences:
     audio_backend: str = "auto"
     listening_enabled: bool = True
     geometry: str = "980x720"
-    remember_history: bool = False
+    remember_history: bool = True
 
     MAX_BYTES = 4096
     VERSION = 1
