@@ -16,6 +16,7 @@ from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.multimodal_status import MultimodalStatus
+from nexus.desktop.welcome import desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
@@ -92,18 +93,63 @@ class DesktopWindow:
         self._workers: list[Thread] = []
 
         root.title(f"Nexus Core {settings.version} — Conversa local")
-        root.geometry("820x620")
-        root.minsize(560, 420)
-        root.configure(bg="#f7f4f5")
-        style = ttk.Style(root)
-        style.configure("Nexus.TButton", padding=(14, 9))
-        style.configure("Nexus.Header.TFrame", background="#241c24")
-        style.configure("Nexus.Header.TLabel", background="#241c24", foreground="#ffffff")
+        root.geometry("980x720")
+        root.minsize(770, 570)
+        root.configure(bg="#f5f1f3")
+        welcome_text, readiness_caption = desktop_startup_message(app)
 
-        frame = ttk.Frame(root, padding=18)
+        # Use the portable 'clam' theme for dependable branded button colors
+        # on Ubuntu, while preserving native keyboard and ttk accessibility.
+        style = ttk.Style(root)
+        if "clam" in style.theme_names():
+            style.theme_use("clam")
+        style.configure("Nexus.App.TFrame", background="#f5f1f3")
+        style.configure("Nexus.Header.TFrame", background="#241c24")
+        style.configure("Nexus.Header.TLabel", background="#241c24",
+                        foreground="#ffffff")
+        style.configure("Nexus.HeaderHint.TLabel", background="#241c24",
+                        foreground="#e9b4c4", font=("Sans", 9))
+        style.configure("Nexus.Subtitle.TLabel", background="#f5f1f3",
+                        foreground="#75646e", font=("Sans", 10))
+        style.configure("Nexus.Section.TLabel", background="#f5f1f3",
+                        foreground="#49333d", font=("Sans", 10, "bold"))
+        style.configure("Nexus.Caption.TLabel", background="#f5f1f3",
+                        foreground="#584751", font=("Sans", 9))
+        style.configure("Nexus.Status.TLabel", background="#ebe2e7",
+                        foreground="#573b48", font=("Sans", 10),
+                        padding=(12, 9))
+        style.configure("Nexus.TCheckbutton", background="#f5f1f3",
+                        foreground="#42323a", font=("Sans", 10))
+        style.map("Nexus.TCheckbutton",
+                  background=[("active", "#f5f1f3")])
+        style.configure("Nexus.TButton", background="#eee6ea",
+                        foreground="#382631", borderwidth=1,
+                        padding=(12, 9), font=("Sans", 10))
+        style.map("Nexus.TButton",
+                  background=[("active", "#e4d9df"), ("pressed", "#d7c8d0")],
+                  foreground=[("disabled", "#8e8189")])
+        style.configure("Nexus.Primary.TButton", background="#722F37",
+                        foreground="#ffffff", borderwidth=1,
+                        padding=(12, 10), font=("Sans", 10, "bold"))
+        style.map("Nexus.Primary.TButton",
+                  background=[("active", "#8f3d4b"), ("pressed", "#59232f"),
+                              ("disabled", "#cfb9c1")],
+                  foreground=[("disabled", "#f6eef1")])
+        style.configure("Nexus.Quiet.TButton", background="#f5f1f3",
+                        foreground="#5e3a47", padding=(12, 9),
+                        font=("Sans", 10))
+        style.map("Nexus.Quiet.TButton",
+                  background=[("active", "#ebdce2"), ("pressed", "#decbd4")])
+        style.configure("Nexus.Danger.TButton", background="#e7d9df",
+                        foreground="#672f40", padding=(12, 9),
+                        font=("Sans", 10))
+        style.map("Nexus.Danger.TButton",
+                  background=[("active", "#dbc3cd"), ("pressed", "#cba7b6")])
+
+        frame = ttk.Frame(root, style="Nexus.App.TFrame", padding=14)
         frame.pack(fill="both", expand=True)
-        # Keep visual assets local. Tk can display the bundled transparent PNG
-        # without requiring a browser, SVG runtime or third-party GUI package.
+
+        # Keep the approved NEXUS CORE logo, only refine its container.
         self._brand_image = None
         brand = Path(__file__).resolve().parents[1] / "assets" / "brand" / "nexus-core-logo.png"
         if brand.is_file():
@@ -111,124 +157,153 @@ class DesktopWindow:
                 self._brand_image = tk.PhotoImage(file=str(brand)).subsample(8, 8)
             except tk.TclError:
                 self._brand_image = None
-        header = ttk.Frame(frame, style="Nexus.Header.TFrame")
+        header = ttk.Frame(frame, style="Nexus.Header.TFrame", padding=(14, 7))
         header.pack(fill="x", pady=(0, 8))
         if self._brand_image is not None:
             ttk.Label(header, image=self._brand_image,
-                      style="Nexus.Header.TLabel").pack(anchor="w", padx=14, pady=5)
+                      style="Nexus.Header.TLabel").pack(side="left", anchor="center")
         else:
-            ttk.Label(header, text="Nexus Core", font=("Sans", 20, "bold"),
-                      style="Nexus.Header.TLabel").pack(anchor="w", padx=14, pady=12)
-        ttk.Label(
-            frame,
-            text="Conversa local · ações mediadas · PostgreSQL no computador",
-        ).pack(anchor="w", pady=(0, 12))
+            ttk.Label(header, text="NEXUS CORE", font=("Sans", 20, "bold"),
+                      style="Nexus.Header.TLabel").pack(side="left", anchor="center")
+        ttk.Label(header, text="ASSISTENTE LOCAL\nPRIVACIDADE POR PADRÃO",
+                  justify="right", style="Nexus.HeaderHint.TLabel").pack(
+                      side="right", anchor="center", padx=(8, 0))
 
-        # Reserve the bottom controls before allowing the transcript to expand.
-        # The default Text height otherwise hides the entry and Send button.
-        footer = ttk.Frame(frame)
+        ttk.Label(frame, text=readiness_caption,
+                  style="Nexus.Subtitle.TLabel").pack(anchor="w", pady=(0, 8))
+
+        # Pack footer before the expanding transcript. All actions have their
+        # own equal-width grid row; status never competes for button space.
+        footer = ttk.Frame(frame, style="Nexus.App.TFrame")
         footer.pack(side="bottom", fill="x")
-        transcript_frame = ttk.Frame(frame)
+
+        transcript_frame = ttk.Frame(frame, padding=2, style="Nexus.App.TFrame")
         transcript_frame.pack(fill="both", expand=True)
         self.transcript = tk.Text(
-            transcript_frame, height=6, wrap="word", state="disabled", padx=14, pady=12,
-            bg="#ffffff", fg="#252025", font=("Sans", 11), relief="flat",
+            transcript_frame, height=5, wrap="word", state="disabled",
+            padx=16, pady=14, bg="#ffffff", fg="#2c242a",
+            font=("Sans", 11), relief="flat", borderwidth=0,
+            highlightthickness=1, highlightbackground="#e2d8dd",
         )
         scrollbar = ttk.Scrollbar(transcript_frame, command=self.transcript.yview)
         self.transcript.configure(yscrollcommand=scrollbar.set)
         self.transcript.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        self.transcript.tag_configure("user", foreground="#722F37", font=("Sans", 11, "bold"))
-        self.transcript.tag_configure("assistant", foreground="#242424", font=("Sans", 11, "bold"))
+        self.transcript.tag_configure(
+            "user", foreground="#722F37", font=("Sans", 11, "bold"))
+        self.transcript.tag_configure(
+            "assistant", foreground="#34232d", font=("Sans", 11, "bold"))
 
-        voice_controls = ttk.Frame(footer)
-        voice_controls.pack(fill="x", pady=(10, 0))
+        # Compact first row: speech preferences are distinct from listening.
+        voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
+        voice_controls.pack(fill="x", pady=(7, 0))
         self.speech_toggle = ttk.Checkbutton(
             voice_controls, text="Ler respostas em voz alta",
-            command=self._toggle_speech,
+            command=self._toggle_speech, style="Nexus.TCheckbutton",
         )
         self.speech_toggle.state(("selected",))
         self.speech_toggle.pack(side="left")
         self.speech_enabled = _WidgetBoolean(self.speech_toggle)
-        ttk.Label(voice_controls, text="Voz:").pack(side="left", padx=(14, 4))
+        ttk.Label(voice_controls, text="Voz:", style="Nexus.Caption.TLabel").pack(
+            side="left", padx=(15, 5))
         self.voice_selector = ttk.Combobox(
-            voice_controls,
-            values=("Feminina", "Masculina"), state="readonly", width=12,
+            voice_controls, values=("Feminina", "Masculina"),
+            state="readonly", width=12,
         )
         self.voice_selector.set(
             "Masculina" if LocalSpeaker.neural_voice_ready() else "Feminina"
         )
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
-        # Optional activation never changes default continuous listening.
         self.wake_toggle = ttk.Checkbutton(
             voice_controls, text='Exigir "Nexus" para ativar',
-            command=self._toggle_wake,
+            command=self._toggle_wake, style="Nexus.TCheckbutton",
         )
-        self.wake_toggle.pack(side="left", padx=(12, 0))
+        self.wake_toggle.pack(side="left", padx=(15, 0))
         self.wake_required = _WidgetBoolean(self.wake_toggle)
-        vision_controls = ttk.Frame(footer)
-        vision_controls.pack(fill="x", pady=(8, 0))
-        ttk.Label(vision_controls, text="Visão local sob autorização:").pack(side="left", padx=(0, 8))
-        for title, callback in (
+
+        # Three uniform-width capture actions; no camera access until consent.
+        vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
+        vision_controls.pack(fill="x", pady=(7, 0))
+        ttk.Label(vision_controls, text="VISÃO SOB AUTORIZAÇÃO",
+                  style="Nexus.Section.TLabel").pack(side="left", padx=(0, 10))
+        vision_actions = ttk.Frame(vision_controls, style="Nexus.App.TFrame")
+        vision_actions.pack(side="left", fill="x", expand=True)
+        for column in range(3):
+            vision_actions.columnconfigure(column, weight=1, uniform="vision")
+        for column, (title, callback) in enumerate((
             ("Imagem", self._vision_file),
             ("Tela", self._vision_screen),
             ("Câmera", self._vision_camera),
-        ):
-            button = ttk.Button(
-                vision_controls, text=title, command=callback, style="Nexus.TButton",
-            )
-            button.pack(side="left", padx=(0, 6))
+        )):
+            button = ttk.Button(vision_actions, text=title,
+                                command=callback, style="Nexus.TButton")
+            button.grid(row=0, column=column, sticky="ew",
+                        padx=(0, 6) if column < 2 else (0, 0))
             self._vision_buttons.append(button)
 
-        # These are factual SOFTWARE states only. They do not imply hardware
-        # certification, continuous video access or persistent camera consent.
-        privacy_row = ttk.Frame(footer)
-        privacy_row.pack(fill="x", pady=(7, 0))
-        # Voice-activity sprite is decorative feedback driven by real PCM peaks.
-        # It does not activate the microphone or indicate successful Vosk STT.
+        # Signals describe SOFTWARE activity, never hardware certification.
+        privacy_row = ttk.Frame(footer, style="Nexus.App.TFrame")
+        privacy_row.pack(fill="x", pady=(5, 0))
         self.microphone_indicator = MicrophoneIndicator(privacy_row)
         self.microphone_indicator.widget.pack(side="left", padx=(0, 7))
-        self._audio_level_label = ttk.Label(privacy_row, text="Entrada: aguardando")
+        self._audio_level_label = ttk.Label(
+            privacy_row, text="Entrada: aguardando",
+            style="Nexus.Caption.TLabel")
         self._audio_level_label.pack(side="left", padx=(0, 10))
         self._privacy_labels = []
-        for text in ("Escuta: aguardando", "Voz: habilitada", "Visão: sem captura"):
-            widget = ttk.Label(privacy_row, text=text)
-            widget.pack(side="left", padx=(0, 12))
+        for label_text in ("Escuta: aguardando", "Voz: habilitada",
+                           "Visão: sem captura"):
+            widget = ttk.Label(
+                privacy_row, text=label_text, style="Nexus.Caption.TLabel")
+            widget.pack(side="left", padx=(0, 10))
             self._privacy_labels.append(widget)
 
-        ttk.Label(footer, text="Sua mensagem (Ctrl+Enter para enviar)").pack(
-            anchor="w", pady=(12, 4)
+        ttk.Label(footer, text="SUA MENSAGEM  ·  Ctrl+Enter para enviar",
+                  style="Nexus.Section.TLabel").pack(
+                      anchor="w", pady=(7, 3))
+        self.input = tk.Text(
+            footer, height=3, wrap="word", font=("Sans", 11),
+            bg="#ffffff", fg="#292127", relief="flat",
+            padx=11, pady=8, borderwidth=0,
+            highlightthickness=1, highlightbackground="#d7c5cd",
+            highlightcolor="#722F37",
         )
-        self.input = tk.Text(footer, height=3, wrap="word", font=("Sans", 11))
         self.input.pack(fill="x")
         self.input.bind("<Control-Return>", self._send)
-        controls = ttk.Frame(footer)
-        controls.pack(fill="x", pady=(8, 0))
-        self.status = ttk.Label(controls, text="Pronto para conversar")
-        self.status.pack(side="left")
-        self.mic_button = ttk.Button(
-            controls, text="Pausar escuta", command=self._toggle_listening,
-            style="Nexus.TButton",
-        )
-        self.mic_button.pack(side="right", padx=(8, 0))
-        ttk.Button(
-            controls, text="Desligar assistente", command=self._close,
-            style="Nexus.TButton",
-        ).pack(side="right", padx=(8, 0))
-        self.send_button = ttk.Button(
-            controls, text="Enviar", command=self._send, style="Nexus.TButton"
-        )
-        self.send_button.pack(side="right")
+
+        # Each action gets an equal, responsive column. Keep original
+        # attributes, shortcuts and state transitions for compatibility.
+        controls = ttk.Frame(footer, style="Nexus.App.TFrame")
+        controls.pack(fill="x", pady=(7, 0))
+        for column in range(5):
+            controls.columnconfigure(column, weight=1, uniform="actions")
         self.suggest_button = ttk.Button(
-            controls, text="Sugerir", command=self._suggest, style="Nexus.TButton",
-        )
-        self.suggest_button.pack(side="right", padx=(0, 6))
+            controls, text="Sugerir", command=self._suggest,
+            style="Nexus.Quiet.TButton")
+        self.suggest_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        self.send_button = ttk.Button(
+            controls, text="Enviar", command=self._send,
+            style="Nexus.Primary.TButton")
+        self.send_button.grid(row=0, column=1, sticky="ew", padx=(0, 6))
         self.cancel_button = ttk.Button(
             controls, text="Cancelar", command=self._cancel_current,
-            style="Nexus.TButton", state="disabled",
-        )
-        self.cancel_button.pack(side="right", padx=(0, 6))
+            style="Nexus.TButton", state="disabled")
+        self.cancel_button.grid(row=0, column=2, sticky="ew", padx=(0, 6))
+        self.mic_button = ttk.Button(
+            controls, text="Pausar escuta", command=self._toggle_listening,
+            style="Nexus.TButton")
+        self.mic_button.grid(row=0, column=3, sticky="ew", padx=(0, 6))
+        self.shutdown_button = ttk.Button(
+            controls, text="Desligar assistente", command=self._close,
+            style="Nexus.Danger.TButton")
+        self.shutdown_button.grid(row=0, column=4, sticky="ew")
+
+        # Full-width status strip: long diagnostics never hide Send/Cancel.
+        self.status = ttk.Label(
+            footer, text="Inicializando a escuta local…",
+            style="Nexus.Status.TLabel", anchor="w")
+        self.status.pack(fill="x", pady=(6, 0))
         root.protocol("WM_DELETE_WINDOW", self._close)
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         root.bind("<Control-Shift-I>", self._show_privacy_status)
@@ -238,14 +313,8 @@ class DesktopWindow:
         root.bind("<Control-Shift-F>", self._shortcut_vision_file)
         root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
-        self._append(
-            "Nexus Core",
-            "Posso responder perguntas e propor ações com as ferramentas disponíveis. "
-            "A escuta começa automaticamente. Diga 'pare de escutar' ou use "
-            "Pausar escuta; use o botão para retomá-la. "
-            "Comandos no sandbox pedem sua autorização antes de executar.",
-            "assistant",
-        )
+        # Welcome is informational: no model calls, hardware claims or TTS.
+        self._append("Nexus Core", welcome_text, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
         root.after(80, self._poll)

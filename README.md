@@ -43,6 +43,45 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## Correções do chat e áudio no código atual
 
+### Interface desktop renovada e boas-vindas verificáveis
+
+A interface Tkinter do **NEXUS CORE v0.9.11** recebeu uma reorganização
+visual, mantendo **a logo original** e a identidade da marca (vinho
+`#722F37`, cabeçalho `#241c24` e tons claros de apoio). A mudança
+se aplica somente à apresentação, sem alterar a autorização das ações.
+
+- **Janela redimensionável:** abertura em 980 × 720 px, com mínimo de
+  770 × 570 px. A transcrição ocupa o espaço expansível; entrada de texto,
+  botões e indicadores ficam no rodapé reservado, sem disputa por espaço.
+- **Ações distribuídas:** botões `Sugerir`, `Enviar` (destaque vinho),
+  `Cancelar`, `Pausar escuta` e `Desligar assistente` em **cinco colunas
+  de larguras iguais**. O texto de status fica em uma faixa própria, abaixo
+  das ações, não comprimindo mais os botões.
+- **Visão:** `Imagem`, `Tela` e `Câmera` recebem a mesma largura
+  disponível e continuam exigindo consentimento por análise. Ícone animado
+  de microfone, porcentagem PCM, estado de escuta, saída de voz e visão
+  continuam visíveis e não implicam funcionamento físico comprovado.
+- **Acessibilidade e atalhos:** comandos e atalhos anteriores permanecem,
+  inclusive `Ctrl+Enter` para enviar e `Ctrl+Shift+M` para pausar/retomar
+  escuta. As cores de botões usam `ttk` com tema `clam` quando disponível.
+- **Boas-vindas:** ao abrir a janela, a conversa exibe uma saudação
+  acolhedora preparada localmente, **sem solicitar inferência ao modelo,
+  ativar dispositivos adicionais, executar ações ou disparar TTS**. Caso
+  `app.status().database` confirme a inicialização do PostgreSQL, a
+  mensagem informa especificamente esse fato; do contrário, informa
+  apenas que a interface foi aberta.
+
+**O texto de boas-vindas não declara que o Nexus Core está “100%
+funcional”.** Iniciar o banco e a janela não valida Ollama, Vosk, câmera,
+alto-falantes, dispositivos reais nem conectividade. Essas verificações
+permanecem separadas e dependem dos testes reais no desktop Ubuntu. A
+apresentação é intencionalmente honesta quanto ao nível de prontidão.
+O módulo `nexus/desktop/welcome.py` isola essa decisão para testes
+automatizados.
+
+Esta alteração **não cria nova tag nem release estável**: o código
+continua em v0.9.11, sujeito à homologação física dos recursos de mídia.
+
 ### Diagnóstico físico da webcam, microfone e arquivos (Ubuntu)
 
 A **v0.9.11** inclui correções de uso a partir de testes físicos no notebook,
