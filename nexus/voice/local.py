@@ -329,7 +329,9 @@ class LocalRecognizer(_StoppableProcess):
                 level = self.peak_level(frames)
                 if on_audio_level is not None and monotonic() >= next_level:
                     on_audio_level(level)
-                    next_level = monotonic() + 0.8
+                    # Refresh the on-screen activity frames ~4 times/second.
+                    # Peak feedback is independent of Vosk word recognition.
+                    next_level = monotonic() + 0.25
                 if level >= 3:
                     speech_started = True
                     last_voice = now

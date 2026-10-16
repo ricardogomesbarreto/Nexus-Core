@@ -333,7 +333,10 @@ def test_image_file_dialog_offers_more_formats_with_safe_fallback(desktop, monke
                       ".bmp", ".tif", ".tiff", ".avif"):
         assert "*" + extension in patterns
         assert "*" + extension.upper() in patterns
-    assert ("Todos os arquivos", "*") in filters
+    assert ("Todos os arquivos (validar conteúdo)", "*") in filters
+    for label in ("PNG", "JPEG / JPG", "WEBP", "BMP", "GIF", "TIFF", "AVIF (se suportado)"):
+        assert any(name == label for name, patterns in filters)
+    assert observed[0]["initialdir"]  # Start inside a friendly photo directory.
     assert not window._busy
     assert vision.calls == []
     assert app.agent.requests == []

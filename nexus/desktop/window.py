@@ -16,6 +16,7 @@ from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.conversation import ChatReply, ChatSession
 from nexus.desktop.multimodal_status import MultimodalStatus
+from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.wake import extract_utterance
@@ -188,6 +189,8 @@ class DesktopWindow:
         # It does not activate the microphone or indicate successful Vosk STT.
         self.microphone_indicator = MicrophoneIndicator(privacy_row)
         self.microphone_indicator.widget.pack(side="left", padx=(0, 7))
+        self._audio_level_label = ttk.Label(privacy_row, text="Entrada: aguardando")
+        self._audio_level_label.pack(side="left", padx=(0, 10))
         self._privacy_labels = []
         for text in ("Escuta: aguardando", "Voz: habilitada", "Visão: sem captura"):
             widget = ttk.Label(privacy_row, text=text)
@@ -472,6 +475,7 @@ class DesktopWindow:
         self._audio_level_samples = 0
         self._mic_last_signal = 0.0
         self.microphone_indicator.show_peak(0, listening=True)
+        self._audio_level_label.configure(text="Entrada: aguardando")
         self.status.configure(text="Ouvindo… diga sua pergunta")
         self._start_worker(self._listen, generation)
 
@@ -489,6 +493,7 @@ class DesktopWindow:
             self.recognizer.stop()
             self.microphone_indicator.show_peak(0, listening=False)
             self._mic_last_signal = 0.0
+            self._audio_level_label.configure(text="Entrada: pausada")
             self.status.configure(text="Escuta pausada; use Retomar escuta")
 
     @staticmethod
@@ -623,17 +628,12 @@ class DesktopWindow:
                  "camera": "câmera"}[source]
         if source == "file":
             selection = filedialog.askopenfilename(
-                parent=self.root, title="Escolher imagem local para análise",
-                # Linux file dialogs filter by extension (case-sensitive).
-                # Offer common raster formats and a fallback for other suffixes;
-                # LocalVision will still validate the actual file contents.
-                filetypes=[
-                    ("Imagens", " ".join(
-                        "*"+ext for suffix in LocalVision.FILE_SUFFIXES
-                        for ext in (suffix, suffix.upper())
-                    )),
-                    ("Todos os arquivos", "*"),
-                ],
+                parent=self.root,
+                title="Escolha uma imagem (PNG, JPG, WEBP, GIF, BMP, TIFF, AVIF)",
+                initialdir=str(image_start_directory()),
+                # Every format has a readable entry, not an incomprehensible
+                # truncated list of glob patterns. File validation follows.
+                filetypes=image_filetypes(),
             )
             if not selection:
                 return
@@ -878,8 +878,9 @@ class DesktopWindow:
                     self._audio_peaks = max(self._audio_peaks, level)
                     self._mic_last_signal = monotonic()
                     self.microphone_indicator.show_peak(level, listening=self._voice_active)
+                    self._audio_level_label.configure(text=f"Entrada: {level}%")
                     if level >= 2:
-                        self.status.configure(text="Microfone com sinal; reconhecendo fala…")
+                        self.status.configure(text=f"Áudio {level}% captado; aguardando transcrição Vosk…")
                     elif self._audio_level_samples >= 4 and self._audio_peaks < 2:
                         self.status.configure(text="Microfone sem sinal; confira a entrada de áudio")
                 continue
@@ -890,6 +891,7 @@ class DesktopWindow:
                 self._listening = False
                 self.microphone_indicator.show_peak(0, listening=False)
                 self._mic_last_signal = 0.0
+                self._audio_level_label.configure(text="Entrada: aguardando")
                 if self._closing:
                     continue
                 if generation != self._listen_generation:
@@ -1015,6 +1017,7 @@ class DesktopWindow:
         if self._closing:
             return
         self._closing = True
+        self._audio_level_label.configure(text="Entrada: desligada")
         self.microphone_indicator.show_peak(0, listening=False)
         self._mic_last_signal = 0.0
         # The original photo asset must be released on the Tk thread even

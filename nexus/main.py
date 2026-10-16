@@ -404,11 +404,27 @@ def cli(argv: list[str] | None = None) -> None:
               file=sys.stderr)
         recognizer = LocalRecognizer()
         recognizer.STREAM_LIMIT = 10
+        peaks = []
         try:
-            transcript = recognizer.recognize_continuous()
+            transcript = recognizer.recognize_continuous(on_audio_level=peaks.append)
+            command = recognizer.capture_command()
+            backend = "pipewire" if "pw-record" in command[0] else "alsa"
+            peak = max(peaks, default=0)
+            if transcript:
+                diagnosis = "Vosk transcreveu a fala."
+            elif not peaks:
+                diagnosis = "A captura não forneceu amostras; confira a entrada de áudio."
+            elif peak < 2:
+                diagnosis = ("A entrada de áudio está silenciosa; escolha o microfone "
+                             "padrão no PipeWire ou teste NEXUS_AUDIO_INPUT=alsa.")
+            else:
+                diagnosis = ("Áudio captado, mas sem palavras reconhecidas; "
+                             "confira o modelo Vosk e teste uma frase clara.")
             result = {"recognition_tested": True,
                       "status": "transcribed" if transcript else "no_transcript",
-                      "transcript": transcript}
+                      "transcript": transcript,
+                      "backend": backend, "peak_percent": peak,
+                      "level_samples": len(peaks), "diagnosis": diagnosis}
         except VoiceError as exc:
             result = {"recognition_tested": False, "status": "error", "message": str(exc)}
         print(json.dumps(result, ensure_ascii=False))

@@ -12,7 +12,7 @@ from nexus.vision.local import LocalVision, VisionError, VisionInputError, visio
 
 def image_bytes():
     output = io.BytesIO()
-    Image.new("RGB", (16, 16)).save(output, format="PNG")
+    Image.new("RGB", (16, 16), (120, 120, 120)).save(output, format="PNG")
     return output.getvalue()
 
 
@@ -128,3 +128,29 @@ def test_capture_applies_os_file_size_limit(monkeypatch):
     monkeypatch.setattr("nexus.vision.local.subprocess.run", run)
     assert LocalVision._capture(["capture-test"]).startswith(b"\x89PNG")
     assert options["preexec_fn"] == LocalVision._limit_capture_output
+
+
+def test_camera_skips_initial_exposure_frames(monkeypatch):
+    service = LocalVision(Settings())
+    commands = []
+    monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/usr/bin/ffmpeg")
+    service._capture = lambda args: commands.append(args) or image_bytes()
+    assert service.camera(0).startswith(b"\x89PNG")
+    assert len(commands) == 1  # One authorized still photo, no continuous preview.
+    assert commands[0][commands[0].index("-vf") + 1] == r"select=gte(n\,8)"
+    assert commands[0][commands[0].index("-frames:v") + 1] == "1"
+
+
+def test_black_camera_capture_is_not_sent_to_visual_model(monkeypatch):
+    from PIL import Image
+    blank = io.BytesIO()
+    Image.new("RGB", (100, 80), (0, 0, 0)).save(blank, "PNG")
+    service = LocalVision(Settings())
+    monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/usr/bin/ffmpeg")
+    service._capture = lambda args: blank.getvalue()
+    with pytest.raises(VisionError, match="praticamente preta"):
+        service.camera(0)
+
+
+def test_bright_camera_frame_remains_usable():
+    assert LocalVision._camera_frame_is_dark(image_bytes()) is False
