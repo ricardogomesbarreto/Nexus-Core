@@ -358,7 +358,7 @@ class DesktopWindow:
                   style="Nexus.Section.TLabel").pack(
                       anchor="w", pady=(7, 3))
         self.input = tk.Text(
-            footer, height=3, wrap="word", font=("Sans", 11),
+            footer, height=2, wrap="word", font=("Sans", 11),
             bg="#ffffff", fg="#292127", relief="flat",
             padx=11, pady=8, borderwidth=0,
             highlightthickness=1, highlightbackground="#d7c5cd",
