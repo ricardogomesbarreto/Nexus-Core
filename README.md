@@ -49,6 +49,101 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
 
+### Saudação falada e roteiro de homologação consolidado (17/10/2026)
+
+O assistente deve falar **apenas** `Bem-vindo ao Nexus Core, <primeiro nome>.`
+na inicialização, usando o primeiro nome obtido **localmente** do perfil Linux.
+O texto de informações e as limitações continuam na janela, mas **não** são
+recitados na saudação. A preferência persistida de voz masculina/feminina e
+a opção `Ler respostas em voz alta` continuam sendo respeitadas. Não há
+consulta externa, Ollama ou autorização de ferramenta para saudar.
+
+**Estado confirmado:** o código da v0.9.12 está na `main`; a publicação de
+tag/release continua bloqueada até o aceite no desktop físico. A CI Ubuntu
+com PostgreSQL/Xvfb valida componentes e mocks, não um microfone, a câmera,
+o modelo Vosk nem a câmera ao vivo no notebook do usuário. O registro
+anterior identificou **sinal no microfone sem transcrição Vosk**. Não marque
+esse item como aprovado sem observar uma transcrição real.
+
+#### Comandos operacionais — Ubuntu local, sem serviços no boot
+
+Os serviços devem ser **iniciados manualmente quando necessários**.
+No notebook onde o PostgreSQL usa o cluster `18/main` e o Ollama está
+instalado como serviço global:
+
+```bash
+sudo systemctl start postgresql@18-main.service
+sudo systemctl start ollama.service
+systemctl is-active postgresql@18-main.service ollama.service
+cd "$HOME/Projetos/Nexus-Core"
+git switch main
+git pull --ff-only
+python3 scripts/install_linux.py
+~/.local/bin/nexus-core --version
+~/.local/bin/nexus-core --ubuntu-preflight
+```
+
+`git pull` e downloads iniciais são feitos **com internet**; depois de
+instalados os modelos, o diálogo, reconhecimento Vosk e síntese local
+podem ser testados **sem internet**. PostgreSQL e Ollama são necessários
+para o fluxo local; **Docker, containerd e MariaDB não devem ser iniciados
+apenas para utilizar o assistente**, salvo funcionalidade específica que
+os exija. A instalação guiada pode alterar serviços do sistema: após
+reinstalar, confira os estados com `systemctl is-enabled`.
+
+Abra **dois terminais** com a sessão do usuário (sem `sudo`):
+
+```bash
+# Terminal 1: teste de aceite com confirmações por etapa.
+cd "$HOME/Projetos/Nexus-Core"
+~/.local/bin/nexus-core --acceptance-log
+
+# Terminal 2: janela com logs de funcionamento emitidos durante os testes.
+~/.local/bin/nexus-core --desktop
+```
+
+Na GUI, confirme a fala inicial do **primeiro nome**, envie duas perguntas
+diferentes, teste voz masculina e feminina, altere uma preferência e
+reabra para verificar a restauração, experimente escuta contínua, câmera
+ao vivo e foto com consentimento, importação de imagem e a análise de tela
+com autorização. O aceite interativo utiliza **`s` = funcionou,
+`f` = falhou e `n`/Enter = não testado**; não marque uma observação
+não realizada como sucesso. Cole no chat apenas os logs resumidos
+`[TESTE-LOCAL]` e o resumo `--acceptance-log`, **sem** transcrições,
+arquivos privados, senhas ou imagens.
+
+Se o reconhecimento ficar em `no_transcript`, compare as entradas:
+
+```bash
+~/.local/bin/nexus-core --microphone-test
+~/.local/bin/nexus-core --recognition-test
+NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --recognition-test
+ollama list
+ollama ps
+free -h
+```
+
+Terminado o uso, encerre o Nexus Core e pare somente os serviços deste
+fluxo, **sem desinstalar** modelos, bancos ou configurações:
+
+```bash
+sudo systemctl stop ollama.service postgresql@18-main.service
+systemctl is-active ollama.service postgresql@18-main.service
+```
+
+Para impedir a inicialização automática no boot (executar **uma vez**,
+quando não estiver usando os serviços e se nenhum outro aplicativo depender
+deles), use `sudo systemctl disable ollama.service
+postgresql@18-main.service`; confira também a configuração do cluster
+PostgreSQL e qualquer unidade agregadora/sockets ativos. Use
+`start` sempre que retornar aos testes. Não é necessário habilitar
+serviços com `enable` para iniciá-los manualmente.
+
+**Portões que continuam abertos:** transcrição Vosk real em mais de uma
+frase, análise multimodal real, câmera ao vivo e consentimentos no
+desktop, recuperação/restauração ensaiada em instalação descartável e
+automação de teclado dependente de X11 quando em sessão Wayland.
+
 Pedidos exatos como **“Crie uma pasta chamada Projetos”** (também com o
 prefixo **“Nexus,”**) agora selecionam
 uma única pasta diretamente dentro da home do usuário, sem aguardar a
