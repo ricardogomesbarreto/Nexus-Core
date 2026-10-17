@@ -1,8 +1,12 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: melhorias integradas à `main` pelo PR #66 (`bb7e487`); CI do PR
-aprovada com 1.619 testes, sem tag/release estável.** O aceite físico no
-notebook e a CI `push` do SHA final ainda são requisitos para publicação.
+**Estado: código de desenvolvimento v0.9.12 até a PR #69
+(`9de8aa7`) integrado à `main`; 1.631 testes aprovados na CI da PR #69.
+Sem tag/release estável.** A presente auditoria corretiva adiciona
+regressões de segurança, instalador e compatibilidade, que serão
+integradas somente depois de outra CI real. O aceite físico no
+notebook, a CI `push` do SHA final e a revisão explícita do workflow
+de publicação ainda são requisitos para release.
 
 Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
 registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e
@@ -21,6 +25,16 @@ aceite separa o navegador padrão sem diálogo do gerenciador de arquivos com
 confirmação. A escuta contínua e a latência visual continuam sem aceite.
 
 ## Entregas no código
+
+**Auditoria corretiva complementar (17/10/2026):**
+[documento e matriz de achados](AUDIT_v0.9.12_2026-10-17.md).
+O instalador deixa de criar serviços Ollama habilitados automaticamente
+no login; saídas dos CLIs Craft opcionais são lidas com descritores
+regulares sem seguir symlinks, e rejeitam arquivo vazio ou formato
+evidentemente incompatível. Imagens que disparam
+`Image.DecompressionBombError` retornam erro seguro, e cartazes
+suportam caminhos alternativos de fontes Linux. Os testes automatizados
+não certificam os executáveis Rust externos ou a câmera e voz reais.
 
 - Integração inicial de criação local por conversa: edição básica de foto e
   cartaz gráfico via Pillow; conversão opcional por PhotoCraft/WordCraft e
