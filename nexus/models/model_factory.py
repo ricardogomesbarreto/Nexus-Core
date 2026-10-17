@@ -25,6 +25,11 @@ def build_model_router(
         transport=transport,
         timeout=settings.local_model_timeout,
     )
+    if type(provider) is OllamaProvider:
+        # Keep custom/legacy provider factory signatures fully compatible.
+        # The budget is a pure, local hardware query with no inference.
+        from nexus.models.resource_budget import ResourceBudget
+        provider.resource_budget = ResourceBudget.detect()
 
     return ModelRouter(
         providers=[provider],

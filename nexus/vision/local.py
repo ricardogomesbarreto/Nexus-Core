@@ -20,6 +20,7 @@ import warnings
 from pathlib import Path
 
 from nexus.config.settings import Settings
+from nexus.models.resource_budget import ResourceBudget
 from nexus.models.ollama_transport import (
     OllamaHTTPError, OllamaTimeoutError, OllamaUnavailableError,
     OllamaTransport, OllamaTransportError,
@@ -60,6 +61,7 @@ class LocalVision:
     def __init__(self, settings: Settings, path_security: PathSecurity | None = None,
                  transport=None):
         self.settings = settings
+        self.resource_budget = ResourceBudget.detect()
         self.path_security = path_security if path_security is not None else PathSecurity()
         self.transport = transport if transport is not None else OllamaTransport(
             base_url=settings.local_model_base_url
@@ -82,7 +84,7 @@ class LocalVision:
         return model
 
     @classmethod
-    def _normalize_image(cls, data: bytes) -> bytes:
+    def _normalize_image(cls, data: bytes, *, max_edge: int | None = None) -> bytes:
         if not data or len(data) > cls.MAX_INPUT_BYTES:
             raise VisionInputError("Imagem vazia ou maior que 6 MiB.")
         try:
@@ -104,9 +106,10 @@ class LocalVision:
                     raw.load()
                     # Re-encode to PNG and discard EXIF/location/metadata.
                     normalized = ImageOps.exif_transpose(raw).convert("RGB")
-                    if max(normalized.size) > cls.MODEL_IMAGE_EDGE:
+                    edge = min(cls.MODEL_IMAGE_EDGE, max_edge or cls.MODEL_IMAGE_EDGE)
+                    if max(normalized.size) > edge:
                         normalized.thumbnail(
-                            (cls.MODEL_IMAGE_EDGE, cls.MODEL_IMAGE_EDGE),
+                            (edge, edge),
                             Image.Resampling.LANCZOS,
                         )
                     buffer = io.BytesIO()
@@ -344,7 +347,8 @@ class LocalVision:
                  model: str = "gemma3:4b") -> dict:
         prompt = self.validate_question(question)
         model_name = self._installed_vision_model(self.validate_model(model))
-        normalized = self._normalize_image(image)
+        normalized = self._normalize_image(
+            image, max_edge=self.resource_budget.vision_edge)
         payload = {
             "model": model_name,
             "messages": [{
@@ -352,7 +356,8 @@ class LocalVision:
                 "images": [base64.b64encode(normalized).decode("ascii")],
             }],
             "stream": False,
-            "options": {"num_ctx": 2048, "num_predict": 320, "temperature": 0.2},
+            "options": self.resource_budget.vision_options(),
+            "keep_alive": self.resource_budget.keep_alive,
         }
         try:
             response = self.transport.chat(

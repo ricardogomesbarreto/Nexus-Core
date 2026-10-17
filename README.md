@@ -49,6 +49,131 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
 
+### Execução leve com perfil de recursos adaptativo (17/10/2026)
+
+**Motivação física:** notebook Ubuntu com 6,5 GiB de RAM, 617 MiB
+disponíveis, 2,6 GiB de swap em uso e o `gemma3:4b` executando
+100% em CPU. Uma captura terminou em ~68,5 s e a narração em mais
+19,1 s. Uma execução bem-sucedida não comprova desempenho aceitável.
+Modelos grandes podem aquecer o notebook e manter a ventoinha acelerada.
+
+O NEXUS CORE agora seleciona automaticamente um orçamento de
+inferência local, sem verificar internet e **sem elevar privilégios**.
+Ele lê `/proc/meminfo` e, quando disponíveis, os limites de memória
+do cgroup Linux (comportamento suportado nas distribuições modernas).
+O ambiente Ubuntu/Debian é a referência de testes; outras distros
+Linux com dependências instaladas podem executar a aplicação usando
+Ollama, PostgreSQL, Vosk, FFmpeg e os serviços próprios da distro.
+
+| Perfil | Quando é escolhido | Limites do Ollama |
+| --- | --- | --- |
+| `auto` | Padrão, detecta recursos locais | Escolhe `eco` se RAM total é até 8 GiB **ou** disponível até 2 GiB |
+| `eco` | PC modesto ou configuração explícita | Máximo 2 threads; contexto de 1024 tokens; visão em até 768 px; resposta visual até 144 tokens |
+| `balanced` | PC com memória suficiente ou escolha explícita | Máximo 4 threads; contexto de 2048 tokens; visão em até 1536 px; resposta visual até 256 tokens |
+
+O modo `eco` define `keep_alive: "0s"` **por requisição ao Ollama**
+(tanto texto quanto visão): após responder, o runtime pode descarregar
+o modelo e liberar RAM, evitando manter dois modelos ao mesmo tempo.
+Isso reduz a memória ociosa, mas recarregar um modelo a cada pergunta
+pode aumentar a latência. Os tempos de CPU, ventoinha e resposta
+dependem de hardware, sistema, modelo e memória livre. `balanced`
+mantém o modelo por até 45 s após a requisição e permite desempenho
+melhor em máquinas com mais recursos. Nenhum ajuste de frequência
+de CPU, limites do kernel, swap ou serviços de outros programas é feito.
+
+A janela usa a narração **mais curta no perfil econômico** para reduzir
+tempo de síntese; a resposta textual completa continua no chat. O
+perfil e os limites escolhidos aparecem no terminal em eventos
+`[TESTE-LOCAL] evento=recurso estado=pronto perfil=eco ...`,
+sem publicar imagens, transcrições, nomes de arquivos ou dados privados.
+
+É possível comparar **somente para uma sessão**, sem modificar as
+preferências de voz e privacidade:
+
+```bash
+NEXUS_RESOURCE_PROFILE=eco ~/.local/bin/nexus-core --desktop
+NEXUS_RESOURCE_PROFILE=balanced ~/.local/bin/nexus-core --desktop
+```
+
+Use `balanced` apenas se a RAM disponível e a ventilação do
+computador forem suficientes; não use para forçar um modelo grande
+em um sistema com pouca memória.
+
+#### Serviços sob demanda: Ubuntu/Debian e outras distros
+
+Depois da instalação inicial e do download **autorizado** dos modelos,
+a aplicação pode trabalhar offline. No Ubuntu/Debian,
+`pg_lsclusters` identifica o cluster PostgreSQL configurado na porta
+local (por exemplo, PostgreSQL 18/main na porta 5432). Em outras
+distribuições com systemd e unidades PostgreSQL/Ollama, o script
+usa os serviços instalados; se não houver systemd, informa como
+iniciá-los manualmente, sem modificar o boot.
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+# Inicia só quando você vai usar a ferramenta:
+bash scripts/nexus_core_session.sh start
+# Inicia serviços e abre a janela:
+bash scripts/nexus_core_session.sh desktop
+# Consulta sem iniciar nada:
+bash scripts/nexus_core_session.sh status
+# Depois de fechar a janela e outros aplicativos que dependam deles:
+bash scripts/nexus_core_session.sh stop
+```
+
+O script **não** executa `systemctl enable`, `ollama pull`,
+downloads, migrações, alterações em PostgreSQL ou modificações de
+configuração do usuário. O `start` solicita `sudo` somente para
+iniciar serviços instalados, sem conceder privilégios ao assistente.
+A interface roda como usuário comum. `stop` encerra os serviços
+locais compartilhados; não use enquanto outros sistemas dependam deles.
+
+Se o Ollama mostrar `could not connect to ollama server` ou a
+aplicação informar `DatabaseConnectionError`, **o serviço está
+indisponível**, e não há evidência de defeito do modelo:
+
+```bash
+bash scripts/nexus_core_session.sh start
+bash scripts/nexus_core_session.sh status
+ollama list
+~/.local/bin/nexus-core --ubuntu-preflight
+```
+
+No PostgreSQL Debian/Ubuntu, `enabled-runtime` pode ser gerado por
+`/etc/postgresql/18/main/start.conf = auto` mesmo com
+`postgresql.service` desabilitado. Para iniciar somente manualmente,
+use `manual` nesse arquivo e `sudo systemctl daemon-reload`
+após editar; isso **não** exige desinstalação.
+
+#### Testes integrados na própria janela e logs ao vivo
+
+O botão **Testar funções** permite iniciar um teste real de
+**duas perguntas faladas**, abrir a câmera sob autorização, selecionar
+uma imagem e consultar instruções para negar/aprovar a criação de pasta
+e a abertura de aplicativo. Ações não são executadas
+silenciosamente; o `SecurityGate` e os diálogos de consentimento
+permanecem obrigatórios.
+
+O teste vocal escreve `evento=teste estado=iniciado origem=voz`,
+registra `recebido` após **uma transcrição Vosk real** e apenas
+`concluido` após **duas transcrições reais**. Resultados não testados
+**não** são declarados sucesso. O terminal também mostra as transições
+de `escuta`, `reconhecimento`, `chat`, `camera`, `visao`,
+`autorizacao`, `ferramenta`, `fala` e `recurso`.
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+bash scripts/nexus_core_session.sh desktop 2>&1 | tee "$HOME/nexus-core-desktop.log"
+# Em outro terminal, enquanto faz os testes reais:
+tail -f "$HOME/nexus-core-desktop.log" | grep --line-buffered 'TESTE-LOCAL'
+```
+
+A CI testa caminhos determinísticos com Ollama e dispositivos simulados,
+mas não mede consumo real de energia, temperatura, ruído ou velocidade
+no notebook. A publicação estável da v0.9.12 ainda depende de aceite
+físico, isolamento de segurança e restauração real. Nenhuma nova
+tag/release é publicada por esta alteração.
+
 ### Saudação falada e roteiro de homologação consolidado (17/10/2026)
 
 O assistente deve falar **apenas** `Bem-vindo ao Nexus Core, <primeiro nome>.`
