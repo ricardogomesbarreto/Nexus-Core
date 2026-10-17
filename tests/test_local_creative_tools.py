@@ -181,3 +181,95 @@ def test_previous_context_does_not_authorize_conversion(tmp_path):
         ],
     })
     assert _simple_creative_request(prompt) is None
+
+
+def test_conversion_rejects_symlink_output_without_reading_private_source(
+    tmp_path, monkeypatch,
+):
+    """A CLI returning success must not trick the assistant into copying secrets."""
+    from types import SimpleNamespace
+
+    executor, home, _ = setup_tools(tmp_path)
+    source = home / "source.docx"
+    source.write_bytes(b"source document")
+    sensitive = home / "do-not-copy.txt"
+    sensitive.write_bytes(b"PRIVATE INFORMATION MUST NOT BE COPIED")
+    dest = home / "result.pdf"
+
+    def fake_run(args, **kwargs):
+        Path(args[3]).symlink_to(sensitive)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(
+        "nexus.tools.creative.shutil.which", lambda name: "/usr/bin/wordcraft-cli",
+    )
+    monkeypatch.setattr("nexus.tools.creative.subprocess.run", fake_run)
+    result = executor.execute(
+        "craft_convert_local", source=str(source), output=str(dest),
+        kind="document",
+    )
+    assert not result.success
+    assert not dest.exists()
+    assert sensitive.read_bytes() == b"PRIVATE INFORMATION MUST NOT BE COPIED"
+    assert "PRIVATE INFORMATION" not in (result.error or "")
+
+
+@pytest.mark.parametrize("contents", [
+    b"", b"not a pdf", b"<!doctype html><html></html>",
+])
+def test_conversion_rejects_empty_or_mislabelled_pdf(tmp_path, monkeypatch, contents):
+    from types import SimpleNamespace
+
+    executor, home, _ = setup_tools(tmp_path)
+    source = home / "source.docx"
+    source.write_bytes(b"docx source")
+    dest = home / "result.pdf"
+
+    def fake_run(args, **kwargs):
+        Path(args[3]).write_bytes(contents)
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(
+        "nexus.tools.creative.shutil.which", lambda name: "/usr/bin/wordcraft-cli",
+    )
+    monkeypatch.setattr("nexus.tools.creative.subprocess.run", fake_run)
+    result = executor.execute(
+        "craft_convert_local", source=str(source), output=str(dest),
+        kind="document",
+    )
+    assert not result.success
+    assert not dest.exists()
+
+
+def test_photo_edit_rejects_decompression_bombs_with_safe_error(tmp_path, monkeypatch):
+    from PIL import Image
+
+    executor, home, _ = setup_tools(tmp_path)
+    source = home / "oversized.png"
+    out = home / "processed.png"
+    stream = io.BytesIO()
+    Image.new("RGB", (100, 100), "navy").save(stream, "PNG")
+    source.write_bytes(stream.getvalue())
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 16)
+    outcome = executor.execute(
+        "edit_image_local", source=str(source), output=str(out),
+        operation="grayscale",
+    )
+    assert not outcome.success
+    assert not out.exists()
+    assert "DecompressionBombError" in (outcome.error or "")
+
+
+@pytest.mark.parametrize("suffix,header", [
+    (".pdf", b"%PDF-1.7\nexample"),
+    (".png", bytes.fromhex("89504e470d0a1a0a")),
+    (".jpg", bytes.fromhex("ffd8ff")),
+    (".webp", b"RIFF\x00\x00\x00\x00WEBP"),
+    (".docx", bytes.fromhex("504b0304")),
+])
+def test_converted_output_has_minimum_file_format_validation(suffix, header):
+    from nexus.tools.creative import _validate_converted_output
+
+    _validate_converted_output(header, suffix)
+    with pytest.raises(ValueError):
+        _validate_converted_output(b"wrong output bytes", suffix)
