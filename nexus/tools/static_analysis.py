@@ -34,14 +34,33 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
         width = {1: "32", 2: "64"}.get(header[4], "desconhecida")
         endian = {1: "<", 2: ">"}.get(header[5])
         machine = "desconhecida"
+        details = ""
         if endian:
-            machine = str(struct.unpack_from(endian + "H", header, 18)[0])
-        return "ELF", f"Binário Linux/Unix; classe={width} bits; código de arquitetura={machine}."
+            code = struct.unpack_from(endian + "H", header, 18)[0]
+            label = {3: "x86", 40: "ARM", 62: "x86_64", 183: "AArch64", 243: "RISC-V"}.get(code, "não mapeada")
+            machine = f"{code} ({label})"
+            expected = 64 if width == "64" else 52 if width == "32" else 0
+            if expected and len(header) >= expected:
+                file_type = struct.unpack_from(endian + "H", header, 16)[0]
+                address_fmt = "Q" if width == "64" else "I"
+                entry = struct.unpack_from(endian + address_fmt, header, 24)[0]
+                details = f" tipo ELF={file_type}; entrada declarada=0x{entry:x}."
+        return "ELF", f"Binário Linux/Unix; classe={width} bits; código de arquitetura={machine}.{details}"
     if header[:2] == b"MZ" and len(header) >= 64:
         offset = struct.unpack_from("<I", header, 0x3c)[0]
         if offset <= len(header) - 26 and header[offset:offset + 4] == b"PE\0\0":
             machine = struct.unpack_from("<H", header, offset + 4)[0]
-            return "PE", f"Executável Windows PE; arquitetura código={machine}."
+            sections = struct.unpack_from("<H", header, offset + 6)[0]
+            optional_size = struct.unpack_from("<H", header, offset + 20)[0]
+            details = ""
+            if optional_size >= 2 and offset + 26 <= len(header):
+                magic = struct.unpack_from("<H", header, offset + 24)[0]
+                variant = {0x10b: "PE32", 0x20b: "PE32+"}.get(magic, "não identificada")
+                details = f" variante={variant}."
+            return "PE", (
+                f"Executável Windows PE; arquitetura código={machine}; "
+                f"seções declaradas={sections}.{details}"
+            )
         return "MZ", "Cabeçalho MZ; assinatura PE não confirmada na amostra limitada."
     if len(header) >= 4 and header[:4] in (
         bytes.fromhex("feedface"), bytes.fromhex("cefaedfe"),
@@ -77,7 +96,15 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         if len(names) > MAX_ARCHIVE_MEMBERS:
             raise ValueError("Índice do arquivo compactado excede o limite local.")
         clean_names = set(names)
-        total_uncompressed = sum(x.file_size for x in archive.infolist())
+        entries = archive.infolist()
+        total_uncompressed = sum(x.file_size for x in entries)
+        encrypted = sum(bool(x.flag_bits & 1) for x in entries)
+        # Report index characteristics, not a malware verdict or a path.
+        odd_paths = sum(
+            n.startswith(("/", "\\")) or
+            ".." in n.replace("\\", "/").split("/")
+            for n in names
+        )
         if total_uncompressed > 4 * 1024 * 1024 * 1024:
             raise ValueError("Contêiner compactado declara tamanho excessivo.")
         has_manifest = "AndroidManifest.xml" in clean_names
@@ -93,7 +120,8 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         return kind, (
             f"Índice local: {len(names)} entradas; tamanho descompactado declarado="
             f"{total_uncompressed} bytes; AndroidManifest={'sim' if has_manifest else 'não'}; "
-            f"arquivos DEX={dex_count}. Nenhum membro foi extraído ou executado."
+            f"arquivos DEX={dex_count}; entradas criptografadas={encrypted}; "
+            f"caminhos atípicos={odd_paths}. Nenhum membro foi extraído ou executado."
         )
 
 

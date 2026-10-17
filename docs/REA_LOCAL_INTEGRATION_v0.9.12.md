@@ -129,3 +129,15 @@ uma segunda instância do Ollama.
 - Aceite no Ubuntu físico de leitura de ELF, JS e APK próprios,
   negação/aprovação, histórico de conversas e inicialização com
   PostgreSQL desligado. **Sem tag/release v0.9.12 até homologação.**
+
+## Ampliação segura de metadados e validação externa v0.9.12
+
+A inspeção offline agora inclui arquitetura/tipo/entrada declarada do ELF,
+variante e seções declaradas PE e contagens ZIP criptografadas/caminhos
+atípicos sem exibir os nomes dos membros. Esses dados não demonstram
+segurança, vulnerabilidade ou comportamento real do aplicativo.
+
+O teste de CLIs opcionais foi documentado em
+[CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md](CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
+A verificação somente de ajuda não valida conversão; para testar binários
+reais o operador deve executar voluntariamente o smoke test no Ubuntu.

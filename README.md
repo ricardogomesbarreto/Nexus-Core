@@ -52,6 +52,13 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ### REA — inspeção estática local por conversa (integração em validação)
 
+**Novo gate v0.9.12:** evidências estruturais ELF/PE/ZIP aprofundadas, sem
+execução de binários; testes reais de CLI PhotoCraft/WordCraft/PdfCraft com
+amostras sintéticas e opção REA somente de descoberta de CLI, conforme
+[aceite dos CLIs reais](docs/CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
+A CI simula contratos, mas **não** homologa os executáveis do notebook.
+
+
 A integração inicial inspirada no anexo **REA — Reverse Engineer Anything**
 amplia a conversa do NEXUS CORE com a ferramenta
 `inspect_artifact_local`, submetida ao `SecurityGate` e à
