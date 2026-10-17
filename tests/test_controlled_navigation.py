@@ -237,6 +237,7 @@ def test_gui_confirmation_previews_exact_navigation(monkeypatch):
     class FakeDialog:
         def __init__(self, root, details, **kwargs):
             captured.append(details)
+            captured.append(kwargs["spoken_question"])
         def ask(self):
             return True
 
@@ -249,12 +250,14 @@ def test_gui_confirmation_previews_exact_navigation(monkeypatch):
               "action": "page_down"},
     )
     assert window._confirm(request) is True
-    assert len(captured) == 1
+    assert len(captured) == 2
     assert "Notas" in captured[0]
     assert "12" in captured[0]
     assert "page_down" in captured[0]
     assert "321" in captured[0]
     assert "NotesClass" in captured[0]
+    assert "escuta está pausada" in captured[1]
+    assert "Nexus, autorizo" not in captured[1]
 
 
 def test_injected_extra_key_is_rejected_by_contract(tmp_path):

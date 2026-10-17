@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.11 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.11%20na%20main-722F37">
+  <img alt="Código v0.9.12 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.12%20na%20main-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -19,9 +19,9 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código na `main`:** `v0.9.11 — First-Run PostgreSQL Authentication`; desenvolvimento integrado após a v0.9.10, sem tag deste marco.<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.11 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.11 comprova o login PostgreSQL local antes da ativação gerenciada)<br>
+> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; desenvolvimento integrado, sem tag deste marco.<br>
+> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 acrescenta uma rota local para pedido explícito de pasta, com confirmação por ação)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
@@ -42,9 +42,37 @@ definido, confirmação de ações e auditoria. Essa finalidade não habilita
 automaticamente ferramentas de rede ou execução irrestrita no host.
 
 As seções de versões abaixo preservam a evolução da implementação. Código
-integrado à `main` ainda depende de testes em um Ubuntu físico com X11,
+integrado à `main` ainda depende de testes em um Ubuntu físico com Wayland
+e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
+
+## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
+
+Pedidos exatos como **“Crie uma pasta chamada Projetos”** (também com o
+prefixo **“Nexus,”**) agora selecionam
+uma única pasta diretamente dentro da home do usuário, sem aguardar a
+interpretação do Ollama. Aceita somente um nome simples (até 64 caracteres,
+sem barras nem pontos); o contrato `create_directory`, a política de caminhos,
+a janela com alvo/risco e a confirmação individual continuam obrigatórios.
+Uma frase transcrita incorretamente pode escolher outro nome: confira o caminho
+mostrado **antes** de autorizar. Perguntas sobre capacidades e caminhos com
+subpastas não entram nessa rota exata.
+
+Os comandos exatos para abrir navegador, gerenciador de arquivos ou terminal
+também solicitam confirmação por ação e aceitam uma sessão gráfica Wayland.
+Digitação e navegação em **outras janelas** continuam limitadas a X11 local.
+O portal de desktop exige concessão da sessão pelo sistema e não fornece a
+mesma identidade de janela exigida pela proteção atual; essa automação Wayland
+segue pendente de projeto e validação, sem contornar as permissões do ambiente.
+
+O [roteiro de aceite físico v0.9.12](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md)
+registra evidências de instalação, PostgreSQL, conversa Ollama, reconhecimento
+de fala, saída feminina e masculina, câmera, ações e recuperação. Seu estado
+inicial é **PENDENTE**; testes automatizados não preenchem o aceite de hardware.
+O workflow de publicação manual verifica agora a CI de `push` aprovada para o
+SHA exato da `main`; o bloqueio de publicação permanece ativo. Não há tag
+v0.9.12 nem tags retroativas para marcos ainda não homologados.
 
 ## Correções e auditoria do código atual
 
@@ -71,13 +99,14 @@ não grava áudio nem amplia o escopo da permissão. Cada decisão vale para uma
 única operação; **Esc**, fechar a janela, cancelamento ou tempo esgotado
 negam a execução. O `SecurityGate` revalida alvo e política depois de uma
 aprovação. O reconhecimento de voz precisa de validação física no Ubuntu;
-esta alteração não muda a versão 0.9.11 nem publica release estável.
+esta alteração integra o código da v0.9.12 sem publicar release estável.
 
 ### Ações locais autorizadas e resposta de voz (código em desenvolvimento)
 
 - **Criar pasta:** pedidos por texto ou voz podem propor `create_directory`
-  para criar uma pasta por vez dentro da área autorizada do usuário. Exige
-  confirmação individual, pasta principal existente e caminho sem links
+  para criar uma pasta por vez dentro da área autorizada do usuário. A frase
+  exata acima usa uma rota local; outros pedidos continuam sujeitos ao modelo.
+  Exige confirmação individual, pasta principal existente e caminho sem links
   simbólicos. Não modifica pastas protegidas ou arquivos já existentes.
 - **Abrir aplicativos:** `Abra o navegador`, `Abra o gerenciador de arquivos`
   e `Abra o terminal` são comandos exatos que dispensam espera pelo Ollama,
@@ -91,7 +120,7 @@ esta alteração não muda a versão 0.9.11 nem publica release estável.
   antes podia esperar o limite total da captura. Testes simulados cobrem o
   caso. Latência real e qualidade da transcrição exigem teste físico.
 
-Essas mudanças são de desenvolvimento dentro da versão de código **0.9.11**;
+Essas mudanças foram integradas ao código até a versão **0.9.12**;
 não representam uma nova tag ou release. Abrir arquivos no aplicativo padrão,
 controlar aplicativos no Wayland, inferência de vídeo contínuo em tempo real,
 conversa simultânea durante a resposta de voz e um conjunto completo de
@@ -778,6 +807,21 @@ Se o prompt ainda falhar, verifique `ollama list` e o serviço Ollama no própri
 computador; nenhuma resposta de modelo inválida autoriza a execução de ferramentas.
 Se `--voice-check` mostrar `vosk_local_model: false`, execute novamente o
 instalador guiado para baixar o modelo; a conversa digitada continua disponível.
+
+---
+
+# v0.9.12 — Authorized Desktop Actions (código integrado; aceite físico pendente)
+
+Pedidos exatos para uma pasta filha da home são resolvidos localmente e
+continuam sujeitos a autorização por operação. O navegador, o gerenciador de
+arquivos e o terminal permanecem ações delimitadas que funcionam em sessões
+gráficas Wayland e X11. A automação de teclado em janelas de terceiros exige
+X11; nenhuma sessão Wayland foi homologada para essa finalidade.
+
+Leia as [notas da v0.9.12](docs/RELEASE_NOTES_v0.9.12.md) e o
+[roteiro de aceite físico](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md).
+O código pode evoluir na `main`, mas a tag e a release dependem do aceite
+físico e da CI no commit final. O workflow permanece bloqueado.
 
 ---
 
@@ -1642,7 +1686,7 @@ seções **Histórico de releases** e **Roadmap** deste README, registra:
 A lista acima é **registro histórico**, não declaração de que cada
 item tem uma release oficial publicada ou homologação física.
 A nota histórica inicial também está acessível diretamente em [v0.3.9](docs/RELEASE_NOTES_v0.3.9.md).
-As notas dedicadas de `v0.3.9` até `v0.9.11` estão disponíveis
+As notas dedicadas de `v0.3.9` até `v0.9.12` estão disponíveis
 em `docs/RELEASE_NOTES_v*.md`. O histórico **não foi apagado
 nem reescrito**: as respectivas seções detalhadas permanecem abaixo.
 
@@ -1689,6 +1733,7 @@ rastreáveis no GitHub:
 | v0.9.9 | Spoken Desktop Controls — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.9.md) |
 | v0.9.10 | Spoken Voice Selection — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.10.md) |
 | v0.9.11 | First-Run PostgreSQL Authentication — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.11.md) |
+| v0.9.12 | Authorized Desktop Actions — integrado à main; aceite físico pendente; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.12.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -2295,10 +2340,10 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 # Estado atual
 
-**Versão do código na `main`: `v0.9.11`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
+**Versão do código na `main`: `v0.9.12`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
-dependências atuais do código `v0.9.11` na `main`. Para as funcionalidades disponíveis,
+dependências atuais do código `v0.9.12` na `main`. Para as funcionalidades disponíveis,
 consulte a seção de validação acima e as entregas `v0.3.2`–`v0.3.8`.
 
 A linha `v0.3.1` inclui a abstração de modelos, a identidade visual desktop
@@ -5395,7 +5440,7 @@ C / C++
 
 ## v0.9.x — Multimodal Interface
 
-O código v0.9.0–v0.9.11 já integra privacidade multimodal, atalhos,
+O código v0.9.0–v0.9.12 já integra privacidade multimodal, atalhos,
 comandos falados locais, análise visual por ação autorizada e verificação do
 login PostgreSQL antes da ativação pelo instalador. A homologação
 física e publicação estável continuam pendentes. Evoluções futuras incluem:
@@ -5406,13 +5451,14 @@ física e publicação estável continuam pendentes. Evoluções futuras incluem
 * integração de dispositivos.
 
 **Estimativa de planejamento para concluir a linha 0.9.x no Ubuntu Desktop
-(CI 24.04; aceite físico por versão pendente):** v0.9.11 implementada e três marcos de desenvolvimento
-restantes, sujeitos aos resultados do aceite físico:
+(CI 24.04; aceite físico por versão pendente):** v0.9.12 integrada ao código,
+com seu aceite físico e dois marcos de desenvolvimento restantes sujeitos
+aos resultados dos testes:
 
 | Marco proposto | Critério principal |
 | --- | --- |
 | v0.9.11 | Implementado no código: login PostgreSQL antes de ativar o instalador; diagnóstico e orientação Ollama/Vosk sem alegar teste físico. |
-| v0.9.12 | Concluir e homologar ações desktop autorizadas por operação; código inicial para criar pastas e abrir aplicativos já integrado, com contratos e testes de segurança. |
+| v0.9.12 | Código integrado para ações desktop autorizadas por operação e frase exata de pasta; homologação física pendente. Teclado em outras janelas continua X11. |
 | v0.9.13 | Encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria; hoje cada turno executa no máximo uma ferramenta. |
 | v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
 
@@ -5735,10 +5781,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Code Version:          v0.9.11 (INTEGRATED IN MAIN; NOT RELEASED)
-Release Name:          First-Run PostgreSQL Authentication
-Release Tag:          v0.9.11 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        VERIFIED LOCAL POSTGRESQL LOGIN BEFORE ACTIVATION
+Code Version:          v0.9.12 (INTEGRATED IN MAIN; NOT RELEASED)
+Release Name:          Authorized Desktop Actions
+Release Tag:          v0.9.12 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
+Implementation:        ONE HOME CHILD BY EXACT PHRASE; APPROVED APP LAUNCH
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux

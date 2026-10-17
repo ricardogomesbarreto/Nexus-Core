@@ -1393,8 +1393,12 @@ class DesktopWindow:
                 "Nexus Core precisa da sua autorização para: "
                 f"{' '.join(str(request.description).split())[:140]}. "
                 "Confira a ação, o alvo e o risco na janela. "
-                "Você pode usar os botões, digitar sua decisão ou dizer: "
-                "Nexus, autorizo esta ação; ou Nexus, nego esta ação."
+                + (
+                    "Você pode usar os botões, digitar sua decisão ou dizer: "
+                    "Nexus, autorizo esta ação; ou Nexus, nego esta ação."
+                    if self._voice_active else
+                    "Use os botões ou digite sua decisão; a escuta está pausada."
+                )
             ),
         )
         self._permission_dialog = dialog
