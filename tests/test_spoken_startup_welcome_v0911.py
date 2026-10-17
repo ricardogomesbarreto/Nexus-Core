@@ -12,6 +12,8 @@ from nexus.desktop.welcome import desktop_spoken_welcome
 
 def test_short_spoken_greeting_is_truthful_and_local():
     assert desktop_spoken_welcome("Ricardo") == "Bem-vindo ao Nexus Core, Ricardo."
+    assert desktop_spoken_welcome("Ricardo Gomes Barreto") == "Bem-vindo ao Nexus Core, Ricardo."
+    assert desktop_spoken_welcome("Ana Maria") == "Bem-vindo ao Nexus Core, Ana."
     assert desktop_spoken_welcome("Nome <comando>") == "Bem-vindo ao Nexus Core."
     assert desktop_spoken_welcome("A" * 61) == "Bem-vindo ao Nexus Core."
     assert len(desktop_spoken_welcome()) <= 90

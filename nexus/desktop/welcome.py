@@ -61,7 +61,13 @@ def desktop_spoken_welcome(name: str | None = None) -> str:
     if not isinstance(name, str):
         name = ""
     name = " ".join(name.split())
-    if (len(name) > 60 or not name or
+    # Spoken greeting uses only the first name, never the full GECOS field.
+    # Reject markup, shell-like tokens and unusually long account labels.
+    if (len(name) > 120 or not name or
             any(not (character.isalpha() or character in " '-") for character in name)):
         name = ""
+    else:
+        name = name.split(" ", 1)[0]
+        if len(name) > 40 or not any(character.isalpha() for character in name):
+            name = ""
     return f"Bem-vindo ao Nexus Core{', ' + name if name else ''}."
