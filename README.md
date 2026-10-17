@@ -84,7 +84,11 @@ mostra o progresso de cada diagnóstico, pede consentimento antes dos testes
 de microfone e câmera e gera um resumo sem transcrição, imagem ou credenciais
 para copiar no chat. As respostas sobre o uso da janela são marcadas
 `RELATADO`, pois dependem da observação do usuário; siga o roteiro para saber
-o que verificar na janela. O resumo não publica tags.
+o que verificar na janela. Responda `s` se funcionou, `f` se testou e falhou,
+ou `n`/Enter se não testou. O diagnóstico de reconhecimento exibe apenas
+backend, pico e contagem de amostras; não imprime a transcrição. O registro
+recebido em 17/10/2026 confirmou captura de um quadro, mas não transcrição
+Vosk nem testes de uso contínuo na janela. O resumo não publica tags.
 O workflow de publicação manual verifica agora a CI de `push` aprovada para o
 SHA exato da `main`; o bloqueio de publicação permanece ativo. Não há tag
 v0.9.12 nem tags retroativas para marcos ainda não homologados.

@@ -12,6 +12,15 @@ e uma pergunta isolada pelo Ollama recebeu uma resposta curta. Houve relatos
 posteriores de problemas de câmera, latência e escuta contínua. Esses testes
 não foram repetidos nesta versão e não comprovam o funcionamento conjunto.
 
+**Registro recebido em 17/10/2026 para a v0.9.12 (checkout `164b799`):**
+PostgreSQL autenticado, modelo Ollama disponível, resposta de teste em 7 s,
+sinal do microfone e um quadro da câmera capturado. O Vosk retornou
+`no_transcript`; precisa de novo teste com intensidade e backend de captura.
+O registro não contém uma sessão `--desktop`: suas respostas sobre chat, voz,
+prévia da câmera e ações não comprovam esses comportamentos. Naquela versão,
+`n` contava indevidamente como falha; agora `n` e Enter deixam a etapa pendente,
+e somente `f` registra falha testada. O aceite físico permanece pendente.
+
 ## Logs ao vivo enquanto usa o assistente
 
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
@@ -49,7 +58,12 @@ Ollama, microfone, Vosk e um quadro da câmera. **Fale claramente quando o
 terminal mostrar o teste de áudio**. A captura da câmera não salva imagem.
 Abra a janela do assistente em **outro terminal** para responder às perguntas
 de observação manual: `[RELATADO]` indica apenas sua declaração, ainda não
-homologação independente. Use `n` para registrar uma falha e Enter para pular.
+homologação independente. Depois de testar na janela, use `s` se funcionou ou
+`f` se falhou. Use `n` ou Enter quando **não testou**. A etapa de Vosk mostra
+backend, pico e quantidade de amostras, sem transcrição. Se ocorrer
+`no_transcript`, fale uma frase clara durante os dez segundos e observe as
+métricas; em outra rodada, experimente `NEXUS_AUDIO_INPUT=alsa` antes do
+comando de aceite. Isso altera a captura apenas naquele processo.
 
 Copie do cabeçalho `NEXUS CORE — REGISTRO DE ACEITE LOCAL` até `[RELEASE]` e
 cole aqui no chat. A saída omite áudio, transcrição, resposta do modelo,

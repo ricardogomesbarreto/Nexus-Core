@@ -55,11 +55,19 @@ def _observation(label: str, *, ask, interactive: bool, out) -> str:
     if not interactive:
         return "PENDENTE"
     try:
-        response = ask(f"{label} Você observou isso? [s/n/Enter]: ").strip().lower()
+        response = ask(
+            f"{label} Testou na janela? "
+            "[s=funcionou/f=falhou/n ou Enter=não testado]: "
+        ).strip().lower()
     except (EOFError, KeyboardInterrupt):
         print("\nEtapa omitida.", file=out, flush=True)
         return "PENDENTE"
-    return {"s": "RELATADO", "n": "FALHOU"}.get(response, "PENDENTE")
+    return {"s": "RELATADO", "f": "FALHOU"}.get(response, "PENDENTE")
+
+
+def _bounded_metric(value, *, maximum: int) -> str:
+    """Expose only coarse numeric diagnostics, never a raw subprocess field."""
+    return str(value) if type(value) is int and 0 <= value <= maximum else "indisponível"
 
 
 def _checkout_sha() -> str:
@@ -95,6 +103,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     print("NEXUS CORE — REGISTRO DE ACEITE LOCAL v0.9.12", file=out, flush=True)
     print("Saída resumida para compartilhar: sem senha, áudio, transcrição ou imagem.", file=out, flush=True)
     print("As etapas RELATADO são declarações do operador; não são prova automática.", file=out, flush=True)
+    print("Na parte manual, f indica falha após teste; n ou Enter deixa pendente.", file=out, flush=True)
     print(f"[CONTEXTO] checkout_sha={_checkout_sha()} (não comprova o executável instalado)", file=out, flush=True)
     print(f"[CONTEXTO] sessão={os.environ.get('XDG_SESSION_TYPE', 'desconhecida') if os.environ.get('XDG_SESSION_TYPE') in ('wayland', 'x11') else 'desconhecida'}", file=out, flush=True)
 
@@ -138,8 +147,14 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     if _consent("Falar uma frase para o Vosk (até dez segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
         begin("Reconhecimento de voz")
         speech = _json(["--recognition-test"], timeout=45)
+        backend = speech.get("backend")
+        backend = backend if backend in ("pipewire", "alsa") else "indisponível"
+        status = speech.get("status")
+        status = status if status in ("transcribed", "no_transcript", "error") else "erro"
         log("Reconhecimento de voz", "PASSOU" if speech.get("recognition_tested") is True and speech.get("status") == "transcribed" and bool(speech.get("transcript")) else "FALHOU",
-            f"status={speech.get('status') if speech.get('status') in ('transcribed', 'no_transcript', 'error') else 'erro'}; conteúdo omitido")
+            f"status={status}; backend={backend}; "
+            f"pico={_bounded_metric(speech.get('peak_percent'), maximum=100)}%; "
+            f"amostras={_bounded_metric(speech.get('level_samples'), maximum=1000000)}; conteúdo omitido")
     else:
         log("Reconhecimento de voz", "PENDENTE")
 

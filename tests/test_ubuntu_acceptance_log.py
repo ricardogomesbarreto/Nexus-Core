@@ -61,23 +61,49 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
             return {"microphone_tested": True, "signal_detected": True, "status": "signal_detected"}
         if args == ["--recognition-test"]:
             return {"recognition_tested": True, "status": "transcribed",
-                    "transcript": "minha senha confidencial"}
+                    "transcript": "minha senha confidencial", "backend": "pipewire",
+                    "peak_percent": 42, "level_samples": 123}
         if args == ["--camera-test", "2"]:
             return {"status": "frame_captured", "image_saved": False,
                     "image_data": "PRIVATE_IMAGE"}
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "n", "", "s", "", "s"])
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "", "s"])
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
     assert "[PASSOU] Reconhecimento de voz" in report
+    assert "backend=pipewire; pico=42%; amostras=123; conteúdo omitido" in report
     assert "[PASSOU] Captura de câmera" in report
     assert "[RELATADO] Chat na janela" in report
     assert "[FALHOU] Escuta contínua" in report
+    assert "[PENDENTE] Voz feminina e masculina" in report
     assert "[RELEASE] PENDENTE" in report
     for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK"):
+        assert secret not in report
+
+
+def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monkeypatch):
+    _passive(monkeypatch)
+    original = acceptance._json
+
+    def diagnose(args, **kwargs):
+        if args == ["--recognition-test"]:
+            return {"recognition_tested": True, "status": "no_transcript",
+                    "backend": "private-device-name", "peak_percent": "secret",
+                    "level_samples": -1, "transcript": "private speech"}
+        return original(args, **kwargs)
+
+    monkeypatch.setattr(acceptance, "_json", diagnose)
+    replies = iter(["", "", "SIM", "", "n", "", "n", "", "", ""])
+    output = io.StringIO()
+    assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
+    report = output.getvalue()
+    assert "[FALHOU] Reconhecimento de voz — status=no_transcript; backend=indisponível; pico=indisponível%; amostras=indisponível; conteúdo omitido" in report
+    assert "[PENDENTE] Chat na janela" in report
+    assert "[PENDENTE] Voz feminina e masculina" in report
+    for secret in ("private speech", "private-device-name", "secret"):
         assert secret not in report
 
 
