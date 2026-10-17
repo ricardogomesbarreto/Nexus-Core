@@ -126,6 +126,9 @@ O script **não** executa `systemctl enable`, `ollama pull`,
 downloads, migrações, alterações em PostgreSQL ou modificações de
 configuração do usuário. O `start` solicita `sudo` somente para
 iniciar serviços instalados, sem conceder privilégios ao assistente.
+A partida do Ollama pode demorar após `systemctl start`; o script aguarda
+até 30 segundos pela API local antes de informar falha, sem imprimir detalhes
+do transporte a cada tentativa.
 A interface roda como usuário comum. `stop` encerra os serviços
 locais compartilhados; não use enquanto outros sistemas dependam deles.
 
@@ -161,6 +164,10 @@ registra `recebido` após **uma transcrição Vosk real** e apenas
 **não** são declarados sucesso. O terminal também mostra as transições
 de `escuta`, `reconhecimento`, `chat`, `camera`, `visao`,
 `autorizacao`, `ferramenta`, `fala` e `recurso`.
+O aceite pergunta separadamente se **“Abra o navegador”** abriu o navegador
+padrão sem diálogo e se **“Abra o gerenciador de arquivos”** respeitou negação
+e autorização. Para reconhecimento sem palavras, os eventos de diagnóstico
+mostram pico e quantidade de amostras, sem registrar a fala.
 
 ```bash
 cd "$HOME/Projetos/Nexus-Core"
@@ -382,6 +389,11 @@ free -h
 O teste físico deve registrar tempo da resposta, memória disponível, swap e
 modelos carregados antes, logo depois e após ao menos 50 segundos sem nova
 análise visual. O resultado do hardware ainda não foi homologado.
+Na sessão enviada em 17/10/2026, uma análise visual levou aproximadamente
+119 segundos no Ubuntu 26.04 com perfil `eco`; o indicador de rede alternou
+corretamente, mas a janela repetiu ciclos de escuta sem transcrição. O teste
+isolado de Vosk transcreveu uma frase. Consulte o roteiro de aceite para a
+evidência e repita as medições antes de considerar o marco estável.
 
 Pedidos exatos como **“Crie uma pasta chamada Projetos”** (também com o
 prefixo **“Nexus,”**) agora selecionam

@@ -1679,7 +1679,8 @@ class DesktopWindow:
                                elapsed_ms=int((monotonic() - self._listen_started) * 1000))
                 elif kind == "silence":
                     live_event("reconhecimento", "sem_transcricao" if self._audio_peaks >= 2 else "sem_sinal",
-                               source="voz", elapsed_ms=int((monotonic() - self._listen_started) * 1000))
+                               source="voz", elapsed_ms=int((monotonic() - self._listen_started) * 1000),
+                               peak_percent=self._audio_peaks, samples=self._audio_level_samples)
                 if kind == "listen_error":
                     live_event("reconhecimento", "falhou", source="voz")
                     transient = (
@@ -1777,9 +1778,11 @@ class DesktopWindow:
                             if self._recognition_failures == 2:
                                 if self._audio_peaks >= 2:
                                     note = (
-                                        "O microfone recebeu áudio, mas o Vosk "
-                                        "não transcreveu. Teste --recognition-test "
-                                        "e confirme o modelo de português."
+                                        "O microfone recebeu áudio, mas o Vosk não "
+                                        "transcreveu na janela. Teste uma frase no "
+                                        "--recognition-test e experimente ALSA no "
+                                        "seletor de microfone; confira a entrada "
+                                        "padrão e seu volume no Ubuntu."
                                     )
                                 else:
                                     note = (

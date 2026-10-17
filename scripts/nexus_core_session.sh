@@ -38,7 +38,17 @@ postgres_ready() {
 }
 ollama_ready() {
   command -v curl >/dev/null 2>&1 &&
-    curl --noproxy '*' -fsS --connect-timeout 2 --max-time 3       'http://127.0.0.1:11434/api/tags' >/dev/null
+    curl --noproxy '*' -fs --connect-timeout 2 --max-time 3 \
+      'http://127.0.0.1:11434/api/tags' >/dev/null 2>&1
+}
+wait_for_ollama() {
+  local attempt deadline=$((SECONDS + 30))
+  for ((attempt=0; attempt<30 && SECONDS<deadline; attempt++)); do
+    if ollama_ready; then return 0; fi
+    if ((SECONDS >= deadline)); then break; fi
+    sleep 1
+  done
+  return 1
 }
 has_service() {
   local name="$1"
@@ -73,8 +83,8 @@ start_services() {
       return 1
     fi
   fi
-  if ! ollama_ready; then
-    printf '[ERRO] Ollama não respondeu em 127.0.0.1:11434. Confira systemctl status ollama.\n' >&2
+  if ! wait_for_ollama; then
+    printf '[ERRO] Ollama não respondeu em 127.0.0.1:11434 após 30 segundos. Confira systemctl status ollama.\n' >&2
     return 1
   fi
   printf '[SERVIÇO] Ollama local: pronto.\n'

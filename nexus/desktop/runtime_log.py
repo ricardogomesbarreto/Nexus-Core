@@ -33,7 +33,8 @@ PROFILES = frozenset({"eco", "balanced"})
 def live_event(event: str, state: str, *, source: str | None = None,
                tool: str | None = None, elapsed_ms: int | None = None,
                profile: str | None = None, threads: int | None = None,
-               memory_mib: int | None = None) -> None:
+               memory_mib: int | None = None, peak_percent: int | None = None,
+               samples: int | None = None) -> None:
     """Emit a single bounded status via the existing console/file logger."""
     if event not in EVENTS or state not in STATES:
         raise ValueError("Evento de execução inválido")
@@ -56,4 +57,9 @@ def live_event(event: str, state: str, *, source: str | None = None,
         if type(memory_mib) is not int:
             raise ValueError("Quantidade de memória inválida")
         fields.append(f"ram_disponivel_mib={max(0, min(memory_mib, 1_000_000))}")
+    if peak_percent is not None or samples is not None:
+        if event != "reconhecimento" or type(peak_percent) is not int or type(samples) is not int:
+            raise ValueError("Métricas de áudio inválidas")
+        fields.append(f"pico={max(0, min(peak_percent, 100))}%")
+        fields.append(f"amostras={max(0, min(samples, 1_000_000))}")
     logging.getLogger("nexus.desktop_runtime").info("TESTE-LOCAL %s", " ".join(fields))

@@ -69,7 +69,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n"])
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"])
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -80,6 +80,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     assert "[FALHOU] Escuta contínua" in report
     assert "[PENDENTE] Voz feminina e masculina" in report
     assert "[PENDENTE] Abrir aplicativo autorizado" in report
+    assert "[PENDENTE] Navegador padrão" in report
     assert "[RELATADO] Criar pasta autorizada" in report
     assert "[RELEASE] PENDENTE" in report
     for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK"):
@@ -98,7 +99,7 @@ def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monke
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", ""])
+    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""])
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -138,14 +139,21 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "n", "n", "n", "n", "f", "s", "n"])
+    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"])
+    prompts = []
+    def ask(question):
+        prompts.append(question)
+        return next(answers)
     output = io.StringIO()
     assert acceptance.run_acceptance(
-        ask=lambda _: next(answers), out=output, interactive=True,
+        ask=ask, out=output, interactive=True,
     ) == 1
     report = output.getvalue()
     assert "[FALHOU] Criar pasta autorizada" in report
     assert "[RELATADO] Abrir aplicativo autorizado" in report
+    assert "[PENDENTE] Navegador padrão" in report
+    assert "Abra o gerenciador de arquivos" in " ".join(prompts)
+    assert "Abra o navegador" in " ".join(prompts)
     assert "[FALHOU] Pasta e aplicativo" not in report
     assert "NexusCoreTeste" not in report  # No action content recorded.
     assert "[RELEASE] PENDENTE" in report
