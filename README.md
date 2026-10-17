@@ -50,6 +50,45 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
 
+### Criação e edição local por conversa (integração em validação)
+
+O Nexus Core recebe comandos de texto ou voz **na própria conversa**, sem abrir
+um painel de botões dos aplicativos externos. Há três ferramentas sob o mesmo
+`SecurityGate` e confirmação por gravação: `edit_image_local` cria uma cópia
+PNG/JPEG/WebP com escala de cinza, inversão, desfoque, nitidez ou rotação;
+`create_graphic_local` cria um cartaz PNG de 1200 × 675 com título e paleta
+vinho do Nexus; `craft_convert_local` usa CLIs locais opcionais para conversão
+de imagem (PhotoCraft), de documento (WordCraft) e extração de texto de PDF
+(PdfCraft). A conversa continua usando o Ollama local. Solicitações não
+autorizadas, destinos já existentes, caminhos fora da home, links simbólicos e
+formatos não previstos são recusados. A origem é aberta com descritor ancorado,
+e as saídas são arquivos novos com permissão `0600`.
+
+Exemplos de pedidos específicos para o chat (o destino não deve existir):
+
+```text
+Edite a foto /home/usuario/Imagens/foto.jpg em escala de cinza e salve em /home/usuario/Imagens/foto-cinza.png.
+Crie um cartaz com o título "Meu projeto" em /home/usuario/Imagens/projeto.png.
+Converta /home/usuario/Documentos/relatorio.docx em /home/usuario/Documentos/relatorio.pdf.
+Extraia o texto de /home/usuario/Documentos/estudo.pdf em /home/usuario/Documentos/estudo.txt.
+```
+
+Para a edição básica e os cartazes, a dependência `Pillow` já vem com a
+instalação de visão (`.[vision]`). As conversões opcionais exigem que os
+executáveis `photocraft-cli`, `wordcraft-cli` e `pdfcraft-cli` estejam
+instalados separadamente no `PATH`; os arquivos ZIP anexados são **código
+fonte**, não executáveis prontos, e não são executados pela instalação do
+Nexus. As chamadas de CLI têm operações fixas e tempo máximo de 90 segundos;
+não ativam canais MCP, controle remoto ou servidores.
+
+**Limite:** PhotoCraft oferece edição de imagem e formatos, mas não um modelo
+gerador de fotografias; `qwen3:1.7b` no Ollama responde em texto. Nesta etapa
+“criar imagem” significa cartaz gráfico com texto, não síntese fotográfica ou
+edição semântica livre por IA. Um modelo de imagem local separado seria
+necessário e deve ser avaliado diante dos 6,5 GiB de RAM do notebook. Os
+testes de interface e de desempenho no Ubuntu físico ainda são necessários;
+isso não altera a situação de tag/release da v0.9.12.
+
 ### Execução leve com perfil de recursos adaptativo (17/10/2026)
 
 **Motivação física:** notebook Ubuntu com 6,5 GiB de RAM, 617 MiB

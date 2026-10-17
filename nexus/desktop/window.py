@@ -193,6 +193,9 @@ class DesktopWindow:
                         foreground="#75646e", font=("Sans", 10))
         style.configure("Nexus.Section.TLabel", background="#f5f1f3",
                         foreground="#49333d", font=("Sans", 10, "bold"))
+        style.configure("Nexus.Creative.TLabel", background="#ebe2e7",
+                        foreground="#573b48", font=("Sans", 10),
+                        padding=(12, 8))
         style.configure("Nexus.Caption.TLabel", background="#f5f1f3",
                         foreground="#584751", font=("Sans", 9))
         style.configure("Nexus.Status.TLabel", background="#ebe2e7",
@@ -245,7 +248,7 @@ class DesktopWindow:
         else:
             ttk.Label(header, text="NEXUS CORE", font=("Sans", 20, "bold"),
                       style="Nexus.Header.TLabel").pack(side="left", anchor="center")
-        ttk.Label(header, text="ASSISTENTE LOCAL\nPRIVACIDADE POR PADRÃO",
+        ttk.Label(header, text="ASSISTENTE LOCAL\nCONVERSA · VISÃO · CRIAÇÃO",
                   justify="right", style="Nexus.HeaderHint.TLabel").pack(
                       side="right", anchor="center", padx=(8, 0))
         self.test_button = ttk.Button(
@@ -293,9 +296,11 @@ class DesktopWindow:
         self.transcript.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         self.transcript.tag_configure(
-            "user", foreground="#722F37", font=("Sans", 11, "bold"))
+            "user", foreground="#722F37", font=("Sans", 11, "bold"),
+            spacing1=8)
         self.transcript.tag_configure(
-            "assistant", foreground="#34232d", font=("Sans", 11, "bold"))
+            "assistant", foreground="#34232d", font=("Sans", 11, "bold"),
+            spacing1=8)
 
         # Compact first row: speech preferences are distinct from listening.
         voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
@@ -390,6 +395,10 @@ class DesktopWindow:
             widget.pack(side="left", padx=(0, 10))
             self._privacy_labels.append(widget)
 
+        ttk.Label(footer, text=(
+            "CRIAÇÃO LOCAL  ·  Peça no chat ou por voz: editar foto, criar cartaz, "
+            "converter arquivo. Cada gravação pede autorização."
+        ), style="Nexus.Creative.TLabel").pack(fill="x", pady=(8, 0))
         ttk.Label(footer, text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
                   style="Nexus.Section.TLabel").pack(
                       anchor="w", pady=(7, 3))

@@ -66,6 +66,18 @@ o script passa a aguardar até 30 s pela API local. Não há aceite de release.
 
 ## Logs ao vivo enquanto usa o assistente
 
+### Criação e edição local (nova integração, ainda sem aceite físico)
+
+Na janela, peça por texto e depois por voz um cartaz PNG em `~/Imagens`
+informando o caminho absoluto (um nome novo em cada tentativa). Confira que
+o Nexus mostra a prévia da ação e pergunta antes de gravar; recuse uma vez,
+autorize outra e confirme que apenas o arquivo autorizado apareceu. Repita
+com uma cópia de foto para escala de cinza. Os CLIs PhotoCraft, WordCraft e
+PdfCraft são opcionais: testar as respectivas conversões exige instalar cada
+binário separadamente e conferir o resultado, sem executar os ZIPs de fonte.
+Observe duração, privacidade do arquivo (`0600`) e se o original permanece
+igual. Não confunda criação de cartaz com geração de fotografia por IA.
+
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
 `~/.local/bin/nexus-core --desktop` diretamente no terminal. **Deixe esse
 terminal aberto enquanto conversa e testa as funções na janela.** O próprio

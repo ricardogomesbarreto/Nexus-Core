@@ -22,6 +22,12 @@ confirmação. A escuta contínua e a latência visual continuam sem aceite.
 
 ## Entregas no código
 
+- Integração inicial de criação local por conversa: edição básica de foto e
+  cartaz gráfico via Pillow; conversão opcional por PhotoCraft/WordCraft e
+  extração de texto por PdfCraft se os CLIs estiverem instalados. Saídas novas
+  sob confirmação e política de caminhos. Não equivale a geração fotográfica
+  por IA nem comprova os CLIs ou o desempenho no notebook físico.
+
 - A frase exata “Crie uma pasta chamada Projetos” e nomes simples semelhantes
   escolhem uma pasta filha da home sem esperar o modelo local. A ação ainda passa
   pelo contrato de ferramenta, `SecurityGate`, prévia do caminho, confirmação
