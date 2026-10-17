@@ -156,3 +156,12 @@ contar arquivos `.so` e ABIs Android conhecidas, entradas de assinatura,
 links simbólicos e caminhos atípicos. Os resultados são apenas indícios do
 índice e não verificam autenticidade, integridade de membros ou vírus.
 Nenhum conteúdo interno é aberto ou descompactado.
+
+### Limites adicionais do índice ZIP
+
+Antes de abrir o contêiner com `zipfile.ZipFile`, o NEXUS CORE confere o
+registro de fim de diretório central (EOCD), limita a 3.000 entradas e a
+8 MiB de diretório central e recusa ZIP64/multidisco nesta inspeção leve.
+A recusa significa somente **fora do escopo do analisador limitado**, não
+que o arquivo seja malicioso. Os limites reduzem risco de consumo excessivo
+de memória ao carregar índices muito grandes, sem substituir isolamento.
