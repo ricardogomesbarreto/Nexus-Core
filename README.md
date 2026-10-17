@@ -70,6 +70,13 @@ O [roteiro de aceite físico v0.9.12](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md
 registra evidências de instalação, PostgreSQL, conversa Ollama, reconhecimento
 de fala, saída feminina e masculina, câmera, ações e recuperação. Seu estado
 inicial é **PENDENTE**; testes automatizados não preenchem o aceite de hardware.
+Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
+`~/.local/bin/nexus-core --acceptance-log` em um terminal interativo. Ele
+mostra o progresso de cada diagnóstico, pede consentimento antes dos testes
+de microfone e câmera e gera um resumo sem transcrição, imagem ou credenciais
+para copiar no chat. As respostas sobre o uso da janela são marcadas
+`RELATADO`, pois dependem da observação do usuário; siga o roteiro para saber
+o que verificar em outro terminal. O resumo não publica tags.
 O workflow de publicação manual verifica agora a CI de `push` aprovada para o
 SHA exato da `main`; o bloqueio de publicação permanece ativo. Não há tag
 v0.9.12 nem tags retroativas para marcos ainda não homologados.
