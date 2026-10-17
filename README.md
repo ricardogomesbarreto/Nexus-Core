@@ -26,6 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
+> **Integração do código:** PR #66 aprovado pela CI (1.619 testes), merge `bb7e487`; ainda sem aceite físico nem tag v0.9.12<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>

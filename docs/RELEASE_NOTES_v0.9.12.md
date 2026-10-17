@@ -1,7 +1,8 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: base integrada à `main`; melhorias seguintes em validação local,
-sem tag/release estável.**
+**Estado: melhorias integradas à `main` pelo PR #66 (`bb7e487`); CI do PR
+aprovada com 1.619 testes, sem tag/release estável.** O aceite físico no
+notebook e a CI `push` do SHA final ainda são requisitos para publicação.
 
 Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
 registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e
