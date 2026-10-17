@@ -1,13 +1,11 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: código de desenvolvimento v0.9.12 até a PR #69
-(`9de8aa7`) integrado à `main`; 1.631 testes aprovados na CI da PR #69.
-Sem tag/release estável.** A auditoria corretiva da PR #70
-executou **1.644 testes aprovados** em Ubuntu/PostgreSQL/Xvfb e
-adicionou verificações de segurança, instalador e compatibilidade.
-O aceite físico no
-notebook, a CI `push` do SHA final e a revisão explícita do workflow
-de publicação ainda são requisitos para release.
+**Estado: código de desenvolvimento v0.9.12 até o PR #76 (`8182ebd`)
+integrado à `main`; 1.740 testes aprovados na CI do PR #76. Sem tag/release
+estável.** O aceite físico no notebook, a CI `push` do SHA final e a revisão
+explícita do workflow de publicação ainda são requisitos para release. As
+integrações Craft e REA são parciais; os três CLIs Craft reais não foram
+homologados no Ubuntu 26.04 do usuário. Consulte a matriz e os gates no README.
 
 Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
 registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e
