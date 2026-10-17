@@ -37,6 +37,9 @@ def _validate_converted_output(data: bytes, extension: str) -> None:
         ".jpg": data.startswith(bytes.fromhex("ffd8ff")),
         ".jpeg": data.startswith(bytes.fromhex("ffd8ff")),
         ".webp": data.startswith(b"RIFF") and data[8:12] == b"WEBP",
+        ".tif": data.startswith((b"II\x2a\x00", b"MM\x00\x2a")),
+        ".tiff": data.startswith((b"II\x2a\x00", b"MM\x00\x2a")),
+        ".rtf": data.startswith(b"{\\rtf"),
         ".docx": data.startswith(bytes.fromhex("504b0304")),
         ".odt": data.startswith(bytes.fromhex("504b0304")),
     }
@@ -81,8 +84,10 @@ def _read_source(policy: PathSecurity, path: str, limit: int = _MAX_INPUT) -> by
 
 class EditImageTool(NexusTool):
     name = "edit_image_local"
-    description = ("Edita uma foto local com Pillow: grayscale, invert, blur, "
-                   "sharpen, rotate_left ou rotate_right; salva uma cópia nova.")
+    description = ("Edita foto local com Pillow: grayscale, invert, blur, sharpen, "
+                   "rotate_left, rotate_right, autocontrast, sepia, "
+                   "flip_horizontal, flip_vertical, brighten ou contrast; "
+                   "salva uma cópia nova.")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -101,9 +106,11 @@ class EditImageTool(NexusTool):
 
     def execute(self, source: str, output: str, operation: str, **kwargs) -> ToolResult:
         try:
-            from PIL import Image, ImageFilter, ImageOps, UnidentifiedImageError
+            from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
             if operation not in {"grayscale", "invert", "blur", "sharpen",
-                                 "rotate_left", "rotate_right"}:
+                                 "rotate_left", "rotate_right", "autocontrast",
+                                 "sepia", "flip_horizontal", "flip_vertical",
+                                 "brighten", "contrast"}:
                 raise ValueError("Edição não suportada. Escolha uma operação disponível.")
             suffix = Path(output).suffix.lower()
             if Path(source).suffix.lower() not in _IMAGE_EXTENSIONS or suffix not in _IMAGE_EXTENSIONS:
@@ -130,8 +137,20 @@ class EditImageTool(NexusTool):
                 image = image.filter(ImageFilter.UnsharpMask(radius=2, percent=140))
             elif operation == "rotate_left":
                 image = image.transpose(Image.Transpose.ROTATE_90)
-            else:
+            elif operation == "rotate_right":
                 image = image.transpose(Image.Transpose.ROTATE_270)
+            elif operation == "autocontrast":
+                image = ImageOps.autocontrast(image)
+            elif operation == "sepia":
+                image = ImageOps.colorize(ImageOps.grayscale(image), "#30201b", "#f4d8a6")
+            elif operation == "flip_horizontal":
+                image = image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            elif operation == "flip_vertical":
+                image = image.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+            elif operation == "brighten":
+                image = ImageEnhance.Brightness(image).enhance(1.25)
+            elif operation == "contrast":
+                image = ImageEnhance.Contrast(image).enhance(1.3)
             result = io.BytesIO()
             image.save(result, format={".png": "PNG", ".jpg": "JPEG",
                                        ".jpeg": "JPEG", ".webp": "WEBP"}[suffix])
@@ -241,10 +260,10 @@ class CraftConvertTool(NexusTool):
 
     def execute(self, source: str, output: str, kind: str, **kwargs) -> ToolResult:
         options = {
-            "image": ("photocraft-cli", {".png", ".jpg", ".jpeg", ".psd", ".pcraft", ".webp"},
-                      {".png", ".jpg", ".jpeg", ".webp", ".pcraft"}),
-            "document": ("wordcraft-cli", {".docx", ".odt", ".md", ".txt"},
-                         {".docx", ".pdf", ".md", ".txt"}),
+            "image": ("photocraft-cli", {".png", ".jpg", ".jpeg", ".psd", ".pcraft", ".webp", ".tif", ".tiff"},
+                      {".png", ".jpg", ".jpeg", ".webp", ".pcraft", ".tif", ".tiff"}),
+            "document": ("wordcraft-cli", {".docx", ".odt", ".md", ".txt", ".rtf"},
+                         {".docx", ".pdf", ".md", ".txt", ".odt", ".rtf"}),
             "pdf_text": ("pdfcraft-cli", {".pdf"}, {".txt"}),
         }
         if kind not in options:
