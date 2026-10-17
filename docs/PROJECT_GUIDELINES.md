@@ -62,6 +62,26 @@ iniciar qualquer teste que interaja com outra máquina ou serviço.
   real no SHA da `main` e aceite em hardware físico para áudio,
   câmera, visão, consumo de recursos, atualização e permissões.
 
+## Engenharia reversa autorizada e análise offline
+
+A integração inspirada no REA deve começar por **leitura estática de
+arquivos próprios ou autorizados**, com limites de RAM/tamanho,
+caminhos protegidos e `SecurityGate`. Não há autorização implícita
+para executar binários inspecionados, iniciar Java/Node, criar servidores
+MCP, descompilar software proprietário, inspecionar processos de terceiros,
+analisar contas e navegadores ou capturar tráfego. Cada modalidade
+avançada requer consentimento separado, isolamento e validação
+em hardware real. Toda conclusão deve mencionar evidências observáveis,
+limites do parser e proibição de extrapolar comportamento de um aplicativo
+a partir de um cabeçalho de arquivo.
+
+O instalador deve tratar `PostgreSQL parado` como um estado
+recuperável: detectar o serviço correspondente à porta configurada,
+solicitar autorização para `start` **sem `enable`**, preservar
+instalações e bancos existentes e exigir autenticação real após
+a prontidão do serviço. Não repetir automaticamente senhas, redefinir
+roles ou iniciar clusters não relacionados.
+
 ## Requisitos de experiência e critérios de aceite
 
 | Requisito | Critério observável |
