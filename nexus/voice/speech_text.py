@@ -39,8 +39,10 @@ def readable_model_text(text: str) -> str:
     return result.strip()
 
 
-def speech_from_model_text(text: str) -> str:
+def speech_from_model_text(text: str, *, max_characters: int = MAX_SPOKEN_CHARACTERS) -> str:
     """Short, punctuation-aware speech; never pronounce Markdown tokens."""
+    if type(max_characters) is not int or not 120 <= max_characters <= MAX_SPOKEN_CHARACTERS:
+        raise ValueError("Limite de voz inválido.")
     clean = readable_model_text(text)
     if not clean:
         return ""
@@ -55,8 +57,8 @@ def speech_from_model_text(text: str) -> str:
         parts.append(line)
     spoken = " ".join(parts)
     spoken = re.sub(r"\s{2,}", " ", spoken)
-    if len(spoken) > MAX_SPOKEN_CHARACTERS:
-        cut = spoken[:MAX_SPOKEN_CHARACTERS].rfind(" ")
-        spoken = spoken[:cut if cut >= MAX_SPOKEN_CHARACTERS // 2 else MAX_SPOKEN_CHARACTERS]
+    if len(spoken) > max_characters:
+        cut = spoken[:max_characters].rfind(" ")
+        spoken = spoken[:cut if cut >= max_characters // 2 else max_characters]
         spoken = spoken.rstrip(" ,;:") + ". Consulte o restante na conversa."
     return spoken.strip()
