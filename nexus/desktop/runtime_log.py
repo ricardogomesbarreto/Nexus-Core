@@ -10,6 +10,7 @@ import logging
 EVENTS = frozenset({
     "interface", "chat", "escuta", "reconhecimento", "fala",
     "camera", "visao", "autorizacao", "ferramenta", "cancelamento",
+    "teste", "recurso",
 })
 STATES = frozenset({
     "iniciado", "concluido", "falhou", "pausado", "retomado",
@@ -24,10 +25,14 @@ TOOLS = frozenset({
     "create_directory", "launch_application", "desktop_type_text",
     "desktop_navigate", "terminal_sandbox", "system_info",
 })
+PROFILES = frozenset({"eco", "balanced"})
+
 
 
 def live_event(event: str, state: str, *, source: str | None = None,
-               tool: str | None = None, elapsed_ms: int | None = None) -> None:
+               tool: str | None = None, elapsed_ms: int | None = None,
+               profile: str | None = None, threads: int | None = None,
+               memory_mib: int | None = None) -> None:
     """Emit a single bounded status via the existing console/file logger."""
     if event not in EVENTS or state not in STATES:
         raise ValueError("Evento de execução inválido")
@@ -40,4 +45,14 @@ def live_event(event: str, state: str, *, source: str | None = None,
         if type(elapsed_ms) is not int:
             raise ValueError("Duração inválida")
         fields.append(f"duracao_ms={max(0, min(elapsed_ms, 3_600_000))}")
+    if profile is not None:
+        fields.append(f"perfil={profile if profile in PROFILES else 'outra'}")
+    if threads is not None:
+        if type(threads) is not int:
+            raise ValueError("Quantidade de threads inválida")
+        fields.append(f"threads={max(1, min(threads, 64))}")
+    if memory_mib is not None:
+        if type(memory_mib) is not int:
+            raise ValueError("Quantidade de memória inválida")
+        fields.append(f"ram_disponivel_mib={max(0, min(memory_mib, 1_000_000))}")
     logging.getLogger("nexus.desktop_runtime").info("TESTE-LOCAL %s", " ".join(fields))
