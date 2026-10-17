@@ -244,3 +244,47 @@ def test_static_image_signatures_are_structural_without_loading_images(name, dat
     reported_kind, summary = _identify(data, Path(name).suffix)
     assert reported_kind == kind
     assert "não analisado" in summary or "não analisados" in summary
+
+
+
+@pytest.mark.parametrize("field,invalid", [
+    ("entries", 3001), ("zip64", 65535), ("directory", 8 * 1024 * 1024 + 1),
+])
+def test_zip_preflight_denies_unbounded_indices_before_zipfile_parse(
+    monkeypatch, field, invalid,
+):
+    import nexus.tools.static_analysis as static
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as z:
+        z.writestr("small.txt", b"x")
+    content = bytearray(buffer.getvalue())
+    end = content.rfind(b"PK\x05\x06")
+    assert end >= 0
+    if field == "entries":
+        struct.pack_into("<H", content, end + 8, invalid)
+        struct.pack_into("<H", content, end + 10, invalid)
+    elif field == "zip64":
+        struct.pack_into("<H", content, end + 8, invalid)
+        struct.pack_into("<H", content, end + 10, invalid)
+    else:
+        struct.pack_into("<I", content, end + 12, invalid)
+    def forbidden(*a, **kw):
+        pytest.fail("Central directory must be rejected before ZipFile allocation")
+    monkeypatch.setattr(static.zipfile, "ZipFile", forbidden)
+    with pytest.raises(ValueError):
+        static._zip_summary(io.BytesIO(content), ".zip")
+
+
+def test_zip_preflight_accepts_empty_and_normal_archives():
+    from nexus.tools.static_analysis import _check_zip_directory_bounds
+    for payloads in ([], [("a.txt", b"one"), ("b.txt", b"two")]):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_STORED) as z:
+            for name, body in payloads:
+                z.writestr(name, body)
+        stream.seek(0)
+        _check_zip_directory_bounds(stream)
+        stream.seek(0)
+        kind, summary = _zip_summary(stream, ".zip")
+        assert kind == "ZIP"
+        assert f"{len(payloads)} entradas" in summary
