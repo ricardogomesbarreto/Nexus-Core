@@ -26,7 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração do código:** PR #66 aprovado pela CI (1.619 testes), merge `bb7e487`; ainda sem aceite físico nem tag v0.9.12<br>
+> **Integração do código:** até a PR #69 na `main` (`9de8aa7`), com 1.631 testes na CI Ubuntu/Python/PostgreSQL/Xvfb; **auditoria corretiva em revisão** e aceite físico/tag v0.9.12 pendentes<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -49,6 +49,45 @@ PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
+
+### Auditoria de código e documentação — 17/10/2026
+
+A [auditoria técnica v0.9.12](docs/AUDIT_v0.9.12_2026-10-17.md)
+reconcilia os chats de desenvolvimento e testes físicos com o inventário
+de 345 arquivos versionados do repositório. Os achados prioritários
+incluem: ativação indevida do Ollama no login pelo instalador,
+segurança das saídas de CLIs externos, validação básica de formatos,
+tratamento de imagens grandes e fontes entre distribuições. A auditoria
+registra **o que foi corrigido no código**, **o que passou na CI** e
+**o que ainda depende de testes físicos**, sem antecipar a release.
+
+**Serviços sob demanda:** novas instalações locais do Ollama pelo
+instalador usam uma unidade systemd de usuário **estática** e apenas
+`systemctl --user start` na sessão atual; não executam `enable` ou
+`--now`. Unidades criadas anteriormente ou serviços Ollama/PostgreSQL
+já existentes **não são alterados retroativamente**: confira
+`systemctl --user is-enabled nexus-core-ollama.service` e
+`systemctl is-enabled ollama.service`. Se alguma unidade aparecer
+habilitada e não houver outro programa dependente, desabilite-a
+explicitamente e pare-a quando terminar de usar.
+
+**Ferramentas Craft externas:** não confundimos subprocessos com
+sandbox. Os CLIs opcionais de terceiros são executados com os
+privilégios normais da conta Linux: a confirmação antes de cada operação
+e o uso de arquivos temporários privados **não impedem** que um
+executável desconhecido possa acessar outros recursos dessa conta ou
+utilizar a rede. Utilize somente binários que você tenha instalado de
+fonte confiável. A nova leitura por descritores não segue links
+simbólicos na saída do CLI; saídas vazias ou assinaturas de arquivo
+incompatíveis são recusadas. A validação não certifica o conteúdo
+semanticamente correto.
+
+**Histórico salvo:** a opção `Salvar conversas` conserva texto no
+disco local. Se uma pergunta incluir dados sensíveis, esse texto também
+poderá ser arquivado; não existe remoção ou criptografia automática
+de todos os segredos. Desative a opção ou use `Apagar histórico`
+quando necessário. Áudio bruto, fotos e frames não são persistidos
+por esse mecanismo.
 
 ### Criação e edição local por conversa (integração em validação)
 
