@@ -171,6 +171,7 @@ def test_session_script_has_syntax_and_avoids_autoenable():
 @pytest.mark.skipif(not __import__("os").environ.get("DISPLAY"), reason="Requer display Xvfb")
 def test_gui_test_panel_never_claims_unobserved_success(monkeypatch, caplog):
     import tkinter as tk
+    import gc
     from nexus.desktop.confirmation import DesktopConfirmation
     from nexus.desktop.window import DesktopWindow
     import time
@@ -207,6 +208,17 @@ def test_gui_test_panel_never_claims_unobserved_success(monkeypatch, caplog):
         assert "evento=teste estado=concluido origem=voz" not in caplog.text
         window._close()
     finally:
+        # Release modal Toplevels explicitly on the main Tk thread. Leaving
+        # them reachable after root.destroy can trigger PhotoImage.__del__
+        # from a later garbage collection in an unrelated pytest case.
+        for child in list(root.winfo_children()):
+            if isinstance(child, tk.Toplevel):
+                child.destroy()
         confirmation.close()
-        try: root.destroy()
-        except tk.TclError: pass
+        try:
+            root.update_idletasks()
+            gc.collect()
+            root.destroy()
+            gc.collect()
+        except tk.TclError:
+            pass
