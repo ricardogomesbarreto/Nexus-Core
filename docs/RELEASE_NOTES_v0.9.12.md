@@ -13,6 +13,13 @@ de observação física em uma saída resumida para compartilhar, sem imprimir
 credenciais, transcrição ou imagens. Uso de microfone e câmera pede consentimento
 separado; as observações manuais não são aprovação automática de release.
 
+O registro físico recebido em 17/10/2026 confirmou uma transcrição Vosk no
+teste isolado, mas a janela repetiu ciclos sem transcrição. O indicador de rede
+alternou de estado; uma análise visual levou cerca de 119 s no notebook. A
+partida dos serviços agora aguarda até 30 s pela API do Ollama, e o roteiro de
+aceite separa o navegador padrão sem diálogo do gerenciador de arquivos com
+confirmação. A escuta contínua e a latência visual continuam sem aceite.
+
 ## Entregas no código
 
 - A frase exata “Crie uma pasta chamada Projetos” e nomes simples semelhantes

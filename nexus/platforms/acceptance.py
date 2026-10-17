@@ -181,8 +181,11 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         ("Criar pasta autorizada",
          "No chat, peça 'Crie uma pasta chamada NexusCoreTeste'; "
          "negue uma vez, repita e autorize. O programa respeitou as decisões?"),
+        ("Navegador padrão",
+         "No chat, peça 'Abra o navegador'. Abriu o navegador padrão sem "
+         "diálogo adicional e sem uma URL escolhida pelo assistente?"),
         ("Abrir aplicativo autorizado",
-         "No chat, peça 'Abra o navegador'; "
+         "No chat, peça 'Abra o gerenciador de arquivos'; "
          "negue uma vez, repita e autorize. Abriu somente depois da confirmação?"),
         ("Permissões", "Você testou confirmar por botão, texto e voz e cancelar?"),
     ):

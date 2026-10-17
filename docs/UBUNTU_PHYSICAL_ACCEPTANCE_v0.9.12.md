@@ -45,6 +45,25 @@ oferece nova foto com consentimento por captura. Atualize diretamente pela
 baixar em `~/Downloads`. Essa versão ainda precisa de teste físico no notebook:
 medir acerto de voz e latência da visão novamente antes de publicar uma tag.
 
+**Sessão física recebida em 17/10/2026 (checkout `0710f9a`):** Ubuntu 26.04
+em Wayland, pacote instalado v0.9.12, PostgreSQL autenticado, resposta
+isolada do Ollama em 11 s, captura PipeWire com transcrição Vosk no teste
+isolado (pico 100%, possível saturação), uma câmera listada e um quadro
+capturado. O indicador alternou `online`/`offline`/`online`. A janela entrou
+no perfil `eco` e registrou sucessivos `sem_transcricao` por cerca de 8,5 s
+cada, inclusive depois da saudação e da resposta visual: **escuta contínua
+falhou nessa sessão**, apesar do teste isolado de Vosk. A análise da câmera
+terminou em 118,9 s e a fala correspondente levou 23,2 s. Um diagnóstico
+passivo separado mostrou 6.694 MiB totais, 2.174 MiB disponíveis, 1.524 MiB
+de swap em uso e nenhum modelo Ollama carregado naquele instante. O log não
+inclui a resposta visual nem confirma sua coerência. O usuário marcou o chat
+como funcional no questionário, mas o arquivo de eventos enviado não contém
+um turno `evento=chat`; essa etapa permanece apenas **RELATADA**. As etapas
+manuais deixadas em branco não foram testadas. O primeiro `start` do script
+de sessão informou Ollama indisponível imediatamente após `systemctl start`,
+enquanto o instalador e a abertura seguinte encontraram o serviço pronto;
+o script passa a aguardar até 30 s pela API local. Não há aceite de release.
+
 ## Logs ao vivo enquanto usa o assistente
 
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
@@ -61,6 +80,12 @@ Os logs não incluem conteúdo das perguntas, fala transcrita, imagem ou senhas.
 `concluido` significa que o processo terminou, e você ainda precisa informar
 se a resposta foi correta, audível e visualmente coerente. Não há homologação
 automática de teclado Wayland nem de recuperação real.
+Após dois ciclos com áudio sem transcrição, experimente **ALSA** no seletor de
+microfone da janela, fale uma frase clara e compare com o teste isolado
+`--recognition-test`; anote `pico` e `amostras` dos eventos seguintes sem
+compartilhar o conteúdo da fala. Um pico de 100% pode indicar saturação, mas
+isoladamente não diagnostica o dispositivo. Não marque escuta contínua como
+aprovada até obter duas respostas faladas seguidas na própria janela.
 
 Na mesma janela, confira o ponto **ONLINE/OFFLINE** do cabeçalho enquanto
 desliga e religa a conexão pelo Ubuntu. O terminal deve registrar
@@ -190,9 +215,12 @@ e descreva qualquer erro reproduzível.
 | SHA da main, Ubuntu/Python/sessão registrados | PENDENTE | — |
 | Instalação, login PostgreSQL e status de recuperação | PENDENTE | — |
 | Resposta pertinente do Ollama sem internet externa | PENDENTE | — |
-| Microfone e transcrição Vosk de fala real | PENDENTE | — |
+| Microfone e transcrição Vosk isolados | APROVADO | PipeWire, `transcribed`, pico 100% no checkout `0710f9a`; precisão da frase não registrada |
+| Escuta e resposta a duas falas seguidas na janela | FALHOU | Repetidos `sem_transcricao` de aproximadamente 8,5 s na sessão enviada |
 | Voz feminina e masculina audíveis, pausa e retomada | PENDENTE | — |
 | Webcam, foto e descrição coerente após consentimento | PENDENTE | — |
+| Indicador ONLINE/OFFLINE na janela | APROVADO | Transições `online`/`offline`/`online` no log enviado |
+| Latência e recursos da análise visual | PENDENTE | Uma análise levou 118,9 s e fala 23,2 s; medir após diagnóstico e ajustes no notebook |
 | Criar pasta: negação e autorização individuais | PENDENTE | — |
 | Navegador padrão abre sem diálogo; fala ambígua não abre | PENDENTE | — |
 | Abrir gerenciador: negação e autorização individuais | PENDENTE | — |

@@ -149,11 +149,16 @@ def test_resource_telemetry_logs_only_bounded_numbers(caplog):
     live_event("teste", "iniciado", source="voz")
     live_event("teste", "recebido", source="voz")
     live_event("teste", "concluido", source="voz")
+    live_event("reconhecimento", "sem_transcricao", source="voz",
+               peak_percent=123, samples=12)
     assert "evento=recurso estado=pronto perfil=eco threads=2 ram_disponivel_mib=617" in caplog.text
     assert "evento=teste estado=concluido origem=voz" in caplog.text
+    assert "evento=reconhecimento estado=sem_transcricao origem=voz pico=100% amostras=12" in caplog.text
     assert "password" not in caplog.text
     with pytest.raises(ValueError):
         live_event("recurso", "pronto", memory_mib="123password")
+    with pytest.raises(ValueError):
+        live_event("reconhecimento", "sem_transcricao", peak_percent="secret", samples=12)
 
 
 def test_session_script_has_syntax_and_avoids_autoenable():
