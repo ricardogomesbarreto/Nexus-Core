@@ -48,6 +48,37 @@ e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
+### Contratos reais dos cinco ZIPs — metadados Craft e prévia de PDF (v0.9.12)
+
+Os cinco anexos de código-fonte originais foram inspecionados sem instalação:
+REA (Node/TypeScript), Ollama (Go), PhotoCraft, WordCraft e PdfCraft (Rust).
+A nova integração por conversa usa somente os **subcomandos reais** info
+(PhotoCraft/WordCraft/PdfCraft) e render (PdfCraft) via executáveis locais
+opcionais, após autorização individual. O retorno JSON é filtrado para
+números e indicadores booleanos, não publica títulos, autores, conteúdo nem
+nomes privados; o arquivo original não é alterado.
+
+Exemplos (destino da prévia deve ser um arquivo inexistente):
+
+    Consulte os metadados do arquivo /home/usuario/Documentos/manual.pdf
+    Mostre os metadados da imagem /home/usuario/Imagens/foto.png
+    Renderize a página 1 do PDF /home/usuario/Documentos/manual.pdf em /home/usuario/Imagens/pagina.png
+
+Para homologar os **CLIs realmente instalados** no Ubuntu 26.04:
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+python3 scripts/validate_craft_cli.py --smoke --advanced
+```
+
+Os testes CI usam subprocessos simulados; não comprovam execução dos
+binários Rust originais no notebook. A opção avançada só executa após
+solicitação explícita e usa arquivos sintéticos. O REA completo permanece
+dependente de instalação Node compilada e análise separada de segurança;
+Ollama e PostgreSQL continuam sob demanda, sem autostart e sem serviço extra.
+
+[Inventário dos cinco ZIPs e gates de segurança](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md).
+
 ## Novas capacidades offline — etapa complementar da v0.9.12
 
 Esta etapa mantém **a mesma versão e aparência** e amplia ferramentas existentes,

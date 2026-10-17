@@ -22,6 +22,8 @@ from nexus.tools.desktop import (
 )
 from nexus.tools.creative import EditImageTool, CreateGraphicTool, CraftConvertTool
 from nexus.tools.static_analysis import InspectArtifactTool
+from nexus.tools.craft_inspect import CraftInspectTool
+from nexus.tools.pdf_render import PdfRenderTool
 
 
 __all__ = [
@@ -49,4 +51,6 @@ __all__ = [
     "CreateGraphicTool",
     "CraftConvertTool",
     "InspectArtifactTool",
+    "CraftInspectTool",
+    "PdfRenderTool",
 ]

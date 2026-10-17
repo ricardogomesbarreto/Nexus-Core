@@ -116,3 +116,11 @@ próxima revisão de segurança antes de liberar operações no assistente.
 A CI cobre argumentos fixos, cabeçalhos, permissões, originais intactos e
 regressões; **não** homologa formatos reais TIFF/ODT/RTF no notebook até
 serem testados com as respectivas CLIs instaladas.
+
+## Contratos originais e testes avançados
+
+Os cinco ZIPs originais foram inspecionados. O comando opcional
+`python3 scripts/validate_craft_cli.py --smoke --advanced` executa, quando
+instalados os binários, `info` do PhotoCraft, WordCraft e PdfCraft e
+`render --page 1 --dpi 96` do PdfCraft, em fixtures sintéticas. A CI não
+certifica esses executáveis; exige verificação física no Ubuntu.

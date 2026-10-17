@@ -151,7 +151,45 @@ def smoke_cli(name: str, executable: str, work: Path) -> bool:
     return ok and _valid_output(output, name)
 
 
-def run(*, smoke: bool = False, rea: bool = False) -> int:
+def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
+    """Run actual info commands on synthetic fixtures; PdfCraft also renders page 1."""
+    from nexus.tools.craft_inspect import _safe_summary
+    from nexus.tools.pdf_render import _validate_png
+
+    kind = {"PhotoCraft": "image", "WordCraft": "document", "PdfCraft": "pdf"}[name]
+    filename = {"PhotoCraft": "info.png", "WordCraft": "info.docx", "PdfCraft": "info.pdf"}[name]
+    source = work / filename
+    if name == "PhotoCraft":
+        _write_png(source)
+    elif name == "WordCraft":
+        _write_docx(source)
+    else:
+        _write_pdf(source)
+    result = work / (name.lower() + "-info.json")
+    with result.open("xb") as stream:
+        ok = _execute([executable, "info", str(source)], stdout=stream)
+    if not ok or result.stat().st_size > 512 * 1024:
+        return False
+    try:
+        _safe_summary(kind, result.read_bytes())
+    except (ValueError, UnicodeError):
+        return False
+    if name == "PdfCraft":
+        out = work / "pdf-preview.png"
+        args = [executable, "render", str(source), "--page", "1",
+                "--dpi", "96", "--out", str(out)]
+        if not _execute(args):
+            return False
+        if out.is_symlink() or not out.is_file() or out.stat().st_size > _MAX_RESULT:
+            return False
+        try:
+            _validate_png(out.read_bytes())
+        except (ValueError, OSError):
+            return False
+    return True
+
+
+def run(*, smoke: bool = False, rea: bool = False, advanced: bool = False) -> int:
     failures = 0
     with tempfile.TemporaryDirectory(prefix="nexus-cli-acceptance-") as folder:
         work = Path(folder)
@@ -171,6 +209,10 @@ def run(*, smoke: bool = False, rea: bool = False) -> int:
             ok = smoke_cli(name, executable, work)
             print(f"[CLI-LOCAL] ferramenta={name} estado={'passou' if ok else 'falhou'} teste=conversao_real")
             failures += not ok
+            if advanced:
+                passed = smoke_advanced_cli(name, executable, work)
+                print(f"[CLI-LOCAL] ferramenta={name} estado={'passou' if passed else 'falhou'} teste=metadados_e_previa")
+                failures += not passed
         if rea:
             executable = shutil.which("rea")
             if not executable:
@@ -191,8 +233,12 @@ def main() -> int:
                         help="Executar conversoes reais apenas em arquivos sinteticos temporarios")
     parser.add_argument("--rea", action="store_true",
                         help="Verificar o comando REA instalado sem analisar arquivos")
+    parser.add_argument("--advanced", action="store_true",
+                        help="Acrescentar testes reais de info e render; exige --smoke")
     options = parser.parse_args()
-    return run(smoke=options.smoke, rea=options.rea)
+    if options.advanced and not options.smoke:
+        parser.error("--advanced exige --smoke para confirmação explícita da execução")
+    return run(smoke=options.smoke, rea=options.rea, advanced=options.advanced)
 
 
 if __name__ == "__main__":

@@ -169,6 +169,30 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, str]] | None:
             "source": pdf_text[1], "output": pdf_text[2],
             "kind": "pdf_text",
         }
+    # Original Craft CLIs expose JSON-only metadata through 'info'. Route
+    # explicit current-turn requests without loading the Ollama model.
+    metadata = re.fullmatch(
+        r"(?:consulte|consultar|mostre|mostrar) os metadados (?:do|da) "
+        r"(?:arquivo|imagem|foto|documento|pdf) "
+        r"(/[\w ./À-ÿ-]{1,400}\.(?:png|jpe?g|webp|psd|pcraft|tiff?|docx|odt|rtf|md|txt|pdf))",
+        current, re.IGNORECASE,
+    )
+    if metadata:
+        ext = Path(metadata[1]).suffix.lower()
+        kind = ("pdf" if ext == ".pdf" else
+                "image" if ext in {".png", ".jpg", ".jpeg", ".webp", ".psd",
+                                  ".pcraft", ".tif", ".tiff"} else "document")
+        return "craft_inspect_local", {"source": metadata[1], "kind": kind}
+    preview = re.fullmatch(
+        r"(?:renderize|renderizar) a p[aá]gina ([1-9]\d{0,3}) "
+        r"do pdf (/[\w ./À-ÿ-]{1,400}\.pdf) "
+        r"em (/[\w ./À-ÿ-]{1,400}\.png)",
+        current, re.IGNORECASE,
+    )
+    if preview:
+        return "pdf_render_local", {
+            "page": int(preview[1]), "source": preview[2], "output": preview[3],
+        }
     conversion = re.fullmatch(
         r"(?:converta|converter) "
         r"(/[\w ./À-ÿ-]{1,400}\.(?:png|jpe?g|webp|psd|pcraft|tiff?|docx|odt|rtf|md|txt)) "
@@ -368,13 +392,15 @@ class AgentPlanner:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
             if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
                 raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
-            if name in {"edit_image_local", "create_graphic_local", "craft_convert_local"}:
+            if name in {"edit_image_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local"}:
                 current = _current_message(prompt) or ""
                 normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii").lower()
                 intent = {
                     "edit_image_local": r"\b(editar?|edite|modificar?|modifique|transformar?|transforme)\b",
                     "create_graphic_local": r"\b(criar?|crie|gerar?|gere|faca)\b",
                     "craft_convert_local": r"\b(converter?|converta|extrair?|extraia)\b",
+                    "craft_inspect_local": r"\bmetadados\b",
+                    "pdf_render_local": r"\b(renderizar?|renderize)\b",
                 }[name]
                 if not re.search(intent, normalized):
                     raise ProposalError("Criação e edição exigem pedido explícito neste turno.")
@@ -385,11 +411,20 @@ class AgentPlanner:
                 parameters = tool.contract.validate_inputs(arguments)
             except ContractViolation as exc:
                 raise ProposalError("Argumentos não obedecem ao contrato.") from exc
-            if name in {"edit_image_local", "create_graphic_local", "craft_convert_local"}:
+            if name in {"edit_image_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local"}:
                 current = _current_message(prompt) or ""
                 if any(parameters[field] not in current for field in ("output", "source")
                        if field in parameters):
                     raise ProposalError("Informe os caminhos exatos de origem e saída no pedido atual.")
+                if name == "craft_inspect_local" and not re.search(
+                    r"\bmetadados\b", current, re.IGNORECASE,
+                ):
+                    raise ProposalError("Leitura via Craft exige pedido explícito de metadados.")
+                if name == "pdf_render_local" and not re.search(
+                    r"\bp[aá]gina\s+" + str(parameters["page"]) + r"\b",
+                    current, re.IGNORECASE,
+                ):
+                    raise ProposalError("A prévia exige a página exata neste turno.")
                 if name == "create_graphic_local" and not re.search(
                     r"\b(cartaz|arte gr[aá]fica|card)\b", current, re.IGNORECASE
                 ):
