@@ -132,17 +132,75 @@ systemctl is-active ollama.service postgresql@18-main.service
 ```
 
 Para impedir a inicialização automática no boot (executar **uma vez**,
-quando não estiver usando os serviços e se nenhum outro aplicativo depender
-deles), use `sudo systemctl disable ollama.service
-postgresql@18-main.service`; confira também a configuração do cluster
-PostgreSQL e qualquer unidade agregadora/sockets ativos. Use
-`start` sempre que retornar aos testes. Não é necessário habilitar
-serviços com `enable` para iniciá-los manualmente.
+quando nenhum outro aplicativo depender desses serviços), desabilite
+`ollama.service` e a unidade agregadora `postgresql.service`. O PostgreSQL
+do Ubuntu/Debian usa `postgresql-common`: o gerador do systemd pode
+exibir `postgresql@18-main.service` como **`enabled-runtime`**, mesmo
+após `systemctl disable`, porque o arquivo
+`/etc/postgresql/18/main/start.conf` contém `auto`. Isto **não indica
+consumo de RAM** enquanto o serviço está `inactive`. Para permitir
+início manual sem ativação automática, confirme a configuração e altere
+`auto` para `manual` naquele arquivo (não use `disabled`, que impede
+o acionamento normal do cluster). Em seguida recarregue o systemd:
 
-**Portões que continuam abertos:** transcrição Vosk real em mais de uma
-frase, análise multimodal real, câmera ao vivo e consentimentos no
-desktop, recuperação/restauração ensaiada em instalação descartável e
-automação de teclado dependente de X11 quando em sessão Wayland.
+```bash
+cat /etc/postgresql/18/main/start.conf
+sudo systemctl disable ollama.service postgresql.service
+# Caso o arquivo acima contenha a linha 'auto':
+sudo sed -i -E 's/^[[:space:]]*auto[[:space:]]*$/manual/' /etc/postgresql/18/main/start.conf
+sudo systemctl daemon-reload
+systemctl is-enabled ollama.service postgresql.service postgresql@18-main.service
+```
+
+Se a linha não for `auto`, inspecione a configuração existente antes de
+alterar. Ao retornar aos testes, `sudo systemctl start postgresql@18-main.service
+ollama.service` continua válido. Não é necessário usar `enable`
+para iniciar serviços manualmente.
+
+**Aceite físico de 17/10/2026:** o operador executou
+`--acceptance-log` na sessão **Wayland** com checkout
+`88564ab019612fb3ff0afa0667881a08e3874760`. O relatório registrou
+**11 PASSOU / 1 FALHOU / 1 RELATADO / 6 PENDENTE**. Os testes individuais
+posteriores confirmaram **transcrição Vosk real em PipeWire e ALSA**,
+portanto o antigo bloqueio `no_transcript` deixou de ocorrer **nesses
+testes pontuais**; a escuta contínua da GUI permanece sem aceite.
+A câmera capturou um quadro. A visão pelo Ollama terminou uma tarefa
+em **68,5 segundos**, com a narração terminando aproximadamente **19,1
+segundos** depois. Isso confirma execução, **não** a precisão semântica
+da descrição. Durante a medição, `gemma3:4b` estava em CPU, com
+aproximadamente **617 MiB disponíveis** dos 6,5 GiB de RAM e
+**2,6 GiB de swap em uso**; há forte pressão de recursos, sem
+atribuir causalidade exclusiva ao Ollama. A falha humana combinada
+`Pasta e aplicativo` não especificava qual operação falhou. O
+roteiro atualizado agora **separa criação de pasta e abertura de
+aplicativo**, mantendo autorização individual.
+
+**Modelo visual opcional para computador com pouca RAM:** sem substituir
+automaticamente `gemma3:4b`, pode-se comparar o modelo multimodal
+`moondream:latest` (aproximadamente 1,7 GB de download no catálogo
+oficial Ollama). É menor, mas pode ser menos preciso, especialmente em
+perguntas complexas e texto em português. Baixe **somente se o usuário
+autorizar e houver espaço disponível**, com internet:
+
+```bash
+df -h "$HOME"
+ollama pull moondream:latest
+# Encerre o Nexus Core antes de trocar o modelo visual:
+ollama stop gemma3:4b
+NEXUS_VISION_MODEL=moondream:latest ~/.local/bin/nexus-core --desktop
+```
+
+Este comando seleciona o modelo visual **somente para essa execução**.
+Ele não altera a opção de voz nem instala serviços no boot. Anote o
+tempo e a qualidade da descrição de uma mesma foto autorizada, sem
+enviar imagens privadas aos logs.
+
+**Portões que continuam abertos:** escuta contínua após múltiplas
+falas, precisão e desempenho da análise multimodal, câmera ao vivo
+e consentimentos no desktop, criação de pasta, abertura de
+aplicativo, recuperação/restauração ensaiada em instalação
+descartável e automação de teclado dependente de X11 quando em
+sessão Wayland.
 
 Pedidos exatos como **“Crie uma pasta chamada Projetos”** (também com o
 prefixo **“Nexus,”**) agora selecionam
