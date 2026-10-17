@@ -108,10 +108,10 @@ def test_javascript_is_triaged_without_node_or_network(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("name,data,kind", [
-    ("bundle.wasm", b"\\x00asm\\x01\\x00\\x00\\x00", "WASM"),
+    ("bundle.wasm", b"\x00asm\x01\x00\x00\x00", "WASM"),
     ("pdf.pdf", b"%PDF-1.7\n", "PDF"),
     ("banner.png", bytes.fromhex("89504e470d0a1a0a"), "PNG"),
-    ("binary.exe", b"MZ" + b"\\x00" * 100, "MZ"),
+    ("binary.exe", b"MZ" + b"\x00" * 100, "MZ"),
 ])
 def test_static_formats_identified_without_opening_app(tmp_path, name, data, kind):
     home, _, executor = setup(tmp_path)
@@ -126,7 +126,7 @@ def test_static_formats_identified_without_opening_app(tmp_path, name, data, kin
 def test_symlink_and_protected_paths_are_denied(tmp_path):
     home, _, executor = setup(tmp_path)
     source = home / "public.elf"
-    source.write_bytes(bytes.fromhex("7f454c46") + b"\\x00" * 32)
+    source.write_bytes(bytes.fromhex("7f454c46") + b"\x00" * 32)
     symlink = home / "link.elf"
     symlink.symlink_to(source)
     blocked = executor.execute("inspect_artifact_local", source=str(symlink))
