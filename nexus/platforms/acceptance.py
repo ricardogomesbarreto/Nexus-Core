@@ -178,7 +178,12 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         ("Escuta contínua", "Ele respondeu a mais de uma fala sem apertar botão?"),
         ("Voz feminina e masculina", "Você ouviu as duas vozes e testou pausa/retomada?"),
         ("Câmera e análise", "Você viu prévia, print e descrição coerente após permissão?"),
-        ("Pasta e aplicativo", "Você testou negar e depois autorizar individualmente cada ação?"),
+        ("Criar pasta autorizada",
+         "No chat, peça 'Crie uma pasta chamada NexusCoreTeste'; "
+         "negue uma vez, repita e autorize. O programa respeitou as decisões?"),
+        ("Abrir aplicativo autorizado",
+         "No chat, peça 'Abra o navegador'; "
+         "negue uma vez, repita e autorize. Abriu somente depois da confirmação?"),
         ("Permissões", "Você testou confirmar por botão, texto e voz e cancelar?"),
     ):
         log(label, _observation(instruction, ask=ask, interactive=interactive, out=out), "observação humana")
