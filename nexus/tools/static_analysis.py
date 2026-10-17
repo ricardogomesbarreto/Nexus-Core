@@ -17,6 +17,7 @@ import zipfile
 from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
+from nexus.tools.wasm_structure import summarize_wasm
 from nexus.security.paths import PathSecurity
 from nexus.tools.base import NexusTool, ToolResult
 from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKind
@@ -99,6 +100,13 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         entries = archive.infolist()
         total_uncompressed = sum(x.file_size for x in entries)
         encrypted = sum(bool(x.flag_bits & 1) for x in entries)
+        symbolic_links = sum((x.external_attr >> 16) & 0o170000 == 0o120000 for x in entries)
+        native_libraries = sum(n.lower().endswith(".so") for n in names)
+        abi_list = sorted({n.split("/")[1] for n in names
+                           if n.startswith("lib/") and n.count("/") >= 2 and
+                           n.split("/")[1] in {"x86", "x86_64", "armeabi-v7a", "arm64-v8a"}})
+        zip_signatures = sum(n.startswith("META-INF/") and
+                             n.upper().endswith((".RSA", ".DSA", ".EC")) for n in names)
         # Report index characteristics, not a malware verdict or a path.
         odd_paths = sum(
             n.startswith(("/", "\\")) or
@@ -111,6 +119,10 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         dex_count = sum(bool(re.fullmatch(r"classes\d*\.dex", n)) for n in names)
         if suffix == ".apk" and (has_manifest or dex_count):
             kind = "APK"
+        elif suffix == ".docx" and {"[Content_Types].xml", "word/document.xml"} <= clean_names:
+            kind = "DOCX"
+        elif suffix == ".odt" and {"mimetype", "content.xml"} <= clean_names:
+            kind = "ODT"
         elif suffix in {".jar", ".war"} and (
             "META-INF/MANIFEST.MF" in clean_names or any(n.endswith(".class") for n in names)
         ):
@@ -121,7 +133,10 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
             f"Índice local: {len(names)} entradas; tamanho descompactado declarado="
             f"{total_uncompressed} bytes; AndroidManifest={'sim' if has_manifest else 'não'}; "
             f"arquivos DEX={dex_count}; entradas criptografadas={encrypted}; "
-            f"caminhos atípicos={odd_paths}. Nenhum membro foi extraído ou executado."
+            f"caminhos atípicos={odd_paths}; links simbólicos declarados={symbolic_links}; "
+            f"bibliotecas nativas .so={native_libraries}; ABIs conhecidas={','.join(abi_list) or 'nenhuma'}; "
+            f"entradas de assinatura declaradas={zip_signatures} (sem verificação criptográfica). "
+            "Nenhum membro foi extraído ou executado."
         )
 
 
@@ -177,7 +192,9 @@ class InspectArtifactTool(NexusTool):
                     raise ValueError("Arquivo alterado durante a inspeção.")
                 suffix = path.suffix.lower()
                 kind, summary = _identify(bytes(header), suffix)
-                if kind == "ZIP" and total:
+                if kind == "WASM":
+                    summary += " " + summarize_wasm(bytes(header), total_size=total)
+                elif kind == "ZIP" and total:
                     # os.dup pins the same inode; no extraction of ZIP payload.
                     with os.fdopen(os.dup(fd), "rb") as stream:
                         stream.seek(0)
