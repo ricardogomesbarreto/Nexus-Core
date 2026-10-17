@@ -28,6 +28,10 @@ from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_messag
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.desktop.runtime_log import live_event
+from nexus.desktop.presentation import (
+    COLORS, DEFAULT_FONT, configure_presentation, message_size,
+    composer_count, activity_state,
+)
 from nexus.models.resource_budget import ResourceBudget
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.speech_text import readable_model_text, speech_from_model_text
@@ -228,6 +232,8 @@ class DesktopWindow:
                         font=("Sans", 10))
         style.map("Nexus.Danger.TButton",
                   background=[("active", "#dbc3cd"), ("pressed", "#cba7b6")])
+        configure_presentation(style)
+        style.configure("Nexus.Status.TLabel", background=COLORS.surface)
 
         frame = ttk.Frame(root, style="Nexus.App.TFrame", padding=14)
         frame.pack(fill="both", expand=True)
@@ -283,13 +289,31 @@ class DesktopWindow:
         footer = ttk.Frame(frame, style="Nexus.App.TFrame")
         footer.pack(side="bottom", fill="x")
 
-        transcript_frame = ttk.Frame(frame, padding=2, style="Nexus.App.TFrame")
+        transcript_frame = ttk.Frame(frame, padding=(2, 2), style="Nexus.Card.TFrame")
         transcript_frame.pack(fill="both", expand=True)
+        conversation_toolbar = ttk.Frame(transcript_frame, style="Nexus.Card.TFrame")
+        conversation_toolbar.pack(fill="x", padx=12, pady=(6, 4))
+        ttk.Label(conversation_toolbar, text="CONVERSA LOCAL",
+                  style="Nexus.CardTitle.TLabel").pack(side="left")
+        self.quick_guide_button = ttk.Button(
+            conversation_toolbar, text="Guia rápido", command=self._show_quick_guide,
+            style="Nexus.Inline.TButton")
+        self.quick_guide_button.pack(side="right", padx=(5, 0))
+        self.zoom_in_button = ttk.Button(
+            conversation_toolbar, text="A+", command=lambda: self._zoom_conversation(1),
+            style="Nexus.Inline.TButton")
+        self.zoom_in_button.pack(side="right", padx=(4, 0))
+        self.zoom_out_button = ttk.Button(
+            conversation_toolbar, text="A−", command=lambda: self._zoom_conversation(-1),
+            style="Nexus.Inline.TButton")
+        self.zoom_out_button.pack(side="right", padx=(4, 0))
+        self._conversation_font_size = DEFAULT_FONT
         self.transcript = tk.Text(
             transcript_frame, height=5, wrap="word", state="disabled",
             padx=16, pady=14, bg="#ffffff", fg="#2c242a",
-            font=("Sans", 11), relief="flat", borderwidth=0,
-            highlightthickness=1, highlightbackground="#e2d8dd",
+            font=("Sans", DEFAULT_FONT), relief="flat", borderwidth=0,
+            highlightthickness=1, highlightbackground=COLORS.card_border,
+            highlightcolor=COLORS.wine,
         )
         scrollbar = ttk.Scrollbar(transcript_frame, command=self.transcript.yview)
         self.transcript.configure(yscrollcommand=scrollbar.set)
@@ -299,8 +323,16 @@ class DesktopWindow:
             "user", foreground="#722F37", font=("Sans", 11, "bold"),
             spacing1=8)
         self.transcript.tag_configure(
-            "assistant", foreground="#34232d", font=("Sans", 11, "bold"),
+            "assistant", foreground="#34232d", font=("Sans", DEFAULT_FONT, "bold"),
             spacing1=8)
+        self.transcript.tag_configure(
+            "message-user", foreground=COLORS.ink, background=COLORS.user_surface,
+            font=("Sans", DEFAULT_FONT), spacing1=3, spacing3=3,
+            lmargin1=12, lmargin2=12, rmargin=12)
+        self.transcript.tag_configure(
+            "message-assistant", foreground=COLORS.ink,
+            font=("Sans", DEFAULT_FONT), spacing1=3, spacing3=3,
+            lmargin1=12, lmargin2=12, rmargin=12)
 
         # Compact first row: speech preferences are distinct from listening.
         voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
@@ -395,9 +427,15 @@ class DesktopWindow:
             widget.pack(side="left", padx=(0, 10))
             self._privacy_labels.append(widget)
 
-        ttk.Label(footer, text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
-                  style="Nexus.Section.TLabel").pack(
-                      anchor="w", pady=(7, 3))
+        composer_title = ttk.Frame(footer, style="Nexus.App.TFrame")
+        composer_title.pack(fill="x", pady=(7, 3))
+        ttk.Label(composer_title,
+                  text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
+                  style="Nexus.Section.TLabel").pack(side="left")
+        self.composer_counter = ttk.Label(
+            composer_title, text="0 / 4000 caracteres",
+            style="Nexus.Counter.TLabel")
+        self.composer_counter.pack(side="right", padx=(8, 0))
         self.input = tk.Text(
             footer, height=2, wrap="word", font=("Sans", 11),
             bg="#ffffff", fg="#292127", relief="flat",
@@ -410,6 +448,8 @@ class DesktopWindow:
         self.input.bind("<Return>", self._send)
         # Shift+Enter retains normal multiline text entry.
         self.input.bind("<Shift-Return>", lambda event: None)
+        self.input.bind("<KeyRelease>", self._refresh_composer_count)
+        self.input.bind("<<Paste>>", lambda event: self.root.after_idle(self._refresh_composer_count))
 
         # Each action gets an equal, responsive column. Keep original
         # attributes, shortcuts and state transitions for compatibility.
@@ -440,10 +480,16 @@ class DesktopWindow:
         self.shutdown_button.grid(row=0, column=4, sticky="ew")
 
         # Full-width status strip: long diagnostics never hide Send/Cancel.
+        status_strip = ttk.Frame(footer, style="Nexus.Soft.TFrame")
+        status_strip.pack(fill="x", pady=(6, 0))
+        self.activity_badge = ttk.Label(
+            status_strip, text="● PRONTO", style="Nexus.LiveReady.TLabel")
+        self.activity_badge.pack(side="left")
+        self._activity_last = ("● PRONTO", "Nexus.LiveReady.TLabel")
         self.status = ttk.Label(
-            footer, text="Inicializando a escuta local…",
+            status_strip, text="Inicializando a escuta local…",
             style="Nexus.Status.TLabel", anchor="w")
-        self.status.pack(fill="x", pady=(6, 0))
+        self.status.pack(side="left", fill="x", expand=True)
         root.protocol("WM_DELETE_WINDOW", self._close)
         root.bind("<Control-Shift-M>", self._shortcut_toggle_listening)
         root.bind("<Control-Shift-I>", self._show_privacy_status)
@@ -454,6 +500,10 @@ class DesktopWindow:
         root.bind("<Control-Shift-T>", self._shortcut_vision_screen)
         root.bind("<Control-Shift-K>", self._shortcut_vision_camera)
         root.bind("<Control-Shift-P>", self._shortcut_camera_photo)
+        root.bind("<Control-plus>", lambda event: self._zoom_conversation(1))
+        root.bind("<Control-equal>", lambda event: self._zoom_conversation(1))
+        root.bind("<Control-minus>", lambda event: self._zoom_conversation(-1))
+        root.bind("<Control-l>", self._focus_composer)
         # Welcome text is displayed immediately. Its short spoken version
         # uses the existing local TTS worker before microphone listening starts.
         # Restore only normal text conversation. Never replay raw device
@@ -703,10 +753,59 @@ class DesktopWindow:
             self._refresh_privacy_status()
         return "break"
 
+    def _show_quick_guide(self) -> None:
+        """A local description of available flows, not a claim of device readiness."""
+        self.messagebox.showinfo(
+            "Nexus Core — guia rápido",
+            "Converse por texto ou voz quando o modelo local estiver disponível.\n\n"
+            "• Imagem, tela e câmera exigem autorização por captura.\n"
+            "• Edição de fotos e operações Craft usam arquivos novos.\n"
+            "• REA faz inspeção estática de arquivos autorizados.\n"
+            "• CLIs PhotoCraft, WordCraft e PdfCraft são opcionais.\n\n"
+            "Atalhos: Enter envia; Shift+Enter quebra linha;\n"
+            "Ctrl+L foca a mensagem; Ctrl++ / Ctrl+- ajustam a leitura;\n"
+            "Ctrl+Shift+M pausa/retoma a escuta;\n"
+            "Ctrl+Shift+I informa o estado de privacidade;\n"
+            "Ctrl+Shift+X solicita cancelamento.\n\n"
+            "Nenhuma função realiza capturas ou ações sem as permissões exigidas.",
+            parent=self.root,
+        )
+
+    def _zoom_conversation(self, delta: int):
+        """Improve legibility without changing persisted layout or permissions."""
+        size = message_size(self._conversation_font_size, delta)
+        if size != self._conversation_font_size:
+            self._conversation_font_size = size
+            self.transcript.configure(font=("Sans", size))
+            for label in ("user", "assistant"):
+                self.transcript.tag_configure(
+                    label, font=("Sans", size, "bold"))
+            for label in ("message-user", "message-assistant"):
+                self.transcript.tag_configure(label, font=("Sans", size))
+        return "break"
+
+    def _focus_composer(self, event=None):
+        if not self._closing:
+            self.input.focus_set()
+        return "break"
+
+    def _refresh_composer_count(self, event=None) -> None:
+        length = len(self.input.get("1.0", "end-1c"))
+        label, style = composer_count(length, limit=ChatSession.MAX_MESSAGE)
+        self.composer_counter.configure(text=label, style=style)
+
+    def _refresh_activity_badge(self) -> None:
+        state = activity_state(busy=self._busy, closing=self._closing)
+        if state != self._activity_last:
+            self.activity_badge.configure(text=state[0], style=state[1])
+            self._activity_last = state
+
     def _append(self, speaker: str, message: str, tag: str) -> None:
         self.transcript.configure(state="normal")
         self.transcript.insert("end", f"{speaker}\n", tag)
-        self.transcript.insert("end", f"{message}\n\n")
+        self.transcript.insert("end", f"{message}\n",
+                               "message-user" if tag == "user" else "message-assistant")
+        self.transcript.insert("end", "\n")
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
@@ -752,6 +851,7 @@ class DesktopWindow:
             "1.0", "Considerando a conversa, sugira próximos passos práticos "
                    "que eu possa escolher. Apenas aconselhe, sem executar ações.",
         )
+        self._refresh_composer_count()
         self._send(advisory_only=True)
 
     def _cancel_current(self):
@@ -782,6 +882,7 @@ class DesktopWindow:
         self.cancel_button.configure(state="disabled")
         for button in self._vision_buttons:
             button.configure(state="normal")
+        self._refresh_activity_badge()
 
     def _say_response(self, text: str) -> bool:
         """Speak normal and visual answers through the same local TTS channel."""
@@ -845,6 +946,7 @@ class DesktopWindow:
             self._answer_privacy_status(message)
             return "break"
         self.input.delete("1.0", "end")
+        self._refresh_composer_count()
         self._append("Você", message, "user")
         self.session.prepare_turn()
         self.microphone_indicator.show_peak(0, listening=False)
@@ -867,6 +969,7 @@ class DesktopWindow:
         if self._speaking:
             self._stop_speaking()
         self.status.configure(text="Processando localmente…")
+        self._refresh_activity_badge()
         self._start_worker(self._answer, message, advisory_only)
         return "break"
 
@@ -1607,6 +1710,7 @@ class DesktopWindow:
 
     def _poll(self) -> None:
         self._refresh_network_status()
+        self._refresh_activity_badge()
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
         self._workers_running()
@@ -1908,6 +2012,7 @@ class DesktopWindow:
         live_event("interface", "desligado")
         self._save_desktop_preferences()
         self._closing = True
+        self._refresh_activity_badge()
         self._audio_level_label.configure(text="Entrada: desligada")
         self.microphone_indicator.show_peak(0, listening=False)
         self._mic_last_signal = 0.0
