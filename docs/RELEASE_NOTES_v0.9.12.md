@@ -2,6 +2,10 @@
 
 **Estado: código em desenvolvimento integrado à `main`; sem tag/release estável.**
 
+Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
+registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e
+permissões sem imprimir conteúdo privado ou produzir log por quadro.
+
 O comando `nexus-core --acceptance-log` reúne verificações locais e perguntas
 de observação física em uma saída resumida para compartilhar, sem imprimir
 credenciais, transcrição ou imagens. Uso de microfone e câmera pede consentimento
