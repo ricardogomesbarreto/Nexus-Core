@@ -25,6 +25,7 @@ from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_messag
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.desktop.runtime_log import live_event
+from nexus.models.resource_budget import ResourceBudget
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.speech_text import readable_model_text, speech_from_model_text
 from nexus.voice.wake import extract_utterance
@@ -148,6 +149,8 @@ class DesktopWindow:
         self._mic_last_signal = 0.0
         self._recognition_failures = 0
         self._listen_retries = 0
+        self._test_voice_turns_remaining = 0
+        self._resource_budget = ResourceBudget.detect()
         self._speak_generation = 0
         self._speaking = False
         self._startup_welcome_generation = None
@@ -234,6 +237,11 @@ class DesktopWindow:
         ttk.Label(header, text="ASSISTENTE LOCAL\nPRIVACIDADE POR PADRÃO",
                   justify="right", style="Nexus.HeaderHint.TLabel").pack(
                       side="right", anchor="center", padx=(8, 0))
+        self.test_button = ttk.Button(
+            header, text="Testar funções", command=self._show_test_panel,
+            style="Nexus.Quiet.TButton",
+        )
+        self.test_button.pack(side="right", padx=(12, 0))
 
         readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
         readiness_row.pack(fill="x", pady=(0, 5))
@@ -442,8 +450,78 @@ class DesktopWindow:
         self.input.focus_set()
         self._refresh_privacy_status()
         live_event("interface", "pronto")
+        live_event(
+            "recurso", "pronto", profile=self._resource_budget.mode,
+            threads=self._resource_budget.num_thread,
+            memory_mib=self._resource_budget.available_ram_mib,
+        )
         root.after(80, self._poll)
         root.after(120, self._start_spoken_welcome)
+
+    def _start_voice_diagnostic(self) -> None:
+        """Only real recognized user speech completes the two-turn test."""
+        if self._closing:
+            return
+        self._test_voice_turns_remaining = 2
+        live_event("teste", "iniciado", source="voz")
+        self._append(
+            "Nexus Core",
+            "Teste de escuta contínua iniciado. Faça duas perguntas em voz "
+            "alta, aguardando o fim de cada resposta. O terminal mostrará "
+            "recebido após a primeira e concluido após a segunda "
+            "transcrição real. Nenhuma transcrição será gravada no log.",
+            "assistant",
+        )
+        if not self._voice_active:
+            self._toggle_listening()
+        else:
+            self._start_listening()
+
+    def _show_test_panel(self) -> None:
+        """Human-operated checks; nothing sensitive runs without consent."""
+        if self._closing:
+            return
+        from tkinter import ttk
+        panel = self.tk.Toplevel(self.root)
+        panel.title("NEXUS CORE — testes locais")
+        panel.transient(self.root)
+        panel.resizable(False, False)
+        body = ttk.Frame(panel, padding=16, style="Nexus.App.TFrame")
+        body.pack(fill="both", expand=True)
+        ttk.Label(
+            body, text="Teste cada função na janela e acompanhe os logs.",
+            style="Nexus.Section.TLabel",
+        ).pack(anchor="w", pady=(0, 10))
+        steps = (
+            ("Voz: testar duas falas", self._start_voice_diagnostic),
+            ("Câmera: abrir com consentimento", self._vision_camera),
+            ("Pasta: como testar", lambda: self._show_test_instructions(
+                "Pasta", "Digite no chat: Crie uma pasta chamada NexusCoreTeste. "
+                "Negue uma tentativa, repita e autorize. A pasta só deve "
+                "ser criada após sua aprovação.")),
+            ("Aplicativo: como testar", lambda: self._show_test_instructions(
+                "Aplicativo", "Digite no chat: Abra o navegador. "
+                "Negue uma tentativa, repita e autorize. Confira o "
+                "registro de autorização e a execução da ferramenta.")),
+            ("Imagem: selecionar com consentimento",
+             lambda: self._request_vision("file")),
+        )
+        for label, action in steps:
+            ttk.Button(body, text=label, style="Nexus.Quiet.TButton",
+                       command=action).pack(fill="x", pady=3)
+        ttk.Label(body, text=(
+            "Resultados reais: evento=teste, escuta, reconhecimento, "
+            "camera, visao, autorizacao e ferramenta. Nenhuma ação "
+            "sem consentimento."
+        ), style="Nexus.Caption.TLabel", wraplength=420).pack(
+            fill="x", pady=(12, 0))
+        live_event("teste", "solicitado", source="texto")
+
+    def _show_test_instructions(self, title: str, message: str) -> None:
+        live_event("teste", "solicitado", source="texto")
+        self.messagebox.showinfo(
+            f"NEXUS CORE — Teste de {title.lower()}", message, parent=self.root,
+        )
 
     def _save_desktop_preferences(self, event=None) -> None:
         """Persist only user choices on this Linux account, never credentials."""
@@ -681,7 +759,11 @@ class DesktopWindow:
             text = "A ação foi concluída. Confira os detalhes na conversa."
         # Model outputs may contain Markdown (bold, bullets, links, code).
         # Convert only the TTS copy; do not modify the source turn or logs.
-        text = speech_from_model_text(text)
+        text = speech_from_model_text(
+            text, max_characters=(
+                450 if self._resource_budget.mode == "eco" else 1300
+            ),
+        )
         if not text:
             return False
         self._speak_generation += 1
@@ -1594,6 +1676,14 @@ class DesktopWindow:
                     elif kind == "transcript" and utterance:
                         self._listen_retries = 0
                         self._recognition_failures = 0
+                        if self._test_voice_turns_remaining > 0:
+                            self._test_voice_turns_remaining -= 1
+                            live_event(
+                                "teste",
+                                ("concluido" if self._test_voice_turns_remaining == 0
+                                 else "recebido"),
+                                source="voz",
+                            )
                         if self._live_camera is not None and self._camera_question(utterance):
                             self._ask_live_camera(utterance)
                         else:
