@@ -79,7 +79,14 @@ executáveis `photocraft-cli`, `wordcraft-cli` e `pdfcraft-cli` estejam
 instalados separadamente no `PATH`; os arquivos ZIP anexados são **código
 fonte**, não executáveis prontos, e não são executados pela instalação do
 Nexus. As chamadas de CLI têm operações fixas e tempo máximo de 90 segundos;
-não ativam canais MCP, controle remoto ou servidores.
+não ativam canais MCP, controle remoto ou servidores. Pedidos explícitos de
+conversão de imagem, documentos ou extração de texto PDF com **dois caminhos
+absolutos** reconhecidos no comando atual usam um atalho local para não
+carregar o Ollama desnecessariamente. O atalho **não contorna o SecurityGate**;
+a pessoa continua precisando autorizar individualmente cada arquivo gerado.
+As operações CLI só funcionam se os executáveis e as sintaxes correspondentes
+estiverem disponíveis, e exigem validação física; os binários opcionais
+**não** são instalados nem baixados automaticamente.
 
 **Limite:** PhotoCraft oferece edição de imagem e formatos, mas não um modelo
 gerador de fotografias; `qwen3:1.7b` no Ollama responde em texto. Nesta etapa
