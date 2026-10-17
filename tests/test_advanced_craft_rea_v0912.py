@@ -231,3 +231,16 @@ def test_craft_document_conversion_passes_fixed_args_and_staged_output(tmp_path,
     assert output_path.read_bytes().startswith(b"PK\x03\x04")
     assert not ex.execute("craft_convert_local", source=str(input_path),
                           output=str(output_path), kind="document").success
+
+
+@pytest.mark.parametrize("name,data,kind", [
+    ("picture.tif", b"II\x2a\x00" + b"\x00" * 16, "TIFF"),
+    ("picture.tiff", b"MM\x00\x2a" + b"\x00" * 16, "TIFF"),
+    ("picture.webp", b"RIFF\x04\x00\x00\x00WEBP", "WEBP"),
+    ("animation.gif", b"GIF89a\x01\x00\x01\x00", "GIF"),
+])
+def test_static_image_signatures_are_structural_without_loading_images(name, data, kind):
+    from nexus.tools.static_analysis import _identify
+    reported_kind, summary = _identify(data, Path(name).suffix)
+    assert reported_kind == kind
+    assert "não analisado" in summary or "não analisados" in summary
