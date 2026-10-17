@@ -17,6 +17,7 @@ import zipfile
 from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
+from nexus.tools.wasm_structure import summarize_wasm
 from nexus.security.paths import PathSecurity
 from nexus.tools.base import NexusTool, ToolResult
 from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKind
@@ -76,6 +77,13 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
         return "PNG", "Imagem PNG; descrição visual é uma operação separada com consentimento."
     if header.startswith(bytes.fromhex("ffd8ff")):
         return "JPEG", "Imagem JPEG; análise visual precisa de autorização separada."
+    if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return "WEBP", "Imagem WebP identificada por assinatura; conteúdo visual não analisado."
+    if header[:4] in (b"II\x2a\x00", b"MM\x00\x2a",
+                      b"II\x2b\x00", b"MM\x00\x2b"):
+        return "TIFF", "Imagem TIFF/BigTIFF identificada por assinatura; conteúdo visual não analisado."
+    if header.startswith((b"GIF87a", b"GIF89a")):
+        return "GIF", "Imagem GIF identificada por assinatura; frames não analisados."
     if header[:2] == b"PK":
         return "ZIP", "Contêiner ZIP/JAR/APK; índice será analisado sem extrair membros."
     if suffix == ".asar":
@@ -89,8 +97,54 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
     return "DESCONHECIDO", "Tipo não identificado pela assinatura e amostra disponíveis."
 
 
+MAX_ZIP_DIRECTORY_BYTES = 8 * 1024 * 1024
+
+
+def _check_zip_directory_bounds(stream) -> None:
+    """Bound ZIP central directory allocations before instantiating ZipFile.
+
+    The End of Central Directory lives in the last 65557 bytes (22-byte
+    record + 65535-byte comment). ZIP64 and multi-disk ZIP are intentionally
+    unsupported by the lightweight analyzer; these are not rejected as
+    dangerous files, only as beyond the declared local inspection policy.
+    """
+    stream.seek(0, os.SEEK_END)
+    total = stream.tell()
+    if total < 22:
+        raise ValueError("ZIP sem diretório central.")
+    size = min(total, 65557)
+    stream.seek(total - size)
+    tail = stream.read(size)
+    pos = len(tail)
+    found = -1
+    while True:
+        pos = tail.rfind(b"PK\x05\x06", 0, pos)
+        if pos < 0:
+            break
+        if pos + 22 <= len(tail):
+            comment_size = struct.unpack_from("<H", tail, pos + 20)[0]
+            if pos + 22 + comment_size == len(tail):
+                found = pos
+                break
+    if found < 0:
+        raise ValueError("ZIP sem registro EOCD válido.")
+    disk, central_disk, entries_disk, entries_total, directory_size, directory_offset = (
+        struct.unpack_from("<HHHHII", tail, found + 4)
+    )
+    if disk or central_disk or entries_disk != entries_total:
+        raise ValueError("ZIP multidisco não suportado.")
+    if (entries_total == 0xFFFF or directory_size == 0xFFFFFFFF or
+            directory_offset == 0xFFFFFFFF):
+        raise ValueError("ZIP64 não suportado no índice limitado.")
+    if entries_total > MAX_ARCHIVE_MEMBERS or directory_size > MAX_ZIP_DIRECTORY_BYTES:
+        raise ValueError("Índice ZIP excede limites de entradas ou memória.")
+    if directory_size + directory_offset > total:
+        raise ValueError("Limites do índice ZIP inconsistentes.")
+
+
 def _zip_summary(stream, suffix: str) -> tuple[str, str]:
     """Only inspect the central directory. Never extract or decompress entries."""
+    _check_zip_directory_bounds(stream)
     with zipfile.ZipFile(stream, "r") as archive:
         names = archive.namelist()
         if len(names) > MAX_ARCHIVE_MEMBERS:
@@ -99,6 +153,13 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         entries = archive.infolist()
         total_uncompressed = sum(x.file_size for x in entries)
         encrypted = sum(bool(x.flag_bits & 1) for x in entries)
+        symbolic_links = sum((x.external_attr >> 16) & 0o170000 == 0o120000 for x in entries)
+        native_libraries = sum(n.lower().endswith(".so") for n in names)
+        abi_list = sorted({n.split("/")[1] for n in names
+                           if n.startswith("lib/") and n.count("/") >= 2 and
+                           n.split("/")[1] in {"x86", "x86_64", "armeabi-v7a", "arm64-v8a"}})
+        zip_signatures = sum(n.startswith("META-INF/") and
+                             n.upper().endswith((".RSA", ".DSA", ".EC")) for n in names)
         # Report index characteristics, not a malware verdict or a path.
         odd_paths = sum(
             n.startswith(("/", "\\")) or
@@ -111,6 +172,10 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
         dex_count = sum(bool(re.fullmatch(r"classes\d*\.dex", n)) for n in names)
         if suffix == ".apk" and (has_manifest or dex_count):
             kind = "APK"
+        elif suffix == ".docx" and {"[Content_Types].xml", "word/document.xml"} <= clean_names:
+            kind = "DOCX"
+        elif suffix == ".odt" and {"mimetype", "content.xml"} <= clean_names:
+            kind = "ODT"
         elif suffix in {".jar", ".war"} and (
             "META-INF/MANIFEST.MF" in clean_names or any(n.endswith(".class") for n in names)
         ):
@@ -121,7 +186,10 @@ def _zip_summary(stream, suffix: str) -> tuple[str, str]:
             f"Índice local: {len(names)} entradas; tamanho descompactado declarado="
             f"{total_uncompressed} bytes; AndroidManifest={'sim' if has_manifest else 'não'}; "
             f"arquivos DEX={dex_count}; entradas criptografadas={encrypted}; "
-            f"caminhos atípicos={odd_paths}. Nenhum membro foi extraído ou executado."
+            f"caminhos atípicos={odd_paths}; links simbólicos declarados={symbolic_links}; "
+            f"bibliotecas nativas .so={native_libraries}; ABIs conhecidas={','.join(abi_list) or 'nenhuma'}; "
+            f"entradas de assinatura declaradas={zip_signatures} (sem verificação criptográfica). "
+            "Nenhum membro foi extraído ou executado."
         )
 
 
@@ -177,7 +245,9 @@ class InspectArtifactTool(NexusTool):
                     raise ValueError("Arquivo alterado durante a inspeção.")
                 suffix = path.suffix.lower()
                 kind, summary = _identify(bytes(header), suffix)
-                if kind == "ZIP" and total:
+                if kind == "WASM":
+                    summary += " " + summarize_wasm(bytes(header), total_size=total)
+                elif kind == "ZIP" and total:
                     # os.dup pins the same inode; no extraction of ZIP payload.
                     with os.fdopen(os.dup(fd), "rb") as stream:
                         stream.seek(0)

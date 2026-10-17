@@ -89,3 +89,15 @@ pendente. CI, Xvfb e mocks não comprovam inferência Ollama, áudio, webcam,
 automação X11 nem recuperação no notebook do usuário. Nenhuma tag v0.9.12
 deve ser criada sem registrar esses resultados, obter CI no SHA final da
 `main` e revisar expressamente o bloqueio do workflow de release.
+
+## Desenvolvimento complementar — integrações locais avançadas (sem release)
+
+- Inspeção REA estática de envelopes WASM, com limite de 128 KiB, contagens
+  por tipo e reconhecimento explícito de prefixo parcial. Nenhuma execução,
+  descompilação, rede, MCP ou depuração.
+- Índice de contêineres DOCX/ODT e características APK/ZIP adicionais,
+  incluindo ABIs, bibliotecas nativas, symlinks e entradas de assinatura.
+- Seis efeitos extras de fotografia via Pillow e conversões opcionais TIFF,
+  ODT e RTF via CLIs Craft existentes.
+- Testes de autorização, arquivos inválidos e regressões, com aceite real
+  dos CLIs e hardware ainda obrigatório. Serviço do sistema sempre sob demanda.

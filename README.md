@@ -48,6 +48,43 @@ e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
+## Novas capacidades offline — etapa complementar da v0.9.12
+
+Esta etapa mantém **a mesma versão e aparência** e amplia ferramentas existentes,
+sem iniciar servidores de terceiros:
+
+- **REA local:** inventário limitado de seções em arquivos `WASM` (quantidades
+  de seções de importação, exportação, código e outras), sem executar funções
+  nem publicar nomes privados. Se ultrapassar o prefixo de 128 KiB, a análise
+  indica explicitamente que o índice é parcial; dados malformados são recusados.
+- **REA de arquivos:** reconhecimento estrutural `DOCX` e `ODT` pelo índice
+  ZIP, com contagem de bibliotecas nativas Android (`.so`), ABIs Android
+  conhecidas, links simbólicos e entradas de assinatura **não verificadas**.
+  Não extrai arquivos, não valida autenticidade ou segurança.
+- **Foto local:** seis efeitos adicionais na conversa: autocontraste, sépia,
+  espelhamento horizontal, espelhamento vertical, clareamento e contraste.
+  Mantém escala de cinza, inversão, desfoque, nitidez e as duas rotações.
+  O resultado é sempre um arquivo novo com permissão 0600.
+- **Craft opcional:** integração por comandos fixos para TIFF (`PhotoCraft`),
+  ODT/RTF (`WordCraft`) e PDF texto (`PdfCraft`, já existente), sempre
+  dependente de CLIs **instalados e autorizados** no Ubuntu.
+
+Exemplos para digitar na conversa (troque pelos caminhos reais; o destino
+não pode existir):
+
+```text
+Edite a foto /home/usuario/Imagens/original.jpg em sépia e salve em /home/usuario/Imagens/sepia.png
+Edite a foto /home/usuario/Imagens/original.jpg em autocontraste e salve em /home/usuario/Imagens/auto.png
+Converta /home/usuario/Imagens/arte.tiff em /home/usuario/Imagens/arte.webp
+Converta /home/usuario/Documentos/proposta.docx em /home/usuario/Documentos/proposta.odt
+Inspecione o arquivo /home/usuario/Projetos/exemplo.wasm
+```
+
+Essas operações não fornecem geração fotográfica por IA nem decompilação
+de código: a confirmação humana e os limites locais permanecem obrigatórios.
+[Documento de integração REA](docs/REA_LOCAL_INTEGRATION_v0.9.12.md) ·
+[Testes dos CLIs reais](docs/CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
+
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
 
 ### REA — inspeção estática local por conversa (integração em validação)

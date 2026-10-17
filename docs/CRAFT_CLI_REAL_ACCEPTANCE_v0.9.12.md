@@ -102,3 +102,17 @@ próxima revisão de segurança antes de liberar operações no assistente.
   restauração/autorizações, conforme roteiros de aceite anteriores.
 - Manter serviços locais sob demanda; **não** criar tag/release v0.9.12
   até todos os gates exigidos serem aprovados.
+
+## Formatos opcionais extras — etapa complementar 0.9.12
+
+- PhotoCraft: conversão TIFF (`.tif`/`.tiff`) incluída nas extensões de
+  entrada e saída; saída verificada pela assinatura TIFF antes de salvar.
+- WordCraft: formatos RTF (entrada/saída) e ODT (saída), com validação mínima
+  dos cabeçalhos. Dependem da CLI compilada e instalada pelo usuário.
+- PhotoCraft (edição interna com Pillow): adicionados autocontraste, sépia,
+  espelhamento horizontal e vertical, clareamento e contraste diretamente na
+  janela de conversa do NEXUS (sem utilizar o CLI externo).
+
+A CI cobre argumentos fixos, cabeçalhos, permissões, originais intactos e
+regressões; **não** homologa formatos reais TIFF/ODT/RTF no notebook até
+serem testados com as respectivas CLIs instaladas.

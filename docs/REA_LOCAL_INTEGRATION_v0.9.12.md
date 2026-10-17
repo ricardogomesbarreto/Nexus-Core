@@ -141,3 +141,27 @@ O teste de CLIs opcionais foi documentado em
 [CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md](CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
 A verificação somente de ajuda não valida conversão; para testar binários
 reais o operador deve executar voluntariamente o smoke test no Ubuntu.
+
+## Etapa complementar — estrutura WASM e arquivos empacotados
+
+A análise **própria e offline** lê envelopes de seções WASM até 128 KiB,
+com máximo de 512 seções e decodificação limitada de inteiros ULEB128.
+Ela conta seções por categoria (imports, exports, código etc.), mas **não**
+lê nomes, não valida o conteúdo semântico, não executa WASM e marca relatórios
+parciais quando o arquivo excede a amostra. Estruturas de seção inválidas
+são rejeitadas.
+
+O índice ZIP passou a identificar contêineres DOCX/ODT por membros estruturais,
+contar arquivos `.so` e ABIs Android conhecidas, entradas de assinatura,
+links simbólicos e caminhos atípicos. Os resultados são apenas indícios do
+índice e não verificam autenticidade, integridade de membros ou vírus.
+Nenhum conteúdo interno é aberto ou descompactado.
+
+### Limites adicionais do índice ZIP
+
+Antes de abrir o contêiner com `zipfile.ZipFile`, o NEXUS CORE confere o
+registro de fim de diretório central (EOCD), limita a 3.000 entradas e a
+8 MiB de diretório central e recusa ZIP64/multidisco nesta inspeção leve.
+A recusa significa somente **fora do escopo do analisador limitado**, não
+que o arquivo seja malicioso. Os limites reduzem risco de consumo excessivo
+de memória ao carregar índices muito grandes, sem substituir isolamento.
