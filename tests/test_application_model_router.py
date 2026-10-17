@@ -139,10 +139,10 @@ def test_application_builds_agent_lazily_with_shared_executor(monkeypatch):
         assert agent.registry is app.tool_registry
         assert agent.executor is app.tool_executor
         assert app.tool_registry.list_tools() == [
-            "craft_convert_local", "create_directory", "create_graphic_local",
+            "craft_convert_local", "craft_inspect_local", "create_directory", "create_graphic_local",
             "desktop_navigate", "desktop_type_text", "desktop_window_info",
             "edit_image_local", "file_metadata", "inspect_artifact_local",
-            "launch_application", "list_directory", "open_default_browser", "read_file",
+            "launch_application", "list_directory", "open_default_browser", "pdf_render_local", "read_file",
             "system_info", "terminal_sandbox",
         ]
     finally:
