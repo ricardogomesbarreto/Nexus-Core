@@ -2,9 +2,10 @@
 
 **Estado: código de desenvolvimento v0.9.12 até a PR #69
 (`9de8aa7`) integrado à `main`; 1.631 testes aprovados na CI da PR #69.
-Sem tag/release estável.** A presente auditoria corretiva adiciona
-regressões de segurança, instalador e compatibilidade, que serão
-integradas somente depois de outra CI real. O aceite físico no
+Sem tag/release estável.** A auditoria corretiva da PR #70
+executou **1.644 testes aprovados** em Ubuntu/PostgreSQL/Xvfb e
+adicionou verificações de segurança, instalador e compatibilidade.
+O aceite físico no
 notebook, a CI `push` do SHA final e a revisão explícita do workflow
 de publicação ainda são requisitos para release.
 
