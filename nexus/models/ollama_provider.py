@@ -120,6 +120,13 @@ class OllamaProvider:
             payload["format"] = request.response_schema or "json"
         if request.max_output_tokens is not None:
             payload["options"]["num_predict"] = request.max_output_tokens
+        budget = getattr(self, "resource_budget", None)
+        if budget is not None:
+            # Bounded to avoid thermal load and simultaneous large models.
+            payload["options"].update(budget.text_options(
+                request.context_length, request.max_output_tokens,
+            ))
+            payload["keep_alive"] = budget.keep_alive
 
         try:
             raw_response = self.transport.chat(
