@@ -26,7 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração do código:** PR #69 (`9de8aa7`) e auditoria corretiva PR #70; CI da PR #70 com **1.644 testes aprovados** (Ubuntu/Python/PostgreSQL/Xvfb), mantendo o aceite físico e a tag v0.9.12 pendentes<br>
+> **Integração mais recente auditada:** PRs #69–#74 incorporadas; `main` em `44fd658` com **1.738 testes aprovados na CI push** (Ubuntu 24.04 runner/Python 3.12/PostgreSQL 16/Xvfb). Aceite físico Ubuntu 26.04 e tag v0.9.12 pendentes.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -47,6 +47,159 @@ integrado à `main` ainda depende de testes em um Ubuntu físico com Wayland
 e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
+
+## Roadmap consolidado e auditoria técnica — NEXUS CORE
+
+> **Revisão: 17/10/2026 · base auditada:** `main`, commit `44fd658185f97b1b370e5d404e34b359275a297e`, após PRs [#69](https://github.com/ricardogomesbarreto/Nexus-Core/pull/69)–[#74](https://github.com/ricardogomesbarreto/Nexus-Core/pull/74).
+> **Estado:** código `0.9.12` na `main`; **última release estável oficial verificada: v0.7.2**. CI `push` do commit-base [#39071933419](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39071933419) **verde: 1.738 testes** (Python 3.12, Ubuntu 24.04 runner, PostgreSQL 16 em container e Xvfb). **Não é homologação no Ubuntu 26.04 físico.**
+> **Escopo:** implementação futura está planejada, **não** afirmada como concluída. Os cinco ZIPs são **fontes de referência**, não programas já instalados, APIs estáveis certificadas, nem autorização para copiar indiscriminadamente todos os seus recursos ao processo Python.
+
+### 1. Fontes verificadas, versões e responsabilidade de cada integração
+
+Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificados. A auditoria identificou os manifestos, CLIs e documentação de origem. Os números são referentes aos **arquivos anexados**; não às últimas versões disponíveis na internet.
+
+| Fonte original (anexo) | Estrutura e capacidades verificadas no ZIP | Papel correto no NEXUS CORE |
+| --- | --- | --- |
+| `ollama-main(1).zip` | Go (módulo `github.com/ollama/ollama`, `go 1.26.0` no `go.mod` do snapshot). `docs/api.md` documenta chat/geração, streaming, `/api/tags`, `/api/ps`, `/api/show`, embeddings, carga/descarga e gestão de modelos. | **Runtime externo local existente**, usado pelo `OllamaProvider` e `OllamaTransport`. Não fundir o servidor Go ao processo Python; controlar disponibilidade, tempo de retenção em RAM e inicialização sob demanda. |
+| `photocraft-main(1).zip` | Rust workspace `0.9.0`, Rust ≥1.95. `apps/photocraft-cli/src/lib.rs`: `convert`, `info`, `run --cmd`, `batch`, `droplet`, `commands`, `mcp`, `serve`; formatos de imagem, camadas e comandos do motor. | **Editor na própria conversa NEXUS**: Pillow para efeitos leves já suportados; PhotoCraft CLI confiável somente para comandos explícitos, com cópia e saída separadas. Não importar a GUI PhotoCraft nem dar comando arbitrário ao LLM. |
+| `wordcraft-main(1).zip` | Rust workspace `0.7.0`, Rust ≥1.95. `apps/wordcraft-cli/src/main.rs`: `convert`, `info`, `text`, `inspect`, `render`, `run --cmd`, `commands`, `parity` e MCP; estilos, tabelas, revisões, referências e modelos no motor. O próprio upstream declara o produto **alpha**. | **Operações editoriais dentro do NEXUS**: conversão/metadados iniciais já conectados; edição estruturada, geração e formatação futuras com contratos tipados e comparação de fidelidade DOCX. Não prometer compatibilidade total com Microsoft Word. |
+| `pdfcraft-main(1).zip` | Rust workspace `0.8.0`, Rust ≥1.95. `apps/pdfcraft-cli/src/main.rs`: `info`, `render`, `text`, `edit`, `combine`, `extract`, `split`, `check`, `audit`, `batch`, `tools`, `run`, MCP opcional; anotações, formulários, assinaturas e OCR no motor. | **PDF integrado à conversa**: extração de texto, metadados e render de página já preparados; combinar/dividir/organizar/anotar/OCR ficam em fases futuras, após testes reais, privacidade e validação das saídas. |
+| `rea-main(1).zip` | Node/TypeScript `rea-agents 6.5.0`; executável `rea` em `scripts/rea.mjs`; Node `^22.19.0 \|\| ^24.11.0 \|\| >=26.0.0`. Projeto prevê análises de ELF/PE/WASM, JS/Electron, APK/JADX, .NET, firmware e motores externos Ghidra/IDA/Hopper, além de runtime/MCP. | **Inspeção estática própria autorizada, já existente**; conexão futura com mecanismos externos **somente isolados, versionados e com escopo explícito**. O ZIP sozinho não instala REA nem valida tais motores. |
+
+**Licenças e distribuição:** revisar licenças/avisos, atribuição de componentes, código de terceiros e compatibilidade antes de redistribuir qualquer motor ou artefato. **Os repositórios anexados não são dependências obrigatórias do instalador principal.** Referências técnicas: [diretrizes](docs/PROJECT_GUIDELINES.md), [auditoria original dos ZIPs](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md), [integração REA](docs/REA_LOCAL_INTEGRATION_v0.9.12.md), [aceite Craft](docs/CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
+
+### 2. Matriz auditada: o que já existe e o que ainda falta
+
+**Legenda:** **INTEGRADO/CI** = implementado em código Python e coberto por testes automatizados; **PARCIAL** = somente subconjunto funcional ou fluxo preparado; **PENDENTE** = não integrado ou não validado; **FÍSICO PENDENTE** = exige teste real no computador do operador. Uma CI verde nunca altera esses rótulos automaticamente.
+
+| Subsistema / capacidade | Situação comprovada na `main` | Evidência no NEXUS CORE | Limite ou próximo passo |
+| --- | --- | --- | --- |
+| Núcleo Python, contratos, mediação, auditoria e `SecurityGate` | **INTEGRADO/CI** | `nexus/tools/contracts.py`, `executor.py`, `nexus/security/`, `nexus/agent/planner.py` | Manter confirmação por operação; proibir shell irrestrito do modelo. |
+| Conversação local via Ollama; roteamento, API HTTP e limites de RAM/CPU | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/models/ollama_provider.py`, `ollama_transport.py`, `resource_budget.py` | Medir latência, streaming, desligamento/descarregamento de modelos e resposta quando offline. |
+| PostgreSQL como banco único, memória explícita e base de conhecimento TXT/MD | **INTEGRADO/CI** | `nexus/memory/`, `nexus/knowledge/`, `nexus/database/` | Testar autenticação/cluster real; não afirmar RAG por embeddings ou OCR já existentes. |
+| Janela desktop própria, identidade vinho `#722F37`, logs, preferências e histórico local | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/desktop/`, `nexus/assets/`, testes desktop | Preservar identidade e navegação, melhorar responsividade e acessibilidade após teste físico. |
+| Voz local Vosk, sintetização, escolha da voz, pausa/retomada e permissões faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/voice/`, `nexus/desktop/confirmation.py`, testes de voz | Registro Ubuntu 26.04: Vosk isolado transcreveu, mas **escuta contínua falhou**; TTS/visão com latência elevada. |
+| Imagem, tela, câmera V4L2, autorização, prévia e respostas faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/vision/`, `nexus/desktop/window.py`, testes visuais | Câmera e inferência foram exercitadas parcialmente; correção da resposta visual e latência ainda sem aceite. |
+| Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
+| Edição de fotos local: 12 operações fixas e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `tests/test_advanced_craft_rea_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
+| PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
+| WordCraft via `convert`/`info`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text`, `inspect`, `render` e edição de objetos/documentos ainda não integrados na conversa. |
+| PdfCraft via `text`/`info`/`render` página → PNG | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py` | Editar/juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
+| REA: SHA-256 e formatos ELF/PE/Mach-O/WASM/APK/JAR/ZIP/JS/Electron; índice ZIP e seções WASM | **INTEGRADO/CI (motor próprio estático)** | `nexus/tools/static_analysis.py`, `wasm_structure.py` | **Não é o REA completo**: sem Ghidra/JADX, desmontagem, decompilação, execução de alvo ou monitoramento de processos. |
+| Validador real dos Craft `--smoke --advanced`; diagnóstico opcional de `rea --help` | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/validate_craft_cli.py`, testes de contrato | A CI substitui binários por dublês; **nenhuma conversão real do notebook pode ser declarada aprovada ainda**. |
+| Instalação e atualização verificadas, diagnóstico de serviços sem autostart | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/install_linux.py`, `scripts/nexus_core_session.sh`, `nexus/updates/` | Verificar serviço Ollama de sistema e usuário, clusters PostgreSQL reais e dependências de terceiros sem pará-las. |
+| Geração livre de imagens por modelo local, edição profissional por camadas, documentos completos, OCR e REA profundo | **PENDENTE** | Recursos identificados nos projetos originais, sem ferramentas NEXUS equivalentes completas | Desenvolver contratos específicos e testes próprios; não anunciar como disponível hoje. |
+
+**Leitura correta da evidência:** a CI executada em Ubuntu 24.04 com Python 3.12, PostgreSQL 16 e Xvfb **não** valida automaticamente Ubuntu 26.04/Wayland/Python 3.14, instalação real de CLI Rust/Node, GPU/CPU, câmera, áudio nem fidelidade de arquivos complexos. Os chats anteriores registraram carga de memória elevada (~6,5 GiB RAM no notebook), escuta contínua falhando, análise da câmera de ~119 s e TTS de ~23 s; repetir as medidas no SHA atual antes de declarar regressão resolvida.
+
+### 3. Regras não negociáveis para todos os próximos marcos
+
+1. **Local-first e privacidade:** Ubuntu 26.04 como máquina prioritária de aceite; modelos, arquivos e banco locais; PostgreSQL continua sendo o único banco; **sem hospedagem, telemetria ou conta obrigatória**. Outras distros desktop somente após testes representativos.
+2. **Identidade visual:** conservar logomarca, cores e experiência própria do NEXUS CORE (vinho `#722F37`). **Não transplantar botões, janelas ou interfaces PhotoCraft/WordCraft/PdfCraft/REA**. A conversa e a voz invocam capacidades nativas do assistente.
+3. **Autonomia delimitada:** o modelo propõe; contrato tipado valida; `SecurityGate` e usuário autorizam individualmente; somente a ferramenta aprovada executa. Histórico, conteúdo importado e resposta do motor externo **não são autorização**.
+4. **Consumo contido:** perfil `eco` para o notebook, timeout por ação, limites de memória/contexto/CPU, um trabalho pesado por vez, cancelamento e feedback; nenhum daemon Craft/REA/MCP ou carga de modelo no login.
+5. **Serviços sob demanda:** `Ollama` e `PostgreSQL` apenas quando necessários; jamais `systemctl enable`/`--user enable` automático. Encerrar/desabilitar **somente instâncias iniciadas e gerenciadas pelo NEXUS**, sem interferir em terceiros.
+6. **Arquivos seguros:** acesso ancorado por descritores, rejeição de symlink, `HOME` autorizado, origem intacta, saída nova (`O_EXCL`/`0600`), staging privado, validação de formato, limite de tamanho, auditoria sem conteúdo privado.
+7. **Código externo:** binário instalado **não é sandbox**. Para ferramentas avançadas, exigir origem/versionamento/hash, separação de privilégios e isolamento real de filesystem, rede e recursos. Nunca executar scripts `setup`, `npx` ou comandos livres apenas por estarem num ZIP.
+8. **Sem release prematura:** primeiro CI verde no commit exato da `main`, depois teste funcional físico e registro de resultados; só então considerar tag/release. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
+
+### 4. Roadmap priorizado por gates (sem versionamento artificial)
+
+**G0 — Fechar a homologação do baseline 0.9.12 (prioridade bloqueante; estado PENDENTE).**
+
+- Reexecutar `git pull --ff-only`, instalador, `--resource-check` e `--acceptance-log` na instalação real do Ubuntu 26.04; registrar `git rev-parse HEAD`, versões Linux/Python/Wayland, memória livre e serviços.
+- Ensaiar PostgreSQL inicialmente parado: identificar `pg_lsclusters`, iniciar **apenas cluster correto** mediante autorização, autenticar, nunca redefinir senha silenciosamente. Validar `systemctl --user` versus `systemctl` do Ollama; checar limpeza da sessão e ausência de autostart.
+- Repetir conversa por teclado, voz, início/pausa/retomada, permissão falada, cancelamento, câmera contínua, uma foto e análise, captura de tela, Wayland e X11 conforme suporte declarado; medir p50/p95 de duração/consumo nos cenários realmente executados.
+- Executar `python3 scripts/validate_craft_cli.py` e `--smoke --advanced` com **binários oficiais reais verificados** (três Craft), mais `--rea` somente se instalado. Registrar falhas individuais; ausente = **não homologado**, nunca sucesso simulado.
+- **Saída/gate:** CI verde na `main` + checklist físico preenchido, com logs sanitizados; falhas críticas resolvidas antes de qualquer tag da 0.9.12.
+
+**G1 — Adaptação e distribuição opcional dos motores Craft (PENDENTE; após G0).**
+
+- Criar `Adapter/Capability Registry` tipado para PhotoCraft, WordCraft e PdfCraft: descoberta, `--version`, verificação de comandos disponíveis, allowlist por formato/ação, incompatibilidades explícitas, timeout, cancelamento e estado **disponível/ausente/incompatível/degradado**.
+- Construir/documentar CLIs a partir de versões fixadas, com checksums/assinaturas, inventário de dependências Rust/Cargo e licenças; disponibilizar instalação **separada e opcional** com consentimento. Nunca compilar os três no primeiro boot.
+- Testar arquivos sintéticos reais (mínimo) e um corpus de arquivos legítimos autorizado (fidelidade). Rejeitar dados incompatíveis, symlinks, saídas vazias, arquivos muito grandes, falhas e travamentos; não depender de shell do modelo.
+- **Saída/gate:** contrato de versão por CLI, smoke real `convert/info/text/render` e documentação de matriz de formatos e limites.
+
+**G2 — PhotoCraft e edição/criação de imagens integradas à conversa (PENDENTE além dos efeitos básicos).**
+
+- Operações seguras de **recorte, redimensionamento, orientação EXIF, ajuste de cores, nitidez, compressão e conversões adicionais**; valores numéricos tipados, preview e original preservado. Refinar qualidade JPEG/WebP/TIFF e transparência.
+- Avaliar comandos do `photocraft-cli commands --json` e integrar **somente IDs previamente auditados** via `run --cmd`, com parâmetros restritos e uma saída por tarefa. Suporte progressivo a camadas, máscaras, texto, composição e processamento em lote sem expor ``--in-place`` nem comandos arbitrários.
+- **Geração fotográfica por IA** é trilha **distinta** de filtros Pillow/PhotoCraft: pesquisar modelo de imagem realmente executável **offline**, licenciado, compatível com o hardware e selecionado sob demanda. Não declarar text-to-image, inpainting ou edição generativa antes de integrar o motor e testar RAM/GPU, fidelidade e segurança.
+- **Saída/gate:** GUI NEXUS própria, testes de entrada/saída e consentimento, desempenho em perfil eco e imagens reais confirmadas no Ubuntu.
+
+**G3 — WordCraft: documentos completos por conversa (PENDENTE além da conversão/metadados).**
+
+- Integrar `wordcraft-cli text`, `inspect` e `render` para leitura estruturada e prévia, de forma limitada e autorizada; confirmar semântica dos JSONs reais do ZIP/binário.
+- Criar e editar `DOCX/ODT` a partir de modelos locais: títulos, estilos, fontes, tabelas, cabeçalhos/rodapés, margens, sumário e referências, com operações permitidas e versões salvas como cópias, sem substituir o arquivo original.
+- Avaliar `run --cmd` e `commands --json` para um subconjunto fixo de comandos seguros; revisões, comentários, controle de alterações, citações e formatação ABNT somente após validação de fidelidade e exemplos reais. **WordCraft upstream é alpha**: preservar metadados/elementos não suportados ou informar claramente a perda.
+- **Saída/gate:** diff antes/depois quando possível, DOCX que abre em leitores independentes, inspeção de layout e testes de ida-e-volta por formato.
+
+**G4 — PdfCraft: edição, extração e auditoria documental (PENDENTE além de text/info/render).**
+
+- Operações inicialmente fixas: pesquisar/extrair texto e páginas, **juntar, separar, girar, reordenar** com `pdfcraft-cli extract/combine/split/edit`; todas com cópia de saída, validação e confirmação das páginas exatas.
+- Segunda camada: marcas de texto, comentários, preenchimento de formulário, bookmarks, propriedades e inspeção/auditoria de redações com comandos tipados; distinguir **cobertura visual** de **redação irreversível verificada**.
+- OCR offline opcional com modelos locais e limites de imagem/idioma; validar se o PDF tem restrições de cópia, e não contornar permissões/proteções automaticamente. Assinatura digital e criptografia exigem revisão independente antes de incorporar qualquer efeito jurídico ou de segurança.
+- **Saída/gate:** PDF parseável por leitor independente, operações corretas em arquivos multi-página, testes adversariais, original intacto, fidelidade e tempos medidos.
+
+**G5 — REA defensivo e engenharia reversa autorizada (PENDENTE para motor externo completo).**
+
+- Evoluir o **motor estático próprio**: evidências estruturadas versionadas de ELF/PE/Mach-O/WASM/DEX/ZIP/JS, hash, limites e proveniência; expandir parser somente com robustez/fuzzing, sem atribuir comportamento a metadados.
+- Criar adaptador **opcional e isolado** para o CLI Node `rea` realmente compilado, contratos JSON documentados, timeout/CPU/RAM/fs/rede delimitados; descoberta/diagnóstico não invoca `setup`, MCP, Ghidra, IDA, Hopper, JADX, ADB nem executáveis-alvo.
+- Escalonar por tipo e autorização: JS/Electron **estático** → WASM com WABT **opcional** → APK/JADX/Ghidra **opcionais** → depuração/runtime **somente laboratórios próprios/expressamente autorizados** com escopo, consentimento adicional, logs e interrupção.
+- Não automatizar interceptação de contas, processos de terceiros, tráfego, pentest remoto ou exploração. **Saída/gate:** evidências reprodutíveis, isolamento verificado, auditoria e relatório que separa observação de hipótese.
+
+**G6 — Ollama: conversação multimodal responsiva e controle local de modelos (PARCIAL).**
+
+- Tornar explícitos na interface e no diagnóstico os endpoints locais relevantes: listar modelos (`/api/tags`), em memória (`/api/ps`), metadados (`/api/show`), geração/chat, eventos de streaming, erro/timeout e tempo de retenção do modelo; nunca efetuar `pull`/`delete`/`create` de modelo sem pedido/consentimento.
+- Melhorar streaming de tokens/resposta falada e interrupção, seleção de modelo por capacidade e memória, contextos curtos no perfil `eco` e fallback texto se modelo multimodal não carregar. Manter provedores desacoplados de ferramentas/`SecurityGate`.
+- Pesquisar embeddings locais e pesquisa semântica como **opção futura**; a base de conhecimento PostgreSQL atual usa indexação textual e não equivale a RAG vetorial. Nenhum serviço em nuvem ou API paga é requisito.
+
+**G7 — Experiência nativa, voz, visão e acessibilidade (PARCIAL; depende de G0 e desempenho).**
+
+- Corrigir ciclo de microfone/escuta contínua Vosk em PipeWire/ALSA, volumes saturados, vazamento de TTS na captura, pausa/retomada, fala feminina/masculina e comandos com confirmação inequívoca. Testar estados com câmera e Ollama concorrentes.
+- Otimizar processamento visual e TTS; manter preview da câmera fluida e análise sob demanda, sinalizando início, progresso, conclusão e cancelamento sem arquivar quadros. Diferenciar ver a câmera de **entender continuamente** a cena.
+- Melhorar interação textual/voz com ações Craft e REA dentro da GUI própria, previews de foto/PDF, fluxos de parâmetros e estado de recursos; **cores vinho e marca preservadas**, sem janelas/botões clonados dos aplicativos anexados.
+- Homologar Wayland e X11 separadamente. Evitar expor comandos incompatíveis como se fossem suporte universal à automação de desktop.
+
+**G8 — Arquitetura, qualidade, segurança e distribuição Linux (CONTÍNUO).**
+
+- Padronizar ferramentas em contratos tipados, política de recursos, validação de resultados, medição de latência/memória, testes de falha, cancelamento, logs sem dados sensíveis e versionamento de adapters. Não adicionar dependência circular entre `nexus/models`, `tools`, `security` e `desktop`.
+- Criar **gates de CI por camada**: Pytest/typing/lint, PostgreSQL, Xvfb, regressões security, entradas malformadas/fuzzing, teste de CLI real em ambiente isolado quando os binários estiverem disponíveis, além dos ensaios físicos Wayland/ALSA/V4L2. CI em runner 24.04 não substitui o Ubuntu 26.04.
+- Evoluir instalador/atualizador com detecção compatível de Ubuntu/Debian, checksums e rollback, **sem sudo global nem autostart**. Compatibilidade Fedora/Arch/Mint somente depois de testes dedicados e decisões de empacotamento.
+- Fazer auditoria de licenças e SBOM das dependências opcionais, em particular Rust/Node/modelos, antes de redistribuí-las em builds NEXUS.
+
+### 5. Plano de testes por resultado observável
+
+| Gate | Execução mínima obrigatória | Critério de aprovação |
+| --- | --- | --- |
+| CI código | `python -m compileall`, `pytest`, executável NEXUS, PostgreSQL/Xvfb, sem skips inesperados no escopo obrigatório | Suíte verde no **SHA final da main**; relatório de regressões sem alterações não revisadas. |
+| CLIs Craft | `python3 scripts/validate_craft_cli.py --smoke --advanced` em Linux físico com binários verificados | Versão identificada, conversões reais e `info/render` produzindo saídas íntegras; originais intactos; ausência de CLI não conta como aprovação. |
+| REA | `--rea` para presença; futuros testes do adapter isolado por engine com amostras próprias | Binário/JSON/isolamento/escopo auditados; nenhuma execução não autorizada e nenhum resultado especulativo apresentado como fato. |
+| Ollama e PostgreSQL | Inicialização sob demanda, autenticação de banco correto, escuta de API loopback, troca/descarga de modelo, encerramento | Serviços não habilitados no boot; liberação de RAM quando apropriado; nenhum processo alheio encerrado. |
+| GUI e mídia | Texto/voz/visão/câmera/tela, autorizações, cancelamento, monitor de recursos, Wayland/X11 | Operações concluídas **com resultado correto**; latência/recursos medidos; negação/cancelamento respeitados. |
+| PDF/DOCX/imagens | Exemplos reais de vários formatos e dimensões, teste cruzado em leitores independentes | Arquivos legíveis, saídas novas com modo 0600, fidelidade documentada, falha segura para dados inválidos. |
+| Publicação | CI main + checklist físico + documentação + revisão de segurança/licenças | Só publicar tag quando todos os gates exigidos para a **capacidade anunciada** estiverem cumpridos. |
+
+### 6. Ordem de execução, status de entrega e critérios de avanço
+
+`G0 → G1 → (G2, G3, G4 em módulos independentes) → G5 → G6/G7 em paralelo controlado → G8 contínuo`.
+
+Não há datas ou números arbitrários de release para funções não concluídas. **Primeiro fechar as pendências da v0.9.12**; versões posteriores devem corresponder a incrementos entregues, cada um com PR, documentação de formato e limitações, CI verde e aceite conforme o hardware e a categoria da operação. Esta seção é o **roadmap canônico**; as seções históricas mais abaixo registram planos e releases antigos, que não anulam os estados verificados acima.
+
+**Comandos do operador para o próximo gate (não instalam binários nem ativam serviços):**
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+git rev-parse --short HEAD
+python3 scripts/validate_craft_cli.py
+python3 scripts/validate_craft_cli.py --smoke --advanced
+python3 scripts/validate_craft_cli.py --rea
+```
+
+O `--smoke --advanced` executa programas externos instalados contra amostras sintéticas, **somente depois da decisão explícita do operador**. Na ausência dos CLIs, registrar `ausente/pendente`. Para os demais testes da janela, consultar [aceite físico](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md), iniciando Ollama e PostgreSQL apenas quando necessários.
+
+---
 
 ### Contratos reais dos cinco ZIPs — metadados Craft e prévia de PDF (v0.9.12)
 
@@ -5815,10 +5968,9 @@ reais de síntese, a janela Tk, PostgreSQL e Docker no Linux.
 
 ---
 
-# Roadmap
+# Roadmap histórico (marcos anteriores)
 
-O roadmap é evolutivo. Cada release adiciona uma responsabilidade
-pequena, clara e verificável.
+**A referência vigente é o [Roadmap consolidado e auditoria técnica](#roadmap-consolidado-e-auditoria-técnica--nexus-core), no início deste README.** As notas abaixo documentam decisões passadas e não substituem o inventário atualizado de funções, CI e testes físicos. Cada release deve adicionar uma responsabilidade pequena, clara e verificável.
 
 ## v0.3.8 — Continuous Local Voice Conversation
 
