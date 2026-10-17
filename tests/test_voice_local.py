@@ -244,6 +244,36 @@ def test_continuous_recognizer_finishes_when_pipewire_becomes_quiet(monkeypatch,
     assert process.terminated
 
 
+def test_continuous_recognizer_retries_noisy_input_without_words_before_thirty_seconds(
+    monkeypatch, tmp_path,
+):
+    from array import array
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+
+    class Decoder:
+        def __init__(self, model, rate):
+            pass
+        def AcceptWaveform(self, frames):
+            return False
+        def PartialResult(self):
+            return json.dumps({"partial": ""})
+        def FinalResult(self):
+            return json.dumps({"text": ""})
+
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
+        Model=lambda path: object(), KaldiRecognizer=Decoder))
+    monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
+    process = FakeProcess(["arecord"], audio=array("h", [8000] * 100000).tobytes())
+    process.returncode = None
+    monkeypatch.setattr(voice_module.subprocess, "Popen", lambda *a, **k: process)
+    clock = iter(i * .25 for i in range(1000))
+    monkeypatch.setattr(voice_module, "monotonic", lambda: next(clock))
+    assert LocalRecognizer(model_dir).recognize_continuous() == ""
+    assert process.stdout.tell() < len(process.audio)  # Ended without reading 30s.
+    assert process.terminated
+
+
 def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):
     model_dir = tmp_path / "model"
     model_dir.mkdir()

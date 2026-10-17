@@ -6,12 +6,14 @@ import io
 import os
 import re
 import unicodedata
+from difflib import SequenceMatcher
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Thread
 from time import monotonic
 
 from nexus.agent import AgentOutcome
+from nexus.agent.planner import _simple_app_request
 from nexus.config.settings import settings
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.permission_dialog import PermissionDialog
@@ -20,6 +22,7 @@ from nexus.desktop.preferences import (
     DesktopPreferences, DesktopPreferenceStore, PreferenceStoreError,
 )
 from nexus.desktop.chat_archive import ChatArchive, ChatArchiveError
+from nexus.desktop.connectivity_indicator import PassiveConnectivityWatcher
 from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
@@ -120,6 +123,9 @@ class DesktopWindow:
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
         self._vision_events: Queue[tuple[str, str, str]] = Queue()
         self._camera_frames: Queue[bytes] = Queue()
+        self._network_events: Queue[str] = Queue()
+        self._network_watcher: PassiveConnectivityWatcher | None = None
+        self._network_state = None
         self._camera_preview = None
         self._live_camera: CameraStream | None = None
         self._live_camera_window = None
@@ -178,6 +184,11 @@ class DesktopWindow:
                         foreground="#ffffff")
         style.configure("Nexus.HeaderHint.TLabel", background="#241c24",
                         foreground="#e9b4c4", font=("Sans", 9))
+        for state, color in (("Online", "#9ee6b6"),
+                             ("Offline", "#ffb3b3"),
+                             ("Unknown", "#ddd0d6")):
+            style.configure(f"Nexus.Network{state}.TLabel", background="#241c24",
+                            foreground=color, font=("Sans", 10, "bold"))
         style.configure("Nexus.Subtitle.TLabel", background="#f5f1f3",
                         foreground="#75646e", font=("Sans", 10))
         style.configure("Nexus.Section.TLabel", background="#f5f1f3",
@@ -242,6 +253,9 @@ class DesktopWindow:
             style="Nexus.Quiet.TButton",
         )
         self.test_button.pack(side="right", padx=(12, 0))
+        self.network_badge = ttk.Label(
+            header, text="● NÃO VERIFICADO", style="Nexus.NetworkUnknown.TLabel")
+        self.network_badge.pack(side="right", anchor="center", padx=(8, 10))
 
         readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
         readiness_row.pack(fill="x", pady=(0, 5))
@@ -449,6 +463,13 @@ class DesktopWindow:
             self._append("Nexus Core", self._history_load_warning, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
+        # In forced offline mode, read only NetworkManager's cached OS state.
+        # The existing active monitor is used when the runtime permits probes.
+        if (hasattr(app, "connectivity_manager")
+                and getattr(app, "connectivity_monitor", None) is None):
+            self._network_watcher = PassiveConnectivityWatcher(self._network_events.put)
+            self._network_watcher.start()
+        self._refresh_network_status()
         live_event("interface", "pronto")
         live_event(
             "recurso", "pronto", profile=self._resource_budget.mode,
@@ -1062,6 +1083,25 @@ class DesktopWindow:
         ):
             self._ask_live_camera(LocalVision.DEFAULT_PROMPT, still=True)
 
+    def _retry_camera_photo(self) -> None:
+        """A new photo requires a new user action and a fresh capture consent."""
+        if self._busy:
+            self.status.configure(text="Aguarde a análise atual ou cancele antes de tentar novamente")
+            return
+        self._vision_camera_photo()
+
+    @staticmethod
+    def _unclear_browser_command(utterance: str) -> bool:
+        """Ask to repeat a likely misheard command; never infer an action."""
+        if _simple_app_request(utterance) is not None:
+            return False
+        plain = unicodedata.normalize("NFKD", utterance).encode(
+            "ascii", "ignore").decode("ascii").lower()
+        plain = re.sub(r"^nexus[,:]?\s+", "", " ".join(plain.split()))
+        return (len(plain.split()) <= 5 and
+                re.match(r"^(?:abra|abre|abrir)\b", plain) is not None and
+                SequenceMatcher(None, plain, "abrir o navegador").ratio() >= 0.69)
+
     def _start_live_camera(self) -> None:
         """Authorize one live session; each spoken question selects one frame."""
         if self._closing or self._busy:
@@ -1367,6 +1407,11 @@ class DesktopWindow:
             preview, text="Captura única autorizada. Análise no Ollama local em andamento.",
             bg="#f5f1f3", fg="#503943",
         ).pack(pady=(0, 5))
+        if source in ("camera", "camera_live"):
+            self.tk.Button(
+                preview, text="Tentar novamente",
+                command=self._retry_camera_photo,
+            ).pack(pady=(4, 5))
         self.tk.Button(
             preview, text="Fechar prévia", command=preview.destroy,
         ).pack(pady=(4, 12))
@@ -1523,7 +1568,34 @@ class DesktopWindow:
         finally:
             self._permission_dialog = None
 
+    def _set_network_status(self, state: str) -> None:
+        if self._network_state == state:
+            return
+        presentation = {
+            "online": ("● ONLINE", "Nexus.NetworkOnline.TLabel", "online"),
+            "offline": ("● OFFLINE", "Nexus.NetworkOffline.TLabel", "offline"),
+            "unknown": ("● NÃO VERIFICADO", "Nexus.NetworkUnknown.TLabel", "nao_verificado"),
+        }
+        label, style, event_state = presentation.get(state, presentation["unknown"])
+        self._network_state = state if state in presentation else "unknown"
+        self.network_badge.configure(text=label, style=style)
+        live_event("rede", event_state)
+
+    def _refresh_network_status(self) -> None:
+        try:
+            while True:
+                self._set_network_status(self._network_events.get_nowait())
+        except Empty:
+            pass
+        if getattr(self.app, "connectivity_monitor", None) is not None:
+            try:
+                snapshot = self.app.status().runtime_snapshot()
+                self._set_network_status("online" if snapshot.network_online else "offline")
+            except (AttributeError, RuntimeError):
+                self._set_network_status("unknown")
+
     def _poll(self) -> None:
+        self._refresh_network_status()
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
         self._workers_running()
@@ -1684,7 +1756,16 @@ class DesktopWindow:
                                  else "recebido"),
                                 source="voz",
                             )
-                        if self._live_camera is not None and self._camera_question(utterance):
+                        if self._unclear_browser_command(utterance):
+                            self._append("Você", utterance, "user")
+                            note = ("Não entendi o comando com segurança. "
+                                    "Se deseja abrir o navegador padrão, diga: "
+                                    "Nexus, abra o navegador. Você também pode digitar o pedido.")
+                            self._append("Nexus Core", note, "assistant")
+                            self.status.configure(text="Comando impreciso; repita ou digite")
+                            if not self._say_response(note):
+                                self._start_listening()
+                        elif self._live_camera is not None and self._camera_question(utterance):
                             self._ask_live_camera(utterance)
                         else:
                             self.input.delete("1.0", "end")
@@ -1808,6 +1889,8 @@ class DesktopWindow:
     def _close(self) -> None:
         if self._closing:
             return
+        if self._network_watcher is not None:
+            self._network_watcher.stop()
         live_event("interface", "desligado")
         self._save_desktop_preferences()
         self._closing = True

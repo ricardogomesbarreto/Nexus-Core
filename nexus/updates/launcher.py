@@ -18,6 +18,7 @@ from .manager import (
 READ_ONLY_FLAGS = frozenset((
     "--help", "-h", "--version", "--status",
     "--acceptance-log",
+    "--resource-check",
     "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
     "--desktop-check", "--voice-check", "--vision-check",
     "--microphone-test", "--recognition-test",

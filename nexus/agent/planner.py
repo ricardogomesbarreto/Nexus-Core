@@ -89,7 +89,7 @@ def _current_message(prompt: str) -> str | None:
 
 
 def _simple_app_request(prompt: str) -> str | None:
-    """Handle only exact, explicit requests; authorization remains in ToolExecutor."""
+    """Handle only exact requests. Each tool retains its own permission level."""
     current = _current_message(prompt)
     if current is None:
         return None
@@ -98,6 +98,9 @@ def _simple_app_request(prompt: str) -> str | None:
     normalized = re.sub(r"^nexus[,:]?\s+", "", normalized)
     return {
         "abra o navegador": "browser", "abrir navegador": "browser",
+        "abrir o navegador": "browser", "abre o navegador": "browser",
+        "abre navegador": "browser", "abra navegador": "browser",
+        "abra o navegador padrao": "browser", "abrir o navegador padrao": "browser",
         "abra o gerenciador de arquivos": "files",
         "abra o terminal": "terminal",
     }.get(normalized)
@@ -163,7 +166,10 @@ class AgentPlanner:
 
     def plan(self, prompt: str) -> AgentProposal:
         application = _simple_app_request(prompt)
-        if application and self.registry.exists("launch_application"):
+        if application == "browser" and self.registry.exists("open_default_browser"):
+            return AgentProposal(type="tool_call", tool_name="open_default_browser",
+                                 arguments={})
+        if application and application != "browser" and self.registry.exists("launch_application"):
             return AgentProposal(type="tool_call", tool_name="launch_application",
                                  arguments={"application": application})
         directory = _simple_directory_request(prompt)
@@ -278,6 +284,8 @@ class AgentPlanner:
             name, arguments = value["tool_name"], value["arguments"]
             if type(name) is not str or type(arguments) is not dict:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
+            if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
+                raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
             tool = self.registry.get(name)
             if tool is None:
                 raise ProposalError("Ferramenta proposta não está disponível.")

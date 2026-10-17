@@ -21,6 +21,28 @@ prévia da câmera e ações não comprovam esses comportamentos. Naquela versã
 `n` contava indevidamente como falha; agora `n` e Enter deixam a etapa pendente,
 e somente `f` registra falha testada. O aceite físico permanece pendente.
 
+**Revisão local da proposta de indicador e recursos (17/10/2026):** 1.480
+testes passaram, 111 foram ignorados neste ambiente sem display, serviços e
+hardware Ubuntu; o wheel 0.9.12 foi gerado e contém os módulos novos. O
+diagnóstico `--resource-check` funcionou sem Ollama neste ambiente, sem
+iniciar aplicação, inferência ou rede externa. Isso não mede a memória, o
+tempo de resposta ou o aquecimento do notebook. A proposta ainda depende de
+CI para o SHA final na `main` e das verificações físicas abaixo. Nenhuma tag
+foi criada.
+
+**Teste adicional recebido em 17/10/2026:** no notebook, a tentativa de
+aplicar o patch falhou porque o arquivo não existia em `~/Downloads`; portanto
+o programa executado não tinha o indicador de rede nem `--resource-check`.
+Na sessão registrada, o Vosk reconheceu algumas falas incorretamente e várias
+capturas de trinta segundos terminaram sem transcrição. Abrir o navegador
+precisou de confirmação; uma foto visual levou cerca de 111 segundos para
+analisar. São falhas observadas da instalação anterior, não aceite. A revisão
+local agora limita a espera sem palavras a oito segundos, solicita repetição
+para comando ambíguo, abre apenas o navegador padrão sem confirmação extra e
+oferece nova foto com consentimento por captura. Ela ainda não foi instalada
+nem testada fisicamente nesse notebook; medir acerto de voz e latência da
+visão novamente antes de publicar qualquer tag.
+
 ## Logs ao vivo enquanto usa o assistente
 
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
@@ -37,6 +59,23 @@ Os logs não incluem conteúdo das perguntas, fala transcrita, imagem ou senhas.
 `concluido` significa que o processo terminou, e você ainda precisa informar
 se a resposta foi correta, audível e visualmente coerente. Não há homologação
 automática de teclado Wayland nem de recuperação real.
+
+Na mesma janela, confira o ponto **ONLINE/OFFLINE** do cabeçalho enquanto
+desliga e religa a conexão pelo Ubuntu. O terminal deve registrar
+`TESTE-LOCAL evento=rede estado=...` apenas na transição. Com o modo local
+padrão, a consulta lê o estado passivo do NetworkManager; **NÃO VERIFICADO**
+indica que o sistema não forneceu diagnóstico conclusivo. Esse teste não
+comprova a disponibilidade de Ollama, PostgreSQL ou outros serviços locais.
+
+Para avaliar peso e latência da visão, execute
+`~/.local/bin/nexus-core --resource-check | python3 -m json.tool` antes de
+abrir a câmera, logo após uma pergunta visual e depois de 50 segundos sem
+outra análise. Compare também `ollama ps` e `free -h`. O diagnóstico lê
+memória do Linux e `/api/ps` em loopback, sem iniciar inferência ou salvar
+imagens. O perfil `eco` usa `keep_alive=0s`, enquanto `balanced` usa `45s`;
+confirmar descarga e tempo de recarga depende do Ollama real no notebook.
+Registre se o microfone
+retoma após a resposta falada, além dos eventos `TESTE-LOCAL`.
 
 ## Registro guiado no terminal para compartilhar
 
@@ -125,10 +164,14 @@ não deve existir. Faça um segundo pedido e autorize por botão ou pela frase
 exata **“Nexus, autorizo esta ação”**: deve aparecer uma única pasta na sua
 home. Confira a trilha de auditoria e remova a pasta depois do teste.
 
-Repita com **“Abra o navegador”** e escolha Negar antes de permitir uma
-segunda chamada. A janela precisa mostrar a ação e aceitar também a decisão
-digitada. Suspenda a escuta e confira que a fala de autorização não instrui
-o uso do microfone pausado. Em Wayland, **não marque navegação/digitação
+Repita com **“Abra o navegador”**. O navegador padrão do Ubuntu deve abrir
+sem diálogo adicional; confira antes com `xdg-settings get default-web-browser`
+e confirme que nenhuma URL específica foi carregada pelo Nexus. Diga também
+uma frase imprecisa como **“abrir na beira do”**: o assistente deve pedir para
+repetir, sem abrir nada. Para testar negação e confirmação de aplicativo,
+use **“Abra o gerenciador de arquivos”**. Suspenda a escuta e confira que a
+fala de autorização não instrui o uso do microfone pausado. Em Wayland,
+**não marque navegação/digitação
 em outras janelas como aprovada**: a implementação atual exige X11. Se desejar
 testá-la em sessão X11 local, use separadamente
 `python3 -m scripts.x11_manual_acceptance`, que cria uma janela temporária e pede
@@ -149,7 +192,8 @@ e descreva qualquer erro reproduzível.
 | Voz feminina e masculina audíveis, pausa e retomada | PENDENTE | — |
 | Webcam, foto e descrição coerente após consentimento | PENDENTE | — |
 | Criar pasta: negação e autorização individuais | PENDENTE | — |
-| Abrir aplicativo: negação e autorização individuais | PENDENTE | — |
+| Navegador padrão abre sem diálogo; fala ambígua não abre | PENDENTE | — |
+| Abrir gerenciador: negação e autorização individuais | PENDENTE | — |
 | Permissão falada, digitada e por botão; cancelamento | PENDENTE | — |
 | Navegação/digitação em janela X11 temporária | PENDENTE | — |
 | CI de `push` para o SHA final da main | PENDENTE | — |

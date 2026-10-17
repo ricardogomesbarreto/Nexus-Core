@@ -141,7 +141,7 @@ def test_application_builds_agent_lazily_with_shared_executor(monkeypatch):
         assert app.tool_registry.list_tools() == [
             "create_directory", "desktop_navigate", "desktop_type_text",
             "desktop_window_info", "file_metadata", "launch_application",
-            "list_directory", "read_file", "system_info", "terminal_sandbox",
+            "list_directory", "open_default_browser", "read_file", "system_info", "terminal_sandbox",
         ]
     finally:
         app.database.close()

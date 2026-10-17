@@ -9,7 +9,8 @@ import pytest
 
 from nexus.security import AuditLogger, PathSecurity, SecurityGate
 from nexus.agent import AgentPlanner
-from nexus.tools import CreateDirectoryTool, LaunchApplicationTool, ToolExecutor, ToolRegistry
+from nexus.tools import (CreateDirectoryTool, LaunchApplicationTool,
+                         OpenDefaultBrowserTool, ToolExecutor, ToolRegistry)
 
 
 class Confirmation:
@@ -125,23 +126,31 @@ def test_wake_word_keeps_application_shortcut_bounded():
     assert _simple_app_request("Nexus, abra o navegador e execute código") is None
 
 
+def test_misheard_browser_command_requests_repetition_without_gui():
+    from nexus.desktop.window import DesktopWindow
+    assert DesktopWindow._unclear_browser_command("abrir na beira do")
+    assert not DesktopWindow._unclear_browser_command("abra o navegador")
+    assert not DesktopWindow._unclear_browser_command("abra o terminal")
+
+
 def test_launch_application_is_whitelisted_and_sanitizes_environment(tmp_path, monkeypatch):
     confirm = Confirmation(True)
     executor, _ = executor_for(tmp_path, LaunchApplicationTool(), confirm)
     monkeypatch.setenv("DISPLAY", ":0")
     monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "do-not-inherit")
     monkeypatch.setattr(LaunchApplicationTool, "SYSTEM_BIN_DIRS", (str(tmp_path),))
-    browser = tmp_path / "firefox"
-    browser.write_text("#!/bin/sh\n")
-    browser.chmod(0o700)
+    files = tmp_path / "nautilus"
+    files.write_text("#!/bin/sh\n")
+    files.chmod(0o700)
     calls = []
     monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.Popen",
                         lambda *args, **kwargs: calls.append((args, kwargs)) or SimpleNamespace())
-    result = executor.execute("launch_application", application="browser")
-    assert result.success and calls[0][0] == ([str(browser)],)
+    result = executor.execute("launch_application", application="files")
+    assert result.success and calls[0][0] == ([str(files)],)
     assert "NEXUS_DATABASE_PASSWORD" not in calls[0][1]["env"]
     assert calls[0][1]["start_new_session"] is True
     assert len(confirm.requests) == 1
+    assert not executor.execute("launch_application", application="browser").success
     denied = executor.execute("launch_application", application="bash -c evil")
     assert not denied.success and len(calls) == 1
 
@@ -155,10 +164,20 @@ def test_launch_application_denied_without_confirmation_or_display(tmp_path, mon
     assert not executor.execute("launch_application", application="browser").success
 
 
-def test_exact_spoken_application_request_skips_slow_model_but_requires_consent(tmp_path):
+def test_exact_spoken_browser_request_skips_model_and_consent(tmp_path, monkeypatch):
     registry = ToolRegistry()
     registry.register(LaunchApplicationTool())
+    registry.register(OpenDefaultBrowserTool())
     executor = ToolExecutor(registry, SecurityGate(audit_logger=AuditLogger(tmp_path / "audit.log")))
+    monkeypatch.setenv("DISPLAY", ":0")
+    monkeypatch.setenv("NEXUS_DATABASE_PASSWORD", "never-inherit")
+    monkeypatch.setattr(OpenDefaultBrowserTool, "_system_binary",
+                        staticmethod(lambda name: "/usr/bin/" + name))
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.run",
+                        lambda *a, **kw: SimpleNamespace(returncode=0, stdout="brave-browser.desktop\n"))
+    launched = []
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.Popen",
+                        lambda args, **kw: launched.append((args, kw)) or SimpleNamespace())
 
     class NoModel:
         def generate(self, request):
@@ -167,5 +186,38 @@ def test_exact_spoken_application_request_skips_slow_model_but_requires_consent(
     planner = AgentPlanner(NoModel(), registry, executor)
     prompt = json.dumps({"mensagem_atual": "Abra o navegador", "historico": []})
     result = planner.run(prompt)
-    assert not result.success and result.error_code == "CONFIRMATION_REQUIRED"
-    assert planner.plan(prompt).arguments == {"application": "browser"}
+    assert result.success and result.tool_result.data == {"browser_id": "brave-browser.desktop"}
+    assert launched[0][0] == ["/usr/bin/gtk-launch", "brave-browser.desktop"]
+    assert "NEXUS_DATABASE_PASSWORD" not in launched[0][1]["env"]
+    assert launched[0][1]["env"]["PATH"] == "/usr/bin:/bin:/snap/bin"
+    assert planner.plan(prompt).arguments == {}
+
+
+def test_default_browser_fails_closed_for_invalid_setting_or_missing_display(tmp_path, monkeypatch):
+    executor, _ = executor_for(tmp_path, OpenDefaultBrowserTool())
+    monkeypatch.delenv("DISPLAY", raising=False)
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    assert not executor.execute("open_default_browser").success
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.setattr(OpenDefaultBrowserTool, "_system_binary",
+                        staticmethod(lambda name: "/usr/bin/" + name))
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.run",
+                        lambda *a, **kw: SimpleNamespace(returncode=0, stdout="../../evil.desktop\n"))
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.Popen",
+                        lambda *a, **kw: pytest.fail("ID inválido não pode ser iniciado"))
+    assert not executor.execute("open_default_browser").success
+    assert not executor.execute("open_default_browser", url="https://example.org").success
+
+
+def test_default_browser_cannot_be_proposed_by_model_for_unrelated_request(tmp_path):
+    from nexus.models.contracts import ModelResponse
+    executor, _ = executor_for(tmp_path, OpenDefaultBrowserTool())
+
+    class UntrustedModel:
+        def generate(self, request):
+            return ModelResponse(content='{"type":"tool_call","tool_name":"open_default_browser","arguments":{}}',
+                                 model="test", done=True, prompt_tokens=0, output_tokens=0)
+
+    planner = AgentPlanner(UntrustedModel(), executor.registry, executor)
+    result = planner.run(json.dumps({"mensagem_atual": "abrir na beira do", "historico": []}))
+    assert not result.success

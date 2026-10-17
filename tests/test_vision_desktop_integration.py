@@ -181,6 +181,34 @@ def test_file_and_camera_require_separate_consent(desktop, monkeypatch, source):
     assert vision.calls[1][0] == "describe"
 
 
+def test_camera_photo_preview_offers_retry_with_fresh_consent(desktop, monkeypatch):
+    from PIL import Image
+    from tkinter import simpledialog
+    root, app, window, vision = desktop
+    frame = io.BytesIO()
+    Image.new("RGB", (8, 8), "blue").save(frame, format="JPEG")
+    vision.camera = lambda index: frame.getvalue()
+    monkeypatch.setattr(simpledialog, "askinteger", lambda *a, **kw: 0)
+    approvals = []
+    monkeypatch.setattr(window.messagebox, "askyesno",
+                        lambda *a, **kw: approvals.append(1) or True)
+    window._vision_camera_photo()
+    spin(root, lambda: not window._busy and window._camera_preview is not None)
+    retry = next(widget for widget in window._camera_preview.winfo_children()
+                 if widget.winfo_class() == "Button" and widget.cget("text") == "Tentar novamente")
+    retry.invoke()
+    spin(root, lambda: not window._busy and len(approvals) == 2)
+    assert len([call for call in vision.calls if call[0] == "describe"]) == 2
+
+
+def test_unclear_browser_voice_request_is_not_executed(desktop):
+    _, app, window, _ = desktop
+    assert window._unclear_browser_command("abrir na beira do")
+    assert not window._unclear_browser_command("abra o navegador")
+    assert not window._unclear_browser_command("abra o terminal")
+    assert not window._unclear_browser_command("crie uma pasta chamada Fotos")
+
+
 def test_dialog_cancellation_is_side_effect_free(desktop, monkeypatch):
     from tkinter import simpledialog, filedialog
     root, app, window, vision = desktop

@@ -32,6 +32,8 @@ PACKAGES_FOR_MISSING = {
     "espeak-ng": ("espeak-ng",),
     "arecord": ("alsa-utils",),
     "ffmpeg": ("ffmpeg",),
+    "xdg-settings": ("xdg-utils",),
+    "gtk-launch": ("libgtk-3-bin",),
     "python3-tk": ("python3-tk",),
     "python3-venv": ("python3-venv",),
 }

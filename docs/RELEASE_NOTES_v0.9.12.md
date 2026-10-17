@@ -1,6 +1,7 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: código em desenvolvimento integrado à `main`; sem tag/release estável.**
+**Estado: base integrada à `main`; melhorias seguintes em validação local,
+sem tag/release estável.**
 
 Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
 registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e
@@ -17,8 +18,12 @@ separado; as observações manuais não são aprovação automática de release.
   escolhem uma pasta filha da home sem esperar o modelo local. A ação ainda passa
   pelo contrato de ferramenta, `SecurityGate`, prévia do caminho, confirmação
   individual e auditoria. Nenhuma frase de consentimento é inferida pelo modelo.
-- Abrir navegador, gerenciador de arquivos ou terminal por comando exato
-  continua disponível em sessão gráfica X11/Wayland e requer confirmação.
+- Abrir o navegador padrão por comando exato em X11/Wayland dispensa
+  confirmação adicional e não recebe URL; o gerenciador de arquivos e o
+  terminal continuam a exigir confirmação. Frases ambíguas não abrem apps.
+- A prévia da câmera oferece **Tentar novamente**, com autorização por nova
+  foto. Entradas com sinal contínuo e sem palavras do Vosk encerram a tentativa
+  após oito segundos; a qualidade de voz exige teste no equipamento real.
 - A pergunta falada da janela de autorização respeita a escuta pausada e
   orienta responder por botão ou texto nesse estado.
 - O workflow de publicação manual v0.9.11 usa o SHA do evento correto e exige

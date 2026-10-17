@@ -10,19 +10,20 @@ import logging
 EVENTS = frozenset({
     "interface", "chat", "escuta", "reconhecimento", "fala",
     "camera", "visao", "autorizacao", "ferramenta", "cancelamento",
-    "teste", "recurso",
+    "teste", "recurso", "rede",
 })
 STATES = frozenset({
     "iniciado", "concluido", "falhou", "pausado", "retomado",
     "solicitado", "aprovado", "negado", "cancelado", "pronto",
     "desligado", "sem_sinal", "sem_transcricao", "recebido", "processando",
+    "online", "offline", "nao_verificado",
 })
 SOURCES = frozenset({
     "texto", "voz", "file", "screen", "display", "window",
     "camera", "camera_live",
 })
 TOOLS = frozenset({
-    "create_directory", "launch_application", "desktop_type_text",
+    "create_directory", "launch_application", "open_default_browser", "desktop_type_text",
     "desktop_navigate", "terminal_sandbox", "system_info",
 })
 PROFILES = frozenset({"eco", "balanced"})

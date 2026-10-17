@@ -13,7 +13,7 @@ from nexus.tools.filesystem import (
     FileMetadataTool,
     CreateDirectoryTool,
 )
-from nexus.tools.desktop_apps import LaunchApplicationTool
+from nexus.tools.desktop_apps import LaunchApplicationTool, OpenDefaultBrowserTool
 from nexus.tools.registry import ToolRegistry
 from nexus.tools.system import SystemInfoTool
 from nexus.tools.terminal import TerminalSandboxTool
@@ -38,6 +38,7 @@ __all__ = [
     "FileMetadataTool",
     "CreateDirectoryTool",
     "LaunchApplicationTool",
+    "OpenDefaultBrowserTool",
     "TerminalSandboxTool",
     "DesktopWindowInfoTool",
     "DesktopTypeTextTool",
