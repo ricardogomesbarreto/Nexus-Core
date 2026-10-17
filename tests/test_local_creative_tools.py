@@ -135,3 +135,49 @@ def test_explicit_turn_uses_local_shortcut_and_prior_history_cannot_authorize(tm
                          "mensagem_atual": "Oi"})
     from nexus.agent.planner import _simple_creative_request
     assert _simple_creative_request(prompt) is None and not other.exists()
+
+
+@pytest.mark.parametrize("spoken,kind", [
+    ("Converta /home/usuario/Documentos/relatorio.docx em /home/usuario/Documentos/relatorio.pdf.", "document"),
+    ("Converta /home/usuario/Imagens/foto.jpg em /home/usuario/Imagens/foto.webp", "image"),
+    ("Extraia o texto de /home/usuario/Documentos/estudo.pdf em /home/usuario/Documentos/estudo.txt.", "pdf_text"),
+])
+def test_exact_conversion_phrase_avoids_ollama(spoken, kind):
+    from nexus.agent.planner import _simple_creative_request
+    action = _simple_creative_request(json.dumps({"historico": [], "mensagem_atual": spoken}))
+    assert action is not None
+    assert action[0] == "craft_convert_local"
+    assert action[1]["kind"] == kind
+    assert action[1]["source"].startswith("/home/usuario/")
+    assert action[1]["output"].startswith("/home/usuario/")
+
+
+def test_optional_cli_conversion_still_requests_consent_and_works_offline(tmp_path, monkeypatch):
+    executor, home, confirmation = setup_tools(tmp_path)
+    document = home / "relatorio.docx"
+    destination = home / "relatorio.pdf"
+    document.write_bytes(b"documento local")
+    monkeypatch.setattr("nexus.tools.creative.shutil.which", lambda name: None)
+
+    class ModelMustNotRun:
+        def generate(self, request):
+            pytest.fail("Conversão com caminhos explícitos não chama o Ollama")
+
+    agent = AgentPlanner(ModelMustNotRun(), executor.registry, executor)
+    question = f"Converta {document} em {destination}"
+    result = agent.run(json.dumps({"historico": [], "mensagem_atual": question}))
+    assert not result.success
+    assert "wordcraft-cli" in (result.tool_result.error or "")
+    assert not destination.exists()
+    assert len(confirmation.calls) == 1
+
+
+def test_previous_context_does_not_authorize_conversion(tmp_path):
+    from nexus.agent.planner import _simple_creative_request
+    prompt = json.dumps({
+        "mensagem_atual": "Como funciona a conversão de documentos?",
+        "historico": [
+            {"usuario": "Converta /home/user/arquivo.docx em /home/user/arquivo.pdf"}
+        ],
+    })
+    assert _simple_creative_request(prompt) is None
