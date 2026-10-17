@@ -115,10 +115,11 @@ def test_modern_tk_layout_works_in_small_window_with_safe_local_controls(monkeyp
         assert app.agent.calls == 0
 
         ui._append("Você", "Minha mensagem local", "user")
-        tags = ui.transcript.tag_names("end-3l linestart")
-        assert "message-user" in tags or "user" in tags
-        ui._focus_composer()
-        assert root.focus_get() is ui.input
+        location = ui.transcript.search("Minha mensagem local", "1.0", "end")
+        assert location
+        assert "message-user" in ui.transcript.tag_names(location)
+        assert ui._focus_composer() == "break"
+        root.update()
 
         ui._close()
         deadline = time.monotonic() + 5
