@@ -138,7 +138,7 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "f", "s", "n", "n", "f", "s", "n", ""])
+    answers = iter(["", "", "", "", "n", "n", "n", "n", "f", "s", "n"])
     output = io.StringIO()
     assert acceptance.run_acceptance(
         ask=lambda _: next(answers), out=output, interactive=True,
