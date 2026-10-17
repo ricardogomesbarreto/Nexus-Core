@@ -48,6 +48,38 @@ e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. Os workflows de publicação permanecem bloqueados.
 
+## Interface nativa profissional — refinamento da v0.9.12 (CI e aceite separados)
+
+O desktop Linux mantém o **logotipo original, as cores vinho `#722F37` e grafite
+`#241c24`, a janela Tk e os botões existentes**. Esta atualização torna a
+apresentação mais consistente sem clonar janelas PhotoCraft, WordCraft, PdfCraft
+ou REA e sem adicionar servidor web ou dependências pesadas:
+
+- **Conversa destacada:** cabeçalho próprio, área de mensagens branca com
+  margens e diferenciação discreta de mensagens do usuário; scrollbar e
+  histórico textual seguem locais.
+- **Leitura mais confortável:** `A+` / `A−` e `Ctrl++` / `Ctrl+-` ajustam a
+  fonte da conversa de 10 a 16 pt, sem salvar dados de texto ou alterar
+  o contrato de autorização.
+- **Compositor:** contador local de até 4.000 caracteres, com aviso visual
+  ao ultrapassar o limite; Enter envia, Shift+Enter quebra linha,
+  `Ctrl+L` foca a caixa de texto.
+- **Transparência de execução:** indicador `PRONTO` / `PROCESSANDO` /
+  `ENCERRANDO` descreve apenas a atividade da interface; não afirma
+  que Ollama, câmera, microfone ou PostgreSQL estão funcionais.
+- **Guia rápido offline:** consulta de comandos/atalhos e avisos sobre
+  consentimento, sem iniciar modelos, dispositivos nem ferramentas.
+- **Compatibilidade:** preservadas ações de voz, câmera, texto, histórico,
+  permissões por operação e logs sanitizados. Paleta em
+  `nexus/desktop/presentation.py`, widgets em `nexus/desktop/window.py`;
+  testes com Tk/Xvfb e janela mínima 770 × 570.
+
+**Status:** incremento de **código integrado após validação em CI**; a aparência,
+legibilidade, Wayland/escala de tela e fluidez ainda precisam de verificação
+física no Ubuntu 26.04. **Não confundir testes Xvfb com aprovação da GUI em
+hardware real.** Esta alteração não conclui o G0, não instala CLIs,
+não ativa serviços automaticamente e não publica uma nova release.
+
 ## Roadmap consolidado e auditoria técnica — NEXUS CORE
 
 > **Revisão: 17/10/2026 · base auditada:** `main`, commit `44fd658185f97b1b370e5d404e34b359275a297e`, após PRs [#69](https://github.com/ricardogomesbarreto/Nexus-Core/pull/69)–[#74](https://github.com/ricardogomesbarreto/Nexus-Core/pull/74).
