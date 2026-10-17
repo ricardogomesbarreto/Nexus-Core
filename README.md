@@ -50,6 +50,59 @@ tag/release estável. Os workflows de publicação permanecem bloqueados.
 
 ## v0.9.12 — Ações autorizadas no desktop (código; aceite físico pendente)
 
+### REA — inspeção estática local por conversa (integração em validação)
+
+A integração inicial inspirada no anexo **REA — Reverse Engineer Anything**
+amplia a conversa do NEXUS CORE com a ferramenta
+`inspect_artifact_local`, submetida ao `SecurityGate` e à
+**confirmação individual da leitura**. Sem iniciar o Ollama para
+reconhecer instruções completas, identifica tipos ELF, PE/MZ, Mach-O,
+WASM, APK/JAR/ZIP, JavaScript/TypeScript, Electron ASAR e assinaturas
+PDF/PNG/JPEG. Mostra tamanho, SHA-256 e informações estáticas resumidas,
+sem executar o arquivo ou extrair conteúdo compactado, com limite
+de 128 MiB por arquivo. Rejeita arquivos protegidos, links simbólicos,
+índices ZIP excessivos e entradas inválidas. A análise não é uma
+certificação de segurança do arquivo.
+
+Exemplo de pedido ao chat: `Analise o arquivo
+/home/usuario/NexusTestes/teste.elf` (substitua pelo caminho real).
+O botão **Testar funções** também mostra como validar as permissões.
+O resultado da leitura é produzido pela ferramenta local sem análise
+remota e sem gravar bytes do alvo no histórico textual.
+
+**Limite essencial:** a implementação não executa nem incorpora o REA
+completo, não instala Node.js/Ghidra/IDA/Hopper, não usa MCP, não
+descompila binários e não intercepta processos, navegadores ou rede.
+Essas modalidades precisam de avaliação separada, consentimentos
+específicos, isolamento e testes físicos. O ZIP do projeto não foi
+instalado nem adicionado ao código-fonte do Nexus. Veja a
+[matriz de capacidades, riscos e testes](docs/REA_LOCAL_INTEGRATION_v0.9.12.md).
+
+### Instalador — PostgreSQL local sob demanda
+
+O instalador anteriormente verificava o login PostgreSQL sem iniciar
+o cluster quando estava desligado. A janela podia funcionar depois
+de `nexus_core_session.sh start`, mas a atualização não se concluía.
+Agora, se a porta de banco configurada estiver indisponível, o
+instalador detecta um cluster único pela porta com `pg_lsclusters`
+e solicita autorização antes de iniciar somente esse serviço.
+A autenticação real com consulta somente leitura ainda é obrigatória;
+não são alteradas senhas, dados, preferências de voz ou autostart.
+
+Na instalação Ubuntu/Debian já provisionada, prefira:
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+bash scripts/nexus_core_session.sh start
+python3 scripts/install_linux.py
+NEXUS_RESOURCE_PROFILE=eco bash scripts/nexus_core_session.sh desktop
+```
+
+O status `not-found` da unidade de usuário
+`nexus-core-ollama.service`, acompanhado de `disabled` da unidade
+global `ollama.service`, é normal quando o computador usa apenas a
+unidade global: não é necessário instalar outro Ollama.
+
 ### Auditoria de código e documentação — 17/10/2026
 
 A [auditoria técnica v0.9.12](docs/AUDIT_v0.9.12_2026-10-17.md)

@@ -27,6 +27,22 @@ confirmação. A escuta contínua e a latência visual continuam sem aceite.
 
 ## Entregas no código
 
+**Integração em revisão — REA e instalação PostgreSQL (17/10/2026):**
+a nova `inspect_artifact_local` identifica formatos binários,
+APKs/JARs/ZIPs, WASM, JavaScript e Electron sem executar nem
+descompilar o alvo. A leitura, sujeita ao `SecurityGate` e à
+confirmação, é local e usa streaming SHA-256, limites de tamanho e
+descritores sem seguir symlinks. O motor REA Node/MCP não foi
+incorporado; Ghidra/IDA/Hopper e modalidades dinâmicas permanecem
+opcionais e pendentes de revisão separada.
+
+O instalador foi corrigido para detectar o cluster PostgreSQL local
+parado e solicitar autorização para iniciá-lo antes da verificação
+`SELECT 1` do ambiente Python, sem ativar serviços no boot. Consulte
+a [documentação REA e os testes reais pendentes](REA_LOCAL_INTEGRATION_v0.9.12.md).
+O conjunto só pode ser anunciado integrado após aprovação da CI
+e merge; isso não representa aceite físico ou release estável.
+
 **Auditoria corretiva complementar (17/10/2026):**
 [documento e matriz de achados](AUDIT_v0.9.12_2026-10-17.md).
 O instalador deixa de criar serviços Ollama habilitados automaticamente

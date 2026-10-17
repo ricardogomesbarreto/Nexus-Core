@@ -21,6 +21,7 @@ from nexus.tools.desktop import (
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
 )
 from nexus.tools.creative import EditImageTool, CreateGraphicTool, CraftConvertTool
+from nexus.tools.static_analysis import InspectArtifactTool
 
 
 __all__ = [
@@ -47,4 +48,5 @@ __all__ = [
     "EditImageTool",
     "CreateGraphicTool",
     "CraftConvertTool",
+    "InspectArtifactTool",
 ]

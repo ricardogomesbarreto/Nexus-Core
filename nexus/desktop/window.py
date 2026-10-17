@@ -531,6 +531,12 @@ class DesktopWindow:
                 "registro de autorização e a execução da ferramenta.")),
             ("Imagem: selecionar com consentimento",
              lambda: self._request_vision("file")),
+            ("REA: inspeção estática local", lambda: self._show_test_instructions(
+                "REA", "Copie um arquivo de teste para sua pasta pessoal. "
+                "Digite no chat: Analise o arquivo /home/usuario/NexusTestes/teste.elf "
+                "(substitua pelo caminho verdadeiro). Negue uma vez; depois "
+                "autorize a leitura. Nenhum executável será iniciado e "
+                "nenhum dado será enviado à rede.")),
         )
         for label, action in steps:
             ttk.Button(body, text=label, style="Nexus.Quiet.TButton",

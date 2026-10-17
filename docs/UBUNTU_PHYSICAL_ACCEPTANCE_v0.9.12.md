@@ -66,6 +66,51 @@ o script passa a aguardar até 30 s pela API local. Não há aceite de release.
 
 ## Logs ao vivo enquanto usa o assistente
 
+### Aceite REA e instalação com banco inicialmente parado
+
+O anexo REA fornecido é um projeto Node/TypeScript completo,
+não um módulo Python instalado. A primeira etapa integrada ao NEXUS
+trata **somente de inspeção estática offline**. Antes dos testes,
+atualize o repositório e execute o instalador com os serviços
+locais disponíveis; depois repita o ensaio com PostgreSQL parado,
+para confirmar que o instalador solicita autorização para iniciar
+o cluster **correto** (não o 16/main na porta 5433):
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+bash scripts/nexus_core_session.sh start
+python3 scripts/install_linux.py
+
+mkdir -p "$HOME/NexusTestes"
+cp /usr/bin/true "$HOME/NexusTestes/teste.elf"
+printf 'import x from "example";\nexport const value = 1;\n' > "$HOME/NexusTestes/teste.js"
+
+~/.local/bin/nexus-core --desktop 2>&1 | tee "$HOME/nexus-core-desktop.log"
+```
+
+Na conversa use `Analise o arquivo
+/home/usuario/NexusTestes/teste.elf` e o equivalente para
+`teste.js`, adaptando para o nome real da conta. **Negue
+primeiro e depois autorize**, confirmando que o relatório mostra
+SHA-256 e tipo de arquivo sem executar nenhum binário. Arquivos
+APK/JAR só devem ser analisados quando próprios ou autorizados.
+Um relatório estático não comprova que o software analisado é
+seguro, funcional ou livre de malware.
+
+Após fechar o assistente, pare o serviço PostgreSQL 18 se nenhum
+outro sistema o usar e execute novamente
+`python3 scripts/install_linux.py` com o serviço parado.
+Confirme que ele **pergunta** se pode iniciar somente
+`postgresql@18-main.service`; o teste real de autenticação
+PostgreSQL deve passar depois do início. Não aceite uma mudança de
+senha ou ativação automática no boot.
+
+Registre os eventos `TESTE-LOCAL` sem transcrever conteúdo
+privado. A CI executa testes simulados de permissões e parsers;
+**não** atesta Ghidra, REA completo, análise de malware ou
+a instalação/temperatura do notebook.
+
 ### Aceite adicional após auditoria do instalador e arquivos locais
 
 A [auditoria corretiva de 17/10/2026](AUDIT_v0.9.12_2026-10-17.md)
