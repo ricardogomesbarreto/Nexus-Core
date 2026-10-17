@@ -247,7 +247,7 @@ class DesktopWindow:
             except tk.TclError:
                 self._brand_image = None
         header = ttk.Frame(frame, style="Nexus.Header.TFrame", padding=(14, 7))
-        header.pack(fill="x", pady=(0, 8))
+        header.pack(fill="x", pady=(0, 5))
         if self._brand_image is not None:
             ttk.Label(header, image=self._brand_image,
                       style="Nexus.Header.TLabel").pack(side="left", anchor="center")
@@ -267,7 +267,7 @@ class DesktopWindow:
         self.network_badge.pack(side="right", anchor="center", padx=(8, 10))
 
         readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
-        readiness_row.pack(fill="x", pady=(0, 5))
+        readiness_row.pack(fill="x", pady=(0, 3))
         ttk.Label(readiness_row, text=readiness_caption,
                   style="Nexus.Subtitle.TLabel").pack(side="left")
         self.clear_history_button = ttk.Button(
@@ -292,7 +292,7 @@ class DesktopWindow:
         transcript_frame = ttk.Frame(frame, padding=(2, 2), style="Nexus.Card.TFrame")
         transcript_frame.pack(fill="both", expand=True)
         conversation_toolbar = ttk.Frame(transcript_frame, style="Nexus.Card.TFrame")
-        conversation_toolbar.pack(fill="x", padx=12, pady=(6, 4))
+        conversation_toolbar.pack(fill="x", padx=12, pady=(3, 2))
         ttk.Label(conversation_toolbar, text="CONVERSA LOCAL",
                   style="Nexus.CardTitle.TLabel").pack(side="left")
         self.quick_guide_button = ttk.Button(
@@ -336,7 +336,7 @@ class DesktopWindow:
 
         # Compact first row: speech preferences are distinct from listening.
         voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        voice_controls.pack(fill="x", pady=(7, 0))
+        voice_controls.pack(fill="x", pady=(3, 0))
         self.speech_toggle = ttk.Checkbutton(
             voice_controls, text="Ler respostas em voz alta",
             command=self._toggle_speech, style="Nexus.TCheckbutton",
@@ -391,7 +391,7 @@ class DesktopWindow:
         # Photo and live video are separate actions; neither opens a device
         # before its own explicit authorization.
         vision_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        vision_controls.pack(fill="x", pady=(7, 0))
+        vision_controls.pack(fill="x", pady=(3, 0))
         ttk.Label(vision_controls, text="VISÃO SOB AUTORIZAÇÃO",
                   style="Nexus.Section.TLabel").pack(side="left", padx=(0, 10))
         vision_actions = ttk.Frame(vision_controls, style="Nexus.App.TFrame")
@@ -412,7 +412,7 @@ class DesktopWindow:
 
         # Signals describe SOFTWARE activity, never hardware certification.
         privacy_row = ttk.Frame(footer, style="Nexus.App.TFrame")
-        privacy_row.pack(fill="x", pady=(5, 0))
+        privacy_row.pack(fill="x", pady=(2, 0))
         self.microphone_indicator = MicrophoneIndicator(privacy_row)
         self.microphone_indicator.widget.pack(side="left", padx=(0, 7))
         self._audio_level_label = ttk.Label(
@@ -428,7 +428,7 @@ class DesktopWindow:
             self._privacy_labels.append(widget)
 
         composer_title = ttk.Frame(footer, style="Nexus.App.TFrame")
-        composer_title.pack(fill="x", pady=(7, 3))
+        composer_title.pack(fill="x", pady=(3, 2))
         ttk.Label(composer_title,
                   text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
                   style="Nexus.Section.TLabel").pack(side="left")
@@ -454,7 +454,7 @@ class DesktopWindow:
         # Each action gets an equal, responsive column. Keep original
         # attributes, shortcuts and state transitions for compatibility.
         controls = ttk.Frame(footer, style="Nexus.App.TFrame")
-        controls.pack(fill="x", pady=(7, 0))
+        controls.pack(fill="x", pady=(3, 0))
         for column in range(5):
             controls.columnconfigure(column, weight=1, uniform="actions")
         self.suggest_button = ttk.Button(
@@ -481,7 +481,7 @@ class DesktopWindow:
 
         # Full-width status strip: long diagnostics never hide Send/Cancel.
         status_strip = ttk.Frame(footer, style="Nexus.Soft.TFrame")
-        status_strip.pack(fill="x", pady=(6, 0))
+        status_strip.pack(fill="x", pady=(2, 0))
         self.activity_badge = ttk.Label(
             status_strip, text="● PRONTO", style="Nexus.LiveReady.TLabel")
         self.activity_badge.pack(side="left")
