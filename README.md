@@ -21,12 +21,12 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 
 > **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; desenvolvimento integrado, sem tag deste marco.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
-> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 acrescenta uma rota local para pedido explícito de pasta, com confirmação por ação)<br>
+> **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração mais recente auditada:** PRs #69–#74 incorporadas; `main` em `44fd658` com **1.738 testes aprovados na CI push** (Ubuntu 24.04 runner/Python 3.12/PostgreSQL 16/Xvfb). Aceite físico Ubuntu 26.04 e tag v0.9.12 pendentes.<br>
+> **Integração recente:** PRs #69–#76 incorporadas; `main` em `8182ebd`; a CI do PR #76 aprovou **1.740 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). A auditoria do código-base `44fd658` registrou separadamente **1.738 testes na CI push**; a CI push do SHA `8182ebd` não foi verificada nesta revisão. Aceite físico Ubuntu 26.04 e tag v0.9.12 pendentes.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
