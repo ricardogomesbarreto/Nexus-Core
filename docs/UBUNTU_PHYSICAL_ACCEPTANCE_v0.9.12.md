@@ -66,6 +66,40 @@ o script passa a aguardar até 30 s pela API local. Não há aceite de release.
 
 ## Logs ao vivo enquanto usa o assistente
 
+### Aceite adicional após auditoria do instalador e arquivos locais
+
+A [auditoria corretiva de 17/10/2026](AUDIT_v0.9.12_2026-10-17.md)
+encontrou que o instalador criava um Ollama do usuário com autostart
+(`enable --now`), enquanto o sistema deve operar sob demanda.
+Isso foi corrigido **para novas unidades**. O teste real deve
+distinguir unidade recém-criada de unidade antiga habilitada:
+
+```bash
+systemctl --user is-enabled nexus-core-ollama.service
+systemctl --user is-active nexus-core-ollama.service
+systemctl is-enabled ollama.service postgresql.service postgresql@18-main.service
+cat /etc/postgresql/18/main/start.conf
+```
+
+Não tente criar uma nova unidade sobre uma antiga nem execute
+`systemctl disable` sem considerar outros serviços que dependam
+daquele daemon. A CI não pode verificar o estado do login físico.
+
+**Criatividade no desktop:** teste três saídas distintas:
+(1) cartaz PNG, (2) cópia de foto editada e (3) conversão de
+documento com um CLI Rust **realmente instalado e identificado**.
+Para cada operação, recuse primeiro, depois autorize com um nome novo,
+verifique que o original permanece intacto e que o resultado não é
+vazio nem incompatível com sua extensão. Se PhotoCraft/PdfCraft/WordCraft
+não estiver instalado, classifique a conversão como **PENDENTE**, não
+como aprovada. Um subprocesso externo **não é isolado em Docker**;
+somente instale CLIs de fontes confiáveis.
+
+O arquivo `chat-history.json` armazena texto local quando a opção
+de histórico está ativa; revise a exclusão e a preferência de gravação
+sem copiar mensagens privadas nos logs. A CI não certifica
+criptografia nem detecção automática de segredos.
+
 ### Criação e edição local (nova integração, ainda sem aceite físico)
 
 Na janela, peça por texto e depois por voz um cartaz PNG em `~/Imagens`

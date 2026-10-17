@@ -37,6 +37,31 @@ iniciar qualquer teste que interaja com outra máquina ou serviço.
   alteram o sistema ou enviam tráfego; deve permitir parar a atividade e
   distinguir resultados observados de hipóteses do modelo.
 
+## Consumo, inicialização e programas locais opcionais
+
+- Nenhum instalador, rotina de primeiro uso ou atualização deve
+  executar `systemctl enable` ou `systemctl --user enable` para
+  serviços PostgreSQL, Ollama ou outras dependências sem uma ação
+  específica e inequívoca solicitada pelo usuário. No perfil NEXUS,
+  Ollama e PostgreSQL devem iniciar **sob demanda** e liberar recursos
+  quando a sessão terminar, desde que nenhum outro aplicativo dependa
+  deles. Não modificar ou parar serviços de terceiros silenciosamente.
+- Ubuntu/Debian são a prioridade de instalação e testes físicos;
+  outras distribuições Linux são alvos de compatibilidade progressiva,
+  sem declarar funcionamento universal com base apenas em testes Xvfb.
+- Ferramentas opcionais do sistema executadas por subprocesso **não**
+  são automaticamente sandbox. Antes de invocar programas externos,
+  confirmar o alvo, limitar argumentos, tempo e tamanho dos arquivos,
+  validar entradas e saídas, e impedir leitura de links simbólicos.
+  A autorização do usuário permite a ação; não transforma executáveis
+  instalados por terceiros em programas seguros ou sem rede.
+- Conversas arquivadas são texto local legível pela conta Linux e
+  podem conter informações fornecidas pelo próprio usuário. Não
+  prometer filtragem integral de segredos ou criptografia automática.
+- Uma release não deve ser publicada apenas por `pytest`: exigir CI
+  real no SHA da `main` e aceite em hardware físico para áudio,
+  câmera, visão, consumo de recursos, atualização e permissões.
+
 ## Requisitos de experiência e critérios de aceite
 
 | Requisito | Critério observável |

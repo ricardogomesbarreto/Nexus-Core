@@ -23,6 +23,27 @@ _MAX_INPUT = 20 * 1024 * 1024
 _MAX_OUTPUT = 25 * 1024 * 1024
 
 
+def _validate_converted_output(data: bytes, extension: str) -> None:
+    """Reject empty or obviously mismatched formats before saving a result.
+
+    Magic bytes do not certify conversion correctness, but prevent a CLI that
+    exits zero without producing a usable file from reporting success.
+    """
+    if not data:
+        raise ValueError("O conversor produziu um arquivo vazio.")
+    signatures = {
+        ".pdf": data.startswith(bytes.fromhex("255044462d")),
+        ".png": data.startswith(bytes.fromhex("89504e470d0a1a0a")),
+        ".jpg": data.startswith(bytes.fromhex("ffd8ff")),
+        ".jpeg": data.startswith(bytes.fromhex("ffd8ff")),
+        ".webp": data.startswith(b"RIFF") and data[8:12] == b"WEBP",
+        ".docx": data.startswith(bytes.fromhex("504b0304")),
+        ".odt": data.startswith(bytes.fromhex("504b0304")),
+    }
+    if extension in signatures and not signatures[extension]:
+        raise ValueError("O conversor produziu um formato incompatível.")
+
+
 def _write_new(policy: PathSecurity, destination: str, data: bytes) -> str:
     """Create only a new file under a pinned, non-symlink parent directory."""
     raw, _ = policy._components(destination)
@@ -119,7 +140,7 @@ class EditImageTool(NexusTool):
         except ImportError:
             return ToolResult(False, self.name, error="Instale o suporte local de imagens: pip install -e '.[vision]'.")
         except (ValueError, OSError, PermissionError, UnidentifiedImageError,
-                Image.DecompressionBombWarning) as exc:
+                Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
             return ToolResult(False, self.name, error=f"Edição não concluída: {type(exc).__name__}.")
 
 
@@ -153,8 +174,24 @@ class CreateGraphicTool(NexusTool):
             canvas.rounded_rectangle((55, 55, 1145, 620), radius=32,
                                      outline="#bb8999", width=3)
             canvas.rounded_rectangle((90, 95, 235, 109), radius=7, fill="#9ee6b6")
-            font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-            font = ImageFont.truetype(font_path, 56) if Path(font_path).is_file() else ImageFont.load_default()
+            # Font paths vary between Debian/Ubuntu, Fedora and Arch.
+            # Keep the same palette without requiring a distro-specific font.
+            font = None
+            for font_path in (
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
+                "/usr/share/fonts/TTF/DejaVuSans.ttf",
+                "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+                "/usr/share/fonts/liberation-sans/LiberationSans-Regular.ttf",
+            ):
+                if Path(font_path).is_file():
+                    try:
+                        font = ImageFont.truetype(font_path, 56)
+                        break
+                    except OSError:
+                        pass
+            if font is None:
+                font = ImageFont.load_default(size=56)
             words = title.strip().split()
             rows, line = [], ""
             for word in words:
@@ -237,11 +274,17 @@ class CraftConvertTool(NexusTool):
                     result = subprocess.run(args, cwd=directory, stdin=subprocess.DEVNULL,
                                             stdout=stream, stderr=subprocess.DEVNULL,
                                             timeout=90, check=False)
-                if result.returncode != 0 or not outfile.is_file():
+                if result.returncode != 0:
                     raise ValueError("O programa local não conseguiu converter o arquivo.")
-                if outfile.stat().st_size > _MAX_OUTPUT:
-                    raise ValueError("Resultado maior que o limite local.")
-                saved = _write_new(policy, output, outfile.read_bytes())
+                # Do not follow a CLI-created symlink pointing outside the
+                # private work directory. Use pinned regular-file descriptors
+                # just like the source-file reader, with an output size cap.
+                staging_policy = PathSecurity()
+                staging_policy.home = work
+                staging_policy.protected_paths = []
+                converted = _read_source(staging_policy, str(outfile), _MAX_OUTPUT)
+                _validate_converted_output(converted, output_ext)
+                saved = _write_new(policy, output, converted)
             return ToolResult(True, self.name, data={"path": saved, "kind": kind})
         except (OSError, PermissionError, ValueError, subprocess.TimeoutExpired) as exc:
             return ToolResult(False, self.name,
