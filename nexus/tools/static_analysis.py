@@ -97,8 +97,54 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
     return "DESCONHECIDO", "Tipo não identificado pela assinatura e amostra disponíveis."
 
 
+MAX_ZIP_DIRECTORY_BYTES = 8 * 1024 * 1024
+
+
+def _check_zip_directory_bounds(stream) -> None:
+    """Bound ZIP central directory allocations before instantiating ZipFile.
+
+    The End of Central Directory lives in the last 65557 bytes (22-byte
+    record + 65535-byte comment). ZIP64 and multi-disk ZIP are intentionally
+    unsupported by the lightweight analyzer; these are not rejected as
+    dangerous files, only as beyond the declared local inspection policy.
+    """
+    stream.seek(0, os.SEEK_END)
+    total = stream.tell()
+    if total < 22:
+        raise ValueError("ZIP sem diretório central.")
+    size = min(total, 65557)
+    stream.seek(total - size)
+    tail = stream.read(size)
+    pos = len(tail)
+    found = -1
+    while True:
+        pos = tail.rfind(b"PK\x05\x06", 0, pos)
+        if pos < 0:
+            break
+        if pos + 22 <= len(tail):
+            comment_size = struct.unpack_from("<H", tail, pos + 20)[0]
+            if pos + 22 + comment_size == len(tail):
+                found = pos
+                break
+    if found < 0:
+        raise ValueError("ZIP sem registro EOCD válido.")
+    disk, central_disk, entries_disk, entries_total, directory_size, directory_offset = (
+        struct.unpack_from("<HHHHII", tail, found + 4)
+    )
+    if disk or central_disk or entries_disk != entries_total:
+        raise ValueError("ZIP multidisco não suportado.")
+    if (entries_total == 0xFFFF or directory_size == 0xFFFFFFFF or
+            directory_offset == 0xFFFFFFFF):
+        raise ValueError("ZIP64 não suportado no índice limitado.")
+    if entries_total > MAX_ARCHIVE_MEMBERS or directory_size > MAX_ZIP_DIRECTORY_BYTES:
+        raise ValueError("Índice ZIP excede limites de entradas ou memória.")
+    if directory_size + directory_offset > total:
+        raise ValueError("Limites do índice ZIP inconsistentes.")
+
+
 def _zip_summary(stream, suffix: str) -> tuple[str, str]:
     """Only inspect the central directory. Never extract or decompress entries."""
+    _check_zip_directory_bounds(stream)
     with zipfile.ZipFile(stream, "r") as archive:
         names = archive.namelist()
         if len(names) > MAX_ARCHIVE_MEMBERS:
