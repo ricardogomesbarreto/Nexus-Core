@@ -21,14 +21,15 @@ prévia da câmera e ações não comprovam esses comportamentos. Naquela versã
 `n` contava indevidamente como falha; agora `n` e Enter deixam a etapa pendente,
 e somente `f` registra falha testada. O aceite físico permanece pendente.
 
-**Revisão local da proposta de indicador e recursos (17/10/2026):** 1.480
-testes passaram, 111 foram ignorados neste ambiente sem display, serviços e
-hardware Ubuntu; o wheel 0.9.12 foi gerado e contém os módulos novos. O
-diagnóstico `--resource-check` funcionou sem Ollama neste ambiente, sem
-iniciar aplicação, inferência ou rede externa. Isso não mede a memória, o
-tempo de resposta ou o aquecimento do notebook. A proposta ainda depende de
-CI para o SHA final na `main` e das verificações físicas abaixo. Nenhuma tag
-foi criada.
+**Integração do indicador e dos recursos (17/10/2026):** a revisão local
+inicial passou com 1.480 testes e 111 ignorados, e gerou o wheel 0.9.12.
+Depois, o PR #66 integrou os ajustes à `main` no commit `bb7e487`; sua CI
+de pull request passou com 1.619 testes, PostgreSQL e display virtual.
+A árvore de arquivos desse commit é idêntica à árvore testada no PR. Isso
+não é o aceite no notebook nem substitui a exigência de CI `push` para o
+SHA final antes de publicar uma tag. O diagnóstico `--resource-check` foi
+executado sem Ollama neste ambiente; consumo, latência e aquecimento no
+notebook continuam sem medição. Nenhuma tag v0.9.12 foi criada.
 
 **Teste adicional recebido em 17/10/2026:** no notebook, a tentativa de
 aplicar o patch falhou porque o arquivo não existia em `~/Downloads`; portanto
@@ -36,12 +37,13 @@ o programa executado não tinha o indicador de rede nem `--resource-check`.
 Na sessão registrada, o Vosk reconheceu algumas falas incorretamente e várias
 capturas de trinta segundos terminaram sem transcrição. Abrir o navegador
 precisou de confirmação; uma foto visual levou cerca de 111 segundos para
-analisar. São falhas observadas da instalação anterior, não aceite. A revisão
-local agora limita a espera sem palavras a oito segundos, solicita repetição
+analisar. São falhas observadas da instalação anterior, não aceite. O código
+integrado agora limita a espera sem palavras a oito segundos, solicita repetição
 para comando ambíguo, abre apenas o navegador padrão sem confirmação extra e
-oferece nova foto com consentimento por captura. Ela ainda não foi instalada
-nem testada fisicamente nesse notebook; medir acerto de voz e latência da
-visão novamente antes de publicar qualquer tag.
+oferece nova foto com consentimento por captura. Atualize diretamente pela
+`main` com `git pull --ff-only` e execute o instalador; não há patch para
+baixar em `~/Downloads`. Essa versão ainda precisa de teste físico no notebook:
+medir acerto de voz e latência da visão novamente antes de publicar uma tag.
 
 ## Logs ao vivo enquanto usa o assistente
 
