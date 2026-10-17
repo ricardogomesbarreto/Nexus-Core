@@ -156,8 +156,8 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, str]] | None:
     # permission gate and each tool's extension policy are still enforced.
     pdf_text = re.fullmatch(
         r"(?:extraia|extrair) o texto (?:de|do) "
-        r"(/[\\w ./À-ÿ-]{1,400}\\.pdf) em "
-        r"(/[\\w ./À-ÿ-]{1,400}\\.txt)",
+        r"(/[\w ./À-ÿ-]{1,400}\.pdf) em "
+        r"(/[\w ./À-ÿ-]{1,400}\.txt)",
         current, re.IGNORECASE,
     )
     if pdf_text:
@@ -167,8 +167,8 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, str]] | None:
         }
     conversion = re.fullmatch(
         r"(?:converta|converter) "
-        r"(/[\\w ./À-ÿ-]{1,400}\\.(?:png|jpe?g|webp|psd|pcraft|docx|odt|md|txt)) "
-        r"em (/[\\w ./À-ÿ-]{1,400}\\.(?:png|jpe?g|webp|pcraft|docx|pdf|md|txt))",
+        r"(/[\w ./À-ÿ-]{1,400}\.(?:png|jpe?g|webp|psd|pcraft|docx|odt|md|txt)) "
+        r"em (/[\w ./À-ÿ-]{1,400}\.(?:png|jpe?g|webp|pcraft|docx|pdf|md|txt))",
         current, re.IGNORECASE,
     )
     if conversion:
