@@ -22,7 +22,8 @@ _MAX_JSON_BYTES = 512 * 1024
 _INPUT_LIMIT = 20 * 1024 * 1024
 _FIELDS = {
     "image": ("width", "height", "depth", "channels", "layers"),
-    "document": ("pages", "pageCount", "page_count", "words", "wordCount", "paragraphs", "characters"),
+    "document": ("pages", "words", "paragraphs", "sections", "comments", "encrypted",
+                 "pageCount", "page_count", "wordCount", "characters"),
     "pdf": ("pages", "bookmarks", "annotations", "fields", "links", "layers",
             "attachments", "transitions", "encrypted", "tagged", "javascript"),
 }
