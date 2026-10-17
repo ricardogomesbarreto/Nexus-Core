@@ -223,6 +223,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="executa diagnóstico físico guiado e imprime resultados seguros para compartilhar",
     )
     actions.add_argument(
+        "--resource-check", action="store_true",
+        help="resume memória Linux e modelos carregados no Ollama local, sem inferência",
+    )
+    actions.add_argument(
         "--platform-check", action="store_true",
         help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
     )
@@ -316,6 +320,15 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.resource_check:
+        if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
+                or args.vision_question is not None or args.vision_model != "gemma3:4b"
+                or args.workspace is not None or args.memory_confirm
+                or args.memory_days != 90 or args.knowledge_limit != 5):
+            parser.error("--resource-check é diagnóstico isolado")
+        from nexus.platforms.resources import inspect_resources
+        print(json.dumps(inspect_resources(), ensure_ascii=False))
+        return
     if args.ubuntu_preflight:
         if (has_memory_action or any(knowledge_actions)
                 or args.knowledge_with_memory or args.vision_question is not None

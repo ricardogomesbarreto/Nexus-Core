@@ -326,6 +326,61 @@ e consentimentos no desktop, criação de pasta, abertura de
 aplicativo, recuperação/restauração ensaiada em instalação
 descartável e automação de teclado dependente de X11 quando em
 sessão Wayland.
+### Indicador de internet na janela
+
+O cabeçalho mostra um ponto colorido com **ONLINE**, **OFFLINE** ou
+**NÃO VERIFICADO**. Ele muda enquanto a janela está aberta e registra
+`TESTE-LOCAL evento=rede estado=online|offline|nao_verificado` no terminal,
+sem dados de navegação. Na configuração local padrão, lê a cada dez segundos
+o estado já conhecido pelo NetworkManager (`nmcli networking
+connectivity`), sem mandar uma nova requisição à internet. `full` significa
+online; `none`, `limited` ou `portal` são apresentados como offline para
+acesso completo. Se o NetworkManager não souber determinar a conexão ou não
+estiver instalado, mostra **NÃO VERIFICADO**, sem presumir que há internet.
+Com `NEXUS_OFFLINE_MODE=false`, o indicador usa o monitor externo existente
+do núcleo, que consulta periodicamente um endereço externo. A verificação
+reflete a disponibilidade da rede, **não** a prontidão do PostgreSQL,
+Ollama, microfone ou câmera. Internet disponível não envia automaticamente
+perguntas, áudio nem imagens para um provedor remoto.
+
+| Situação | Efeito real nesta versão |
+| --- | --- |
+| Internet disponível | Permite baixar dependências/modelos e consultar ou preparar atualizações estáveis quando a verificação automática foi ativada. O chat e a visão continuam usando Ollama local. |
+| Sem internet | Conversa local, Vosk, síntese de voz, PostgreSQL e visão com modelos previamente instalados podem funcionar; downloads, `git pull` e checagens de release dependentes da rede aguardam conexão. |
+| Serviço local parado | O ícone pode mostrar ONLINE e o chat ainda falhar se Ollama ou PostgreSQL estiver indisponível; use o preflight para diagnosticar os serviços. |
+
+Confira a troca do indicador desligando e religando a conexão no Ubuntu, com
+`~/.local/bin/nexus-core --desktop` aberto, e copie as linhas `evento=rede`.
+O resultado no notebook físico ainda precisa ser observado antes de homologar
+esta versão.
+
+### Diagnóstico de recursos e modelo visual
+
+`~/.local/bin/nexus-core --resource-check` lê somente `/proc/meminfo` e o
+endpoint **local** `/api/ps` do Ollama. O JSON mostra memória disponível,
+swap em uso, quantidade de modelos carregados e tamanhos informados pelo
+Ollama, sem nomes de modelos, conteúdo das conversas ou inferência. A soma de
+tamanhos dos modelos **não** é uma medida exata da RAM usada pelo Nexus Core;
+compare os resultados com `free -h` e `ollama ps` no seu computador.
+
+As análises visuais respeitam o orçamento adaptativo descrito acima: no perfil
+`eco`, `keep_alive: "0s"` permite descarregar o modelo após cada resposta;
+no `balanced`, `keep_alive: "45s"` mantém o modelo por até 45 segundos para
+outra pergunta. A descarga libera memória ociosa, mas recarregar o modelo
+pode aumentar a latência. Ela não reduz o trabalho nem garante menos
+aquecimento durante a inferência; os resultados dependem da RAM, CPU/GPU,
+outros processos e versão do Ollama.
+
+```bash
+# Antes, durante e depois de uma análise da câmera, em outro terminal:
+~/.local/bin/nexus-core --resource-check | python3 -m json.tool
+ollama ps
+free -h
+```
+
+O teste físico deve registrar tempo da resposta, memória disponível, swap e
+modelos carregados antes, logo depois e após ao menos 50 segundos sem nova
+análise visual. O resultado do hardware ainda não foi homologado.
 
 Pedidos exatos como **“Crie uma pasta chamada Projetos”** (também com o
 prefixo **“Nexus,”**) agora selecionam
@@ -337,8 +392,12 @@ Uma frase transcrita incorretamente pode escolher outro nome: confira o caminho
 mostrado **antes** de autorizar. Perguntas sobre capacidades e caminhos com
 subpastas não entram nessa rota exata.
 
-Os comandos exatos para abrir navegador, gerenciador de arquivos ou terminal
-também solicitam confirmação por ação e aceitam uma sessão gráfica Wayland.
+O comando exato **“Abra o navegador”** abre o navegador padrão registrado no
+desktop (`xdg-settings get default-web-browser`) usando seu ID `.desktop`, sem
+pedir confirmação adicional e sem abrir um endereço web. Se o padrão for Brave,
+o Nexus solicita a abertura do Brave. Ações no navegador, como navegar ou
+digitar, têm permissões próprias. O gerenciador de arquivos e o terminal
+continuam a solicitar confirmação por ação. Essas aberturas aceitam Wayland.
 Digitação e navegação em **outras janelas** continuam limitadas a X11 local.
 O portal de desktop exige concessão da sessão pelo sistema e não fornece a
 mesma identidade de janela exigida pela proteção atual; essa automação Wayland
@@ -405,17 +464,25 @@ esta alteração integra o código da v0.9.12 sem publicar release estável.
   exata acima usa uma rota local; outros pedidos continuam sujeitos ao modelo.
   Exige confirmação individual, pasta principal existente e caminho sem links
   simbólicos. Não modifica pastas protegidas ou arquivos já existentes.
-- **Abrir aplicativos:** `Abra o navegador`, `Abra o gerenciador de arquivos`
-  e `Abra o terminal` são comandos exatos que dispensam espera pelo Ollama,
-  mas ainda exigem confirmação. O iniciador seleciona somente aplicativos
-  conhecidos instalados nos caminhos de sistema; não recebe argumentos ou
-  comandos do modelo. Pode ser chamado no Wayland com sessão gráfica ativa.
+- **Abrir aplicativos:** `Abra o navegador` dispensa espera pelo Ollama e
+  confirmação adicional. Consulta o navegador padrão do desktop e inicia
+  somente o ID de aplicativo registrado, sem URL ou argumentos do modelo.
+  `Abra o gerenciador de arquivos` e `Abra o terminal` ainda exigem confirmação.
+  Se a voz for ambígua, peça para repetir: o Nexus não executa um palpite.
+  O instalador verifica `xdg-settings` e `gtk-launch`, instalando `xdg-utils`
+  e `libgtk-3-bin` pelo Ubuntu após a confirmação de pacotes do sistema.
   O resultado confirma o envio da solicitação de abertura, não a interação
   subsequente com o aplicativo.
 - **Escuta após silêncio:** ao parar a entrega de bytes pelo PipeWire depois
   de uma fala, o reconhecedor verifica o tempo de pausa e finaliza o turno;
   antes podia esperar o limite total da captura. Testes simulados cobrem o
-  caso. Latência real e qualidade da transcrição exigem teste físico.
+  caso. Se houver áudio constante sem nenhuma palavra parcial do Vosk, encerra
+  a tentativa após oito segundos de sinal em vez de esperar os trinta segundos
+  do fluxo. Uma frase ambígua semelhante a “abrir o navegador” gera pedido de
+  repetição, sem acionar o modelo ou abrir aplicativos. Latência real e
+  qualidade da transcrição exigem teste físico.
+- **Foto da webcam:** a prévia apresenta **Tentar novamente** e **Fechar
+  prévia**. Cada nova foto é outro pedido, com autorização de captura própria.
 
 Essas mudanças foram integradas ao código até a versão **0.9.12**;
 não representam uma nova tag ou release. Abrir arquivos no aplicativo padrão,
@@ -1110,8 +1177,9 @@ instalador guiado para baixar o modelo; a conversa digitada continua disponível
 # v0.9.12 — Authorized Desktop Actions (código integrado; aceite físico pendente)
 
 Pedidos exatos para uma pasta filha da home são resolvidos localmente e
-continuam sujeitos a autorização por operação. O navegador, o gerenciador de
-arquivos e o terminal permanecem ações delimitadas que funcionam em sessões
+continuam sujeitos a autorização por operação. Abrir o navegador padrão é
+uma ação explícita de baixo risco sem confirmação extra; o gerenciador de
+arquivos e o terminal continuam a exigir confirmação e funcionam em sessões
 gráficas Wayland e X11. A automação de teclado em janelas de terceiros exige
 X11; nenhuma sessão Wayland foi homologada para essa finalidade.
 

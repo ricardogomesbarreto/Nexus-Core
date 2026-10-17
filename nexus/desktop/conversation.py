@@ -181,6 +181,8 @@ class ChatSession:
             return f"Pasta criada: {data['path']}"
         if result.tool_name == "launch_application" and isinstance(data, dict):
             return f"Solicitei a abertura de {data['application']} no desktop."
+        if result.tool_name == "open_default_browser" and isinstance(data, dict):
+            return f"Solicitei a abertura do navegador padrão ({data['browser_id']})."
         if result.tool_name == "system_info" and isinstance(data, dict):
             parts = [
                 f"Sistema operacional: {data.get('system', 'desconhecido')}",

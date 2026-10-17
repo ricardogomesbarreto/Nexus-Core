@@ -42,8 +42,9 @@ def local_conversation_answer(message: str, *, now: datetime | None = None) -> s
             "e um modelo visual instalado. Também posso consultar informações "
             "e arquivos permitidos e executar ações limitadas no X11, com as "
             "confirmações exigidas. A automação de aplicativos no Wayland, "
-            "abrir aplicativos específicos e criar uma pasta por comando "
-            "exigem confirmação individual. Abrir arquivos em aplicativos e "
+            "criar uma pasta por comando e abrir aplicativos como terminal e arquivos "
+            "exigem confirmação individual. Posso abrir o navegador padrão "
+            "quando você pedir. Abrir arquivos em aplicativos e "
             "automatizar programas no Wayland ainda não estão disponíveis."
         )
     return None

@@ -196,6 +196,7 @@ class LocalRecognizer(_StoppableProcess):
     DURATION = 8
     STREAM_LIMIT = 30
     END_OF_SPEECH_SECONDS = 1.2
+    MAX_UNDECODABLE_SECONDS = 8.0
 
     def __init__(self, model_path: str | Path | None = None):
         super().__init__()
@@ -336,6 +337,7 @@ class LocalRecognizer(_StoppableProcess):
             deadline = monotonic() + self.STREAM_LIMIT
             next_level = 0.0
             speech_started = False
+            speech_started_at = 0.0
             last_voice = 0.0
             partial_text = ""
             last_partial_change = 0.0
@@ -388,6 +390,8 @@ class LocalRecognizer(_StoppableProcess):
                     # Peak feedback is independent of Vosk word recognition.
                     next_level = monotonic() + 0.25
                 if level >= 3:
+                    if not speech_started:
+                        speech_started_at = now
                     speech_started = True
                     last_voice = now
                 if decoder.AcceptWaveform(frames):
@@ -414,6 +418,12 @@ class LocalRecognizer(_StoppableProcess):
                     text = json.loads(decoder.FinalResult()).get("text", "")
                     return (text.strip() if isinstance(text, str) and text.strip()
                             else partial_text)[:4000]
+                # A constant noisy input must not occupy the microphone for
+                # thirty seconds when Vosk has no partial transcription.
+                if (speech_started and not partial_text
+                        and now - speech_started_at >= self.MAX_UNDECODABLE_SECONDS):
+                    text = json.loads(decoder.FinalResult()).get("text", "")
+                    return text.strip()[:4000] if isinstance(text, str) else ""
             if cancelled():
                 return ""
             if process.poll() is not None and process.returncode != 0:
