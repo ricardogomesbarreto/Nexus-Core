@@ -24,6 +24,7 @@ from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
+from nexus.desktop.runtime_log import live_event
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.speech_text import readable_model_text, speech_from_model_text
 from nexus.voice.wake import extract_utterance
@@ -130,6 +131,10 @@ class DesktopWindow:
         self._busy = False
         self._operation_kind = None
         self._operation_started = 0.0
+        self._last_progress_interval = 0
+        self._chat_source = "texto"
+        self._listen_started = 0.0
+        self._speak_started = 0.0
         self._cancel_requested = False
         self._listening = False
         self._voice_active = (
@@ -436,6 +441,7 @@ class DesktopWindow:
             self._append("Nexus Core", self._history_load_warning, "assistant")
         self.input.focus_set()
         self._refresh_privacy_status()
+        live_event("interface", "pronto")
         root.after(80, self._poll)
         root.after(120, self._start_spoken_welcome)
 
@@ -646,6 +652,7 @@ class DesktopWindow:
         if not self._busy or self._closing or self._cancel_requested:
             return
         self._cancel_requested = True
+        live_event("cancelamento", "solicitado")
         if self._operation_kind == "chat":
             self.session.cancel_current()
             # Release threads blocked on tool consent immediately.
@@ -680,10 +687,12 @@ class DesktopWindow:
         self._speak_generation += 1
         generation = self._speak_generation
         self._speaking = True
+        self._speak_started = monotonic()
+        live_event("fala", "iniciado")
         self._start_worker(self._speak, text, self.voice_choice.get(), generation)
         return True
 
-    def _send(self, event=None, *, advisory_only=False):
+    def _send(self, event=None, *, advisory_only=False, channel="texto"):
         if self._busy or self._closing:
             return "break"
         message = self.input.get("1.0", "end-1c").strip()
@@ -729,7 +738,10 @@ class DesktopWindow:
         self._busy = True
         self._operation_kind = "chat"
         self._operation_started = monotonic()
+        self._last_progress_interval = 0
+        self._chat_source = channel
         self._cancel_requested = False
+        live_event("chat", "iniciado", source=channel)
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
         self.cancel_button.configure(state="normal")
@@ -783,6 +795,8 @@ class DesktopWindow:
         self._audio_peaks = 0
         self._audio_level_samples = 0
         self._mic_last_signal = 0.0
+        self._listen_started = monotonic()
+        live_event("escuta", "iniciado", source="voz")
         self.microphone_indicator.show_peak(0, listening=True)
         self._audio_level_label.configure(text="Entrada: aguardando")
         self.status.configure(text="Ouvindo… diga sua pergunta")
@@ -814,6 +828,7 @@ class DesktopWindow:
         if self._closing:
             return
         self._voice_active = not self._voice_active
+        live_event("escuta", "retomado" if self._voice_active else "pausado", source="voz")
         self.mic_button.configure(
             text="Pausar escuta" if self._voice_active else "Retomar escuta"
         )
@@ -969,9 +984,11 @@ class DesktopWindow:
         """Authorize one live session; each spoken question selects one frame."""
         if self._closing or self._busy:
             return
+        live_event("camera", "solicitado", source="camera_live")
         from tkinter import simpledialog
         devices = LocalVision.cameras()
         if not devices:
+            live_event("camera", "falhou", source="camera_live")
             self._vision_notice("Nenhuma câmera local foi encontrada. "
                                 + LocalVision.camera_discovery_hint())
             return
@@ -995,6 +1012,7 @@ class DesktopWindow:
             "enviado somente ao Ollama local. Nenhum vídeo será gravado. "
             "Use 'Feche a câmera' ou o botão para parar.", parent=self.root,
         ) or self._closing:
+            live_event("camera", "negado", source="camera_live")
             return
         stream = CameraStream(index)
         try:
@@ -1014,16 +1032,19 @@ class DesktopWindow:
             preview.protocol("WM_DELETE_WINDOW", self._stop_live_camera)
         except VisionError as exc:
             stream.stop()
+            live_event("camera", "falhou", source="camera_live")
             self._vision_notice(str(exc))
             return
         except Exception:
             stream.stop()
+            live_event("camera", "falhou", source="camera_live")
             self._vision_notice("Não foi possível abrir a prévia da câmera.")
             return
         self._live_camera = stream
         self._live_camera_window = preview
         self._live_camera_label = label
         self._live_camera_sequence = 0
+        live_event("camera", "iniciado", source="camera_live")
         self._vision_buttons[3].configure(text="Desligar câmera")
         self._append("Nexus Core", "Abrindo câmera. Aguarde a primeira imagem na prévia.", "assistant")
         self.status.configure(text="Abrindo câmera; aguardando a primeira imagem…")
@@ -1033,6 +1054,7 @@ class DesktopWindow:
         if stream is None:
             return
         self._live_camera = None
+        live_event("camera", "desligado", source="camera_live")
         stream.stop()
         preview = self._live_camera_window
         self._live_camera_window = None
@@ -1078,6 +1100,8 @@ class DesktopWindow:
         self._operation_kind = "vision"
         self._vision_source = "camera_live"
         self._operation_started = monotonic()
+        self._last_progress_interval = 0
+        live_event("visao", "iniciado", source="camera_live")
         self._cancel_requested = False
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
@@ -1190,11 +1214,14 @@ class DesktopWindow:
             parent=self.root,
         )
         if not consent or self._closing or self._busy:
+            live_event("visao", "negado", source=source)
             return
         self._busy = True
         self._operation_kind = "vision"
         self._operation_started = monotonic()
+        self._last_progress_interval = 0
         self._vision_source = source
+        live_event("visao", "iniciado", source=source)
         self._cancel_requested = False
         self.send_button.configure(state="disabled")
         self.suggest_button.configure(state="disabled")
@@ -1343,6 +1370,7 @@ class DesktopWindow:
         )
 
     def _confirm(self, request) -> bool:
+        live_event("autorizacao", "solicitado", tool=request.tool_name)
         details = [
             f"Ferramenta: {self._display(request.tool_name or 'unknown')}",
             f"Ação: {self._display(request.description)}",
@@ -1403,7 +1431,13 @@ class DesktopWindow:
         )
         self._permission_dialog = dialog
         try:
-            return dialog.ask()
+            approved = dialog.ask()
+            live_event("autorizacao", "aprovado" if approved else "negado",
+                       tool=request.tool_name)
+            return approved
+        except Exception:
+            live_event("autorizacao", "falhou", tool=request.tool_name)
+            raise
         finally:
             self._permission_dialog = None
 
@@ -1419,6 +1453,15 @@ class DesktopWindow:
             elapsed = int(monotonic() - self._operation_started)
             if elapsed >= 10:
                 self.status.configure(text=f"Ollama processando há {elapsed} s · Cancelar disponível")
+                interval = elapsed // 10
+                if interval > self._last_progress_interval:
+                    self._last_progress_interval = interval
+                    if self._operation_kind == "chat":
+                        live_event("chat", "processando", source=self._chat_source,
+                                   elapsed_ms=elapsed * 1000)
+                    elif self._operation_kind == "vision":
+                        live_event("visao", "processando", source=self._vision_source,
+                                   elapsed_ms=elapsed * 1000)
         self.confirmation.process(self._confirm)
         stream = self._live_camera
         if stream is not None:
@@ -1438,6 +1481,7 @@ class DesktopWindow:
                     self._live_camera_label.configure(image=photo, text="", width=0, height=0)
                     self._live_camera_label.image = photo
                     if first_frame:
+                        live_event("camera", "pronto", source="camera_live")
                         self.status.configure(text="Câmera ao vivo pronta · pergunte sobre o vídeo")
                 except (ImportError, OSError, ValueError, self.tk.TclError):
                     self._stop_live_camera()
@@ -1452,6 +1496,8 @@ class DesktopWindow:
                         and not self._closing):
                     self._audio_level_samples += 1
                     level = max(0, min(100, int(value)))
+                    if level >= 2 and self._audio_peaks < 2:
+                        live_event("escuta", "recebido", source="voz")
                     self._audio_peaks = max(self._audio_peaks, level)
                     self._mic_last_signal = monotonic()
                     self.microphone_indicator.show_peak(level, listening=self._voice_active)
@@ -1474,7 +1520,14 @@ class DesktopWindow:
                 if generation != self._listen_generation:
                     self._start_listening()
                     continue
+                if kind == "transcript" and value:
+                    live_event("reconhecimento", "concluido", source="voz",
+                               elapsed_ms=int((monotonic() - self._listen_started) * 1000))
+                elif kind == "silence":
+                    live_event("reconhecimento", "sem_transcricao" if self._audio_peaks >= 2 else "sem_sinal",
+                               source="voz", elapsed_ms=int((monotonic() - self._listen_started) * 1000))
                 if kind == "listen_error":
+                    live_event("reconhecimento", "falhou", source="voz")
                     transient = (
                         "capturar áudio" in value
                         or "Fluxo de áudio interrompido" in value
@@ -1546,7 +1599,7 @@ class DesktopWindow:
                         else:
                             self.input.delete("1.0", "end")
                             self.input.insert("1.0", utterance)
-                            self._send()
+                            self._send(channel="voz")
                     else:
                         if kind == "silence":
                             self._recognition_failures += 1
@@ -1570,6 +1623,8 @@ class DesktopWindow:
                 if generation != self._speak_generation:
                     continue
                 self._speaking = False
+                live_event("fala", "concluido" if kind == "speak_done" else "falhou",
+                           elapsed_ms=int((monotonic() - self._speak_started) * 1000))
                 if not self._closing and not self._busy:
                     if kind == "speak_error" and self.speech_enabled.get():
                         self.status.configure(text=value)
@@ -1591,6 +1646,14 @@ class DesktopWindow:
                 break
             cancelled = self._cancel_requested
             if not self._closing:
+                elapsed_ms = int((monotonic() - self._operation_started) * 1000)
+                live_event("chat", "cancelado" if cancelled or reply.outcome.error_code == "CANCELLED"
+                           else "concluido" if reply.outcome.success else "falhou",
+                           source=self._chat_source, elapsed_ms=elapsed_ms)
+                if reply.outcome.tool_result is not None:
+                    tool_result = reply.outcome.tool_result
+                    live_event("ferramenta", "concluido" if tool_result.success else "falhou",
+                               tool=tool_result.tool_name)
                 self._finish_operation()
                 if cancelled or reply.outcome.error_code == "CANCELLED":
                     self._append("Nexus Core", "Solicitação cancelada.", "assistant")
@@ -1626,6 +1689,9 @@ class DesktopWindow:
             if self._closing:
                 self._busy = False
                 continue
+            live_event("visao", "cancelado" if cancelled else "concluido" if kind == "success" else "falhou",
+                       source=self._vision_source,
+                       elapsed_ms=int((monotonic() - self._operation_started) * 1000))
             self._finish_operation()
             if cancelled:
                 self._append("Nexus Core", "Análise visual cancelada.", "assistant")
@@ -1652,6 +1718,7 @@ class DesktopWindow:
     def _close(self) -> None:
         if self._closing:
             return
+        live_event("interface", "desligado")
         self._save_desktop_preferences()
         self._closing = True
         self._audio_level_label.configure(text="Entrada: desligada")

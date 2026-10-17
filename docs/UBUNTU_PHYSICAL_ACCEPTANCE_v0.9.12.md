@@ -12,6 +12,23 @@ e uma pergunta isolada pelo Ollama recebeu uma resposta curta. Houve relatos
 posteriores de problemas de câmera, latência e escuta contínua. Esses testes
 não foram repetidos nesta versão e não comprovam o funcionamento conjunto.
 
+## Logs ao vivo enquanto usa o assistente
+
+Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
+`~/.local/bin/nexus-core --desktop` diretamente no terminal. **Deixe esse
+terminal aberto enquanto conversa e testa as funções na janela.** O próprio
+processo mostra `TESTE-LOCAL evento=... estado=...` com transições de chat,
+escuta, reconhecimento, reprodução, câmera, análise visual e permissões.
+`duracao_ms` mede o tempo do turno; não indica qualidade da resposta. Se a
+resposta demorar, `processando` aparece a cada dez segundos. A escuta
+registra o primeiro sinal de cada ciclo, sem imprimir o nível a cada amostra;
+a câmera registra início e primeiro quadro, sem inundar o terminal por vídeo.
+Copie as linhas `TESTE-LOCAL` da sessão e os erros relevantes para este chat.
+Os logs não incluem conteúdo das perguntas, fala transcrita, imagem ou senhas.
+`concluido` significa que o processo terminou, e você ainda precisa informar
+se a resposta foi correta, audível e visualmente coerente. Não há homologação
+automática de teclado Wayland nem de recuperação real.
+
 ## Registro guiado no terminal para compartilhar
 
 Depois de atualizar a `main` e executar o instalador, rode diretamente no
