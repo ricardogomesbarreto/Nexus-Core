@@ -190,7 +190,7 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, str]] | None:
         r"(?:o |a )?(?:arquivo|bin[aá]rio|aplicativo) "
         r"(/[\w ./À-ÿ-]{1,400}\."
         r"(?:elf|so|bin|exe|dll|apk|jar|war|zip|wasm|asar|js|mjs|cjs|jsx|ts|tsx|"
-        r"json|pdf|png|jpe?g|docx|odt|tiff?))",
+        r"json|pdf|png|jpe?g|webp|gif|docx|odt|tiff?))",
         current, flags=re.IGNORECASE,
     )
     if inspection:
