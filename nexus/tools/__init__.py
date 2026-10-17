@@ -20,6 +20,7 @@ from nexus.tools.terminal import TerminalSandboxTool
 from nexus.tools.desktop import (
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
 )
+from nexus.tools.creative import EditImageTool, CreateGraphicTool, CraftConvertTool
 
 
 __all__ = [
@@ -43,4 +44,7 @@ __all__ = [
     "DesktopWindowInfoTool",
     "DesktopTypeTextTool",
     "DesktopNavigateTool",
+    "EditImageTool",
+    "CreateGraphicTool",
+    "CraftConvertTool",
 ]

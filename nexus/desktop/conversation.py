@@ -183,6 +183,8 @@ class ChatSession:
             return f"Solicitei a abertura de {data['application']} no desktop."
         if result.tool_name == "open_default_browser" and isinstance(data, dict):
             return f"Solicitei a abertura do navegador padrão ({data['browser_id']})."
+        if result.tool_name in {"edit_image_local", "create_graphic_local", "craft_convert_local"} and isinstance(data, dict):
+            return f"Arquivo criado no computador: {data['path']}"
         if result.tool_name == "system_info" and isinstance(data, dict):
             parts = [
                 f"Sistema operacional: {data.get('system', 'desconhecido')}",
