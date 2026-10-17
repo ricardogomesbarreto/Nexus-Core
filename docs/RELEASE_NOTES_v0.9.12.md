@@ -2,6 +2,11 @@
 
 **Estado: código em desenvolvimento integrado à `main`; sem tag/release estável.**
 
+O comando `nexus-core --acceptance-log` reúne verificações locais e perguntas
+de observação física em uma saída resumida para compartilhar, sem imprimir
+credenciais, transcrição ou imagens. Uso de microfone e câmera pede consentimento
+separado; as observações manuais não são aprovação automática de release.
+
 ## Entregas no código
 
 - A frase exata “Crie uma pasta chamada Projetos” e nomes simples semelhantes

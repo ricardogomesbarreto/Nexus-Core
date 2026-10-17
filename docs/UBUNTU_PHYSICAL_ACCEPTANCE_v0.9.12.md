@@ -12,6 +12,36 @@ e uma pergunta isolada pelo Ollama recebeu uma resposta curta. Houve relatos
 posteriores de problemas de câmera, latência e escuta contínua. Esses testes
 não foram repetidos nesta versão e não comprovam o funcionamento conjunto.
 
+## Registro guiado no terminal para compartilhar
+
+Depois de atualizar a `main` e executar o instalador, rode diretamente no
+terminal interativo (não redirecione a entrada padrão):
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main
+git pull --ff-only
+python3 scripts/install_linux.py
+~/.local/bin/nexus-core --acceptance-log
+```
+
+O comando mostra `[EXECUTANDO]` antes de cada etapa e `[PASSOU]`, `[FALHOU]`
+ou `[PENDENTE]` após a verificação. Ele consulta versão, PostgreSQL/Ollama,
+dependências e status de recuperação; pede `SIM` separadamente antes de usar
+Ollama, microfone, Vosk e um quadro da câmera. **Fale claramente quando o
+terminal mostrar o teste de áudio**. A captura da câmera não salva imagem.
+Abra a janela do assistente em **outro terminal** para responder às perguntas
+de observação manual: `[RELATADO]` indica apenas sua declaração, ainda não
+homologação independente. Use `n` para registrar uma falha e Enter para pular.
+
+Copie do cabeçalho `NEXUS CORE — REGISTRO DE ACEITE LOCAL` até `[RELEASE]` e
+cole aqui no chat. A saída omite áudio, transcrição, resposta do modelo,
+imagem, nomes de câmeras, senha e caminhos privados. Revise o texto antes de
+compartilhar; não cole logs brutos do instalador nem o arquivo de credenciais.
+Em execução sem terminal interativo, os testes físicos ficam `PENDENTE`.
+Mesmo com tudo verde, o resumo não cria tag nem substitui teste de recuperação
+real em instalação descartável.
+
 ## Identificação e instalação
 
 No terminal do Ubuntu do usuário:

@@ -219,6 +219,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="exibe o estado do núcleo no terminal",
     )
     actions.add_argument(
+        "--acceptance-log", action="store_true",
+        help="executa diagnóstico físico guiado e imprime resultados seguros para compartilhar",
+    )
+    actions.add_argument(
         "--platform-check", action="store_true",
         help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
     )
@@ -286,6 +290,9 @@ def cli(argv: list[str] | None = None) -> None:
         help="diretório local montado como somente leitura no sandbox",
     )
     args = parser.parse_args(argv)
+    if args.acceptance_log:
+        from nexus.platforms.acceptance import run_acceptance
+        raise SystemExit(run_acceptance())
     if args.workspace is not None and args.sandbox_command is None:
         parser.error("--workspace exige --sandbox-command")
     has_memory_action = any((

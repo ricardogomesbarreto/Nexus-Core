@@ -17,8 +17,10 @@ from .manager import (
 # A conservative check: even a mixed/invalid request never upgrades.
 READ_ONLY_FLAGS = frozenset((
     "--help", "-h", "--version", "--status",
+    "--acceptance-log",
     "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
     "--desktop-check", "--voice-check", "--vision-check",
+    "--microphone-test", "--recognition-test",
     "--camera-list", "--camera-test",
     "--devices-check", "--devices-preview-stdin",
 ))
