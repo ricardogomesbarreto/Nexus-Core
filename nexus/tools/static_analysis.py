@@ -77,6 +77,13 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
         return "PNG", "Imagem PNG; descrição visual é uma operação separada com consentimento."
     if header.startswith(bytes.fromhex("ffd8ff")):
         return "JPEG", "Imagem JPEG; análise visual precisa de autorização separada."
+    if header.startswith(b"RIFF") and header[8:12] == b"WEBP":
+        return "WEBP", "Imagem WebP identificada por assinatura; conteúdo visual não analisado."
+    if header[:4] in (b"II\x2a\x00", b"MM\x00\x2a",
+                      b"II\x2b\x00", b"MM\x00\x2b"):
+        return "TIFF", "Imagem TIFF/BigTIFF identificada por assinatura; conteúdo visual não analisado."
+    if header.startswith((b"GIF87a", b"GIF89a")):
+        return "GIF", "Imagem GIF identificada por assinatura; frames não analisados."
     if header[:2] == b"PK":
         return "ZIP", "Contêiner ZIP/JAR/APK; índice será analisado sem extrair membros."
     if suffix == ".asar":
