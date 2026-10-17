@@ -395,10 +395,6 @@ class DesktopWindow:
             widget.pack(side="left", padx=(0, 10))
             self._privacy_labels.append(widget)
 
-        ttk.Label(footer, text=(
-            "CRIAÇÃO LOCAL  ·  Peça no chat ou por voz: editar foto, criar cartaz, "
-            "converter arquivo. Cada gravação pede autorização."
-        ), style="Nexus.Creative.TLabel").pack(fill="x", pady=(8, 0))
         ttk.Label(footer, text="SUA MENSAGEM  ·  Enter envia  •  Shift+Enter quebra linha",
                   style="Nexus.Section.TLabel").pack(
                       anchor="w", pady=(7, 3))
