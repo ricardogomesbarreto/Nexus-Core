@@ -433,6 +433,74 @@ def verify_local_postgresql(python: Path, home: Path) -> None:
         raise PostgreSQLAuthenticationError("Login PostgreSQL não confirmado.") from exc
 
 
+def ensure_postgresql_running_for_install() -> bool:
+    """Request one-time service start when PostgreSQL is stopped.
+
+    Never enable services at boot or change cluster settings. The subsequent
+    verify_local_postgresql() must still authenticate with SELECT 1; pg_isready
+    by itself is not a successful authentication test.
+    """
+    import re
+    from time import monotonic, sleep
+
+    port_text = os.environ.get("NEXUS_DATABASE_PORT", "5432")
+    if not port_text.isdecimal() or not 1 <= int(port_text) <= 65535:
+        print("Porta PostgreSQL inválida; instalação não alterada.")
+        return False
+    if not installed("pg_isready"):
+        print("Cliente pg_isready indisponível; configure PostgreSQL antes de instalar.")
+        return False
+
+    def ready() -> bool:
+        try:
+            _run(
+                ["pg_isready", "-q", "-h", "127.0.0.1", "-p", port_text],
+                timeout=5,
+            )
+            return True
+        except (OSError, subprocess.SubprocessError):
+            return False
+
+    if ready():
+        return True
+    print(f"PostgreSQL local na porta {port_text} está parado.")
+    if not (installed("pg_lsclusters") and installed("systemctl") and installed("sudo")):
+        print("Inicie o PostgreSQL local manualmente e repita o instalador.")
+        return False
+    try:
+        found = _run(["pg_lsclusters", "--no-header"], capture=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        print("Clusters PostgreSQL não puderam ser consultados.")
+        return False
+    units = []
+    for line in found.stdout.splitlines():
+        fields = line.split()
+        if (len(fields) >= 4 and fields[2] == port_text
+                and re.fullmatch(r"[0-9]+", fields[0])
+                and re.fullmatch(r"[A-Za-z0-9_-]+", fields[1])):
+            units.append(f"postgresql@{fields[0]}-{fields[1]}.service")
+    if len(units) != 1:
+        print("Não foi possível identificar um cluster PostgreSQL único para a porta.")
+        return False
+    unit = units[0]
+    if not confirm(f"Iniciar apenas {unit} para autenticar a instalação agora?"):
+        print("Inicie o PostgreSQL quando for instalar; nenhuma unidade habilitada.")
+        return False
+    try:
+        _run(["sudo", "systemctl", "start", unit], timeout=35)
+    except (OSError, subprocess.SubprocessError):
+        print("PostgreSQL não pôde ser iniciado. Confira o estado do serviço.")
+        return False
+    deadline = monotonic() + 12
+    while monotonic() < deadline:
+        if ready():
+            print("PostgreSQL local iniciado para validar a instalação.")
+            return True
+        sleep(0.5)
+    print("PostgreSQL iniciou, mas a porta local não ficou pronta a tempo.")
+    return False
+
+
 def install_managed_python():
     from nexus.updates.recovery import RecoveryError, maintenance_lock
     from nexus.updates.manager import _private_directory, managed_home
@@ -596,6 +664,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if not prepare_local_models():
         print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
+              file=sys.stderr)
+        return 2
+    if not ensure_postgresql_running_for_install():
+        print("Instalação adiada: PostgreSQL local precisa estar ativo para "
+              "validar as credenciais; o ambiente anterior foi preservado.",
               file=sys.stderr)
         return 2
     try:
