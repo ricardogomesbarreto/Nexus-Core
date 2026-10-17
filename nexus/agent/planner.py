@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable
 
 from nexus.models.contracts import ModelError, ModelProviderTimeoutError, ModelProviderUnavailableError, ModelRequest, ModelResponse
@@ -75,22 +76,49 @@ def _conversation_only(prompt: str) -> bool:
                          r"sugira|sugestões|sugestoes)\b", current))
 
 
-def _simple_app_request(prompt: str) -> str | None:
-    """Handle only exact, explicit requests; authorization remains in ToolExecutor."""
+def _current_message(prompt: str) -> str | None:
+    """Use the current turn only; conversation history grants no authority."""
     try:
         envelope = json.loads(prompt)
+        if isinstance(envelope, dict) and envelope.get("modo") == "sugestao_sem_ferramentas":
+            return None
         current = envelope.get("mensagem_atual") if isinstance(envelope, dict) else prompt
     except (ValueError, TypeError):
         current = prompt
-    if not isinstance(current, str):
+    return current if isinstance(current, str) else None
+
+
+def _simple_app_request(prompt: str) -> str | None:
+    """Handle only exact, explicit requests; authorization remains in ToolExecutor."""
+    current = _current_message(prompt)
+    if current is None:
         return None
     normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii")
     normalized = " ".join(normalized.lower().strip().rstrip(".!?").split())
+    normalized = re.sub(r"^nexus[,:]?\s+", "", normalized)
     return {
         "abra o navegador": "browser", "abrir navegador": "browser",
         "abra o gerenciador de arquivos": "files",
         "abra o terminal": "terminal",
     }.get(normalized)
+
+
+def _simple_directory_request(prompt: str) -> str | None:
+    """A single home child by explicit name; never accept a model-supplied path."""
+    current = _current_message(prompt)
+    if current is None:
+        return None
+    current = re.sub(r"^nexus[,:]?\s+", "", current.strip(), flags=re.IGNORECASE)
+    match = re.fullmatch(
+        r"(?:crie|criar) (?:uma |a )?pasta(?: chamada)? ([\w -]{1,64})",
+        current.rstrip(".!?"), flags=re.IGNORECASE,
+    )
+    if match is None:
+        return None
+    name = unicodedata.normalize("NFC", match.group(1)).strip()
+    if not name or len(name.encode("utf-8")) > 128:
+        return None
+    return str(Path.home().resolve() / name)
 
 
 @dataclass(frozen=True)
@@ -138,6 +166,10 @@ class AgentPlanner:
         if application and self.registry.exists("launch_application"):
             return AgentProposal(type="tool_call", tool_name="launch_application",
                                  arguments={"application": application})
+        directory = _simple_directory_request(prompt)
+        if directory and self.registry.exists("create_directory"):
+            return AgentProposal(type="tool_call", tool_name="create_directory",
+                                 arguments={"path": directory})
         conversational = _conversation_only(prompt)
         if conversational:
             # Plain text avoids schema compilation and malformed JSON on small

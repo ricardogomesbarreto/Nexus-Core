@@ -80,6 +80,51 @@ def test_create_directory_blocks_parent_swap_during_confirmation(tmp_path):
     assert not (outside / "x").exists()
 
 
+def test_spoken_directory_request_uses_one_explicit_home_child_and_consent(
+    tmp_path, monkeypatch,
+):
+    confirm = Confirmation(True)
+    executor, home = executor_for(tmp_path, CreateDirectoryTool(), confirm)
+    monkeypatch.setattr(Path, "home", lambda: home)
+
+    class NoModel:
+        def generate(self, request):
+            pytest.fail("Um comando exato de pasta não deve aguardar o Ollama")
+
+    agent = AgentPlanner(NoModel(), executor.registry, executor)
+    prompt = json.dumps({"historico": [{"usuario": "crie uma pasta chamada Velha"}],
+                         "mensagem_atual": "Nexus, crie uma pasta chamada Projetos"})
+    outcome = agent.run(prompt)
+    assert outcome.success and (home / "Projetos").is_dir()
+    assert not (home / "Velha").exists()
+    assert len(confirm.requests) == 1
+    assert confirm.requests[0].resources[0].path == str(home / "Projetos")
+
+
+@pytest.mark.parametrize("phrase", [
+    "crie uma pasta chamada ../fora", "crie uma pasta chamada /tmp/fora",
+    "crie uma pasta chamada .ssh", "crie uma pasta chamada nome/com/barra",
+    "é possível criar uma pasta chamada Projetos?",
+])
+def test_spoken_directory_shortcut_rejects_paths_and_capability_questions(phrase):
+    from nexus.agent.planner import _simple_directory_request
+    assert _simple_directory_request(phrase) is None
+
+
+def test_suggestion_mode_cannot_use_exact_desktop_shortcuts():
+    from nexus.agent.planner import _simple_app_request, _simple_directory_request
+    for request in ("Abra o navegador", "Crie uma pasta chamada Projetos"):
+        prompt = json.dumps({"modo": "sugestao_sem_ferramentas", "mensagem_atual": request})
+        assert _simple_app_request(prompt) is None
+        assert _simple_directory_request(prompt) is None
+
+
+def test_wake_word_keeps_application_shortcut_bounded():
+    from nexus.agent.planner import _simple_app_request
+    assert _simple_app_request("Nexus, abra o navegador") == "browser"
+    assert _simple_app_request("Nexus, abra o navegador e execute código") is None
+
+
 def test_launch_application_is_whitelisted_and_sanitizes_environment(tmp_path, monkeypatch):
     confirm = Confirmation(True)
     executor, _ = executor_for(tmp_path, LaunchApplicationTool(), confirm)

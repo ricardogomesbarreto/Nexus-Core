@@ -8,7 +8,7 @@ RELEASES = (
     "0.3.9", "0.4.0", "0.4.1", "0.5.0",
     "0.6.0", "0.6.1", "0.6.2", "0.6.3",
     "0.7.0", "0.7.1", "0.7.2", "0.7.3",
-    "0.8.0", "0.8.1", "0.8.2", "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.9.6", "0.9.7", "0.9.8", "0.9.9", "0.9.10", "0.9.11",
+    "0.8.0", "0.8.1", "0.8.2", "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.9.6", "0.9.7", "0.9.8", "0.9.9", "0.9.10", "0.9.11", "0.9.12",
 )
 
 
@@ -26,13 +26,25 @@ def test_every_version_note_and_historical_readme_anchor_exists():
 def test_all_unhomologated_release_workflows_stay_explicitly_disabled():
     for release in (
         "0.7.3", "0.8.0", "0.8.1", "0.8.2",
-        "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.9.6", "0.9.7", "0.9.8", "0.9.9", "0.9.10", "0.9.11",
+        "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.9.0", "0.9.1", "0.9.2", "0.9.3", "0.9.4", "0.9.5", "0.9.6", "0.9.7", "0.9.8", "0.9.9", "0.9.10", "0.9.11", "0.9.12",
     ):
         path = PROJECT_ROOT / ".github/workflows" / f"release-v{release}.yml"
         text = path.read_text(encoding="utf-8")
         assert "if: ${{ false }}" in text, path
         assert "workflow_run:" not in text, path
         assert "workflow_dispatch:" in text, path
+
+
+def test_manual_release_needs_successful_ci_for_exact_main_sha():
+    for release in ("0.9.11", "0.9.12"):
+        workflow = (PROJECT_ROOT / ".github/workflows" / f"release-v{release}.yml")
+        text = workflow.read_text(encoding="utf-8")
+        assert "github.event.workflow_run.head_sha" not in text
+        assert "ref: ${{ github.sha }}" in text
+        assert "TESTED_SHA: ${{ github.sha }}" in text
+        assert '"$GITHUB_REF" != "refs/heads/main"' in text
+        assert "head_sha=\"$TESTED_SHA\"" in text
+        assert '.conclusion == "success"' in text
 
 
 def test_x11_operational_document_reports_actual_merge_and_pending_hardware():
