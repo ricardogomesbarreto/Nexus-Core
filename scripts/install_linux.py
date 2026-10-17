@@ -192,7 +192,7 @@ def provision_postgresql() -> bool:
 
 
 def _user_ollama_service(binary: Path) -> None:
-    """Keep a user-scoped Ollama install available after the next login."""
+    """Start local Ollama on demand; never enable autostart at user login."""
     unit_dir = Path.home() / ".config" / "systemd" / "user"
     if unit_dir.is_symlink():
         raise RuntimeError("Pasta de serviços do usuário insegura.")
@@ -201,14 +201,16 @@ def _user_ollama_service(binary: Path) -> None:
     if unit.exists() or unit.is_symlink():
         raise RuntimeError("Serviço Ollama do Nexus já existe; confira manualmente.")
     executable = str(binary).replace("%", "%%").replace("\\", "\\\\").replace('"', '\\"')
+    # A static user unit is startable but has no [Install] section and
+    # cannot be automatically enabled for login. The desktop workload must
+    # not silently remain resident or consume RAM on subsequent boots.
     content = ("[Unit]\nDescription=Ollama local do Nexus Core\n"
                "[Service]\nType=simple\nExecStart=\"" + executable + "\" serve\n"
-               "Environment=OLLAMA_HOST=127.0.0.1:11434\nRestart=on-failure\n"
-               "[Install]\nWantedBy=default.target\n")
+               "Environment=OLLAMA_HOST=127.0.0.1:11434\nRestart=on-failure\n")
     unit.write_text(content, encoding="utf-8")
     unit.chmod(0o600)
     _run(["systemctl", "--user", "daemon-reload"], timeout=30)
-    _run(["systemctl", "--user", "enable", "--now", unit.name], timeout=30)
+    _run(["systemctl", "--user", "start", unit.name], timeout=30)
 
 
 def prepare_local_models() -> bool:
