@@ -50,7 +50,8 @@ def test_badge_updates_on_tk_thread_from_queued_state(desktop, caplog):
     import logging
     caplog.set_level(logging.INFO, logger="nexus.desktop_runtime")
     root, _, window, _ = desktop
-    window._network_watcher.stop()
+    if window._network_watcher is not None:
+        window._network_watcher.stop()
     assert window.network_badge.cget("text") == "● NÃO VERIFICADO"
     window._network_events.put("online")
     window._refresh_network_status()
