@@ -101,3 +101,14 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
   ODT e RTF via CLIs Craft existentes.
 - Testes de autorização, arquivos inválidos e regressões, com aceite real
   dos CLIs e hardware ainda obrigatório. Serviço do sistema sempre sob demanda.
+
+## Aditivo de integração dos ZIPs originais — sem publicação de release
+
+- Novo `craft_inspect_local`: subcomandos `info` dos três Craft, JSON limitado
+  e saída sanitizada; exige confirmação individual e arquivo autorizado.
+- Novo `pdf_render_local`: uma página PDF por chamada, DPI fixo, saída PNG
+  nova sem sobrescrita, tamanho e dimensões limitados.
+- CLI de aceite `--smoke --advanced` exercita as operações originais sem dados
+  pessoais quando os binários estiverem presentes.
+- Motores REA externos/Node e modelos Ollama não são reinstalados, alterados
+  ou habilitados automaticamente. v0.9.12 mantém gates físicos pendentes.
