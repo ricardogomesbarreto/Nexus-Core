@@ -133,6 +133,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | PdfCraft via `text`/`info`/`render` página → PNG | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py` | Editar/juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
 | REA: SHA-256 e formatos ELF/PE/Mach-O/WASM/APK/JAR/ZIP/JS/Electron; índice ZIP e seções WASM | **INTEGRADO/CI (motor próprio estático)** | `nexus/tools/static_analysis.py`, `wasm_structure.py` | **Não é o REA completo**: sem Ghidra/JADX, desmontagem, decompilação, execução de alvo ou monitoramento de processos. |
 | Validador real dos Craft `--smoke --advanced`; diagnóstico opcional de `rea --help` | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/validate_craft_cli.py`, testes de contrato | A CI substitui binários por dublês; **nenhuma conversão real do notebook pode ser declarada aprovada ainda**. |
+| Registro diagnóstico Craft de versão e comandos auditados (`--craft-capabilities`) | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/craft_capabilities.py` | Consulta explícita sem arquivos, somente `--version`/`--help`; não atesta proveniência, isolamento nem resultado real. |
 | Instalação e atualização verificadas, diagnóstico de serviços sem autostart | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/install_linux.py`, `scripts/nexus_core_session.sh`, `nexus/updates/` | Verificar serviço Ollama de sistema e usuário, clusters PostgreSQL reais e dependências de terceiros sem pará-las. |
 | Geração livre de imagens por modelo local, edição profissional por camadas, documentos completos, OCR e REA profundo | **PENDENTE** | Recursos identificados nos projetos originais, sem ferramentas NEXUS equivalentes completas | Desenvolver contratos específicos e testes próprios; não anunciar como disponível hoje. |
 
@@ -160,6 +161,8 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 - **Saída/gate:** CI verde na `main` + checklist físico preenchido, com logs sanitizados; falhas críticas resolvidas antes de qualquer tag da 0.9.12.
 
 **G1 — Adaptação e distribuição opcional dos motores Craft (PENDENTE; após G0).**
+
+Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão e comandos anunciados pelos CLIs encontrados no `PATH`, comparando com PhotoCraft 0.9.0, WordCraft 0.7.0 e PdfCraft 0.8.0 dos ZIPs. Não ativa ferramentas, instala motores, certifica executáveis ou conclui este gate.
 
 - Criar `Adapter/Capability Registry` tipado para PhotoCraft, WordCraft e PdfCraft: descoberta, `--version`, verificação de comandos disponíveis, allowlist por formato/ação, incompatibilidades explícitas, timeout, cancelamento e estado **disponível/ausente/incompatível/degradado**.
 - Construir/documentar CLIs a partir de versões fixadas, com checksums/assinaturas, inventário de dependências Rust/Cargo e licenças; disponibilizar instalação **separada e opcional** com consentimento. Nunca compilar os três no primeiro boot.
@@ -239,11 +242,14 @@ cd "$HOME/Projetos/Nexus-Core"
 git switch main && git pull --ff-only
 git rev-parse --short HEAD
 python3 scripts/validate_craft_cli.py
+~/.local/bin/nexus-core --craft-capabilities | python3 -m json.tool
 python3 scripts/validate_craft_cli.py --smoke --advanced
 python3 scripts/validate_craft_cli.py --rea
 ```
 
 O `--smoke --advanced` executa programas externos instalados contra amostras sintéticas, **somente depois da decisão explícita do operador**. Na ausência dos CLIs, registrar `ausente/pendente`. Para os demais testes da janela, consultar [aceite físico](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md), iniciando Ollama e PostgreSQL apenas quando necessários.
+
+`--craft-capabilities` executa **apenas** `--version` e `--help` de programas Craft locais descobertos no `PATH`, sob limite de saída e tempo. Faça isso apenas com executáveis de origem confiável: qualquer binário instalado pode executar código próprio até mesmo ao receber `--help`. `missing` significa ausente; `degraded` indica falha de consulta ou comando esperado não anunciado; `incompatible` indica versão diferente do snapshot estudado; `available` indica **apenas** contrato anunciado da versão estudada, ainda sem operação real comprovada. O JSON omite caminho do executável, conteúdo de arquivos e saída livre dos programas. Não confundir com o smoke físico, nem usar esse estado sozinho para autorizar uma ação.
 
 ---
 

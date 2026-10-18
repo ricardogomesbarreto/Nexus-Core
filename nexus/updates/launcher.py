@@ -19,6 +19,7 @@ READ_ONLY_FLAGS = frozenset((
     "--help", "-h", "--version", "--status",
     "--acceptance-log",
     "--resource-check",
+    "--craft-capabilities",
     "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
     "--desktop-check", "--voice-check", "--vision-check",
     "--microphone-test", "--recognition-test",
