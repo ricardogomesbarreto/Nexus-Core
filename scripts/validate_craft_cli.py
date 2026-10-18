@@ -152,8 +152,9 @@ def smoke_cli(name: str, executable: str, work: Path) -> bool:
 
 
 def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
-    """Run actual info commands on synthetic fixtures; PdfCraft also renders page 1."""
+    """Run info, Word text and PdfCraft render/extract on synthetic files."""
     from nexus.tools.craft_inspect import _safe_summary
+    from nexus.tools.pdf_extract import _validate_pdf_copy
     from nexus.tools.pdf_render import _validate_png
 
     kind = {"PhotoCraft": "image", "WordCraft": "document", "PdfCraft": "pdf"}[name]
@@ -174,6 +175,13 @@ def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
         _safe_summary(kind, result.read_bytes())
     except (ValueError, UnicodeError):
         return False
+    if name == "WordCraft":
+        out = work / "word-text.txt"
+        with out.open("xb") as stream:
+            ok = _execute([executable, "text", str(source)], stdout=stream)
+        if (not ok or out.stat().st_size > _MAX_RESULT or
+                b"NEXUS CORE CLI" not in out.read_bytes()):
+            return False
     if name == "PdfCraft":
         out = work / "pdf-preview.png"
         args = [executable, "render", str(source), "--page", "1",
@@ -184,6 +192,16 @@ def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
             return False
         try:
             _validate_png(out.read_bytes())
+        except (ValueError, OSError):
+            return False
+        extract = work / "pdf-extract.pdf"
+        if not _execute([executable, "extract", str(source), "--pages", "1",
+                         "--out", str(extract)]):
+            return False
+        if extract.is_symlink() or not extract.is_file() or extract.stat().st_size > _MAX_RESULT:
+            return False
+        try:
+            _validate_pdf_copy(extract.read_bytes())
         except (ValueError, OSError):
             return False
     return True
@@ -234,7 +252,7 @@ def main() -> int:
     parser.add_argument("--rea", action="store_true",
                         help="Verificar o comando REA instalado sem analisar arquivos")
     parser.add_argument("--advanced", action="store_true",
-                        help="Acrescentar testes reais de info e render; exige --smoke")
+                        help="Acrescentar testes reais de info, Word text, PDF render/extract; exige --smoke")
     options = parser.parse_args()
     if options.advanced and not options.smoke:
         parser.error("--advanced exige --smoke para confirmação explícita da execução")

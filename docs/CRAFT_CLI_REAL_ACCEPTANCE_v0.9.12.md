@@ -4,8 +4,9 @@
 
 Este roteiro verifica **executáveis reais** instalados no Ubuntu 26.04. A CI verifica
 o diagnóstico e os fixtures com dublês de teste; ela não prova que esses três
-CLIs estão instalados e operantes no notebook do operador. Não publicar tag/release
-com base exclusivamente em mocks.
+CLIs estão instalados e operantes no notebook do operador. A tag candidata
+`v0.9.12-rc.1` pode identificar código testado na CI; não publicar release
+estável com base exclusivamente em mocks.
 
 ### Contratos oficiais verificados nas fontes upstream
 
@@ -40,6 +41,7 @@ e execução da ajuda, **não** confirma conversão. Ausência/falha produz exit
 ```bash
 cd "$HOME/Projetos/Nexus-Core"
 python3 scripts/validate_craft_cli.py --smoke
+python3 scripts/validate_craft_cli.py --smoke --advanced
 ```
 
 Com `--smoke` o script executa os **CLIs instalados**, cada um com
@@ -54,6 +56,13 @@ uma amostra criada no diretório privado temporário do sistema:
 O limite é de 60 segundos por operação e 25 MiB para validar cada saída. O
 diretório temporário é excluído ao final; não usa documentos pessoais,
 não inicia Ollama, PostgreSQL, Docker, MCP, serviços REA nem faz downloads.
+
+`--advanced` adiciona `info` dos três motores, `wordcraft-cli text` sobre o
+DOCX sintético, `pdfcraft-cli render` em PNG com blocos/CRC verificados e
+`pdfcraft-cli extract` da página 1 para PDF com cabeçalho, `startxref` e
+`%%EOF`. Um resultado de estrutura válida não certifica fidelidade do
+documento ou isolamento do executável; abra e confira cópias autorizadas em
+leitores independentes antes de homologar a capacidade.
 
 Saída esperada (somente quando **todos realmente passarem**):
 
@@ -100,8 +109,9 @@ próxima revisão de segurança antes de liberar operações no assistente.
 - Aceite físico de REA opcional, sem instalar automaticamente motores pesados.
 - Homologação da escuta contínua, áudio/vozes, câmera, Wayland/X11 e
   restauração/autorizações, conforme roteiros de aceite anteriores.
-- Manter serviços locais sob demanda; **não** criar tag/release v0.9.12
-  até todos os gates exigidos serem aprovados.
+- Manter serviços locais sob demanda; **não** criar tag/release **estável**
+  v0.9.12 até todos os gates exigidos serem aprovados. A tag `-rc.1` não
+  é estável e não satisfaz esse aceite.
 
 ## Formatos opcionais extras — etapa complementar 0.9.12
 

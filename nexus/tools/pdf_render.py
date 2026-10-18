@@ -10,6 +10,7 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import zlib
 from pathlib import Path
 
 from nexus.security import RiskLevel, SensitiveResource
@@ -22,13 +23,38 @@ _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def _validate_png(data: bytes) -> None:
-    if (len(data) < 33 or not data.startswith(_PNG_SIGNATURE)
+    if (len(data) < 57 or not data.startswith(_PNG_SIGNATURE)
             or data[12:16] != b"IHDR"):
         raise ValueError("PdfCraft não gerou PNG válido.")
-    width, height = struct.unpack_from(">II", data, 16)
-    if not (0 < width <= 4096 and 0 < height <= 4096 and
-            width * height <= 8_000_000):
-        raise ValueError("Prévia excede limites de pixels.")
+    offset, seen_image, seen_end = 8, False, False
+    while offset < len(data):
+        if len(data) - offset < 12:
+            raise ValueError("PNG truncado.")
+        length = struct.unpack_from(">I", data, offset)[0]
+        end = offset + 12 + length
+        if end > len(data):
+            raise ValueError("Bloco PNG truncado.")
+        kind = data[offset + 4:offset + 8]
+        payload = data[offset + 8:end - 4]
+        crc = struct.unpack_from(">I", data, end - 4)[0]
+        if zlib.crc32(kind + payload) & 0xffffffff != crc:
+            raise ValueError("Bloco PNG corrompido.")
+        if offset == 8:
+            if kind != b"IHDR" or length != 13:
+                raise ValueError("Cabeçalho PNG inválido.")
+            width, height = struct.unpack_from(">II", data, offset + 8)
+            if not (0 < width <= 4096 and 0 < height <= 4096 and
+                    width * height <= 8_000_000):
+                raise ValueError("Prévia excede limites de pixels.")
+        elif kind == b"IDAT":
+            seen_image = True
+        elif kind == b"IEND":
+            if length != 0 or not seen_image or end != len(data):
+                raise ValueError("Final PNG inválido.")
+            seen_end = True
+        offset = end
+    if not seen_end:
+        raise ValueError("PNG incompleto.")
 
 
 class PdfRenderTool(NexusTool):

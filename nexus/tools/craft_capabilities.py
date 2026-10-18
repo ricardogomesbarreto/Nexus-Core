@@ -29,9 +29,9 @@ class CraftContract:
 CONTRACTS = (
     CraftContract("photocraft-cli", "0.9.0", ("convert", "info"),
                   ("png", "jpg", "jpeg", "webp", "psd", "pcraft", "tif", "tiff")),
-    CraftContract("wordcraft-cli", "0.7.0", ("convert", "info"),
+    CraftContract("wordcraft-cli", "0.7.0", ("convert", "info", "text"),
                   ("docx", "odt", "rtf", "md", "txt", "pdf")),
-    CraftContract("pdfcraft-cli", "0.8.0", ("text", "info", "render"),
+    CraftContract("pdfcraft-cli", "0.8.0", ("text", "info", "render", "extract"),
                   ("pdf", "txt", "png")),
 )
 

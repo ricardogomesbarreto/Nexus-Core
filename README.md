@@ -19,14 +19,14 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; desenvolvimento integrado, sem tag deste marco.<br>
+> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; a tag candidata `v0.9.12-rc.1` é criada somente após CI verde no SHA exato da `main`, sem release estável.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração recente:** PR #80 refinou a interface e adicionou prévia local; sua CI aprovou **1.747 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag v0.9.12 pendente.<br>
+> **Integração recente:** PR #82 adicionou diagnóstico Craft com **1.752 testes aprovados**. As ações WordCraft/PdfCraft seguintes exigem CI nova; CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag estável v0.9.12 pendente.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -46,7 +46,8 @@ As seções de versões abaixo preservam a evolução da implementação. Códig
 integrado à `main` ainda depende de testes em um Ubuntu físico com Wayland
 e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
-tag/release estável. Os workflows de publicação permanecem bloqueados.
+tag/release estável. O workflow da release estável permanece bloqueado;
+somente uma tag **candidata de código** pode ser criada após a CI da `main`.
 
 ## Interface nativa profissional — refinamento da v0.9.12 (CI e aceite separados)
 
@@ -129,8 +130,8 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
 | Edição de fotos local: 12 efeitos, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE para geometria** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
-| WordCraft via `convert`/`info`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text`, `inspect`, `render` e edição de objetos/documentos ainda não integrados na conversa. |
-| PdfCraft via `text`/`info`/`render` página → PNG | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py` | Editar/juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
+| WordCraft via `convert`/`info`/`text`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text` agora extrai DOCX/ODT/RTF para TXT novo sob autorização; `inspect`, `render` e edição de objetos/documentos ainda pendentes. |
+| PdfCraft via `text`/`info`/`render`/`extract` | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py` | `extract` copia até 20 páginas explícitas para PDF novo; juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
 | REA: SHA-256 e formatos ELF/PE/Mach-O/WASM/APK/JAR/ZIP/JS/Electron; índice ZIP e seções WASM | **INTEGRADO/CI (motor próprio estático)** | `nexus/tools/static_analysis.py`, `wasm_structure.py` | **Não é o REA completo**: sem Ghidra/JADX, desmontagem, decompilação, execução de alvo ou monitoramento de processos. |
 | Validador real dos Craft `--smoke --advanced`; diagnóstico opcional de `rea --help` | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/validate_craft_cli.py`, testes de contrato | A CI substitui binários por dublês; **nenhuma conversão real do notebook pode ser declarada aprovada ainda**. |
 | Registro diagnóstico Craft de versão e comandos auditados (`--craft-capabilities`) | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/craft_capabilities.py` | Consulta explícita sem arquivos, somente `--version`/`--help`; não atesta proveniência, isolamento nem resultado real. |
@@ -148,7 +149,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 5. **Serviços sob demanda:** `Ollama` e `PostgreSQL` apenas quando necessários; jamais `systemctl enable`/`--user enable` automático. Encerrar/desabilitar **somente instâncias iniciadas e gerenciadas pelo NEXUS**, sem interferir em terceiros.
 6. **Arquivos seguros:** acesso ancorado por descritores, rejeição de symlink, `HOME` autorizado, origem intacta, saída nova (`O_EXCL`/`0600`), staging privado, validação de formato, limite de tamanho, auditoria sem conteúdo privado.
 7. **Código externo:** binário instalado **não é sandbox**. Para ferramentas avançadas, exigir origem/versionamento/hash, separação de privilégios e isolamento real de filesystem, rede e recursos. Nunca executar scripts `setup`, `npx` ou comandos livres apenas por estarem num ZIP.
-8. **Sem release prematura:** primeiro CI verde no commit exato da `main`, depois teste funcional físico e registro de resultados; só então considerar tag/release. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
+8. **Sem release prematura:** tag candidata `v0.9.12-rc.1` identifica código após CI verde no commit exato da `main`, **sem release estável nem promoção automática**. Depois do teste físico e registro de resultados, considerar a tag/release estável. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
 
 ### 4. Roadmap priorizado por gates (sem versionamento artificial)
 
@@ -158,7 +159,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 - Ensaiar PostgreSQL inicialmente parado: identificar `pg_lsclusters`, iniciar **apenas cluster correto** mediante autorização, autenticar, nunca redefinir senha silenciosamente. Validar `systemctl --user` versus `systemctl` do Ollama; checar limpeza da sessão e ausência de autostart.
 - Repetir conversa por teclado, voz, início/pausa/retomada, permissão falada, cancelamento, câmera contínua, uma foto e análise, captura de tela, Wayland e X11 conforme suporte declarado; medir p50/p95 de duração/consumo nos cenários realmente executados.
 - Executar `python3 scripts/validate_craft_cli.py` e `--smoke --advanced` com **binários oficiais reais verificados** (três Craft), mais `--rea` somente se instalado. Registrar falhas individuais; ausente = **não homologado**, nunca sucesso simulado.
-- **Saída/gate:** CI verde na `main` + checklist físico preenchido, com logs sanitizados; falhas críticas resolvidas antes de qualquer tag da 0.9.12.
+- **Saída/gate:** CI verde na `main` + checklist físico preenchido, com logs sanitizados; falhas críticas resolvidas antes da tag/release **estável** 0.9.12. A tag `-rc.1` é um instantâneo de código para teste e não conclui G0.
 
 **G1 — Adaptação e distribuição opcional dos motores Craft (PENDENTE; após G0).**
 
@@ -227,7 +228,7 @@ Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão 
 | Ollama e PostgreSQL | Inicialização sob demanda, autenticação de banco correto, escuta de API loopback, troca/descarga de modelo, encerramento | Serviços não habilitados no boot; liberação de RAM quando apropriado; nenhum processo alheio encerrado. |
 | GUI e mídia | Texto/voz/visão/câmera/tela, autorizações, cancelamento, monitor de recursos, Wayland/X11 | Operações concluídas **com resultado correto**; latência/recursos medidos; negação/cancelamento respeitados. |
 | PDF/DOCX/imagens | Exemplos reais de vários formatos e dimensões, teste cruzado em leitores independentes | Arquivos legíveis, saídas novas com modo 0600, fidelidade documentada, falha segura para dados inválidos. |
-| Publicação | CI main + checklist físico + documentação + revisão de segurança/licenças | Só publicar tag quando todos os gates exigidos para a **capacidade anunciada** estiverem cumpridos. |
+| Publicação | CI main + checklist físico + documentação + revisão de segurança/licenças | Tag `-rc.1` após CI main representa código candidato; release/tag estável somente quando todos os gates exigidos para a **capacidade anunciada** estiverem cumpridos. |
 
 ### 6. Ordem de execução, status de entrega e critérios de avanço
 
@@ -276,6 +277,28 @@ cd "$HOME/Projetos/Nexus-Core"
 python3 scripts/validate_craft_cli.py --smoke --advanced
 ```
 
+Outras duas operações seguem os contratos dos ZIPs e pedem autorização com
+origem, destino e, no PDF, a lista exata de páginas exibidos na janela:
+
+```text
+Extraia o texto do documento /home/usuario/Documentos/relatorio.docx em /home/usuario/Documentos/relatorio.txt
+Extraia as páginas 1,3-5 do PDF /home/usuario/Documentos/manual.pdf em /home/usuario/Documentos/trecho.pdf
+```
+
+`wordcraft-cli text` aceita DOCX/ODT/RTF neste adaptador; a saída TXT deve ser
+UTF-8, não vazia e de até 25 MiB. `pdfcraft-cli extract` aceita até 20 páginas
+distintas entre 1 e 5000, sem adivinhar páginas ausentes. O Nexus mantém a
+origem intacta, rejeita symlinks, nunca substitui destino existente e valida
+apenas a **estrutura mínima** do PDF novo; fidelidade, número real de páginas e
+abertura em um leitor independente continuam pendentes de teste físico.
+
+A prévia `pdf_render_local` verifica agora comprimento dos blocos PNG, CRC,
+presença de dados de imagem e finalização `IEND` além das dimensões. Isso
+elimina retornos truncados aceitos anteriormente, mas não equivale a uma
+comparação visual da página. O smoke `--advanced` inclui WordCraft `text` e
+PdfCraft `extract` em arquivos sintéticos quando os CLIs confiáveis estiverem
+instalados. Os testes da CI usam dublês, não os executáveis Rust originais.
+
 Os testes CI usam subprocessos simulados; não comprovam execução dos
 binários Rust originais no notebook. A opção avançada só executa após
 solicitação explícita e usa arquivos sintéticos. O REA completo permanece
@@ -283,6 +306,7 @@ dependente de instalação Node compilada e análise separada de segurança;
 Ollama e PostgreSQL continuam sob demanda, sem autostart e sem serviço extra.
 
 [Inventário dos cinco ZIPs e gates de segurança](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md).
+[Auditoria complementar, achados e testes pendentes](docs/AUDIT_v0.9.12_2026-10-18.md).
 
 ## Novas capacidades offline — etapa complementar da v0.9.12
 

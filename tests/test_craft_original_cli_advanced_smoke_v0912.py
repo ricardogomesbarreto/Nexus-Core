@@ -2,7 +2,6 @@
 import io
 import json
 from pathlib import Path
-import struct
 
 import pytest
 
@@ -26,20 +25,23 @@ def test_advanced_probe_executes_only_documented_commands_on_synthetic_files(
             }[name]
             kwargs["stdout"].write(json.dumps(data).encode())
             return True
-        assert name == "PdfCraft"
-        assert argv[1] == "render"
+        if argv[1] == "text":
+            assert name == "WordCraft"
+            kwargs["stdout"].write(b"NEXUS CORE CLI\n")
+            return True
+        if argv[1] == "extract":
+            assert name == "PdfCraft" and argv[3:5] == ["--pages", "1"]
+            cli._write_pdf(Path(argv[6]))
+            return True
+        assert name == "PdfCraft" and argv[1] == "render"
         assert argv[3:7] == ["--page", "1", "--dpi", "96"]
-        # Header-only PNG is enough for the Nexus validation helper; the
-        # actual binary is responsible for generating fully decoded pixels.
-        image = (b"\x89PNG\r\n\x1a\n" +
-                 struct.pack(">I", 13) + b"IHDR" +
-                 struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0) + b"\0\0\0\0")
-        Path(argv[8]).write_bytes(image)
+        cli._write_png(Path(argv[8]))
         return True
     monkeypatch.setattr(cli, "_execute", execute)
     assert cli.smoke_advanced_cli(name, "/trusted/cli", tmp_path)
     assert [call[1] for call in commands] == (
-        ["info", "render"] if name == "PdfCraft" else ["info"]
+        ["info", "render", "extract"] if name == "PdfCraft" else
+        ["info", "text"] if name == "WordCraft" else ["info"]
     )
 
 

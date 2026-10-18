@@ -6,9 +6,11 @@ MCP server, network endpoint or shell snippet is accepted from the model.
 
 import io
 import os
+import selectors
 import shutil
 import subprocess
 import tempfile
+import time
 import warnings
 from pathlib import Path
 
@@ -21,6 +23,40 @@ from nexus.tools.contracts import FieldSpec, ResourceSpec, ToolContract, ValueKi
 _IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".webp"})
 _MAX_INPUT = 20 * 1024 * 1024
 _MAX_OUTPUT = 25 * 1024 * 1024
+
+
+def _bounded_stdout(args: list[str], output: Path, directory: str, *, timeout: int = 90) -> None:
+    """Write CLI text output with an absolute byte/time budget."""
+    with output.open("xb") as target:
+        process = subprocess.Popen(args, cwd=directory, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                   close_fds=True)
+        deadline = time.monotonic() + timeout
+        total = 0
+        try:
+            assert process.stdout is not None
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not selector.select(remaining):
+                        raise subprocess.TimeoutExpired(args, timeout)
+                    chunk = os.read(process.stdout.fileno(), 65536)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > _MAX_OUTPUT:
+                        raise ValueError("Saída de texto excede o limite local.")
+                    target.write(chunk)
+            process.wait(timeout=max(0.01, deadline - time.monotonic()))
+            if process.returncode:
+                raise ValueError("O CLI não extraiu o texto solicitado.")
+        finally:
+            if process.poll() is None:
+                process.kill()
+            process.wait()
+            if process.stdout is not None:
+                process.stdout.close()
 
 
 def _validate_converted_output(data: bytes, extension: str) -> None:
@@ -320,8 +356,9 @@ class CreateGraphicTool(NexusTool):
 class CraftConvertTool(NexusTool):
     name = "craft_convert_local"
     description = ("Usa CLI local instalado: PhotoCraft para converter imagem, "
-                   "WordCraft para converter documento, PdfCraft para extrair texto PDF. "
-                   "Informe source, output e kind (image, document ou pdf_text).")
+                   "WordCraft para converter documento ou extrair texto, "
+                   "PdfCraft para extrair texto PDF. Informe source, output e "
+                   "kind (image, document, document_text ou pdf_text).")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -343,6 +380,7 @@ class CraftConvertTool(NexusTool):
                       {".png", ".jpg", ".jpeg", ".webp", ".pcraft", ".tif", ".tiff"}),
             "document": ("wordcraft-cli", {".docx", ".odt", ".md", ".txt", ".rtf"},
                          {".docx", ".pdf", ".md", ".txt", ".odt", ".rtf"}),
+            "document_text": ("wordcraft-cli", {".docx", ".odt", ".rtf"}, {".txt"}),
             "pdf_text": ("pdfcraft-cli", {".pdf"}, {".txt"}),
         }
         if kind not in options:
@@ -368,12 +406,15 @@ class CraftConvertTool(NexusTool):
                     args = [executable, "convert", str(infile), str(outfile)]
                 else:
                     args = [executable, "text", str(infile)]
-                with open(outfile, "wb") if kind == "pdf_text" else open(os.devnull, "wb") as stream:
-                    result = subprocess.run(args, cwd=directory, stdin=subprocess.DEVNULL,
-                                            stdout=stream, stderr=subprocess.DEVNULL,
-                                            timeout=90, check=False)
-                if result.returncode != 0:
-                    raise ValueError("O programa local não conseguiu converter o arquivo.")
+                if kind in {"pdf_text", "document_text"}:
+                    _bounded_stdout(args, outfile, directory)
+                else:
+                    with open(os.devnull, "wb") as stream:
+                        result = subprocess.run(args, cwd=directory, stdin=subprocess.DEVNULL,
+                                                stdout=stream, stderr=subprocess.DEVNULL,
+                                                timeout=90, check=False)
+                    if result.returncode != 0:
+                        raise ValueError("O programa local não conseguiu converter o arquivo.")
                 # Do not follow a CLI-created symlink pointing outside the
                 # private work directory. Use pinned regular-file descriptors
                 # just like the source-file reader, with an output size cap.
@@ -381,9 +422,12 @@ class CraftConvertTool(NexusTool):
                 staging_policy.home = work
                 staging_policy.protected_paths = []
                 converted = _read_source(staging_policy, str(outfile), _MAX_OUTPUT)
+                if kind in {"pdf_text", "document_text"}:
+                    converted.decode("utf-8", errors="strict")
                 _validate_converted_output(converted, output_ext)
                 saved = _write_new(policy, output, converted)
             return ToolResult(True, self.name, data={"path": saved, "kind": kind})
-        except (OSError, PermissionError, ValueError, subprocess.TimeoutExpired) as exc:
+        except (OSError, PermissionError, ValueError, UnicodeError,
+                subprocess.TimeoutExpired) as exc:
             return ToolResult(False, self.name,
                               error=f"Conversão local não concluída: {type(exc).__name__}.")
