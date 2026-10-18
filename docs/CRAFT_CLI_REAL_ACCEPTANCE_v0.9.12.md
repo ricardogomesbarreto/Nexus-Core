@@ -59,8 +59,8 @@ não inicia Ollama, PostgreSQL, Docker, MCP, serviços REA nem faz downloads.
 
 `--advanced` adiciona `info` dos três motores, `wordcraft-cli text` sobre o
 DOCX sintético, `pdfcraft-cli render` em PNG com blocos/CRC verificados e
-`pdfcraft-cli extract` da página 1 para PDF com cabeçalho, `startxref` e
-`%%EOF`. Um resultado de estrutura válida não certifica fidelidade do
+`pdfcraft-cli extract` da página 1 e `combine` de dois PDFs sintéticos
+para PDF com cabeçalho, `startxref` e `%%EOF`. Um resultado de estrutura válida não certifica fidelidade do
 documento ou isolamento do executável; abra e confira cópias autorizadas em
 leitores independentes antes de homologar a capacidade.
 

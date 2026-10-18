@@ -117,7 +117,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | `ollama-main(1).zip` | Go (módulo `github.com/ollama/ollama`, `go 1.26.0` no `go.mod` do snapshot). `docs/api.md` documenta chat/geração, streaming, `/api/tags`, `/api/ps`, `/api/show`, embeddings, carga/descarga e gestão de modelos. | **Runtime externo local existente**, usado pelo `OllamaProvider` e `OllamaTransport`. Não fundir o servidor Go ao processo Python; controlar disponibilidade, tempo de retenção em RAM e inicialização sob demanda. |
 | `photocraft-main(1).zip` | Rust workspace `0.9.0`, Rust ≥1.95. `apps/photocraft-cli/src/lib.rs`: `convert`, `info`, `run --cmd`, `batch`, `droplet`, `commands`, `mcp`, `serve`; formatos de imagem, camadas e comandos do motor. | **Editor na própria conversa NEXUS**: Pillow para efeitos leves já suportados; PhotoCraft CLI confiável somente para comandos explícitos, com cópia e saída separadas. Não importar a GUI PhotoCraft nem dar comando arbitrário ao LLM. |
 | `wordcraft-main(1).zip` | Rust workspace `0.7.0`, Rust ≥1.95. `apps/wordcraft-cli/src/main.rs`: `convert`, `info`, `text`, `inspect`, `render`, `run --cmd`, `commands`, `parity` e MCP; estilos, tabelas, revisões, referências e modelos no motor. O próprio upstream declara o produto **alpha**. | **Operações editoriais dentro do NEXUS**: conversão/metadados iniciais já conectados; edição estruturada, geração e formatação futuras com contratos tipados e comparação de fidelidade DOCX. Não prometer compatibilidade total com Microsoft Word. |
-| `pdfcraft-main(1).zip` | Rust workspace `0.8.0`, Rust ≥1.95. `apps/pdfcraft-cli/src/main.rs`: `info`, `render`, `text`, `edit`, `combine`, `extract`, `split`, `check`, `audit`, `batch`, `tools`, `run`, MCP opcional; anotações, formulários, assinaturas e OCR no motor. | **PDF integrado à conversa**: extração de texto, metadados e render de página já preparados; combinar/dividir/organizar/anotar/OCR ficam em fases futuras, após testes reais, privacidade e validação das saídas. |
+| `pdfcraft-main(1).zip` | Rust workspace `0.8.0`, Rust ≥1.95. `apps/pdfcraft-cli/src/main.rs`: `info`, `render`, `text`, `edit`, `combine`, `extract`, `split`, `check`, `audit`, `batch`, `tools`, `run`, MCP opcional; anotações, formulários, assinaturas e OCR no motor. | **PDF integrado à conversa**: texto, metadados, prévia, extração de páginas e junção fixa de dois PDFs em saída nova; divisão, rotação, anotações e OCR permanecem pendentes. Os CLIs reais não foram homologados no notebook. |
 | `rea-main(1).zip` | Node/TypeScript `rea-agents 6.5.0`; executável `rea` em `scripts/rea.mjs`; Node `^22.19.0 \|\| ^24.11.0 \|\| >=26.0.0`. Projeto prevê análises de ELF/PE/WASM, JS/Electron, APK/JADX, .NET, firmware e motores externos Ghidra/IDA/Hopper, além de runtime/MCP. | **Inspeção estática própria autorizada, já existente**; conexão futura com mecanismos externos **somente isolados, versionados e com escopo explícito**. O ZIP sozinho não instala REA nem valida tais motores. |
 
 **Licenças e distribuição:** revisar licenças/avisos, atribuição de componentes, código de terceiros e compatibilidade antes de redistribuir qualquer motor ou artefato. **Os repositórios anexados não são dependências obrigatórias do instalador principal.** Referências técnicas: [diretrizes](docs/PROJECT_GUIDELINES.md), [auditoria original dos ZIPs](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md), [integração REA](docs/REA_LOCAL_INTEGRATION_v0.9.12.md), [aceite Craft](docs/CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
@@ -138,7 +138,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | Edição de fotos local: 12 efeitos, alfa PNG/WebP, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
 | WordCraft via `convert`/`info`/`text`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text` agora extrai DOCX/ODT/RTF para TXT novo sob autorização; `inspect`, `render` e edição de objetos/documentos ainda pendentes. |
-| PdfCraft via `text`/`info`/`render`/`extract` | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py` | `extract` copia até 20 páginas explícitas para PDF novo; juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
+| PdfCraft via `text`/`info`/`render`/`extract`/`combine` | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py`, `pdf_combine.py` | `extract` copia até 20 páginas explícitas; `combine` junta exatamente dois arquivos em PDF novo, com permissão para ambas as origens. Separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
 | REA: SHA-256 e formatos ELF/PE/Mach-O/WASM/APK/JAR/ZIP/JS/Electron; índice ZIP e seções WASM | **INTEGRADO/CI (motor próprio estático)** | `nexus/tools/static_analysis.py`, `wasm_structure.py` | **Não é o REA completo**: sem Ghidra/JADX, desmontagem, decompilação, execução de alvo ou monitoramento de processos. |
 | Validador real dos Craft `--smoke --advanced`; diagnóstico opcional de `rea --help` | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/validate_craft_cli.py`, testes de contrato | A CI substitui binários por dublês; **nenhuma conversão real do notebook pode ser declarada aprovada ainda**. |
 | Registro diagnóstico Craft de versão e comandos auditados (`--craft-capabilities`) | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/craft_capabilities.py` | Consulta explícita sem arquivos, somente `--version`/`--help`; não atesta proveniência, isolamento nem resultado real. |
@@ -192,9 +192,9 @@ Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão 
 - Avaliar `run --cmd` e `commands --json` para um subconjunto fixo de comandos seguros; revisões, comentários, controle de alterações, citações e formatação ABNT somente após validação de fidelidade e exemplos reais. **WordCraft upstream é alpha**: preservar metadados/elementos não suportados ou informar claramente a perda.
 - **Saída/gate:** diff antes/depois quando possível, DOCX que abre em leitores independentes, inspeção de layout e testes de ida-e-volta por formato.
 
-**G4 — PdfCraft: edição, extração e auditoria documental (PENDENTE além de text/info/render).**
+**G4 — PdfCraft: edição, extração e auditoria documental (PARCIAL: text/info/render/extract/combine; demais operações PENDENTES).**
 
-- Operações inicialmente fixas: pesquisar/extrair texto e páginas, **juntar, separar, girar, reordenar** com `pdfcraft-cli extract/combine/split/edit`; todas com cópia de saída, validação e confirmação das páginas exatas.
+- Operações inicialmente fixas: pesquisar/extrair texto e páginas, **juntar, separar, girar, reordenar** com `pdfcraft-cli extract/combine/split/edit`; extração e junção de dois PDFs já têm adaptadores de cópia com confirmação, mas **separar, girar e reordenar ainda faltam**. A validação estrutural básica não confirma fidelidade ou páginas reais.
 - Segunda camada: marcas de texto, comentários, preenchimento de formulário, bookmarks, propriedades e inspeção/auditoria de redações com comandos tipados; distinguir **cobertura visual** de **redação irreversível verificada**.
 - OCR offline opcional com modelos locais e limites de imagem/idioma; validar se o PDF tem restrições de cópia, e não contornar permissões/proteções automaticamente. Assinatura digital e criptografia exigem revisão independente antes de incorporar qualquer efeito jurídico ou de segurança.
 - **Saída/gate:** PDF parseável por leitor independente, operações corretas em arquivos multi-página, testes adversariais, original intacto, fidelidade e tempos medidos.
@@ -285,12 +285,13 @@ cd "$HOME/Projetos/Nexus-Core"
 python3 scripts/validate_craft_cli.py --smoke --advanced
 ```
 
-Outras duas operações seguem os contratos dos ZIPs e pedem autorização com
-origem, destino e, no PDF, a lista exata de páginas exibidos na janela:
+As operações documentais seguem os contratos dos ZIPs e pedem autorização
+com as origens, destino e, na extração, a lista exata de páginas na janela:
 
 ```text
 Extraia o texto do documento /home/usuario/Documentos/relatorio.docx em /home/usuario/Documentos/relatorio.txt
 Extraia as páginas 1,3-5 do PDF /home/usuario/Documentos/manual.pdf em /home/usuario/Documentos/trecho.pdf
+Junte os PDFs /home/usuario/Documentos/a.pdf e /home/usuario/Documentos/b.pdf em /home/usuario/Documentos/combinado.pdf
 ```
 
 `wordcraft-cli text` aceita DOCX/ODT/RTF neste adaptador; a saída TXT deve ser
@@ -300,12 +301,18 @@ origem intacta, rejeita symlinks, nunca substitui destino existente e valida
 apenas a **estrutura mínima** do PDF novo; fidelidade, número real de páginas e
 abertura em um leitor independente continuam pendentes de teste físico.
 
+`pdfcraft-cli combine` aceita exatamente duas origens PDF, na ordem informada,
+com até 10 MiB cada. O destino PDF novo pode ter até 25 MiB. Confirme os três
+caminhos na janela antes da ação; nenhum conteúdo do documento é enviado ao
+Ollama. A verificação de `%PDF`, `startxref` e `%%EOF` é uma barreira básica;
+conferir páginas e conteúdo em outro leitor continua necessário.
+
 A prévia `pdf_render_local` verifica agora comprimento dos blocos PNG, CRC,
 presença de dados de imagem e finalização `IEND` além das dimensões. Isso
 elimina retornos truncados aceitos anteriormente, mas não equivale a uma
 comparação visual da página. O smoke `--advanced` inclui WordCraft `text` e
-PdfCraft `extract` em arquivos sintéticos quando os CLIs confiáveis estiverem
-instalados. Os testes da CI usam dublês, não os executáveis Rust originais.
+PdfCraft `extract` e `combine` em arquivos sintéticos quando os CLIs confiáveis
+estiverem instalados. Os testes da CI usam dublês, não os executáveis Rust originais.
 
 Os testes CI usam subprocessos simulados; não comprovam execução dos
 binários Rust originais no notebook. A opção avançada só executa após

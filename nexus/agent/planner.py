@@ -212,6 +212,18 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
         return "pdf_extract_pages_local", {
             "pages": pages[1], "source": pages[2], "output": pages[3],
         }
+    combined = re.fullmatch(
+        r"(?:junte|juntar|combine|combinar) (?:os )?pdfs? "
+        r"(/[/\w .À-ÿ-]{1,400}\.pdf) e "
+        r"(/[/\w .À-ÿ-]{1,400}\.pdf) em "
+        r"(/[/\w .À-ÿ-]{1,400}\.pdf)",
+        current, re.IGNORECASE,
+    )
+    if combined:
+        return "pdf_combine_local", {
+            "source_a": combined[1], "source_b": combined[2],
+            "output": combined[3],
+        }
     # Original Craft CLIs expose JSON-only metadata through 'info'. Route
     # explicit current-turn requests without loading the Ollama model.
     metadata = re.fullmatch(
@@ -435,7 +447,7 @@ class AgentPlanner:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
             if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
                 raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local"}:
                 current = _current_message(prompt) or ""
                 normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii").lower()
                 intent = {
@@ -446,6 +458,7 @@ class AgentPlanner:
                     "craft_inspect_local": r"\bmetadados\b",
                     "pdf_render_local": r"\b(renderizar?|renderize)\b",
                     "pdf_extract_pages_local": r"\b(extrair?|extraia)\b",
+                    "pdf_combine_local": r"\b(juntar?|junte|combinar?|combine)\b",
                 }[name]
                 if not re.search(intent, normalized):
                     raise ProposalError("Criação e edição exigem pedido explícito neste turno.")
@@ -456,15 +469,17 @@ class AgentPlanner:
                 parameters = tool.contract.validate_inputs(arguments)
             except ContractViolation as exc:
                 raise ProposalError("Argumentos não obedecem ao contrato.") from exc
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local"}:
                 current = _current_message(prompt) or ""
-                if any(parameters[field] not in current for field in ("output", "source")
+                if any(parameters[field] not in current for field in ("output", "source", "source_a", "source_b")
                        if field in parameters):
                     raise ProposalError("Informe os caminhos exatos de origem e saída no pedido atual.")
                 if name == "image_geometry_local" and _simple_creative_request(prompt) != (name, parameters):
                     raise ProposalError("Informe as medidas exatas para recorte ou redimensionamento.")
                 if name == "pdf_extract_pages_local" and _simple_creative_request(prompt) != (name, parameters):
                     raise ProposalError("Informe a lista exata de páginas e os caminhos neste turno.")
+                if name == "pdf_combine_local" and _simple_creative_request(prompt) != (name, parameters):
+                    raise ProposalError("Informe dois PDFs e o destino exatos, na ordem desejada neste turno.")
                 if name == "craft_convert_local" and parameters.get("kind") == "document_text" and "texto" not in current.lower():
                     raise ProposalError("Extração de texto exige pedido explícito neste turno.")
                 if name == "craft_inspect_local" and not re.search(

@@ -104,6 +104,14 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
 
 ## Desenvolvimento complementar — integrações locais avançadas (sem release)
 
+- O ZIP original PdfCraft define `combine A B --out NEW`. O Nexus passa a
+  aceitar “Junte os PDFs /home/.../a.pdf e /home/.../b.pdf em
+  /home/.../combinado.pdf” na conversa, com confirmação das duas origens e
+  destino, limite de 10 MiB por entrada, 25 MiB de saída e 90 segundos de
+  execução; usa cópias temporárias privadas e salva somente arquivo novo.
+  `--craft-capabilities` e o roteiro `validate_craft_cli.py --smoke --advanced`
+  cobrem agora o comando. Testes de código e CLI simulado não comprovam que a
+  junção real preserve páginas, metadados ou fidelidade no notebook.
 - WordCraft `text` exporta DOCX/ODT/RTF para TXT UTF-8 novo com leitura de
   stdout limitada a 25 MiB e 90 segundos. PdfCraft `extract` copia até 20
   páginas explicitamente listadas para um PDF novo, sem alterar a origem.

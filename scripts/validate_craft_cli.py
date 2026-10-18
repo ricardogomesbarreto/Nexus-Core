@@ -152,7 +152,7 @@ def smoke_cli(name: str, executable: str, work: Path) -> bool:
 
 
 def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
-    """Run info, Word text and PdfCraft render/extract on synthetic files."""
+    """Run info, Word text and PdfCraft render/extract/combine on synthetic files."""
     from nexus.tools.craft_inspect import _safe_summary
     from nexus.tools.pdf_extract import _validate_pdf_copy
     from nexus.tools.pdf_render import _validate_png
@@ -202,6 +202,17 @@ def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
             return False
         try:
             _validate_pdf_copy(extract.read_bytes())
+        except (ValueError, OSError):
+            return False
+        other, combined = work / "pdf-segundo.pdf", work / "pdf-combinado.pdf"
+        _write_pdf(other)
+        if not _execute([executable, "combine", str(source), str(other),
+                         "--out", str(combined)]):
+            return False
+        if combined.is_symlink() or not combined.is_file() or combined.stat().st_size > _MAX_RESULT:
+            return False
+        try:
+            _validate_pdf_copy(combined.read_bytes())
         except (ValueError, OSError):
             return False
     return True
