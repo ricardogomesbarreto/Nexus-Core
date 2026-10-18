@@ -19,14 +19,14 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código em desenvolvimento:** `v0.9.12 — Authorized Desktop Actions`; `v0.9.12-rc.1` marca `2aeb78b` (1.771 testes) e `v0.9.12-rc.2` marca `14d5f4c` (1.779 testes). Mudanças posteriores nascem na `main` após CI própria e não movem essas tags; nenhuma candidata é release estável.<br>
-> **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
+> **Ciclo de fechamento v0.9.12:** tags de código `v0.9.12-rc.1` (`2aeb78b`) e `v0.9.12-rc.2` (`14d5f4c`) são snapshots imutáveis; `v0.9.12-rc.3` é a candidata **publicável automaticamente após CI verde da main**. Confirme a publicação em [GitHub Releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases); não confundir candidata com release estável.<br>
+> **Release estável:** a última publicada é `v0.7.2`. A `v0.9.12` estável permanece **bloqueada** pelo aceite físico incompleto do Ubuntu 26.04; o publicador estável mantém `if: false`. A candidata `rc.3` é um pré-lançamento técnico e não altera essa condição.<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração recente:** o Nexus Core acrescentou conversão de documentos, extração e junção de PDFs e preservação de transparência em imagens; a CI da [`main`](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39123896150) aprovou o commit `96969e7`. O aceite físico Ubuntu 26.04 e a tag estável v0.9.12 continuam pendentes.<br>
+> **Integração do ciclo:** código v0.9.12 integra conversa, edição de imagens, documentos e PDFs autorizados, REA estrutural offline e a apresentação pública das funcionalidades como **NEXUS CORE**. Para o SHA mais recente, consulte a [CI da main](https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml?query=branch%3Amain); testes físicos e binários Craft/REA externos ainda exigem aceite.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -48,6 +48,59 @@ e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. O workflow da release estável permanece bloqueado;
 tags **candidatas de código** são snapshots imutáveis após a CI da `main`.
+
+## Fechamento do ciclo 0.9.12 — publicação candidata e gate físico
+
+**Atualização 18/10/2026.** O código da 0.9.12, suas funcionalidades locais
+e a interface profissional foram consolidados na linha `main`.
+Foi integrado também o fluxo de apresentação que **nomeia as ferramentas
+como funções do próprio NEXUS CORE**, mantendo a origem dos motores
+opcionais documentada apenas na camada técnica.
+
+A entrega ocorre em **dois níveis distintos**:
+
+- **Código candidato `v0.9.12-rc.3`:** publicação técnica por GitHub
+  Actions após CI bem-sucedida no **SHA exato da main**. O pipeline cria
+  tag imutável, wheel, arquivo de hash SHA-256 e um GitHub
+  **pre-release**. Confira a publicação real em
+  [Releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
+  e os [runs de publicação](https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/release-candidate-v0.9.12.yml).
+  **Se o workflow ainda não tiver terminado com sucesso, a candidata
+  ainda não está publicada.**
+- **Release estável `v0.9.12`: BLOQUEADA.** A coleta física de 18/10
+  registrou **11 verificações aprovadas e 10 pendentes** no Ubuntu 26.04.
+  A CI em Linux/Xvfb não comprova escuta contínua, funcionamento de
+  câmera/visão, controle do teclado Wayland, ciclo real de serviços,
+  desempenho em perfil eco nem operações de binários Craft opcionais.
+
+Os requisitos de publicação, o estado funcional, as evidências disponíveis
+e os próximos passos estão detalhados no
+[roadmap de fechamento da v0.9.12](docs/ROADMAP_v0.9.12_RELEASE_STATUS.md),
+nas [notas da rc.3](docs/RELEASE_NOTES_v0.9.12-rc.3.md) e no
+[roteiro físico Ubuntu](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md).
+O [workflow estável](.github/workflows/release-v0.9.12.yml)
+continua explicitamente bloqueado até uma revisão específica após o
+aceite de todos os gates. Não alterar tags candidatas existentes,
+não iniciar serviços automaticamente e não publicar promessas de
+compatibilidade física sem registros.
+
+**Após atualizar no Ubuntu, executar os gates:**
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+python3 scripts/validate_craft_cli.py
+# Executa terceiros SOMENTE se você tiver verificado e autorizado os CLIs:
+python3 scripts/validate_craft_cli.py --smoke --advanced
+# Iniciar serviços locais apenas quando precisar usar o assistente:
+bash scripts/nexus_core_session.sh start
+python3 scripts/install_linux.py
+NEXUS_RESOURCE_PROFILE=eco bash scripts/nexus_core_session.sh desktop
+# Ao concluir, preservar serviços de outros aplicativos:
+bash scripts/nexus_core_session.sh stop
+# Registro físico interativo: apenas durante uma sessão de testes:
+~/.local/bin/nexus-core --acceptance-log
+```
 
 ## Interface nativa profissional — refinamento da v0.9.12 (CI e aceite separados)
 
@@ -103,6 +156,9 @@ respectivos commits; uma atualização futura não move nenhuma delas. O teste
 visual no notebook continua pendente.
 
 ## Roadmap consolidado e auditoria técnica — NEXUS CORE
+
+> **Plano de fechamento atualizado em 18/10/2026:** [gates G0–G8, roadmap de distribuição e pendências físicas](docs/ROADMAP_v0.9.12_RELEASE_STATUS.md). A auditoria abaixo é o inventário histórico de 17/10 e deve ser lida junto ao estado atual. A candidata `rc.3` não significa homologação estável.
+
 
 > **Revisão: 17/10/2026 · base auditada:** `main`, commit `44fd658185f97b1b370e5d404e34b359275a297e`, após PRs [#69](https://github.com/ricardogomesbarreto/Nexus-Core/pull/69)–[#74](https://github.com/ricardogomesbarreto/Nexus-Core/pull/74).
 > **Estado:** código `0.9.12` na `main`; **última release estável oficial verificada: v0.7.2**. CI `push` do commit-base [#39071933419](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39071933419) **verde: 1.738 testes** (Python 3.12, Ubuntu 24.04 runner, PostgreSQL 16 em container e Xvfb). **Não é homologação no Ubuntu 26.04 físico.**
