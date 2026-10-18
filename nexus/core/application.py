@@ -23,7 +23,7 @@ from nexus.tools import (
     TerminalSandboxTool,
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
     EditImageTool, ImageGeometryTool, CreateGraphicTool, CraftConvertTool, InspectArtifactTool,
-    CraftInspectTool, PdfRenderTool, PdfExtractTool,
+    CraftInspectTool, PdfRenderTool, PdfExtractTool, PdfCombineTool,
     ToolExecutor,
     ToolRegistry,
 )
@@ -60,6 +60,7 @@ class NexusApplication:
             DesktopWindowInfoTool(), DesktopTypeTextTool(), DesktopNavigateTool(),
             EditImageTool(), ImageGeometryTool(), CreateGraphicTool(), CraftConvertTool(),
             InspectArtifactTool(), CraftInspectTool(), PdfRenderTool(), PdfExtractTool(),
+            PdfCombineTool(),
         ):
             self.tool_registry.register(tool)
 

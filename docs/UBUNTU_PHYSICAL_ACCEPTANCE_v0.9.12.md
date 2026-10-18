@@ -5,6 +5,18 @@ no notebook do usuário. Nenhuma etapa abaixo está marcada como aprovada pela
 CI nem pelos testes simulados. Registre data, versão, SHA, sessão gráfica,
 resultado observado e eventuais falhas antes de propor uma tag.
 
+**Registro de 18/10/2026 (`a36bbe1`, Ubuntu 26.04/Wayland):** instalação
+concluída com serviços locais existentes; sessão desktop em perfil `eco`
+iniciou e encerrou normalmente, relatou `online`, 2010 MiB de memória
+disponível e saudação falada em 4,6 s. Nesse trecho não há turnos de chat,
+escuta, câmera ou permissões. O `--acceptance-log` seguinte marcou 11 PASSOU,
+0 FALHOU, 0 RELATADO e 10 PENDENTE: PostgreSQL, resposta isolada do Ollama
+(10 s), microfone, uma transcrição isolada Vosk e captura de quadro passaram.
+O operador deixou em branco as oito etapas manuais da janela; teclado no
+Wayland e restauração real também seguem pendentes. `session.sh stop`
+preservou os serviços preexistentes; não comprova parada de instâncias que
+o Nexus iniciou. Esse registro não libera a tag estável.
+
 **Evidência histórica informada pelo usuário, ainda não aceite da v0.9.12:**
 Ubuntu 26.04.1, Python 3.14.4 e Wayland; o teste de microfone da linha 0.9.11
 registrou sinal PipeWire, o diagnóstico reconheceu um modelo Vosk instalado,

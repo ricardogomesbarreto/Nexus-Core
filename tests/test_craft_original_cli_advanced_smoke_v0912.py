@@ -33,6 +33,11 @@ def test_advanced_probe_executes_only_documented_commands_on_synthetic_files(
             assert name == "PdfCraft" and argv[3:5] == ["--pages", "1"]
             cli._write_pdf(Path(argv[6]))
             return True
+        if argv[1] == "combine":
+            assert name == "PdfCraft" and Path(argv[2]).is_file() and Path(argv[3]).is_file()
+            assert argv[4] == "--out"
+            cli._write_pdf(Path(argv[5]))
+            return True
         assert name == "PdfCraft" and argv[1] == "render"
         assert argv[3:7] == ["--page", "1", "--dpi", "96"]
         cli._write_png(Path(argv[8]))
@@ -40,7 +45,7 @@ def test_advanced_probe_executes_only_documented_commands_on_synthetic_files(
     monkeypatch.setattr(cli, "_execute", execute)
     assert cli.smoke_advanced_cli(name, "/trusted/cli", tmp_path)
     assert [call[1] for call in commands] == (
-        ["info", "render", "extract"] if name == "PdfCraft" else
+        ["info", "render", "extract", "combine"] if name == "PdfCraft" else
         ["info", "text"] if name == "WordCraft" else ["info"]
     )
 
