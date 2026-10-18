@@ -151,9 +151,8 @@ def test_question_is_spoken_before_microphone_can_accept_consent():
                 return
             assert not recognizer.started.is_set()
             assert dialog.window.winfo_exists()
-            description = next(widget for widget in dialog.window.winfo_children()[0].winfo_children()
-                               if isinstance(widget, tk.Text))
-            assert "Ação: criar pasta" in description.get("1.0", "end")
+            assert dialog.description.winfo_ismapped()
+            assert "Ação: criar pasta" in dialog.description.get("1.0", "end")
             recognizer.phrases.put("Nexus, autorizo esta ação")
             speaker.release.set()
 

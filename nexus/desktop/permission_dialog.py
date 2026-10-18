@@ -78,6 +78,7 @@ class PermissionDialog:
                               highlightthickness=1, highlightbackground="#e5d9df")
         description.insert("1.0", details)
         description.configure(state="disabled")
+        self.description = description
         scrollbar = ttk.Scrollbar(detail_box, command=description.yview)
         description.configure(yscrollcommand=scrollbar.set)
         description.pack(side="left", fill="both", expand=True)
