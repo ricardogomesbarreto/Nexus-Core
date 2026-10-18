@@ -20,7 +20,9 @@ from nexus.tools.terminal import TerminalSandboxTool
 from nexus.tools.desktop import (
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
 )
-from nexus.tools.creative import EditImageTool, CreateGraphicTool, CraftConvertTool
+from nexus.tools.creative import (
+    EditImageTool, ImageGeometryTool, CreateGraphicTool, CraftConvertTool,
+)
 from nexus.tools.static_analysis import InspectArtifactTool
 from nexus.tools.craft_inspect import CraftInspectTool
 from nexus.tools.pdf_render import PdfRenderTool
@@ -48,6 +50,7 @@ __all__ = [
     "DesktopTypeTextTool",
     "DesktopNavigateTool",
     "EditImageTool",
+    "ImageGeometryTool",
     "CreateGraphicTool",
     "CraftConvertTool",
     "InspectArtifactTool",

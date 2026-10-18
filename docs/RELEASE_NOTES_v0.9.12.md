@@ -97,6 +97,11 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
   incluindo ABIs, bibliotecas nativas, symlinks e entradas de assinatura.
 - Seis efeitos extras de fotografia via Pillow e conversões opcionais TIFF,
   ODT e RTF via CLIs Craft existentes.
+- Recorte e redimensionamento de fotos PNG/JPEG/WebP por medidas explícitas
+  na conversa, com confirmação, origem preservada e destino novo privado.
+  A orientação EXIF é aplicada; a cópia não retém metadados da origem.
+  Tamanho e dimensões são limitados. Testes no notebook e aceite continuam
+  pendentes; essa entrega não altera o número de versão nem cria tag.
 - Testes de autorização, arquivos inválidos e regressões, com aceite real
   dos CLIs e hardware ainda obrigatório. Serviço do sistema sempre sob demanda.
 

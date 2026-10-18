@@ -25,7 +25,7 @@ SOURCES = frozenset({
 TOOLS = frozenset({
     "create_directory", "launch_application", "open_default_browser", "desktop_type_text",
     "desktop_navigate", "terminal_sandbox", "system_info",
-    "edit_image_local", "create_graphic_local", "craft_convert_local",
+    "edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local",
 })
 PROFILES = frozenset({"eco", "balanced"})
 

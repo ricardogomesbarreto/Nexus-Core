@@ -113,7 +113,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | Voz local Vosk, sintetização, escolha da voz, pausa/retomada e permissões faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/voice/`, `nexus/desktop/confirmation.py`, testes de voz | Registro Ubuntu 26.04: Vosk isolado transcreveu, mas **escuta contínua falhou**; TTS/visão com latência elevada. |
 | Imagem, tela, câmera V4L2, autorização, prévia e respostas faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/vision/`, `nexus/desktop/window.py`, testes visuais | Câmera e inferência foram exercitadas parcialmente; correção da resposta visual e latência ainda sem aceite. |
 | Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
-| Edição de fotos local: 12 operações fixas e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `tests/test_advanced_craft_rea_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
+| Edição de fotos local: 12 efeitos, recorte/redimensionamento e cartaz PNG | **INTEGRADO; CI/FÍSICO PENDENTES para geometria** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
 | WordCraft via `convert`/`info`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text`, `inspect`, `render` e edição de objetos/documentos ainda não integrados na conversa. |
 | PdfCraft via `text`/`info`/`render` página → PNG | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py` | Editar/juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
@@ -152,7 +152,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 - Testar arquivos sintéticos reais (mínimo) e um corpus de arquivos legítimos autorizado (fidelidade). Rejeitar dados incompatíveis, symlinks, saídas vazias, arquivos muito grandes, falhas e travamentos; não depender de shell do modelo.
 - **Saída/gate:** contrato de versão por CLI, smoke real `convert/info/text/render` e documentação de matriz de formatos e limites.
 
-**G2 — PhotoCraft e edição/criação de imagens integradas à conversa (PENDENTE além dos efeitos básicos).**
+**G2 — PhotoCraft e edição/criação de imagens integradas à conversa (PARCIAL: efeitos, recorte e redimensionamento; demais etapas PENDENTES).**
 
 - Operações seguras de **recorte, redimensionamento, orientação EXIF, ajuste de cores, nitidez, compressão e conversões adicionais**; valores numéricos tipados, preview e original preservado. Refinar qualidade JPEG/WebP/TIFF e transparência.
 - Avaliar comandos do `photocraft-cli commands --json` e integrar **somente IDs previamente auditados** via `run --cmd`, com parâmetros restritos e uma saída por tarefa. Suporte progressivo a camadas, máscaras, texto, composição e processamento em lote sem expor ``--in-place`` nem comandos arbitrários.
@@ -281,6 +281,12 @@ sem iniciar servidores de terceiros:
   espelhamento horizontal, espelhamento vertical, clareamento e contraste.
   Mantém escala de cinza, inversão, desfoque, nitidez e as duas rotações.
   O resultado é sempre um arquivo novo com permissão 0600.
+- **Geometria local:** recorte por posição e dimensões, ou redimensionamento
+  por largura e altura. PNG/JPEG/WebP, origem até 12 MiB, 4096 pixels por lado
+  e 8 megapixels; a saída também respeita esses limites. A orientação EXIF é
+  aplicada e metadados privados são removidos da nova cópia. Preserva alfa em
+  PNG/WebP; JPEG compõe transparência sobre branco. Não há preview de edição
+  nem geração de fotografia por IA nesta etapa.
 - **Craft opcional:** integração por comandos fixos para TIFF (`PhotoCraft`),
   ODT/RTF (`WordCraft`) e PDF texto (`PdfCraft`, já existente), sempre
   dependente de CLIs **instalados e autorizados** no Ubuntu.
@@ -291,6 +297,8 @@ não pode existir):
 ```text
 Edite a foto /home/usuario/Imagens/original.jpg em sépia e salve em /home/usuario/Imagens/sepia.png
 Edite a foto /home/usuario/Imagens/original.jpg em autocontraste e salve em /home/usuario/Imagens/auto.png
+Redimensione a foto /home/usuario/Imagens/original.jpg para 800 por 600 pixels e salve em /home/usuario/Imagens/menor.png
+Recorte a foto /home/usuario/Imagens/original.jpg começando em 10,20 com 300 por 200 pixels e salve em /home/usuario/Imagens/recorte.png
 Converta /home/usuario/Imagens/arte.tiff em /home/usuario/Imagens/arte.webp
 Converta /home/usuario/Documentos/proposta.docx em /home/usuario/Documentos/proposta.odt
 Inspecione o arquivo /home/usuario/Projetos/exemplo.wasm
@@ -298,6 +306,11 @@ Inspecione o arquivo /home/usuario/Projetos/exemplo.wasm
 
 Essas operações não fornecem geração fotográfica por IA nem decompilação
 de código: a confirmação humana e os limites locais permanecem obrigatórios.
+As medidas e caminhos devem estar completos no pedido atual. O atalho local
+para recorte/redimensionamento dispensa a espera pelo Ollama, mas exibe a
+confirmação do Nexus antes de gravar e recusa um destino que já exista.
+Pedidos reconhecidos pela voz passam pelo mesmo controle; pronunciar caminhos
+absolutos com exatidão ainda requer teste no Ubuntu físico.
 [Documento de integração REA](docs/REA_LOCAL_INTEGRATION_v0.9.12.md) ·
 [Testes dos CLIs reais](docs/CRAFT_CLI_REAL_ACCEPTANCE_v0.9.12.md).
 
