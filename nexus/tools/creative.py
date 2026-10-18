@@ -381,9 +381,8 @@ class CreateGraphicTool(NexusTool):
 
 class CraftConvertTool(NexusTool):
     name = "craft_convert_local"
-    description = ("Usa CLI local instalado: PhotoCraft para converter imagem, "
-                   "WordCraft para converter documento ou extrair texto, "
-                   "PdfCraft para extrair texto PDF. Informe source, output e "
+    description = ("Converte imagem ou documento, ou extrai texto de documento/PDF "
+                   "por um mecanismo local opcional. Informe source, output e "
                    "kind (image, document, document_text ou pdf_text).")
     risk_level = RiskLevel.MEDIUM
     path_security = None
@@ -417,7 +416,7 @@ class CraftConvertTool(NexusTool):
             return ToolResult(False, self.name, error="Formato de entrada ou saída não suportado.")
         executable = shutil.which(binary)
         if executable is None:
-            return ToolResult(False, self.name, error=f"CLI local opcional não instalado: {binary}.")
+            return ToolResult(False, self.name, error="Mecanismo local para este formato não instalado. Consulte --feature-check.")
         try:
             policy = self.path_security or PathSecurity()
             data = _read_source(policy, source)

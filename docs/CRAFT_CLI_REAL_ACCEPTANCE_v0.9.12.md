@@ -67,9 +67,9 @@ leitores independentes antes de homologar a capacidade.
 Saída esperada (somente quando **todos realmente passarem**):
 
 ```text
-[CLI-LOCAL] ferramenta=PhotoCraft estado=passou teste=conversao_real
-[CLI-LOCAL] ferramenta=WordCraft estado=passou teste=conversao_real
-[CLI-LOCAL] ferramenta=PdfCraft estado=passou teste=conversao_real
+[NEXUS-LOCAL] area=imagens estado=passou teste=conversao_real
+[NEXUS-LOCAL] area=documentos estado=passou teste=conversao_real
+[NEXUS-LOCAL] area=pdf estado=passou teste=conversao_real
 ```
 
 **Segurança:** pasta temporária e argumentos fixos NÃO são sandbox. O

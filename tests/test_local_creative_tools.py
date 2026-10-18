@@ -135,7 +135,7 @@ def test_optional_craft_cli_missing_does_not_create_output(tmp_path, monkeypatch
     monkeypatch.setattr("nexus.tools.creative.shutil.which", lambda name: None)
     result = executor.execute("craft_convert_local", source=str(source),
                               output=str(home / "text.txt"), kind="pdf_text")
-    assert not result.success and "pdfcraft-cli" in result.error
+    assert not result.success and "Mecanismo local para este formato não instalado" in result.error
     assert not (home / "text.txt").exists()
 
 
@@ -215,7 +215,7 @@ def test_optional_cli_conversion_still_requests_consent_and_works_offline(tmp_pa
     question = f"Converta {document} em {destination}"
     result = agent.run(json.dumps({"historico": [], "mensagem_atual": question}))
     assert not result.success
-    assert "wordcraft-cli" in (result.tool_result.error or "")
+    assert "Mecanismo local para este formato não instalado" in (result.tool_result.error or "")
     assert not destination.exists()
     assert len(confirmation.calls) == 1
 

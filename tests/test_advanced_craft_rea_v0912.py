@@ -205,7 +205,7 @@ def test_craft_optional_binary_missing_reports_error_without_creating_output(tmp
     result = ex.execute("craft_convert_local", source=str(source),
                         output=str(destination), kind="document")
     assert not result.success
-    assert "wordcraft-cli" in (result.error or "")
+    assert "Mecanismo local para este formato não instalado" in (result.error or "")
     assert not destination.exists()
     assert confirm.calls == 1
 

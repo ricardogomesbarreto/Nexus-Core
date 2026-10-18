@@ -72,7 +72,7 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
     if header.startswith(b"\0asm") and len(header) >= 8:
         return "WASM", f"WebAssembly; versão={int.from_bytes(header[4:8], 'little')}."
     if header.startswith(b"%PDF-"):
-        return "PDF", "Documento PDF; extração de texto usa o fluxo PdfCraft quando disponível."
+        return "PDF", "Documento PDF; extração de texto pode ser solicitada separadamente."
     if header.startswith(bytes.fromhex("89504e470d0a1a0a")):
         return "PNG", "Imagem PNG; descrição visual é uma operação separada com consentimento."
     if header.startswith(bytes.fromhex("ffd8ff")):
@@ -87,7 +87,7 @@ def _identify(header: bytes, suffix: str) -> tuple[str, str]:
     if header[:2] == b"PK":
         return "ZIP", "Contêiner ZIP/JAR/APK; índice será analisado sem extrair membros."
     if suffix == ".asar":
-        return "ASAR", "Arquivo Electron ASAR; análise profunda requer REA instalado separadamente."
+        return "ASAR", "Arquivo Electron ASAR; a análise atual é somente estática."
     if suffix in {".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".json"}:
         try:
             header.decode("utf-8", errors="strict")

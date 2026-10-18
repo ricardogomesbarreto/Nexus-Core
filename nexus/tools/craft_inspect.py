@@ -59,7 +59,7 @@ def _safe_summary(kind: str, output: bytes) -> str:
 class CraftInspectTool(NexusTool):
     name = "craft_inspect_local"
     description = ("Consulta somente metadados de imagem, documento ou PDF "
-                   "por CLI Craft local opcional; sem exibir conteúdo privado.")
+                   "por mecanismo local opcional; sem exibir conteúdo privado.")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -76,10 +76,10 @@ class CraftInspectTool(NexusTool):
 
     def execute(self, source: str, kind: str, **kwargs) -> ToolResult:
         if kind not in _ALLOWED_EXT or Path(source).suffix.lower() not in _ALLOWED_EXT[kind]:
-            return ToolResult(False, self.name, error="Tipo de inspeção Craft não suportado.")
+            return ToolResult(False, self.name, error="Tipo de inspeção não suportado.")
         executable = shutil.which(_BIN[kind])
         if executable is None:
-            return ToolResult(False, self.name, error=f"CLI opcional ausente: {_BIN[kind]}.")
+            return ToolResult(False, self.name, error="Mecanismo local para este formato não instalado. Consulte --feature-check.")
         try:
             content = _read_source(self.path_security or PathSecurity(), source, _INPUT_LIMIT)
             # The private temporary source copy protects the original file.

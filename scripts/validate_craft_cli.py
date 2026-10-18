@@ -23,6 +23,7 @@ CRAFT = {
     "WordCraft": ("wordcraft-cli", "convert"),
     "PdfCraft": ("pdfcraft-cli", "text"),
 }
+AREAS = {"PhotoCraft": "imagens", "WordCraft": "documentos", "PdfCraft": "pdf"}
 _TIMEOUT = 60
 _MAX_RESULT = 25 * 1024 * 1024
 
@@ -223,35 +224,36 @@ def run(*, smoke: bool = False, rea: bool = False, advanced: bool = False) -> in
     with tempfile.TemporaryDirectory(prefix="nexus-cli-acceptance-") as folder:
         work = Path(folder)
         for name, (binary, _) in CRAFT.items():
+            area = AREAS[name]
             executable = shutil.which(binary)
             if not executable:
-                print(f"[CLI-LOCAL] ferramenta={name} estado=ausente")
+                print(f"[NEXUS-LOCAL] area={area} estado=ausente")
                 failures += 1
                 continue
             if not _execute([executable, "--help"], timeout=12):
-                print(f"[CLI-LOCAL] ferramenta={name} estado=ajuda_falhou")
+                print(f"[NEXUS-LOCAL] area={area} estado=ajuda_falhou")
                 failures += 1
                 continue
             if not smoke:
-                print(f"[CLI-LOCAL] ferramenta={name} estado=cli_detectado teste=nao_executado")
+                print(f"[NEXUS-LOCAL] area={area} estado=cli_detectado teste=nao_executado")
                 continue
             ok = smoke_cli(name, executable, work)
-            print(f"[CLI-LOCAL] ferramenta={name} estado={'passou' if ok else 'falhou'} teste=conversao_real")
+            print(f"[NEXUS-LOCAL] area={area} estado={'passou' if ok else 'falhou'} teste=conversao_real")
             failures += not ok
             if advanced:
                 passed = smoke_advanced_cli(name, executable, work)
-                print(f"[CLI-LOCAL] ferramenta={name} estado={'passou' if passed else 'falhou'} teste=metadados_e_previa")
+                print(f"[NEXUS-LOCAL] area={area} estado={'passou' if passed else 'falhou'} teste=metadados_e_previa")
                 failures += not passed
         if rea:
             executable = shutil.which("rea")
             if not executable:
-                print("[CLI-LOCAL] ferramenta=REA estado=ausente")
+                print("[NEXUS-LOCAL] area=inspecao_estatica estado=ausente")
                 failures += 1
             else:
                 # Discover the optional installed CLI without running a target,
                 # setup, a provider, or the REA MCP server.
                 ok = _execute([executable, "--help"], timeout=12)
-                print(f"[CLI-LOCAL] ferramenta=REA estado={'cli_detectado' if ok else 'falhou'} teste=sem_alvo")
+                print(f"[NEXUS-LOCAL] area=inspecao_estatica estado={'cli_detectado' if ok else 'falhou'} teste=sem_alvo")
                 failures += not ok
     return int(bool(failures))
 
@@ -261,9 +263,9 @@ def main() -> int:
     parser.add_argument("--smoke", action="store_true",
                         help="Executar conversoes reais apenas em arquivos sinteticos temporarios")
     parser.add_argument("--rea", action="store_true",
-                        help="Verificar o comando REA instalado sem analisar arquivos")
+                        help="Verificar mecanismo opcional de inspeção sem analisar arquivos")
     parser.add_argument("--advanced", action="store_true",
-                        help="Acrescentar testes reais de info, Word text, PDF render/extract; exige --smoke")
+                        help="Acrescentar testes de metadados, texto e prévia locais; exige --smoke")
     options = parser.parse_args()
     if options.advanced and not options.smoke:
         parser.error("--advanced exige --smoke para confirmação explícita da execução")

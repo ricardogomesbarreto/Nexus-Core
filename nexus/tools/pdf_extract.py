@@ -41,13 +41,13 @@ def _validate_pdf_copy(data: bytes) -> None:
     if (len(data) < 64 or not re.match(rb"^%PDF-[12]\.\d(?:\r?\n)", data[:16])
             or b"startxref" not in data[-2048:]
             or b"%%EOF" not in data[-1024:]):
-        raise ValueError("PdfCraft não produziu um PDF reconhecível.")
+        raise ValueError("O mecanismo local não produziu um PDF reconhecível.")
 
 
 class PdfExtractTool(NexusTool):
     name = "pdf_extract_pages_local"
     description = ("Copia páginas explícitas de um PDF local para outro PDF novo "
-                   "com PdfCraft opcional; pages como 1,3-5, até 20 páginas.")
+                   "com mecanismo local opcional; pages como 1,3-5, até 20 páginas.")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -71,7 +71,8 @@ class PdfExtractTool(NexusTool):
                 raise ValueError("Origem e destino devem ser PDF.")
             executable = shutil.which("pdfcraft-cli")
             if executable is None:
-                raise ValueError("CLI local opcional ausente: pdfcraft-cli.")
+                return ToolResult(False, self.name,
+                                  error="Mecanismo local de PDF não instalado. Consulte --feature-check.")
             policy = self.path_security or PathSecurity()
             data = _read_source(policy, source, 20 * 1024 * 1024)
             if not data.startswith(b"%PDF-"):
@@ -87,7 +88,7 @@ class PdfExtractTool(NexusTool):
                     stderr=subprocess.DEVNULL, timeout=90, check=False,
                 )
                 if result.returncode != 0:
-                    raise ValueError("PdfCraft não extraiu as páginas solicitadas.")
+                    raise ValueError("O mecanismo local não extraiu as páginas solicitadas.")
                 staging_policy = PathSecurity()
                 staging_policy.home = work
                 staging_policy.protected_paths = []

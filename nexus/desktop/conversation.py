@@ -7,6 +7,7 @@ from threading import Event, Lock
 from nexus.agent import AgentOutcome
 from nexus.desktop.local_replies import local_conversation_answer
 from nexus.desktop.chat_archive import ChatArchive, ChatArchiveError
+from nexus.desktop.tool_labels import action_label
 
 
 @dataclass(frozen=True)
@@ -175,7 +176,7 @@ class ChatSession:
         if result is None:
             return outcome.error or "Não foi possível concluir a solicitação."
         if not result.success:
-            return f"{result.tool_name}: {result.error}"
+            return f"{action_label(result.tool_name)}: {result.error}"
         data = result.data
         if result.tool_name == "create_directory" and isinstance(data, dict):
             return f"Pasta criada: {data['path']}"
@@ -183,7 +184,7 @@ class ChatSession:
             return f"Solicitei a abertura de {data['application']} no desktop."
         if result.tool_name == "open_default_browser" and isinstance(data, dict):
             return f"Solicitei a abertura do navegador padrão ({data['browser_id']})."
-        if result.tool_name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "pdf_extract_pages_local"} and isinstance(data, dict):
+        if result.tool_name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_render_local"} and isinstance(data, dict):
             return f"Arquivo criado no computador: {data['path']}"
         if result.tool_name == "system_info" and isinstance(data, dict):
             parts = [
@@ -199,6 +200,6 @@ class ChatSession:
             output = json.dumps(data, ensure_ascii=False, default=str)
         if len(output) > cls.MAX_DISPLAY:
             output = output[:cls.MAX_DISPLAY] + "\n… saída abreviada."
-        return f"{result.tool_name} executada.\n{output}" if output else (
-            f"{result.tool_name} executada."
+        return f"Ação concluída: {action_label(result.tool_name)}.\n{output}" if output else (
+            f"Ação concluída: {action_label(result.tool_name)}."
         )

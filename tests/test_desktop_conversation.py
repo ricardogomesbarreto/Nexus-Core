@@ -65,7 +65,7 @@ def test_tool_output_and_failure_are_visible_in_conversation():
         )),
     ])
     session = ChatSession(agent)
-    assert session.ask("faça").text == "terminal_sandbox executada.\nok\n"
+    assert session.ask("faça").text == "Ação concluída: Comando no terminal.\nok\n"
     assert "Autorização recusada" in session.ask("de novo").text
 
 

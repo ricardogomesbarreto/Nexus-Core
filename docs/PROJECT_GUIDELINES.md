@@ -9,6 +9,16 @@ de experiência é um assistente capaz de conversar, observar sob autorização
 e ajudar em tarefas reais no computador. O comportamento publicado deve
 corresponder ao código e à homologação, sem prometer recursos de ficção.
 
+## Identidade do assistente e origem técnica
+
+O aplicativo, a conversa, a voz, as permissões e os diagnósticos de uso
+apresentam capacidades como funções do **NEXUS CORE**: imagens, documentos,
+PDF e inspeção local. Nomes de projetos usados como referência não são nomes
+de módulos visíveis ao usuário nem substituem a identidade do produto.
+Nomes exatos de executáveis, versões, licenças e proveniência continuam
+registrados somente na documentação técnica e nos adaptadores necessários
+à execução. Essa separação não autoriza redistribuição sem revisão da licença.
+
 ## Ambiente de segurança e hacking autorizado
 
 O Nexus Core também é um ambiente para estudo de segurança, CTFs,

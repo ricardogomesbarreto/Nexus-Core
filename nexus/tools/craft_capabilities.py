@@ -122,3 +122,24 @@ def inspect_craft_capabilities(
     return {"schema": "nexus.craft-capabilities.v1", "mode": "explicit_local_probe",
             "tools": entries, "real_operation_tested": False,
             "external_network_used": False}
+
+
+def inspect_local_features(*, probe=inspect_craft_capabilities) -> dict:
+    """Nexus-facing summary: capability categories without backend branding.
+
+    This reflects executable version/help only, never certifies a real edit.
+    """
+    state = probe()
+    categories = ("imagens", "documentos", "pdf")
+    labels = {"available": "anunciada", "missing": "ausente",
+              "degraded": "degradada", "incompatible": "incompativel"}
+    return {
+        "schema": "nexus.local-features.v1",
+        "mode": "explicit_local_probe",
+        "features": [
+            {"category": category, "status": labels[item["status"]]}
+            for category, item in zip(categories, state["tools"], strict=True)
+        ],
+        "real_operation_tested": False,
+        "external_network_used": False,
+    }

@@ -26,8 +26,11 @@ TOOLS = frozenset({
     "create_directory", "launch_application", "open_default_browser", "desktop_type_text",
     "desktop_navigate", "terminal_sandbox", "system_info",
     "edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local",
-    "pdf_extract_pages_local",
+    "craft_inspect_local", "inspect_artifact_local", "pdf_extract_pages_local",
+    "pdf_combine_local", "pdf_render_local",
 })
+TOOL_EVENTS = {"craft_convert_local": "converter_arquivo",
+               "craft_inspect_local": "consultar_metadados"}
 PROFILES = frozenset({"eco", "balanced"})
 
 
@@ -44,7 +47,7 @@ def live_event(event: str, state: str, *, source: str | None = None,
     if source is not None:
         fields.append(f"origem={source if source in SOURCES else 'outra'}")
     if tool is not None:
-        fields.append(f"ferramenta={tool if tool in TOOLS else 'outra'}")
+        fields.append(f"ferramenta={TOOL_EVENTS.get(tool, tool) if tool in TOOLS else 'outra'}")
     if elapsed_ms is not None:
         if type(elapsed_ms) is not int:
             raise ValueError("Duração inválida")
