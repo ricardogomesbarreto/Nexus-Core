@@ -26,7 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração do ciclo:** código v0.9.12 integra conversa, edição de imagens, documentos e PDFs autorizados, REA estrutural offline e a apresentação pública das funcionalidades como **NEXUS CORE**. Para o SHA mais recente, consulte a [CI da main](https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml?query=branch%3Amain); testes físicos e binários Craft/REA externos ainda exigem aceite.<br>
+> **Integração do ciclo:** código v0.9.12 integra conversa, edição de imagens, documentos e PDFs autorizados, inspeção estrutural offline e a apresentação pública das funcionalidades como **NEXUS CORE**. Para o SHA mais recente, consulte a [CI da main](https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml?query=branch%3Amain); testes físicos e executáveis locais opcionais ainda exigem aceite.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
