@@ -227,6 +227,10 @@ def cli(argv: list[str] | None = None) -> None:
         help="resume memória Linux e modelos carregados no Ollama local, sem inferência",
     )
     actions.add_argument(
+        "--craft-capabilities", action="store_true",
+        help="consulta --version e --help dos CLIs Craft locais, sem abrir arquivos",
+    )
+    actions.add_argument(
         "--platform-check", action="store_true",
         help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
     )
@@ -320,6 +324,15 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.craft_capabilities:
+        if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
+                or args.vision_question is not None or args.vision_model != "gemma3:4b"
+                or args.workspace is not None or args.memory_confirm
+                or args.memory_days != 90 or args.knowledge_limit != 5):
+            parser.error("--craft-capabilities é diagnóstico isolado")
+        from nexus.tools.craft_capabilities import inspect_craft_capabilities
+        print(json.dumps(inspect_craft_capabilities(), ensure_ascii=False))
+        return
     if args.resource_check:
         if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
                 or args.vision_question is not None or args.vision_model != "gemma3:4b"
