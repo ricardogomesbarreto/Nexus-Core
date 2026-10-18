@@ -29,7 +29,17 @@ A árvore de arquivos desse commit é idêntica à árvore testada no PR. Isso
 não é o aceite no notebook nem substitui a exigência de CI `push` para o
 SHA final antes de publicar uma tag. O diagnóstico `--resource-check` foi
 executado sem Ollama neste ambiente; consumo, latência e aquecimento no
-notebook continuam sem medição. Nenhuma tag v0.9.12 foi criada.
+notebook continuam sem medição. Naquela data, nenhuma tag candidata havia sido
+criada; `-rc.1` e `-rc.2` foram publicadas depois, sem release estável.
+
+**Ensaio adicional de ciclo de serviços:** após atualizar a `main`, consulte
+`bash scripts/nexus_core_session.sh status`. Com PostgreSQL e Ollama já ativos
+para outro aplicativo, rode `start` e `stop` e confirme que ambos continuam
+ativos. Depois, com ambos parados e sem outro aplicativo dependente, rode
+`start`, verifique a execução do assistente e faça `stop`: apenas as instâncias
+iniciadas pelo Nexus devem parar. Se outro processo reiniciar uma unidade no
+intervalo, seu identificador de ativação muda e o Nexus deve preservá-la.
+Esse ensaio é **PENDENTE no Ubuntu físico**; a CI usa unidades simuladas.
 
 **Teste adicional recebido em 17/10/2026:** no notebook, a tentativa de
 aplicar o patch falhou porque o arquivo não existia em `~/Downloads`; portanto

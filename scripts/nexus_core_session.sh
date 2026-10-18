@@ -55,11 +55,61 @@ has_service() {
   systemctl cat "$name" >/dev/null 2>&1
 }
 
+# Only a service started by this user's Nexus session can later be stopped.
+# The runtime directory is private and disappears on reboot; InvocationID
+# also prevents a stale record from stopping a service restarted elsewhere.
+state_dir="${XDG_RUNTIME_DIR:-}/nexus-core"
+state_file="$state_dir/started-services"
+prepare_state() {
+  local runtime="${XDG_RUNTIME_DIR:-}"
+  if [[ -z "$runtime" || ! -d "$runtime" || -L "$runtime" || ! -O "$runtime" ]]; then
+    printf '[ERRO] XDG_RUNTIME_DIR privado indisponível; não é seguro gerenciar a parada dos serviços.\n' >&2
+    return 1
+  fi
+  if [[ -L "$state_dir" ]]; then return 1; fi
+  if [[ ! -d "$state_dir" ]]; then
+    (umask 077; mkdir -m 700 -- "$state_dir") || return 1
+  fi
+  if [[ ! -O "$state_dir" || "$(stat -c %a -- "$state_dir")" != 700 ||
+        -L "$state_file" || ( -e "$state_file" &&
+          ( ! -f "$state_file" || ! -O "$state_file" || "$(stat -c %a -- "$state_file")" != 600 ) ) ]]; then
+    printf '[ERRO] Estado privado da sessão inválido.\n' >&2
+    return 1
+  fi
+}
+service_active() {
+  local scope="$1" unit="$2"
+  if [[ "$scope" == user ]]; then systemctl --user is-active --quiet "$unit" 2>/dev/null
+  else systemctl is-active --quiet "$unit" 2>/dev/null; fi
+}
+invocation_id() {
+  local scope="$1" unit="$2" value
+  if [[ "$scope" == user ]]; then
+    value="$(systemctl --user show "$unit" --property=InvocationID --value 2>/dev/null)"
+  else
+    value="$(systemctl show "$unit" --property=InvocationID --value 2>/dev/null)"
+  fi
+  if [[ "$value" =~ ^[a-fA-F0-9]{32}$ ]]; then printf '%s\n' "$value"; fi
+}
+record_started() {
+  local scope="$1" unit="$2" identity
+  identity="$(invocation_id "$scope" "$unit")"
+  if [[ -z "$identity" ]]; then
+    printf '[ERRO] Serviço %s iniciou, mas não foi possível registrar sua identidade; não o pararei automaticamente.\n' "$unit" >&2
+    return 1
+  fi
+  (umask 077; printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$state_file")
+}
+
 start_services() {
   if ! postgres_ready; then
     if command -v systemctl >/dev/null 2>&1 && has_service "$pg_unit"; then
-      printf '[SERVIÇO] Iniciando PostgreSQL em %s (%s)\n' "$port" "$pg_unit"
-      sudo systemctl start "$pg_unit"
+      if ! service_active system "$pg_unit"; then
+        prepare_state
+        printf '[SERVIÇO] Iniciando PostgreSQL em %s (%s)\n' "$port" "$pg_unit"
+        sudo systemctl start "$pg_unit"
+        record_started system "$pg_unit"
+      fi
     else
       printf '[ERRO] PostgreSQL na porta %s indisponível. Inicie manualmente conforme a sua distro.\n' "$port" >&2
       return 1
@@ -72,12 +122,20 @@ start_services() {
   printf '[SERVIÇO] PostgreSQL local: pronto.\n'
   if ! ollama_ready; then
     if command -v systemctl >/dev/null 2>&1 && has_service ollama.service; then
-      printf '[SERVIÇO] Iniciando Ollama local\n'
-      sudo systemctl start ollama.service
+      if ! service_active system ollama.service; then
+        prepare_state
+        printf '[SERVIÇO] Iniciando Ollama local\n'
+        sudo systemctl start ollama.service
+        record_started system ollama.service
+      fi
     elif command -v systemctl >/dev/null 2>&1 &&
          systemctl --user cat nexus-core-ollama.service >/dev/null 2>&1; then
-      printf '[SERVIÇO] Iniciando Ollama do usuário\n'
-      systemctl --user start nexus-core-ollama.service
+      if ! service_active user nexus-core-ollama.service; then
+        prepare_state
+        printf '[SERVIÇO] Iniciando Ollama do usuário\n'
+        systemctl --user start nexus-core-ollama.service
+        record_started user nexus-core-ollama.service
+      fi
     else
       printf '[ERRO] Serviço Ollama não encontrado. Em outro terminal execute: ollama serve\n' >&2
       return 1
@@ -107,15 +165,26 @@ elif [[ "$action" == "start" || "$action" == "desktop" ]]; then
     exec "$executable" --desktop
   fi
 else
-  if command -v systemctl >/dev/null 2>&1; then
-    if has_service ollama.service; then
-      sudo systemctl stop ollama.service
-    elif systemctl --user cat nexus-core-ollama.service >/dev/null 2>&1; then
-      systemctl --user stop nexus-core-ollama.service
-    fi
-    if has_service "$pg_unit"; then
-      sudo systemctl stop "$pg_unit"
-    fi
+  prepare_state
+  if [[ -f "$state_file" ]]; then
+    remaining="$(mktemp "$state_dir/.remaining.XXXXXX")"
+    while IFS=$'\t' read -r scope unit identity; do
+      if [[ ! "$identity" =~ ^[a-fA-F0-9]{32}$ ]] ||
+         { [[ "$scope" != system || "$unit" != ollama.service && "$unit" != "$pg_unit" ]] &&
+           [[ "$scope" != user || "$unit" != nexus-core-ollama.service ]]; }; then
+        continue
+      fi
+      if service_active "$scope" "$unit" && [[ "$(invocation_id "$scope" "$unit")" == "$identity" ]]; then
+        printf '[SERVIÇO] Parando instância iniciada pelo Nexus: %s\n' "$unit"
+        if [[ "$scope" == user ]]; then
+          if ! systemctl --user stop "$unit"; then printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"; fi
+        elif ! sudo systemctl stop "$unit"; then
+          printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"
+        fi
+      fi
+    done < "$state_file"
+    if [[ -s "$remaining" ]]; then mv -- "$remaining" "$state_file"
+    else rm -f -- "$remaining" "$state_file"; fi
   fi
-  printf '[SERVIÇO] Solicitação de parada concluída. Os serviços continuam instalados.\n'
+  printf '[SERVIÇO] Parada das instâncias registradas concluída; outros serviços preservados.\n'
 fi
