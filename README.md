@@ -67,6 +67,8 @@ A entrega ocorre em **dois níveis distintos**:
   [SHA256SUMS](https://github.com/ricardogomesbarreto/Nexus-Core/releases/download/v0.9.12-rc.3/SHA256SUMS).
   SHA-256 oficial do wheel: `0d6ec807c6d00fa8774c0e1caa0430b5a83f4c50a1b97356e9309ce0f1674125`.
   A candidata é um snapshot testável, **não** homologação do notebook.
+  Publicação reproduzível pelo [workflow versionado](.github/workflows/release-candidate-v0.9.12.yml),
+  com verificação de CI e preservação da tag já publicada.
 - **Release estável `v0.9.12`: BLOQUEADA.** A coleta física de 18/10
   registrou **11 verificações aprovadas e 10 pendentes** no Ubuntu 26.04.
   A CI em Linux/Xvfb não comprova escuta contínua, funcionamento de
