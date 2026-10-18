@@ -19,7 +19,7 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Ciclo de fechamento v0.9.12:** tags de código `v0.9.12-rc.1` (`2aeb78b`) e `v0.9.12-rc.2` (`14d5f4c`) são snapshots imutáveis; `v0.9.12-rc.3` é a candidata **publicável automaticamente após CI verde da main**. Confirme a publicação em [GitHub Releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases); não confundir candidata com release estável.<br>
+> **Ciclo de fechamento v0.9.12:** tags de código `v0.9.12-rc.1` (`2aeb78b`) e `v0.9.12-rc.2` (`14d5f4c`) são snapshots imutáveis; [`v0.9.12-rc.3`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3) **foi publicada como pré-release** em 18/10/2026, no SHA `6429a5e`, após **1.798 testes aprovados** na CI da main. Não confundir candidata com release estável.<br>
 > **Release estável:** a última publicada é `v0.7.2`. A `v0.9.12` estável permanece **bloqueada** pelo aceite físico incompleto do Ubuntu 26.04; o publicador estável mantém `if: false`. A candidata `rc.3` é um pré-lançamento técnico e não altera essa condição.<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
@@ -59,14 +59,14 @@ opcionais documentada apenas na camada técnica.
 
 A entrega ocorre em **dois níveis distintos**:
 
-- **Código candidato `v0.9.12-rc.3`:** publicação técnica por GitHub
-  Actions após CI bem-sucedida no **SHA exato da main**. O pipeline cria
-  tag imutável, wheel, arquivo de hash SHA-256 e um GitHub
-  **pre-release**. Confira a publicação real em
-  [Releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
-  e os [runs de publicação](https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/release-candidate-v0.9.12.yml).
-  **Se o workflow ainda não tiver terminado com sucesso, a candidata
-  ainda não está publicada.**
+- **Código candidato [`v0.9.12-rc.3`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3): PUBLICADO** em 18/10/2026.
+  O [workflow](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39126956436)
+  concluiu com sucesso depois de uma CI de **1.798 testes** no commit
+  `6429a5e61235588feb5c4eb46838c61793bf43ec`.
+  Contém tag imutável, wheel Python de 959.084 bytes e o arquivo
+  [SHA256SUMS](https://github.com/ricardogomesbarreto/Nexus-Core/releases/download/v0.9.12-rc.3/SHA256SUMS).
+  SHA-256 oficial do wheel: `0d6ec807c6d00fa8774c0e1caa0430b5a83f4c50a1b97356e9309ce0f1674125`.
+  A candidata é um snapshot testável, **não** homologação do notebook.
 - **Release estável `v0.9.12`: BLOQUEADA.** A coleta física de 18/10
   registrou **11 verificações aprovadas e 10 pendentes** no Ubuntu 26.04.
   A CI em Linux/Xvfb não comprova escuta contínua, funcionamento de
