@@ -19,14 +19,14 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; `v0.9.12-rc.1` marca o commit `2aeb78b` (CI: 1.771 testes). A correção de transparência aguarda CI na `main` para a candidata imutável `v0.9.12-rc.2`; nenhuma é release estável.<br>
+> **Código em desenvolvimento:** `v0.9.12 — Authorized Desktop Actions`; `v0.9.12-rc.1` marca `2aeb78b` (1.771 testes) e `v0.9.12-rc.2` marca `14d5f4c` (1.779 testes). Mudanças posteriores nascem na `main` após CI própria e não movem essas tags; nenhuma candidata é release estável.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração recente:** PR #82 adicionou diagnóstico Craft com **1.752 testes aprovados**. As ações WordCraft/PdfCraft seguintes exigem CI nova; CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag estável v0.9.12 pendente.<br>
+> **Integração recente:** PRs #83/#84 adicionaram ações WordCraft/PdfCraft e preservação de transparência; a CI `push` de `14d5f4c` aprovou **1.779 testes**. Correções posteriores exigem CI no respectivo SHA. O aceite físico Ubuntu 26.04 e a tag estável v0.9.12 continuam pendentes.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -47,7 +47,7 @@ integrado à `main` ainda depende de testes em um Ubuntu físico com Wayland
 e, para a automação específica de teclado, X11; além de
 PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. O workflow da release estável permanece bloqueado;
-somente uma tag **candidata de código** pode ser criada após a CI da `main`.
+tags **candidatas de código** são snapshots imutáveis após a CI da `main`.
 
 ## Interface nativa profissional — refinamento da v0.9.12 (CI e aceite separados)
 
@@ -98,10 +98,9 @@ não ativa serviços automaticamente e não publica uma nova release.
 **Atualização 18/10/2026:** efeitos da edição local preservam o canal alfa
 de PNG/WebP; quando a cópia solicitada é JPEG, a transparência é composta
 sobre branco. A foto de origem permanece intacta e os metadados privados
-não são copiados. A candidata `-rc.1` permanece fixada no commit anterior;
-o fluxo de CI cria `-rc.2` uma vez, somente após testes verdes na `main`,
-e a preserva em atualizações futuras. O teste visual no notebook continua
-pendente.
+não são copiados. As candidatas `-rc.1` e `-rc.2` permanecem fixadas nos
+respectivos commits; uma atualização futura não move nenhuma delas. O teste
+visual no notebook continua pendente.
 
 ## Roadmap consolidado e auditoria técnica — NEXUS CORE
 
@@ -136,7 +135,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | Voz local Vosk, sintetização, escolha da voz, pausa/retomada e permissões faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/voice/`, `nexus/desktop/confirmation.py`, testes de voz | Registro Ubuntu 26.04: Vosk isolado transcreveu, mas **escuta contínua falhou**; TTS/visão com latência elevada. |
 | Imagem, tela, câmera V4L2, autorização, prévia e respostas faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/vision/`, `nexus/desktop/window.py`, testes visuais | Câmera e inferência foram exercitadas parcialmente; correção da resposta visual e latência ainda sem aceite. |
 | Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
-| Edição de fotos local: 12 efeitos, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE para geometria** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
+| Edição de fotos local: 12 efeitos, alfa PNG/WebP, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
 | WordCraft via `convert`/`info`/`text`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text` agora extrai DOCX/ODT/RTF para TXT novo sob autorização; `inspect`, `render` e edição de objetos/documentos ainda pendentes. |
 | PdfCraft via `text`/`info`/`render`/`extract` | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py` | `extract` copia até 20 páginas explícitas para PDF novo; juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
@@ -157,7 +156,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 5. **Serviços sob demanda:** `Ollama` e `PostgreSQL` apenas quando necessários; jamais `systemctl enable`/`--user enable` automático. Encerrar/desabilitar **somente instâncias iniciadas e gerenciadas pelo NEXUS**, sem interferir em terceiros.
 6. **Arquivos seguros:** acesso ancorado por descritores, rejeição de symlink, `HOME` autorizado, origem intacta, saída nova (`O_EXCL`/`0600`), staging privado, validação de formato, limite de tamanho, auditoria sem conteúdo privado.
 7. **Código externo:** binário instalado **não é sandbox**. Para ferramentas avançadas, exigir origem/versionamento/hash, separação de privilégios e isolamento real de filesystem, rede e recursos. Nunca executar scripts `setup`, `npx` ou comandos livres apenas por estarem num ZIP.
-8. **Sem release prematura:** `v0.9.12-rc.1` identifica o snapshot anterior; `v0.9.12-rc.2` será marcada uma única vez após CI verde do novo commit na `main`. Tags candidatas são imutáveis e uma CI posterior não tenta movê-las. **Sem release estável nem promoção automática.** Depois do teste físico e registro de resultados, considerar a tag/release estável. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
+8. **Sem release prematura:** `v0.9.12-rc.1` e `v0.9.12-rc.2` identificam dois snapshots anteriores com CI verde. Tags candidatas são imutáveis e uma CI posterior não tenta movê-las. **Sem release estável nem promoção automática.** Depois do teste físico e registro de resultados, considerar a tag/release estável. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
 
 ### 4. Roadmap priorizado por gates (sem versionamento artificial)
 
@@ -237,7 +236,7 @@ Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão 
 | Ollama e PostgreSQL | Inicialização sob demanda, autenticação de banco correto, escuta de API loopback, troca/descarga de modelo, encerramento | Serviços não habilitados no boot; liberação de RAM quando apropriado; nenhum processo alheio encerrado. |
 | GUI e mídia | Texto/voz/visão/câmera/tela, autorizações, cancelamento, monitor de recursos, Wayland/X11 | Operações concluídas **com resultado correto**; latência/recursos medidos; negação/cancelamento respeitados. |
 | PDF/DOCX/imagens | Exemplos reais de vários formatos e dimensões, teste cruzado em leitores independentes | Arquivos legíveis, saídas novas com modo 0600, fidelidade documentada, falha segura para dados inválidos. |
-| Publicação | CI main + checklist físico + documentação + revisão de segurança/licenças | Tag `-rc.1` após CI main representa código candidato; release/tag estável somente quando todos os gates exigidos para a **capacidade anunciada** estiverem cumpridos. |
+| Publicação | CI main + checklist físico + documentação + revisão de segurança/licenças | Tags `-rc.1`/`-rc.2` são snapshots de código; release/tag estável somente quando todos os gates exigidos para a **capacidade anunciada** estiverem cumpridos. |
 
 ### 6. Ordem de execução, status de entrega e critérios de avanço
 
@@ -593,8 +592,13 @@ iniciar serviços instalados, sem conceder privilégios ao assistente.
 A partida do Ollama pode demorar após `systemctl start`; o script aguarda
 até 30 segundos pela API local antes de informar falha, sem imprimir detalhes
 do transporte a cada tentativa.
-A interface roda como usuário comum. `stop` encerra os serviços
-locais compartilhados; não use enquanto outros sistemas dependam deles.
+A interface roda como usuário comum. `start` registra no diretório privado
+`XDG_RUNTIME_DIR/nexus-core` somente os serviços que ele próprio iniciou.
+`stop` compara o identificador da ativação antes de parar cada unidade:
+serviços já ativos anteriormente ou reiniciados por outro processo ficam
+intactos. Sem `XDG_RUNTIME_DIR` privado, o script recusa iniciar serviços que
+não poderá rastrear. Ainda assim, um serviço iniciado pelo NEXUS pode ter
+passado a atender outro aplicativo; feche esses aplicativos antes de `stop`.
 
 Se o Ollama mostrar `could not connect to ollama server` ou a
 aplicação informar `DatabaseConnectionError`, **o serviço está

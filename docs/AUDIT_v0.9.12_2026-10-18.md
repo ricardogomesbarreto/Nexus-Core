@@ -88,3 +88,46 @@ esses binários confiáveis estiverem instalados**.
 binários reais verificados, anotar quais estão ausentes e testar os dois
 pedidos documentais em arquivos de teste próprios. Compartilhar somente logs
 sanitizados, sem senhas, conteúdo de documentos ou fotos.
+
+## Complemento após a candidata rc.2 — ciclo de serviços
+
+Em 18/10, a `main` avançou para `14d5f4c`, marcada pela candidata imutável
+`v0.9.12-rc.2`. A CI do **SHA exato** aprovou **1.779 testes**; a última
+release estável publicada no GitHub permanece `v0.7.2`. O inventário agora
+contém **372 arquivos versionados** (119 em `nexus/`, 141 em `tests/`,
+45 em `docs/`). Todos os caminhos foram inventariados; `compileall`
+varreu os módulos Python e uma busca textual não encontrou referência ao
+banco legado. Os caminhos críticos de mídia, sessão, segurança, instalador,
+publicação e documentação foram inspecionados diretamente. Essa cobertura
+não afirma leitura manual de cada linha ou teste de hardware.
+
+**S01 — parada de serviços de terceiros (corrigido no código, teste físico
+pendente).** `scripts/nexus_core_session.sh stop` enviava `systemctl stop`
+para Ollama e PostgreSQL mesmo quando `start` os encontrara em execução.
+Isso contrariava a regra de serviços sob demanda do projeto e podia
+interromper NUTRA, ERP, ADV ou outro aplicativo do usuário. Agora `start`
+registra em `XDG_RUNTIME_DIR/nexus-core` apenas unidades que ele iniciou,
+com permissão privada e `InvocationID` da ativação. `stop` compara a unidade
+e o identificador antes de parar; serviços preexistentes ou reiniciados por
+outro processo ficam intactos. Sem diretório runtime privado, a inicialização
+de um serviço indisponível é recusada em vez de prometer uma parada segura.
+Os testes simulados cobrem preexistência, início próprio, reinício externo e
+segunda parada; o Ubuntu real ainda precisa reproduzir o ciclo. Se outro
+aplicativo passar a usar uma unidade iniciada pelo Nexus na mesma ativação,
+o script não consegue detectar esse compartilhamento: feche esses
+aplicativos antes de chamar `stop`.
+
+**D01 — README desatualizado (corrigido).** O cabeçalho ainda tratava a
+`rc.2` como futura e citava somente os testes do PR #82, embora o PR #84
+e a CI da `main` tivessem terminado. Foram atualizados o estado das tags,
+matriz de edição e instruções de serviços, preservando o histórico de
+versões antigas como histórico.
+
+**Contagem de versões:** o plano histórico estima **dois marcos de código
+após 0.9.12**, `0.9.13` (tarefas encadeadas com autorização por etapa) e
+`0.9.14` (correções do aceite), além da promoção **estável de 0.9.12**.
+O roadmap canônico G0–G8 não fixa uma contagem de releases para chegar à
+`1.0`: falhas reais podem exigir mais marcos. G0 permanece aberto por escuta
+contínua, vozes, câmera e desempenho, ações na GUI, Wayland/X11, restauração
+e CLIs externos ainda sem aceite físico. Portanto o incremento numérico
+para `0.9.13` não é justificado somente por esta auditoria.
