@@ -26,7 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração recente:** PRs #69–#76 incorporadas; `main` em `8182ebd`; a CI do PR #76 aprovou **1.740 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). A auditoria do código-base `44fd658` registrou separadamente **1.738 testes na CI push**; a CI push do SHA `8182ebd` não foi verificada nesta revisão. Aceite físico Ubuntu 26.04 e tag v0.9.12 pendentes.<br>
+> **Integração recente:** PR #78 incorporou recorte/redimensionamento local; sua CI aprovou **1.744 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag v0.9.12 pendente.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -113,7 +113,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 | Voz local Vosk, sintetização, escolha da voz, pausa/retomada e permissões faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/voice/`, `nexus/desktop/confirmation.py`, testes de voz | Registro Ubuntu 26.04: Vosk isolado transcreveu, mas **escuta contínua falhou**; TTS/visão com latência elevada. |
 | Imagem, tela, câmera V4L2, autorização, prévia e respostas faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/vision/`, `nexus/desktop/window.py`, testes visuais | Câmera e inferência foram exercitadas parcialmente; correção da resposta visual e latência ainda sem aceite. |
 | Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
-| Edição de fotos local: 12 efeitos, recorte/redimensionamento e cartaz PNG | **INTEGRADO; CI/FÍSICO PENDENTES para geometria** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
+| Edição de fotos local: 12 efeitos, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE para geometria** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | PhotoCraft via `convert`/`info` com formatos PNG/JPEG/WebP/PSD/PCraft/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável de origem Rust não foi compilado/executado no Ubuntu; comandos avançados `run/batch` não conectados. |
 | WordCraft via `convert`/`info`, DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | `text`, `inspect`, `render` e edição de objetos/documentos ainda não integrados na conversa. |
 | PdfCraft via `text`/`info`/`render` página → PNG | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py` | Editar/juntar/separar/OCR/anotar/formulários/assinatura não conectados; CLI real não homologado. |
