@@ -26,7 +26,7 @@ Assistente pessoal de inteligência artificial **local-first, modular e seguro**
 > **Interface atual:** janela nativa Linux (Tk), texto e voz local feminina/masculina<br>
 > **Banco único:** PostgreSQL local<br>
 > **Validação:** suíte Linux executada na CI com PostgreSQL, Docker e display virtual<br>
-> **Integração recente:** PR #78 incorporou recorte/redimensionamento local; sua CI aprovou **1.744 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag v0.9.12 pendente.<br>
+> **Integração recente:** PR #80 refinou a interface e adicionou prévia local; sua CI aprovou **1.747 testes** (Python 3.12, Linux, PostgreSQL 16 e Xvfb). CI do PR não substitui a CI `push` do SHA final nem o aceite físico Ubuntu 26.04. Tag v0.9.12 pendente.<br>
 > **Primary Platform:** Linux<br>
 > **Local Model Runtime:** Ollama<br>
 > **Reference Model:** `qwen3:1.7b`<br>
@@ -87,8 +87,8 @@ ou REA e sem adicionar servidor web ou dependências pesadas:
   prévia em `nexus/desktop/image_preview.py`;
   testes com Tk/Xvfb e janela mínima 770 × 570.
 
-**Status:** refinamento inicial integrado após validação em CI; a prévia e
-o modal atualizados ainda exigem CI e teste físico. A aparência,
+**Status:** prévia, janela e modal atualizados integrados após **1.747 testes
+aprovados na CI do PR #80**. A aparência,
 legibilidade, Wayland/escala de tela e fluidez ainda precisam de verificação
 física no Ubuntu 26.04. **Não confundir testes Xvfb com aprovação da GUI em
 hardware real.** Esta alteração não conclui o G0, não instala CLIs,
