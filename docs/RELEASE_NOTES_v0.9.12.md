@@ -1,12 +1,22 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: código de desenvolvimento v0.9.12; PR #82 integrado à `main`, com
-1.752 testes aprovados na CI desse PR. A tag candidata `v0.9.12-rc.1` marca
-somente um instantâneo após CI verde no SHA da `main`; release estável
-continua pendente.** O aceite físico no notebook e a revisão explícita do
+**Estado: código de desenvolvimento v0.9.12; PR #83 integrado à `main`, com
+1.771 testes aprovados na CI do commit `2aeb78b`. A tag candidata
+`v0.9.12-rc.1` aponta somente para esse instantâneo; a correção posterior de
+transparência receberá `v0.9.12-rc.2` apenas se a CI da nova `main` passar.
+Release estável continua pendente.** O aceite físico no notebook e a revisão explícita do
 workflow de publicação ainda são requisitos para release. As
 integrações Craft e REA são parciais; os três CLIs Craft reais não foram
 homologados no Ubuntu 26.04 do usuário. Consulte a matriz e os gates no README.
+
+### Correções posteriores à candidata rc.1
+
+- Edição de imagem Pillow: preserva o canal de transparência de PNG/WebP em
+  operações de cor, nitidez, blur e rotação/espelhamento; JPEG recebe fundo
+  branco. Salva arquivo novo sem metadados da origem. É correção de código,
+  sujeita a CI e inspeção visual física antes de afirmar resultado no notebook.
+- O workflow de tag salta candidatas já publicadas, sem mover o ponteiro e sem
+  deixar a CI futura vermelha apenas porque uma tag anterior foi preservada.
 
 Ao executar `nexus-core --desktop` no terminal, eventos `TESTE-LOCAL`
 registram ao vivo estados e duração de chat, escuta, fala, câmera, visão e

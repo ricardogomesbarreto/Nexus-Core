@@ -19,7 +19,7 @@
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
-> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; a tag candidata `v0.9.12-rc.1` é criada somente após CI verde no SHA exato da `main`, sem release estável.<br>
+> **Código na `main`:** `v0.9.12 — Authorized Desktop Actions`; `v0.9.12-rc.1` marca o commit `2aeb78b` (CI: 1.771 testes). A correção de transparência aguarda CI na `main` para a candidata imutável `v0.9.12-rc.2`; nenhuma é release estável.<br>
 > **Publicação estável:** v0.7.2 é a última release oficial; o código v0.7.3–v0.9.12 permanece sem homologação física e sem release estável; [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)<br>
 > **Linha em evolução:** `v0.9.x — Multimodal Interface` (v0.9.12 reúne conversa, voz, visão, ações autorizadas e integrações locais parciais de criação, documentos e análise estática)<br>
 > **Plataforma e distribuição:** Ubuntu Desktop com `VERSION_ID` reconhecido e Python 3.12+; instalação condicionada às dependências e ao login PostgreSQL local; outras distros em estudo; aplicativo local sob licença MIT<br>
@@ -95,6 +95,14 @@ física no Ubuntu 26.04. **Não confundir testes Xvfb com aprovação da GUI em
 hardware real.** Esta alteração não conclui o G0, não instala CLIs,
 não ativa serviços automaticamente e não publica uma nova release.
 
+**Atualização 18/10/2026:** efeitos da edição local preservam o canal alfa
+de PNG/WebP; quando a cópia solicitada é JPEG, a transparência é composta
+sobre branco. A foto de origem permanece intacta e os metadados privados
+não são copiados. A candidata `-rc.1` permanece fixada no commit anterior;
+o fluxo de CI cria `-rc.2` uma vez, somente após testes verdes na `main`,
+e a preserva em atualizações futuras. O teste visual no notebook continua
+pendente.
+
 ## Roadmap consolidado e auditoria técnica — NEXUS CORE
 
 > **Revisão: 17/10/2026 · base auditada:** `main`, commit `44fd658185f97b1b370e5d404e34b359275a297e`, após PRs [#69](https://github.com/ricardogomesbarreto/Nexus-Core/pull/69)–[#74](https://github.com/ricardogomesbarreto/Nexus-Core/pull/74).
@@ -149,7 +157,7 @@ Os cinco arquivos recebidos foram abertos como ZIP e tiveram seus CRCs verificad
 5. **Serviços sob demanda:** `Ollama` e `PostgreSQL` apenas quando necessários; jamais `systemctl enable`/`--user enable` automático. Encerrar/desabilitar **somente instâncias iniciadas e gerenciadas pelo NEXUS**, sem interferir em terceiros.
 6. **Arquivos seguros:** acesso ancorado por descritores, rejeição de symlink, `HOME` autorizado, origem intacta, saída nova (`O_EXCL`/`0600`), staging privado, validação de formato, limite de tamanho, auditoria sem conteúdo privado.
 7. **Código externo:** binário instalado **não é sandbox**. Para ferramentas avançadas, exigir origem/versionamento/hash, separação de privilégios e isolamento real de filesystem, rede e recursos. Nunca executar scripts `setup`, `npx` ou comandos livres apenas por estarem num ZIP.
-8. **Sem release prematura:** tag candidata `v0.9.12-rc.1` identifica código após CI verde no commit exato da `main`, **sem release estável nem promoção automática**. Depois do teste físico e registro de resultados, considerar a tag/release estável. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
+8. **Sem release prematura:** `v0.9.12-rc.1` identifica o snapshot anterior; `v0.9.12-rc.2` será marcada uma única vez após CI verde do novo commit na `main`. Tags candidatas são imutáveis e uma CI posterior não tenta movê-las. **Sem release estável nem promoção automática.** Depois do teste físico e registro de resultados, considerar a tag/release estável. Não avançar versão por calendário nem afirmar 100% funcional por contagem de testes.
 
 ### 4. Roadmap priorizado por gates (sem versionamento artificial)
 
@@ -173,6 +181,7 @@ Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão 
 **G2 — PhotoCraft e edição/criação de imagens integradas à conversa (PARCIAL: efeitos, recorte e redimensionamento; demais etapas PENDENTES).**
 
 - Operações seguras de **recorte, redimensionamento, orientação EXIF, ajuste de cores, nitidez, compressão e conversões adicionais**; valores numéricos tipados, preview e original preservado. Refinar qualidade JPEG/WebP/TIFF e transparência.
+- A edição local de efeitos preserva agora alfa em PNG/WebP e compõe sobre branco ao salvar JPEG; conferência visual e formatos adicionais continuam pendentes.
 - Avaliar comandos do `photocraft-cli commands --json` e integrar **somente IDs previamente auditados** via `run --cmd`, com parâmetros restritos e uma saída por tarefa. Suporte progressivo a camadas, máscaras, texto, composição e processamento em lote sem expor ``--in-place`` nem comandos arbitrários.
 - **Geração fotográfica por IA** é trilha **distinta** de filtros Pillow/PhotoCraft: pesquisar modelo de imagem realmente executável **offline**, licenciado, compatível com o hardware e selecionado sob demanda. Não declarar text-to-image, inpainting ou edição generativa antes de integrar o motor e testar RAM/GPU, fidelidade e segurança.
 - **Saída/gate:** GUI NEXUS própria, testes de entrada/saída e consentimento, desempenho em perfil eco e imagens reais confirmadas no Ubuntu.
