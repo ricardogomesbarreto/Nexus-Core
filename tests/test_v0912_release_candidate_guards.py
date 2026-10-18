@@ -42,3 +42,13 @@ def test_candidate_notes_and_roadmap_disclose_physical_acceptance_gap():
     assert "BLOQUEADA" in roadmap
     assert "release-candidate-v0.9.12.yml" in readme
     assert "ROADMAP_v0.9.12_RELEASE_STATUS.md" in readme
+
+
+def test_existing_published_candidate_is_skipped_before_tag_conflict_check():
+    source = CANDIDATE.read_text(encoding="utf-8")
+    section = source.split("run: |", 1)[1].split("      - name: Build and check candidate wheel", 1)[0]
+    check_release = section.index("if gh release view v0.9.12-rc.3")
+    check_tag = section.index("if git show-ref --verify --quiet refs/tags/v0.9.12-rc.3")
+    assert check_release < check_tag
+    assert 'echo "publish=false" >> "$GITHUB_OUTPUT"' in section
+    assert "Candidate already published; leaving immutable." in section

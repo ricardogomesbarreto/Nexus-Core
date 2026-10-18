@@ -1,7 +1,7 @@
 # NEXUS CORE — Fechamento de código 0.9.12 e roadmap de release
 
 **Data da revisão:** 18/10/2026 · **Versão do pacote:** 0.9.12
-· **candidata planejada:** v0.9.12-rc.3
+· **candidata publicada:** [v0.9.12-rc.3](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3), commit `6429a5e`, CI main de 1.798 testes
 · **estável:** **BLOQUEADA** até homologação física.
 
 Este documento complementa a seção [Roadmap consolidado](../README.md#roadmap-consolidado-e-auditoria-técnica--nexus-core)
@@ -21,7 +21,7 @@ Não renomeia o produto nem transfere interfaces de projetos externos.
 | Documentos e PDFs, conversão/metadados, extração, render e junção de dois PDFs | Código integrado; **CLIs opcionais não homologados** | Executáveis reais, versão/fonte/hashes, saídas em leitores independentes |
 | Análise REA estrutural offline | Código integrado/CI | Corpus defensivo, relatórios/limites, ausência de execução dos alvos |
 | REA profundo, OCR, geração generativa de imagens, edição de documento complexa | **Não implementado integralmente** | Arquitetura separada, isolamento, custo em RAM e novos gates específicos |
-| CI de 0.9.12 e tags históricas rc.1/rc.2 | Registradas no GitHub | Candidata rc.3 deve corresponder ao SHA da main aprovado na CI |
+| CI da 0.9.12, tags rc.1/rc.2 e publicação rc.3 | **1.798 testes aprovados na main**; rc.3 publicada com wheel e SHA256SUMS | Candidata imutável e verificável; não é release estável |
 | Aceite físico G0 para release estável | **11 PASSOU / 10 PENDENTE no relatório de 18/10** | Concluir e comprovar as dez etapas; nenhuma omissão equivale a sucesso |
 
 ## G0 — Bloqueio de publicação estável v0.9.12
@@ -65,14 +65,20 @@ bloqueio do workflow `release-v0.9.12.yml`. Até lá a candidata é pré-release
 
 ## Publicação no GitHub sem falsos positivos
 
-A pré-release `v0.9.12-rc.3` tem workflow independente
-`.github/workflows/release-candidate-v0.9.12.yml`: após CI de push
-verde no SHA atual da `main` com versão 0.9.12, constrói wheel
-e publica tag anotada imutável + `SHA256SUMS` como **prerelease**.
-Não muda `releases/latest` estável e não desbloqueia
-`release-v0.9.12.yml`. Consulte a página GitHub Releases para
-confirmar a existência real: uma PR aprovada não equivale à publicação.
-Se o workflow falhar, registrar a falha; não editar tags já criadas.
+A pré-release [`v0.9.12-rc.3`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3)
+**foi publicada em 18/10/2026**, no commit de código
+`6429a5e61235588feb5c4eb46838c61793bf43ec`, após
+[CI de 1.798 testes](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39126833572)
+e [workflow de publicação verde](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/39126956436).
+Artefatos: `nexus_core-0.9.12-py3-none-any.whl` (959.084 bytes) e
+`SHA256SUMS`. SHA-256 do wheel:
+`0d6ec807c6d00fa8774c0e1caa0430b5a83f4c50a1b97356e9309ce0f1674125`.
+O workflow é idempotente: após publicação, futuras atualizações de
+`main` verificam que a candidata existe e **não reescrevem a tag**.
+
+A publicação é **pré-release**, não muda `releases/latest` estável
+(v0.7.2) e não desbloqueia o workflow `release-v0.9.12.yml`.
+Somente o aceite físico completo poderá liberar a release estável.
 
 ## Roadmap pós-0.9.12
 

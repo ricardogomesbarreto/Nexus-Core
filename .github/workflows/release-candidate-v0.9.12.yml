@@ -53,22 +53,30 @@ jobs:
             echo "Candidate skipped: main advanced, SHA differs or version mismatch."
             exit 0
           fi
-          if git show-ref --verify --quiet refs/tags/v0.9.12-rc.3; then
-            target="$(git rev-list -n 1 v0.9.12-rc.3)"
-            if [[ "$target" != "$TESTED_SHA" ]]; then
-              echo "::error::Candidate tag exists at another commit. Never move tags."
-              exit 1
-            fi
-          fi
+          # A successful prerelease is immutable: all future CI pushes must
+          # skip without reporting a false failure because main has advanced.
           if gh release view v0.9.12-rc.3 >/dev/null 2>&1; then
             published="$(gh release view v0.9.12-rc.3 --json isPrerelease --jq .isPrerelease)"
             if [[ "$published" != "true" ]]; then
-              echo "::error::Existing candidate tag has a non-prerelease publication."
+              echo "::error::Candidate tag has a non-prerelease publication."
+              exit 1
+            fi
+            if ! git show-ref --verify --quiet refs/tags/v0.9.12-rc.3; then
+              echo "::error::Published candidate lacks its annotated tag."
               exit 1
             fi
             echo "publish=false" >> "$GITHUB_OUTPUT"
             echo "Candidate already published; leaving immutable."
             exit 0
+          fi
+          # If a tag exists without a release, it must be for this exact SHA
+          # before an interrupted publishing attempt may be retried.
+          if git show-ref --verify --quiet refs/tags/v0.9.12-rc.3; then
+            target="$(git rev-list -n 1 v0.9.12-rc.3)"
+            if [[ "$target" != "$TESTED_SHA" ]]; then
+              echo "::error::Unpublished candidate tag targets another commit."
+              exit 1
+            fi
           fi
           echo "publish=true" >> "$GITHUB_OUTPUT"
       - name: Build and check candidate wheel
