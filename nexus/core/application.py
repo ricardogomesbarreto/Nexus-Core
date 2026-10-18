@@ -22,7 +22,7 @@ from nexus.tools import (
     SystemInfoTool,
     TerminalSandboxTool,
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
-    EditImageTool, CreateGraphicTool, CraftConvertTool, InspectArtifactTool,
+    EditImageTool, ImageGeometryTool, CreateGraphicTool, CraftConvertTool, InspectArtifactTool,
     CraftInspectTool, PdfRenderTool,
     ToolExecutor,
     ToolRegistry,
@@ -58,7 +58,7 @@ class NexusApplication:
             OpenDefaultBrowserTool(),
             TerminalSandboxTool(),
             DesktopWindowInfoTool(), DesktopTypeTextTool(), DesktopNavigateTool(),
-            EditImageTool(), CreateGraphicTool(), CraftConvertTool(),
+            EditImageTool(), ImageGeometryTool(), CreateGraphicTool(), CraftConvertTool(),
             InspectArtifactTool(), CraftInspectTool(), PdfRenderTool(),
         ):
             self.tool_registry.register(tool)

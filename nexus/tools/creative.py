@@ -163,6 +163,85 @@ class EditImageTool(NexusTool):
             return ToolResult(False, self.name, error=f"Edição não concluída: {type(exc).__name__}.")
 
 
+class ImageGeometryTool(NexusTool):
+    """Crop or resize one authorized raster, never modifying the input."""
+
+    name = "image_geometry_local"
+    description = ("Recorta ou redimensiona foto local PNG/JPEG/WebP. "
+                   "Informe source, output, operation (crop ou resize), "
+                   "x, y, width e height em pixels. Salva uma cópia nova.")
+    risk_level = RiskLevel.MEDIUM
+    path_security = None
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("source", ValueKind.STRING, nonempty=True),
+                FieldSpec("output", ValueKind.STRING, nonempty=True),
+                FieldSpec("operation", ValueKind.STRING, nonempty=True),
+                FieldSpec("x", ValueKind.INTEGER), FieldSpec("y", ValueKind.INTEGER),
+                FieldSpec("width", ValueKind.INTEGER), FieldSpec("height", ValueKind.INTEGER)),
+        resources=(ResourceSpec("source", "source"), ResourceSpec("output", "output")),
+        outputs=(FieldSpec("path", ValueKind.STRING), FieldSpec("operation", ValueKind.STRING),
+                 FieldSpec("width", ValueKind.INTEGER), FieldSpec("height", ValueKind.INTEGER)),
+    )
+
+    def sensitive_resources(self, **kwargs):
+        return (SensitiveResource("source", kwargs["source"]),
+                SensitiveResource("output", kwargs["output"]))
+
+    def execute(self, source: str, output: str, operation: str,
+                x: int, y: int, width: int, height: int, **kwargs) -> ToolResult:
+        try:
+            from PIL import Image, ImageOps, UnidentifiedImageError
+            suffix = Path(output).suffix.lower()
+            if (operation not in {"crop", "resize"} or
+                    Path(source).suffix.lower() not in _IMAGE_EXTENSIONS or
+                    suffix not in _IMAGE_EXTENSIONS or
+                    not (0 <= x <= 4096 and 0 <= y <= 4096 and
+                         1 <= width <= 4096 and 1 <= height <= 4096 and
+                         width * height <= 8_000_000) or
+                    (operation == "resize" and (x != 0 or y != 0))):
+                raise ValueError("Medidas, formato ou operação inválidos.")
+            policy = self.path_security or PathSecurity()
+            content = _read_source(policy, source, 12 * 1024 * 1024)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", Image.DecompressionBombWarning)
+                with Image.open(io.BytesIO(content)) as raw:
+                    if (raw.format not in {"PNG", "JPEG", "WEBP"} or
+                            raw.width > 4096 or raw.height > 4096 or
+                            raw.width * raw.height > 8_000_000):
+                        raise ValueError("Imagem de origem fora dos limites.")
+                    raw.load()
+                    oriented = ImageOps.exif_transpose(raw)
+                    mode = ("RGBA" if "A" in oriented.getbands() or
+                            "transparency" in oriented.info else "RGB")
+                    image = oriented.convert(mode)
+            if operation == "crop":
+                if x + width > image.width or y + height > image.height:
+                    raise ValueError("O recorte ultrapassa a imagem.")
+                image = image.crop((x, y, x + width, y + height))
+            else:
+                image = image.resize((width, height), Image.Resampling.LANCZOS)
+            # A fresh canvas discards source metadata (including location).
+            fresh = Image.new(image.mode, image.size)
+            fresh.paste(image)
+            if suffix in {".jpg", ".jpeg"} and fresh.mode == "RGBA":
+                background = Image.new("RGB", fresh.size, "white")
+                background.paste(fresh, mask=fresh.getchannel("A"))
+                fresh = background
+            encoded = io.BytesIO()
+            fresh.save(encoded, format={".png": "PNG", ".jpg": "JPEG",
+                                        ".jpeg": "JPEG", ".webp": "WEBP"}[suffix])
+            saved = _write_new(policy, output, encoded.getvalue())
+            return ToolResult(True, self.name, data={"path": saved, "operation": operation,
+                                                      "width": width, "height": height})
+        except ImportError:
+            return ToolResult(False, self.name, error="Instale o suporte local de imagens: pip install -e '.[vision]'.")
+        except (ValueError, OSError, PermissionError, UnidentifiedImageError,
+                Image.DecompressionBombWarning, Image.DecompressionBombError) as exc:
+            return ToolResult(False, self.name,
+                              error=f"Transformação não concluída: {type(exc).__name__}.")
+
+
 class CreateGraphicTool(NexusTool):
     name = "create_graphic_local"
     description = ("Cria um cartaz gráfico local PNG com título e cores da marca; "

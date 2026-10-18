@@ -157,6 +157,16 @@ binário separadamente e conferir o resultado, sem executar os ZIPs de fonte.
 Observe duração, privacidade do arquivo (`0600`) e se o original permanece
 igual. Não confunda criação de cartaz com geração de fotografia por IA.
 
+Para a geometria, use uma cópia de foto com resolução de até 4096 por lado
+e teste os dois pedidos do README com **saídas novas**: `Redimensione ...`
+e `Recorte ... começando em x,y com largura por altura pixels ...`.
+Recuse a primeira tentativa, autorize outra com nome diferente e verifique
+dimensões, enquadramento, transparência quando aplicável e ausência de
+metadados privados. Confirme que repetir um destino existente falha sem
+alterá-lo. Repita por voz somente se os caminhos/medidas forem transcritos
+exatamente; registre falha de reconhecimento como tal, sem inferir sucesso
+da edição textual. Registre tempo e consumo no notebook.
+
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
 `~/.local/bin/nexus-core --desktop` diretamente no terminal. **Deixe esse
 terminal aberto enquanto conversa e testa as funções na janela.** O próprio
