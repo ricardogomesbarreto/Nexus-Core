@@ -80,6 +80,54 @@ def test_edit_photo_is_bounded_and_does_not_follow_symlink(tmp_path):
     assert len(confirmation.calls) >= 2
 
 
+@pytest.mark.parametrize("operation", ["grayscale", "invert", "blur", "sharpen",
+                                      "sepia", "rotate_left", "flip_horizontal"])
+def test_photo_effects_preserve_alpha_without_copying_private_metadata(tmp_path, operation):
+    from PIL import Image, PngImagePlugin
+
+    executor, home, _ = setup_tools(tmp_path)
+    source = home / "transparente.png"
+    output = home / "editada.png"
+    original_image = Image.new("RGBA", (3, 2), (60, 80, 120, 0))
+    for index, opacity in enumerate((0, 40, 120, 180, 220, 255)):
+        original_image.putpixel((index % 3, index // 3), (60, 80, 120, opacity))
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("GPSInfo", "private")
+    original_image.save(source, pnginfo=metadata)
+    source_bytes = source.read_bytes()
+
+    result = executor.execute("edit_image_local", source=str(source),
+                              output=str(output), operation=operation)
+    assert result.success
+    with Image.open(output) as edited:
+        expected = original_image.getchannel("A")
+        if operation == "rotate_left":
+            expected = expected.transpose(Image.Transpose.ROTATE_90)
+        elif operation == "flip_horizontal":
+            expected = expected.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+        assert edited.mode == "RGBA"
+        assert edited.size == expected.size
+        assert edited.getchannel("A").tobytes() == expected.tobytes()
+        assert "GPSInfo" not in edited.info
+    assert source.read_bytes() == source_bytes
+    assert os.stat(output).st_mode & 0o777 == 0o600
+
+
+def test_photo_effect_flattens_transparency_to_white_for_jpeg(tmp_path):
+    from PIL import Image
+
+    executor, home, _ = setup_tools(tmp_path)
+    source = home / "transparente.webp"
+    Image.new("RGBA", (24, 24), (15, 25, 35, 0)).save(source)
+    output = home / "copia.jpg"
+    result = executor.execute("edit_image_local", source=str(source),
+                              output=str(output), operation="grayscale")
+    assert result.success
+    with Image.open(output) as edited:
+        assert edited.mode == "RGB"
+        assert all(channel >= 245 for channel in edited.getpixel((12, 12)))
+
+
 def test_optional_craft_cli_missing_does_not_create_output(tmp_path, monkeypatch):
     executor, home, _ = setup_tools(tmp_path)
     source = home / "report.pdf"

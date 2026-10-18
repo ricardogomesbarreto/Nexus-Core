@@ -55,7 +55,7 @@ jobs:
         run: nexus-core --version
 
   candidate_tag:
-    name: Marcar candidato v0.9.12-rc.1 após CI da main
+    name: Marcar candidato v0.9.12-rc.2 após CI da main
     needs: linux
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -71,21 +71,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag=v0.9.12-rc.1
+          tag=v0.9.12-rc.2
           git fetch origin main --tags
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            echo "Tag candidata $tag já publicada em $(git rev-list -n 1 "$tag"); preservada."
+            exit 0
+          fi
           version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           if [[ "$version" != "0.9.12" || "$(git rev-parse HEAD)" != "$EXPECTED_SHA" || "$(git rev-parse origin/main)" != "$EXPECTED_SHA" ]]; then
             echo "A main avançou ou a versão não é 0.9.12; tag não criada." >&2
             exit 1
           fi
-          if git show-ref --verify --quiet "refs/tags/$tag"; then
-            test "$(git rev-list -n 1 "$tag")" = "$EXPECTED_SHA" || {
-              echo "A tag candidata já aponta para outro SHA; não mover." >&2
-              exit 1
-            }
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "$tag" -m 'Nexus Core 0.9.12 RC1: código candidato; aceite físico pendente'
+          git tag -a "$tag" -m 'Nexus Core 0.9.12 RC2: correção de imagem; aceite físico pendente'
           git push origin "refs/tags/$tag"
