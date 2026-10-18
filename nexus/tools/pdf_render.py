@@ -25,7 +25,7 @@ _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 def _validate_png(data: bytes) -> None:
     if (len(data) < 57 or not data.startswith(_PNG_SIGNATURE)
             or data[12:16] != b"IHDR"):
-        raise ValueError("PdfCraft não gerou PNG válido.")
+        raise ValueError("O mecanismo local não gerou PNG válido.")
     offset, seen_image, seen_end = 8, False, False
     while offset < len(data):
         if len(data) - offset < 12:
@@ -60,7 +60,7 @@ def _validate_png(data: bytes) -> None:
 class PdfRenderTool(NexusTool):
     name = "pdf_render_local"
     description = ("Renderiza uma única página PDF local autorizada em PNG novo "
-                   "usando PdfCraft instalado separadamente.")
+                   "usando mecanismo local opcional.")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -83,7 +83,7 @@ class PdfRenderTool(NexusTool):
             return ToolResult(False, self.name, error="Origem PDF, PNG de saída ou página inválida.")
         executable = shutil.which("pdfcraft-cli")
         if executable is None:
-            return ToolResult(False, self.name, error="CLI local opcional ausente: pdfcraft-cli.")
+            return ToolResult(False, self.name, error="Mecanismo local de PDF não instalado. Consulte --feature-check.")
         try:
             policy = self.path_security or PathSecurity()
             data = _read_source(policy, source, 20 * 1024 * 1024)
@@ -100,7 +100,7 @@ class PdfRenderTool(NexusTool):
                     stderr=subprocess.DEVNULL, timeout=90, check=False,
                 )
                 if status.returncode != 0:
-                    raise ValueError("O PdfCraft não renderizou a página solicitada.")
+                    raise ValueError("O mecanismo local não renderizou a página solicitada.")
                 staging_policy = PathSecurity()
                 staging_policy.home = work
                 staging_policy.protected_paths = []

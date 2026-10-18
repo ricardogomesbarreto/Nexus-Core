@@ -29,6 +29,7 @@ from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.image_preview import load_image_preview, PREVIEW_EXTENSIONS
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.desktop.runtime_log import live_event
+from nexus.desktop.tool_labels import action_label, resource_label
 from nexus.desktop.presentation import (
     COLORS, DEFAULT_FONT, configure_presentation, message_size,
     composer_count, activity_state,
@@ -591,8 +592,8 @@ class DesktopWindow:
                 "registro de autorização e a execução da ferramenta.")),
             ("Imagem: selecionar com consentimento",
              lambda: self._request_vision("file")),
-            ("REA: inspeção estática local", lambda: self._show_test_instructions(
-                "REA", "Copie um arquivo de teste para sua pasta pessoal. "
+            ("Arquivo: inspeção estática local", lambda: self._show_test_instructions(
+                "Inspeção local", "Copie um arquivo de teste para sua pasta pessoal. "
                 "Digite no chat: Analise o arquivo /home/usuario/NexusTestes/teste.elf "
                 "(substitua pelo caminho verdadeiro). Negue uma vez; depois "
                 "autorize a leitura. Nenhum executável será iniciado e "
@@ -769,9 +770,9 @@ class DesktopWindow:
             "Nexus Core — guia rápido",
             "Converse por texto ou voz quando o modelo local estiver disponível.\n\n"
             "• Imagem, tela e câmera exigem autorização por captura.\n"
-            "• Edição de fotos e operações Craft usam arquivos novos.\n"
-            "• REA faz inspeção estática de arquivos autorizados.\n"
-            "• CLIs PhotoCraft, WordCraft e PdfCraft são opcionais.\n\n"
+            "• Edição de fotos e operações disponíveis de documento/PDF geram cópias novas.\n"
+            "• Inspeção estática lê apenas arquivos autorizados.\n"
+            "• Algumas conversões e operações em PDF exigem componentes locais opcionais.\n\n"
             "Atalhos: Enter envia; Shift+Enter quebra linha;\n"
             "Ctrl+L foca a mensagem; Ctrl++ / Ctrl+- ajustam a leitura;\n"
             "Ctrl+Shift+M pausa/retoma a escuta;\n"
@@ -1675,7 +1676,7 @@ class DesktopWindow:
     def _confirm(self, request) -> bool:
         live_event("autorizacao", "solicitado", tool=request.tool_name)
         details = [
-            f"Ferramenta: {self._display(request.tool_name or 'unknown')}",
+            f"Função Nexus Core: {action_label(request.tool_name or '')}",
             f"Ação: {self._display(request.description)}",
             f"Risco: {request.risk_level.name}",
         ]
@@ -1711,7 +1712,7 @@ class DesktopWindow:
             )
         for resource in request.resources:
             details.append(
-                f"Recurso {self._display(resource.name)}: {self._display(resource.path)}"
+                f"{resource_label(resource.name)}: {self._display(resource.path)}"
             )
         details.append("\nEsta autorização vale somente para a ação acima.")
         dialog = PermissionDialog(

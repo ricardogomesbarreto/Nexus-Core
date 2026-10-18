@@ -104,12 +104,18 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
 
 ## Desenvolvimento complementar — integrações locais avançadas (sem release)
 
+- A janela, autorizações, respostas do chat e mensagens de falha exibem
+  funções do NEXUS CORE, sem nomes de projetos dos ZIPs. O diagnóstico
+  `--feature-check` retorna categorias de imagem, documento e PDF, indicando
+  apenas se os comandos locais foram anunciados; o modo técnico anterior
+  continua disponível para engenharia. A proveniência e as licenças permanecem
+  na documentação técnica, sem apresentar outra marca ao usuário.
 - O ZIP original PdfCraft define `combine A B --out NEW`. O Nexus passa a
   aceitar “Junte os PDFs /home/.../a.pdf e /home/.../b.pdf em
   /home/.../combinado.pdf” na conversa, com confirmação das duas origens e
   destino, limite de 10 MiB por entrada, 25 MiB de saída e 90 segundos de
   execução; usa cópias temporárias privadas e salva somente arquivo novo.
-  `--craft-capabilities` e o roteiro `validate_craft_cli.py --smoke --advanced`
+  `--feature-check` e o roteiro `validate_craft_cli.py --smoke --advanced`
   cobrem agora o comando. Testes de código e CLI simulado não comprovam que a
   junção real preserve páginas, metadados ou fidelidade no notebook.
 - WordCraft `text` exporta DOCX/ODT/RTF para TXT UTF-8 novo com leitura de

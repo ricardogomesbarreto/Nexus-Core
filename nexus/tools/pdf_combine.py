@@ -22,7 +22,7 @@ from nexus.tools.pdf_extract import _validate_pdf_copy
 class PdfCombineTool(NexusTool):
     name = "pdf_combine_local"
     description = ("Junta dois PDFs locais, na ordem informada, em um PDF novo "
-                   "com PdfCraft opcional; preserva os originais.")
+                   "com mecanismo local opcional; preserva os originais.")
     risk_level = RiskLevel.MEDIUM
     path_security = None
     contract = ToolContract(
@@ -49,7 +49,8 @@ class PdfCombineTool(NexusTool):
                 raise ValueError("Informe dois arquivos distintos.")
             executable = shutil.which("pdfcraft-cli")
             if executable is None:
-                raise ValueError("CLI local opcional ausente: pdfcraft-cli.")
+                return ToolResult(False, self.name,
+                                  error="Mecanismo local de PDF não instalado. Consulte --feature-check.")
             policy = self.path_security or PathSecurity()
             first = _read_source(policy, source_a, 10 * 1024 * 1024)
             second = _read_source(policy, source_b, 10 * 1024 * 1024)
@@ -67,7 +68,7 @@ class PdfCombineTool(NexusTool):
                     timeout=90, check=False,
                 )
                 if status.returncode:
-                    raise ValueError("PdfCraft não juntou os documentos.")
+                    raise ValueError("O mecanismo local não juntou os documentos.")
                 staging_policy = PathSecurity()
                 staging_policy.home = work
                 staging_policy.protected_paths = []

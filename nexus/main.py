@@ -228,7 +228,11 @@ def cli(argv: list[str] | None = None) -> None:
     )
     actions.add_argument(
         "--craft-capabilities", action="store_true",
-        help="consulta --version e --help dos CLIs Craft locais, sem abrir arquivos",
+        help=argparse.SUPPRESS,
+    )
+    actions.add_argument(
+        "--feature-check", action="store_true",
+        help="verifica funções locais opcionais de imagem, documento e PDF sem abrir arquivos",
     )
     actions.add_argument(
         "--platform-check", action="store_true",
@@ -324,14 +328,19 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
-    if args.craft_capabilities:
+    if args.craft_capabilities or args.feature_check:
         if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
                 or args.vision_question is not None or args.vision_model != "gemma3:4b"
                 or args.workspace is not None or args.memory_confirm
                 or args.memory_days != 90 or args.knowledge_limit != 5):
-            parser.error("--craft-capabilities é diagnóstico isolado")
-        from nexus.tools.craft_capabilities import inspect_craft_capabilities
-        print(json.dumps(inspect_craft_capabilities(), ensure_ascii=False))
+            parser.error("A consulta de funções é um diagnóstico isolado")
+        if args.feature_check:
+            from nexus.tools.craft_capabilities import inspect_local_features
+            result = inspect_local_features()
+        else:
+            from nexus.tools.craft_capabilities import inspect_craft_capabilities
+            result = inspect_craft_capabilities()
+        print(json.dumps(result, ensure_ascii=False))
         return
     if args.resource_check:
         if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
