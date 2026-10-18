@@ -1,7 +1,7 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: código de desenvolvimento v0.9.12 até o PR #78
-integrado à `main`; 1.744 testes aprovados na CI do PR #78. Sem tag/release
+**Estado: código de desenvolvimento v0.9.12 até o PR #80
+integrado à `main`; 1.747 testes aprovados na CI do PR #80. Sem tag/release
 estável.** O aceite físico no notebook, a CI `push` do SHA final e a revisão
 explícita do workflow de publicação ainda são requisitos para release. As
 integrações Craft e REA são parciais; os três CLIs Craft reais não foram
