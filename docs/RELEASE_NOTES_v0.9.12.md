@@ -1,5 +1,23 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
+> **Atualização de fechamento — 18/10/2026:** a entrega do código da v0.9.12
+> permanece na `main` com workflow CI obrigatório. Há uma candidata
+> `v0.9.12-rc.3` destinada **somente a testes**, com wheel e SHA-256
+> publicados automaticamente após CI verde no commit exato da `main`.
+> Verifique a existência do artefato em
+> [GitHub Releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases);
+> uma PR aprovada isoladamente **não prova publicação**.
+> A release estável `v0.9.12` continua em **hold** no workflow próprio.
+> O [roadmap atualizado](ROADMAP_v0.9.12_RELEASE_STATUS.md) registra
+> **11 PASSOU, 10 PENDENTE** no aceite físico de 18/10, pendências de voz,
+> câmera/Wayland/latência, serviços locais e CLIs Rust/REA reais.
+> O publicador da candidata **não** remove nenhuma dessas restrições.
+>
+> A interface integrada descreve criação, edição e análise como funções do
+> **NEXUS CORE**, com proveniência e licenças dos componentes nos registros
+> técnicos. Serviços continuam sob demanda, PostgreSQL permanece banco único
+> e o design vinho é preservado.
+
 **Estado: código de desenvolvimento v0.9.12; PRs #83/#84 integrados à `main`,
 com 1.779 testes aprovados na CI do commit `14d5f4c`. As tags candidatas
 `v0.9.12-rc.1` e `v0.9.12-rc.2` apontam para os seus próprios commits.
