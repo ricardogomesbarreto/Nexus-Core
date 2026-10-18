@@ -102,6 +102,11 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
   A orientação EXIF é aplicada; a cópia não retém metadados da origem.
   Tamanho e dimensões são limitados. Testes no notebook e aceite continuam
   pendentes; essa entrega não altera o número de versão nem cria tag.
+- Interface: prévia reduzida das imagens novas dentro do Nexus, acionada
+  pela pessoa após a edição, sem abrir o editor externo ou gravar cópia;
+  cabeçalho/barra de conversa reorganizados e autorização com detalhes
+  roláveis. A identidade vinho e as decisões de permissão são preservadas.
+  CI e aceite na sessão Wayland física permanecem necessários.
 - Testes de autorização, arquivos inválidos e regressões, com aceite real
   dos CLIs e hardware ainda obrigatório. Serviço do sistema sempre sob demanda.
 
