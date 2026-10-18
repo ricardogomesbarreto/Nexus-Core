@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import struct
+import zlib
 from types import SimpleNamespace
 
 import pytest
@@ -107,9 +108,13 @@ def test_real_cli_arguments_and_gate_are_fixed(tmp_path, monkeypatch, kind, suff
 
 
 def _fake_png(width=6, height=8):
-    return b"\x89PNG\r\n\x1a\n" + struct.pack(">I", 13) + b"IHDR" + struct.pack(
-        ">IIBBBBB", width, height, 8, 2, 0, 0, 0
-    ) + b"\x00\x00\x00\x00"
+    def chunk(kind, data):
+        return (struct.pack(">I", len(data)) + kind + data +
+                struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff))
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    pixels = b"\x00" + b"\x00\x00\x00" * width
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) +
+            chunk(b"IDAT", zlib.compress(pixels)) + chunk(b"IEND", b""))
 
 
 def test_pdf_render_is_private_new_file_and_original_untouched(tmp_path, monkeypatch):
@@ -147,6 +152,14 @@ def test_pdf_render_is_private_new_file_and_original_untouched(tmp_path, monkeyp
 def test_pdf_render_rejects_invalid_or_massive_pixels(bad):
     with pytest.raises(ValueError):
         _validate_png(bad)
+
+
+def test_pdf_render_rejects_corrupt_crc_and_truncated_png():
+    png = _fake_png()
+    _validate_png(png)
+    for bad in (png[:-2], png[:-12], png + b"trailing", png[:29] + b"X" + png[30:]):
+        with pytest.raises(ValueError):
+            _validate_png(bad)
 
 
 def test_pdf_render_symlink_output_from_cli_is_never_read(tmp_path, monkeypatch):

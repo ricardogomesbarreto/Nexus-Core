@@ -1,9 +1,10 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
-**Estado: código de desenvolvimento v0.9.12 até o PR #80
-integrado à `main`; 1.747 testes aprovados na CI do PR #80. Sem tag/release
-estável.** O aceite físico no notebook, a CI `push` do SHA final e a revisão
-explícita do workflow de publicação ainda são requisitos para release. As
+**Estado: código de desenvolvimento v0.9.12; PR #82 integrado à `main`, com
+1.752 testes aprovados na CI desse PR. A tag candidata `v0.9.12-rc.1` marca
+somente um instantâneo após CI verde no SHA da `main`; release estável
+continua pendente.** O aceite físico no notebook e a revisão explícita do
+workflow de publicação ainda são requisitos para release. As
 integrações Craft e REA são parciais; os três CLIs Craft reais não foram
 homologados no Ubuntu 26.04 do usuário. Consulte a matriz e os gates no README.
 
@@ -89,6 +90,15 @@ deve ser criada sem registrar esses resultados, obter CI no SHA final da
 `main` e revisar expressamente o bloqueio do workflow de release.
 
 ## Desenvolvimento complementar — integrações locais avançadas (sem release)
+
+- WordCraft `text` exporta DOCX/ODT/RTF para TXT UTF-8 novo com leitura de
+  stdout limitada a 25 MiB e 90 segundos. PdfCraft `extract` copia até 20
+  páginas explicitamente listadas para um PDF novo, sem alterar a origem.
+  Ambos passam por confirmação individual e pelos caminhos protegidos.
+- Validação da prévia PNG inclui CRC/blocos completos; o smoke `--advanced`
+  testa também WordCraft `text` e PdfCraft `extract` sobre fixtures sintéticos.
+  Executáveis reais, fidelidade, página efetiva e leitura independente do
+  PDF ainda dependem do Ubuntu físico.
 
 - Inspeção REA estática de envelopes WASM, com limite de 128 KiB, contagens
   por tipo e reconhecimento explícito de prefixo parcial. Nenhuma execução,
