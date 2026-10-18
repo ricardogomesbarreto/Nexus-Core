@@ -26,6 +26,7 @@ from nexus.desktop.connectivity_indicator import PassiveConnectivityWatcher
 from nexus.desktop.multimodal_status import MultimodalStatus
 from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_message
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
+from nexus.desktop.image_preview import load_image_preview, PREVIEW_EXTENSIONS
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.desktop.runtime_log import live_event
 from nexus.desktop.presentation import (
@@ -33,6 +34,7 @@ from nexus.desktop.presentation import (
     composer_count, activity_state,
 )
 from nexus.models.resource_budget import ResourceBudget
+from nexus.security.paths import PathSecurity
 from nexus.voice import LocalRecognizer, LocalSpeaker, VoiceError
 from nexus.voice.speech_text import readable_model_text, speech_from_model_text
 from nexus.voice.wake import extract_utterance
@@ -131,6 +133,11 @@ class DesktopWindow:
         self._network_watcher: PassiveConnectivityWatcher | None = None
         self._network_state = None
         self._camera_preview = None
+        self._created_image_path: str | None = None
+        self._created_image_window = None
+        self._created_image_photo = None
+        self._preview_policy = (getattr(getattr(app, "security_gate", None),
+                                        "path_security", None) or PathSecurity())
         self._live_camera: CameraStream | None = None
         self._live_camera_window = None
         self._live_camera_label = None
@@ -188,10 +195,10 @@ class DesktopWindow:
                         foreground="#ffffff")
         style.configure("Nexus.HeaderHint.TLabel", background="#241c24",
                         foreground="#e9b4c4", font=("Sans", 9))
-        for state, color in (("Online", "#9ee6b6"),
-                             ("Offline", "#ffb3b3"),
-                             ("Unknown", "#ddd0d6")):
-            style.configure(f"Nexus.Network{state}.TLabel", background="#241c24",
+        for state, color in (("Online", "#246747"),
+                             ("Offline", "#9d3947"),
+                             ("Unknown", "#675761")):
+            style.configure(f"Nexus.Network{state}.TLabel", background="#ffffff",
                             foreground=color, font=("Sans", 10, "bold"))
         style.configure("Nexus.Subtitle.TLabel", background="#f5f1f3",
                         foreground="#75646e", font=("Sans", 10))
@@ -257,15 +264,6 @@ class DesktopWindow:
         ttk.Label(header, text="ASSISTENTE LOCAL\nCONVERSA · VISÃO · CRIAÇÃO",
                   justify="right", style="Nexus.HeaderHint.TLabel").pack(
                       side="right", anchor="center", padx=(8, 0))
-        self.test_button = ttk.Button(
-            header, text="Testar funções", command=self._show_test_panel,
-            style="Nexus.Quiet.TButton",
-        )
-        self.test_button.pack(side="right", padx=(12, 0))
-        self.network_badge = ttk.Label(
-            header, text="● NÃO VERIFICADO", style="Nexus.NetworkUnknown.TLabel")
-        self.network_badge.pack(side="right", anchor="center", padx=(8, 10))
-
         readiness_row = ttk.Frame(frame, style="Nexus.App.TFrame")
         readiness_row.pack(fill="x", pady=(0, 3))
         ttk.Label(readiness_row, text=readiness_caption,
@@ -295,6 +293,10 @@ class DesktopWindow:
         conversation_toolbar.pack(fill="x", padx=12, pady=(3, 2))
         ttk.Label(conversation_toolbar, text="CONVERSA LOCAL",
                   style="Nexus.CardTitle.TLabel").pack(side="left")
+        self.test_button = ttk.Button(
+            conversation_toolbar, text="Testar funções", command=self._show_test_panel,
+            style="Nexus.Inline.TButton")
+        self.test_button.pack(side="right", padx=(7, 0))
         self.quick_guide_button = ttk.Button(
             conversation_toolbar, text="Guia rápido", command=self._show_quick_guide,
             style="Nexus.Inline.TButton")
@@ -307,6 +309,14 @@ class DesktopWindow:
             conversation_toolbar, text="A−", command=lambda: self._zoom_conversation(-1),
             style="Nexus.Inline.TButton")
         self.zoom_out_button.pack(side="right", padx=(4, 0))
+        self.preview_image_button = ttk.Button(
+            conversation_toolbar, text="Ver imagem criada", command=self._show_created_image,
+            style="Nexus.Inline.TButton", state="disabled")
+        self.preview_image_button.pack(side="right", padx=(7, 0))
+        self.network_badge = ttk.Label(
+            conversation_toolbar, text="● NÃO VERIFICADO",
+            style="Nexus.NetworkUnknown.TLabel")
+        self.network_badge.pack(side="right", anchor="center", padx=(12, 0))
         self._conversation_font_size = DEFAULT_FONT
         self.transcript = tk.Text(
             transcript_frame, height=5, wrap="word", state="disabled",
@@ -338,7 +348,7 @@ class DesktopWindow:
         voice_controls = ttk.Frame(footer, style="Nexus.App.TFrame")
         voice_controls.pack(fill="x", pady=(3, 0))
         self.speech_toggle = ttk.Checkbutton(
-            voice_controls, text="Ler respostas em voz alta",
+            voice_controls, text="Responder em voz",
             command=self._toggle_speech, style="Nexus.TCheckbutton",
         )
         self.speech_toggle.state(("selected",))
@@ -361,7 +371,7 @@ class DesktopWindow:
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
         self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
-        ttk.Label(voice_controls, text="Microfone:", style="Nexus.Caption.TLabel").pack(
+        ttk.Label(voice_controls, text="Entrada:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
             voice_controls, values=("Automático", "PipeWire", "ALSA"),
@@ -770,6 +780,58 @@ class DesktopWindow:
             "Nenhuma função realiza capturas ou ações sem as permissões exigidas.",
             parent=self.root,
         )
+
+    def _remember_created_image(self, result) -> None:
+        """Offer a preview only after a mediated image action succeeded."""
+        if (not result.success or result.tool_name not in {
+                "edit_image_local", "image_geometry_local", "create_graphic_local",
+                "craft_convert_local"} or not isinstance(result.data, dict)):
+            return
+        path = result.data.get("path")
+        if isinstance(path, str) and Path(path).suffix.lower() in PREVIEW_EXTENSIONS:
+            self._created_image_path = path
+            self.preview_image_button.configure(state="normal")
+
+    def _close_created_image(self) -> None:
+        if self._created_image_window is not None:
+            self._created_image_window.destroy()
+            self._created_image_window = None
+        self._created_image_photo = None
+
+    def _show_created_image(self) -> None:
+        """Display a bounded copy inside Nexus; never launch an external app."""
+        if self._closing or self._created_image_path is None:
+            return
+        try:
+            from PIL import ImageTk
+            image = load_image_preview(self._created_image_path, self._preview_policy)
+            image.thumbnail((max(1, min(720, self.root.winfo_screenwidth() - 80)),
+                             max(1, min(480, self.root.winfo_screenheight() - 180))))
+            self._close_created_image()
+            preview = self.tk.Toplevel(self.root)
+            self._created_image_window = preview
+            preview.title("Nexus Core — imagem criada")
+            preview.configure(bg=COLORS.header)
+            preview.transient(self.root)
+            preview.protocol("WM_DELETE_WINDOW", self._close_created_image)
+            head = self.tk.Frame(preview, bg=COLORS.header, padx=16, pady=12)
+            head.pack(fill="x")
+            self.tk.Label(head, text="PRÉVIA LOCAL", bg=COLORS.header,
+                          fg="#ffffff", font=("Sans", 12, "bold")).pack(side="left")
+            self.tk.Label(head, text=f"{image.width} × {image.height} px",
+                          bg=COLORS.header, fg="#e9b4c4",
+                          font=("Sans", 10)).pack(side="right")
+            self._created_image_photo = ImageTk.PhotoImage(image, master=preview)
+            self.tk.Label(preview, image=self._created_image_photo,
+                          bg=COLORS.paper, padx=12, pady=12).pack(padx=12, pady=(0, 10))
+            self.tk.Button(preview, text="Fechar prévia", command=self._close_created_image,
+                           bg=COLORS.wine, fg="white", activebackground=COLORS.wine_hover,
+                           activeforeground="white", relief="flat", padx=16, pady=8,
+                           cursor="hand2").pack(pady=(0, 12))
+            self.status.configure(text="Prévia local da imagem criada")
+        except (ImportError, OSError, ValueError, PermissionError, self.tk.TclError):
+            self._close_created_image()
+            self.status.configure(text="Prévia indisponível; a imagem original não foi alterada")
 
     def _zoom_conversation(self, delta: int):
         """Improve legibility without changing persisted layout or permissions."""
@@ -1950,6 +2012,8 @@ class DesktopWindow:
                     self._start_listening()
                 else:
                     self._append("Nexus Core", reply.text, "assistant")
+                    if reply.outcome.tool_result is not None:
+                        self._remember_created_image(reply.outcome.tool_result)
                     self.status.configure(
                         text=(self.session.last_archive_error
                               or ("Escuta pausada" if not self._voice_active
@@ -2019,6 +2083,8 @@ class DesktopWindow:
         # The original photo asset must be released on the Tk thread even
         # when tests or users destroy the root before audio workers exit.
         self._brand_image = None
+        self._close_created_image()
+        self._created_image_path = None
         if self._camera_preview is not None:
             self._camera_preview.destroy()
             self._camera_preview = None

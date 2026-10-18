@@ -58,6 +58,18 @@ ou REA e sem adicionar servidor web ou dependências pesadas:
 - **Conversa destacada:** cabeçalho próprio, área de mensagens branca com
   margens e diferenciação discreta de mensagens do usuário; scrollbar e
   histórico textual seguem locais.
+- **Faixa superior mais clara:** marca preservada no cabeçalho escuro; rede,
+  testes e guia ficam na barra da conversa, com contraste apropriado sobre
+  fundo claro. Os controles de voz usam rótulos curtos para caber na janela.
+- **Prévia de imagem criada:** depois de uma edição, cartaz ou conversão para
+  PNG/JPEG/WebP aprovada e concluída, o botão `Ver imagem criada` abre uma
+  janela do próprio Nexus. A prévia é local, reduzida, sem metadados e sem
+  gravar outra cópia. A leitura verifica o caminho da home e recusa links
+  simbólicos, dimensões ou arquivos excessivos. A imagem completa continua
+  apenas no arquivo novo autorizado.
+- **Autorização legível:** cabeçalho escuro, detalhes com rolagem e decisões
+  de mesma largura; confirmação por voz, texto e botões mantém as mesmas
+  regras estritas.
 - **Leitura mais confortável:** `A+` / `A−` e `Ctrl++` / `Ctrl+-` ajustam a
   fonte da conversa de 10 a 16 pt, sem salvar dados de texto ou alterar
   o contrato de autorização.
@@ -71,10 +83,12 @@ ou REA e sem adicionar servidor web ou dependências pesadas:
   consentimento, sem iniciar modelos, dispositivos nem ferramentas.
 - **Compatibilidade:** preservadas ações de voz, câmera, texto, histórico,
   permissões por operação e logs sanitizados. Paleta em
-  `nexus/desktop/presentation.py`, widgets em `nexus/desktop/window.py`;
+  `nexus/desktop/presentation.py`, widgets em `nexus/desktop/window.py` e
+  prévia em `nexus/desktop/image_preview.py`;
   testes com Tk/Xvfb e janela mínima 770 × 570.
 
-**Status:** incremento de **código integrado após validação em CI**; a aparência,
+**Status:** refinamento inicial integrado após validação em CI; a prévia e
+o modal atualizados ainda exigem CI e teste físico. A aparência,
 legibilidade, Wayland/escala de tela e fluidez ainda precisam de verificação
 física no Ubuntu 26.04. **Não confundir testes Xvfb com aprovação da GUI em
 hardware real.** Esta alteração não conclui o G0, não instala CLIs,

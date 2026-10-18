@@ -167,6 +167,14 @@ alterá-lo. Repita por voz somente se os caminhos/medidas forem transcritos
 exatamente; registre falha de reconhecimento como tal, sem inferir sucesso
 da edição textual. Registre tempo e consumo no notebook.
 
+Depois de autorizar uma imagem nova, clique em **Ver imagem criada** na barra
+da conversa. Confirme que a prévia é coerente, aparece dentro do Nexus, cabe
+na tela, não substitui o arquivo e não abre outro programa. Verifique também
+o indicador de rede, o botão de testes, a área de entrada e o histórico com
+a janela em 770 × 570 e maximizada. Na autorização, confira leitura dos
+detalhes, rolagem, negação, aceitação por texto/botão e cancelamento por Esc.
+Essas observações são aceites humanos; a CI com Xvfb não as substitui.
+
 Após `git pull --ff-only` e `python3 scripts/install_linux.py`, execute
 `~/.local/bin/nexus-core --desktop` diretamente no terminal. **Deixe esse
 terminal aberto enquanto conversa e testa as funções na janela.** O próprio

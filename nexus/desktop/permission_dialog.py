@@ -61,14 +61,27 @@ class PermissionDialog:
         self.window.minsize(500, 370)
         self.window.configure(bg="#f5f1f3")
         self.window.protocol("WM_DELETE_WINDOW", lambda: self._finish(False))
+        banner = tk.Frame(self.window, bg="#241c24", padx=18, pady=11)
+        banner.pack(fill="x")
+        tk.Label(banner, text="NEXUS CORE  ·  AUTORIZAÇÃO", bg="#241c24",
+                 fg="#ffffff", font=("Sans", 12, "bold")).pack(anchor="w")
+        tk.Label(banner, text="Revise a ação e o alvo antes de decidir.",
+                 bg="#241c24", fg="#e9b4c4", font=("Sans", 9)).pack(anchor="w")
         frame = ttk.Frame(self.window, style="Nexus.App.TFrame", padding=16)
         frame.pack(fill="both", expand=True)
-        ttk.Label(frame, text="Autorizar uma ação", style="Nexus.Section.TLabel").pack(anchor="w")
-        description = tk.Text(frame, height=9, wrap="word", bg="#ffffff", fg="#292127",
-                              relief="flat", padx=10, pady=10)
+        ttk.Label(frame, text="Detalhes da solicitação",
+                  style="Nexus.Section.TLabel").pack(anchor="w")
+        detail_box = ttk.Frame(frame, style="Nexus.Card.TFrame")
+        detail_box.pack(fill="both", expand=True, pady=(8, 10))
+        description = tk.Text(detail_box, height=7, wrap="word", bg="#ffffff", fg="#292127",
+                              font=("Sans", 10), relief="flat", padx=12, pady=10,
+                              highlightthickness=1, highlightbackground="#e5d9df")
         description.insert("1.0", details)
         description.configure(state="disabled")
-        description.pack(fill="both", expand=True, pady=(10, 12))
+        scrollbar = ttk.Scrollbar(detail_box, command=description.yview)
+        description.configure(yscrollcommand=scrollbar.set)
+        description.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
         ttk.Label(frame, text="Digite AUTORIZAR ou NEGAR e pressione Enter:",
                   style="Nexus.Caption.TLabel").pack(anchor="w")
         self.entry = ttk.Entry(frame)
@@ -82,10 +95,12 @@ class PermissionDialog:
         self.status.pack(anchor="w", fill="x", pady=(0, 12))
         buttons = ttk.Frame(frame, style="Nexus.App.TFrame")
         buttons.pack(fill="x")
+        buttons.columnconfigure(0, weight=1, uniform="decision")
+        buttons.columnconfigure(1, weight=1, uniform="decision")
         ttk.Button(buttons, text="Negar", command=lambda: self._finish(False),
-                   style="Nexus.TButton").pack(side="right", padx=(8, 0))
+                   style="Nexus.TButton").grid(row=0, column=0, sticky="ew", padx=(0, 5))
         ttk.Button(buttons, text="Autorizar esta ação", command=lambda: self._finish(True),
-                   style="Nexus.Primary.TButton").pack(side="right")
+                   style="Nexus.Primary.TButton").grid(row=0, column=1, sticky="ew", padx=(5, 0))
         self.window.bind("<Escape>", lambda event: self._finish(False))
 
     def _typed_answer(self, event=None):
