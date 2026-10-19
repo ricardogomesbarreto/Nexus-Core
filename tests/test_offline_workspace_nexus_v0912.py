@@ -10,7 +10,7 @@ from nexus.agent.planner import _simple_creative_request
 from nexus.desktop.conversation import ChatSession
 from nexus.agent import AgentOutcome
 from nexus.security import AuditLogger, PathSecurity, SecurityGate
-from nexus.tools import LocalDataTool, LocalNoteTool, ToolExecutor, ToolRegistry, ToolResult
+from nexus.tools import LocalDataTool, LocalNoteTool, LocalLibraryCatalogTool, ToolExecutor, ToolRegistry, ToolResult
 from nexus.tools.offline_workspace import _transform, offline_capabilities
 from nexus.voice.local import LocalRecognizer
 
@@ -34,6 +34,7 @@ def setup(tmp_path, approve=True):
     reg = ToolRegistry()
     reg.register(LocalDataTool())
     reg.register(LocalNoteTool())
+    reg.register(LocalLibraryCatalogTool())
     approval = Approval(approve)
     exec_ = ToolExecutor(reg, SecurityGate(
         path_security=p, audit_logger=AuditLogger(tmp_path / "audit.log")), approval)
@@ -113,6 +114,7 @@ def test_data_transform_does_not_use_model_or_files(tmp_path):
     ('Codifique em base64 o texto "abc"', "local_data_transform"),
     ('Decodifique base64 "YQ=="', "local_data_transform"),
     ('Codifique em hexadecimal o texto "abc"', "local_data_transform"),
+    ("Liste recursos offline em /home/usuario/Biblioteca", "local_library_catalog"),
 ])
 def test_explicit_current_turn_parser_only(utterance, name):
     action = _simple_creative_request(json.dumps(
@@ -157,3 +159,55 @@ def test_native_chat_reports_private_note_without_displaying_its_body():
     message = ChatSession._describe(outcome)
     assert message == "Nota local criada: /home/u/n.md"
     assert "content" not in message
+
+
+def test_offline_library_catalog_metadata_only_and_consent(tmp_path):
+    executor, home, approval = setup(tmp_path, approve=False)
+    library = home / "Biblioteca"
+    library.mkdir()
+    (library / "enciclopedia.zim").write_bytes(b"ZIM")
+    (library / "regiao.pmtiles").write_bytes(b"PMTILES")
+    (library / "texto.txt").write_text("privado")
+    (library / "ignorado.exe").write_bytes(b"exe")
+    (library / "ligacao.pdf").symlink_to(tmp_path / "segredo.pdf")
+    denied = executor.execute("local_library_catalog", directory=str(library))
+    assert not denied.success and approval.called == 1
+    approval.approve = True
+    result = executor.execute("local_library_catalog", directory=str(library))
+    assert result.success
+    assert [i["name"] for i in result.data["items"]] == [
+        "enciclopedia.zim", "regiao.pmtiles", "texto.txt"]
+    assert [i["kind"] for i in result.data["items"]] == [
+        "biblioteca_zim", "mapa_pmtiles", "texto"]
+    assert "privado" not in json.dumps(result.data)
+    assert (library / "texto.txt").read_text() == "privado"
+
+
+def test_offline_catalog_rejects_symlinked_parent(tmp_path):
+    executor, home, _ = setup(tmp_path)
+    real = home / "Real"
+    real.mkdir()
+    (home / "Atalho").symlink_to(real, target_is_directory=True)
+    result = executor.execute("local_library_catalog", directory=str(home / "Atalho"))
+    assert not result.success
+
+
+def test_offline_catalog_does_not_scan_recursively(tmp_path):
+    executor, home, _ = setup(tmp_path)
+    library = home / "Biblioteca"
+    library.mkdir()
+    deeper = library / "subpasta"
+    deeper.mkdir()
+    (deeper / "invisivel.zim").write_bytes(b"ZIM")
+    result = executor.execute("local_library_catalog", directory=str(library))
+    assert result.success and result.data["items"] == []
+
+
+def test_offline_catalog_native_reply_does_not_print_file_contents():
+    outcome = AgentOutcome(True, tool_result=ToolResult(
+        True, "local_library_catalog",
+        data={"path": "/home/u/Library", "items": [
+            {"name": "livro.zim", "kind": "biblioteca_zim", "size": 3}]}))
+    reply = ChatSession._describe(outcome)
+    assert "livro.zim" in reply and "biblioteca_zim" in reply
+    assert "privado" not in reply
