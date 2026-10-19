@@ -132,6 +132,26 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
         return None
     current = re.sub(r"^nexus[,:]?\s+", "", current.strip(), flags=re.IGNORECASE)
     current = current.rstrip(".!? ")
+    # Exact current-turn requests for local utilities; chat history and model
+    # output never substitute paths, contents or consent.
+    note = re.fullmatch(
+        r'(?:crie|criar) uma nota com (?:o )?texto ["“]([^"”]{1,4000})["”] em '
+        r'(/[\w ./À-ÿ-]{1,400}\.md)',
+        current, re.IGNORECASE,
+    )
+    if note:
+        return "local_note_create", {"content": note[1], "output": note[2]}
+    transforms = (
+        (r'(?:calcule|calcular) (?:o )?sha-?256 do texto ["“]([^"”]{1,4000})["”]', "sha256"),
+        (r'(?:codifique|codificar) em base64 o texto ["“]([^"”]{1,4000})["”]', "base64_encode"),
+        (r'(?:decodifique|decodificar) base64 ["“]([^"”]{1,4000})["”]', "base64_decode"),
+        (r'(?:codifique|codificar) em hexadecimal o texto ["“]([^"”]{1,4000})["”]', "hex_encode"),
+        (r'(?:decodifique|decodificar) hexadecimal ["“]([^"”]{1,4000})["”]', "hex_decode"),
+    )
+    for pattern, operation in transforms:
+        match = re.fullmatch(pattern, current, re.IGNORECASE)
+        if match:
+            return "local_data_transform", {"operation": operation, "value": match[1]}
     poster = re.fullmatch(
         r'(?:crie|criar|gere|gerar) um cartaz com (?:o )?t[ií]tulo ["“]([^"”]{1,100})["”] em (/[\w ./-]+\.png)',
         current, re.IGNORECASE,
@@ -476,7 +496,7 @@ class AgentPlanner:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
             if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
                 raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform"}:
                 current = _current_message(prompt) or ""
                 normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii").lower()
                 intent = {
@@ -490,6 +510,8 @@ class AgentPlanner:
                     "pdf_combine_local": r"\b(juntar?|junte|combinar?|combine)\b",
                     "pdf_organize_local": r"\b(girar?|gire|mover?|mova)\b",
                     "image_colors_local": r"\b(analise|analisar)\b",
+                    "local_note_create": r"\b(crie|criar)\b",
+                    "local_data_transform": r"\b(codifique|codificar|decodifique|decodificar|calcule|calcular)\b",
                 }[name]
                 if not re.search(intent, normalized):
                     raise ProposalError("Criação e edição exigem pedido explícito neste turno.")
@@ -500,11 +522,15 @@ class AgentPlanner:
                 parameters = tool.contract.validate_inputs(arguments)
             except ContractViolation as exc:
                 raise ProposalError("Argumentos não obedecem ao contrato.") from exc
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform"}:
                 current = _current_message(prompt) or ""
                 if any(parameters[field] not in current for field in ("output", "source", "source_a", "source_b")
                        if field in parameters):
                     raise ProposalError("Informe os caminhos exatos de origem e saída no pedido atual.")
+                if name in ("local_note_create", "local_data_transform") and (
+                    _simple_creative_request(prompt) != (name, parameters)
+                ):
+                    raise ProposalError("Nota e transformação exigem texto, operação e alvo exatos no pedido atual.")
                 if name == "image_geometry_local" and _simple_creative_request(prompt) != (name, parameters):
                     raise ProposalError("Informe as medidas exatas para recorte ou redimensionamento.")
                 if name == "pdf_extract_pages_local" and _simple_creative_request(prompt) != (name, parameters):
