@@ -81,7 +81,13 @@ def test_two_turns_are_not_credited_until_speech_finishes_and_listening_resumes(
         assert ui._test_voice_turns_remaining == 0 and ui._listening
         assert events.count(("teste", "concluido")) == 1
         ui._close()
+        while ui._workers_running() and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
     finally:
         speech_release.set()
         confirmation.close()
-        root.destroy()
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
