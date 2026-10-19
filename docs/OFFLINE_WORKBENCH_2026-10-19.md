@@ -48,6 +48,14 @@ regionais de mapas, modelos Ollama prontos, vozes Vosk/Piper ou executável
 desktop Linux do Nexus. O conjunto original opera vários serviços em
 contêineres e pelo navegador; não é um pacote instalável do Nexus.
 
+No código há **38 serviços** de orquestração/recursos e **20 controladores**
+da API. Os catálogos JSON descrevem coleções, regiões e aplicações; seus
+registros **não são** os livros, mapas, modelos e cursos. Os dois arquivos
+ZIM são exemplos mínimos em inglês. O próprio README da fonte prevê
+downloads separados e recomenda mais memória e armazenamento quando a IA e
+os acervos são ativados. Reutilizar esses serviços diretamente exigiria
+outra arquitetura e aumentaria o consumo do notebook.
+
 Também faltam dados de licença, tamanho, integridade e atualização para
 cada acervo que se deseje disponibilizar; memória e espaço em disco devem
 ser medidos no notebook antes de baixar ou ativar serviços adicionais.
