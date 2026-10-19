@@ -129,6 +129,66 @@ class LocalDataTool(NexusTool):
                               error="Transformação inválida ou dados incompatíveis.")
 
 
+class LocalLibraryCatalogTool(NexusTool):
+    """Bounded, metadata-only listing; never opens ZIM/PMTiles/PDF contents."""
+
+    name = "local_library_catalog"
+    description = ("Lista somente nomes, tipos e tamanhos de arquivos de uma "
+                   "pasta offline explicitamente autorizada.")
+    risk_level = RiskLevel.MEDIUM
+    path_security = None
+    _TYPES = {
+        ".zim": "biblioteca_zim",
+        ".pmtiles": "mapa_pmtiles",
+        ".md": "nota_markdown",
+        ".txt": "texto",
+        ".pdf": "documento_pdf",
+        ".epub": "ebook",
+    }
+    MAX_ENTRIES = 500
+    MAX_ITEMS = 50
+    contract = ToolContract(
+        name=name, description=description, permission=risk_level,
+        inputs=(FieldSpec("directory", ValueKind.STRING, nonempty=True),),
+        resources=(ResourceSpec("directory", "directory"),),
+        outputs=(FieldSpec("path", ValueKind.STRING),
+                 FieldSpec("items", ValueKind.ARRAY, item_fields=(
+                     FieldSpec("name", ValueKind.STRING),
+                     FieldSpec("kind", ValueKind.STRING),
+                     FieldSpec("size", ValueKind.INTEGER),
+                 ))),
+    )
+
+    def sensitive_resources(self, **kwargs):
+        return (SensitiveResource("directory", kwargs["directory"]),)
+
+    def execute(self, directory: str, **kwargs):
+        policy = self.path_security or PathSecurity()
+        try:
+            with policy.open_directory(directory) as (fd, path):
+                items = []
+                count = 0
+                with os.scandir(fd) as entries:
+                    for entry in entries:
+                        count += 1
+                        if count > self.MAX_ENTRIES:
+                            raise ValueError("Pasta excede 500 entradas; escolha uma menor.")
+                        kind = self._TYPES.get(Path(entry.name).suffix.lower())
+                        if kind is None or not entry.is_file(follow_symlinks=False):
+                            continue
+                        if len(items) >= self.MAX_ITEMS:
+                            raise ValueError("Mais de 50 arquivos encontrados; organize a pasta.")
+                        size = entry.stat(follow_symlinks=False).st_size
+                        if size < 0:
+                            continue
+                        items.append({"name": entry.name[:255], "kind": kind, "size": size})
+            items.sort(key=lambda item: item["name"].casefold())
+            return ToolResult(True, self.name, data={"path": str(path), "items": items})
+        except (OSError, PermissionError, ValueError) as exc:
+            return ToolResult(False, self.name,
+                              error=f"Catálogo offline indisponível: {type(exc).__name__}.")
+
+
 # Passive detection only. An installed binary is NOT a running/approved service.
 # Do not probe HTTP ports, docker socket or start / enable dependencies here.
 _PASSIVE = (
@@ -143,6 +203,7 @@ def offline_capabilities(*, which=None) -> list[dict[str, str]]:
     probe = which if which is not None else shutil.which
     catalog = [
         {"capability": "notas_markdown", "status": "local_integrada"},
+        {"capability": "catalogo_arquivos_offline", "status": "local_integrada"},
         {"capability": "ferramentas_dados", "status": "local_integrada"},
         {"capability": "conversa_local", "status": "integrada_requer_modelo"},
         {"capability": "pesquisa_documental", "status": "texto_postgresql_sem_vetor"},
