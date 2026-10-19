@@ -178,6 +178,10 @@ class ChatSession:
         if not result.success:
             return f"{action_label(result.tool_name)}: {result.error}"
         data = result.data
+        if result.tool_name == "local_note_create" and isinstance(data, dict):
+            return f"Nota local criada: {data['path']}"
+        if result.tool_name == "local_data_transform" and isinstance(data, dict):
+            return f"Transformação local concluída ({data['operation']}): {data['result']}"
         if result.tool_name == "create_directory" and isinstance(data, dict):
             return f"Pasta criada: {data['path']}"
         if result.tool_name == "launch_application" and isinstance(data, dict):
