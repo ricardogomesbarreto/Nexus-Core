@@ -49,6 +49,51 @@ PostgreSQL, Ollama, voz, câmera, instalação e recuperação antes de uma nova
 tag/release estável. O workflow da release estável permanece bloqueado;
 tags **candidatas de código** são snapshots imutáveis após a CI da `main`.
 
+## Novos recursos offline no NEXUS CORE — incremento pós-rc.3
+
+**Revisão 19/10/2026.** O novo anexo foi auditado como referência
+de uma suíte offline com **oito categorias**. Isso não significa que os
+oito módulos foram copiados ou que serviços de terceiros foram instalados.
+O NEXUS CORE continua sendo um aplicativo desktop local e leve;
+não se transformou em servidor Docker.
+
+**Agora integrado ao código (sujeito a CI e aceite):** notas Markdown novas
+em arquivo privado `0600` com confirmação individual;
+SHA-256, Base64, hexadecimal, URL encode/decode e ROT13 local, por
+pedido explícito; inventário passivo que não inicia nem baixa programas;
+correção de alinhamento de amostras PCM de microfone nos buffers Vosk.
+O guia rápido expõe os recursos como funções do NEXUS CORE.
+
+**Próximas etapas reais:** biblioteca de conteúdo ZIM, plataforma educativa
+local, mapas regionais offline, indexação vetorial opcional **dentro de
+PostgreSQL**, medição de desempenho sem leaderboard remoto e catálogo
+aprovado de aplicativos sem acesso irrestrito ao Docker. Essas capacidades
+**não devem ser descritas como prontas**: a implementação por módulo
+continua no roadmap e depende de consentimento, testes de segurança,
+RAM/disco e validação física.
+
+Exemplos de comandos na conversa:
+
+```text
+Crie uma nota com o texto "Revisar exercícios" em /home/usuario/Notas/aula.md
+Calcule SHA-256 do texto "exemplo"
+Codifique em base64 o texto "ação"
+Decodifique base64 "YQ=="
+```
+
+A pasta de destino deve existir e estar autorizada; adapte o nome de
+usuário. O conteúdo fornecido na conversa pode ficar no histórico
+local. Transformações de codificação não constituem criptografia.
+
+[Auditoria técnica das oito categorias, limitações e prioridades de
+implementação](docs/OFFLINE_KNOWLEDGE_SUITE_ROADMAP_v0.9.12.md).
+
+**Release:** a candidata 0.9.12-rc.3 existente não é modificada.
+A release 0.9.12 estável continua **bloqueada** até cumprir os
+testes físicos G0: duas trocas de voz consecutivas, câmera/visão,
+latência, permissões, serviços sob demanda, Wayland/X11 e documentos
+reais. Passar na CI não equivale a homologar o notebook.
+
 ## Fechamento do ciclo 0.9.12 — publicação candidata e gate físico
 
 **Atualização 18/10/2026.** O código da 0.9.12, suas funcionalidades locais
