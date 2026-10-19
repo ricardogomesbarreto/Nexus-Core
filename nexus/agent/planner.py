@@ -135,7 +135,7 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
     # Exact current-turn requests for local utilities; chat history and model
     # output never substitute paths, contents or consent.
     catalog = re.fullmatch(
-        r'(?:liste|listar|mostre) (?:os )?recursos offline (\/[\w ./À-ÿ-]{1,400})',
+        r'(?:liste|listar|mostre) (?:os )?recursos offline em (\/[\w ./À-ÿ-]{1,400})',
         current, re.IGNORECASE,
     )
     if catalog:
