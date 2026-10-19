@@ -134,6 +134,12 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
     current = current.rstrip(".!? ")
     # Exact current-turn requests for local utilities; chat history and model
     # output never substitute paths, contents or consent.
+    catalog = re.fullmatch(
+        r'(?:liste|listar|mostre) (?:os )?recursos offline (\/[\w ./À-ÿ-]{1,400})',
+        current, re.IGNORECASE,
+    )
+    if catalog:
+        return "local_library_catalog", {"directory": catalog[1]}
     note = re.fullmatch(
         r'(?:crie|criar) uma nota com (?:o )?texto ["“]([^"”]{1,4000})["”] em '
         r'(/[\w ./À-ÿ-]{1,400}\.md)',
@@ -496,7 +502,7 @@ class AgentPlanner:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
             if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
                 raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform", "local_library_catalog"}:
                 current = _current_message(prompt) or ""
                 normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii").lower()
                 intent = {
@@ -512,6 +518,7 @@ class AgentPlanner:
                     "image_colors_local": r"\b(analise|analisar)\b",
                     "local_note_create": r"\b(crie|criar)\b",
                     "local_data_transform": r"\b(codifique|codificar|decodifique|decodificar|calcule|calcular)\b",
+                    "local_library_catalog": r"\b(liste|listar|mostre)\b",
                 }[name]
                 if not re.search(intent, normalized):
                     raise ProposalError("Criação e edição exigem pedido explícito neste turno.")
@@ -522,11 +529,15 @@ class AgentPlanner:
                 parameters = tool.contract.validate_inputs(arguments)
             except ContractViolation as exc:
                 raise ProposalError("Argumentos não obedecem ao contrato.") from exc
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local", "local_note_create", "local_data_transform", "local_library_catalog"}:
                 current = _current_message(prompt) or ""
                 if any(parameters[field] not in current for field in ("output", "source", "source_a", "source_b")
                        if field in parameters):
                     raise ProposalError("Informe os caminhos exatos de origem e saída no pedido atual.")
+                if name == "local_library_catalog" and (
+                    _simple_creative_request(prompt) != (name, parameters)
+                ):
+                    raise ProposalError("Catálogo exige caminho exato do diretório autorizado no pedido atual.")
                 if name in ("local_note_create", "local_data_transform") and (
                     _simple_creative_request(prompt) != (name, parameters)
                 ):
