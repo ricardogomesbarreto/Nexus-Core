@@ -103,15 +103,20 @@ class LocalVision:
                             or height > cls.MAX_DIMENSION
                             or width * height > cls.MAX_PIXELS):
                         raise VisionInputError("Imagem excede 4096 px ou 8 megapixels.")
+                    edge = min(cls.MODEL_IMAGE_EDGE, max_edge or cls.MODEL_IMAGE_EDGE)
+                    if raw.format == "JPEG" and max(raw.size) > edge:
+                        # JPEG can decode at reduced resolution. For notebook
+                        # cameras this avoids full-resolution RGB allocations.
+                        raw.draft("RGB", (edge, edge))
                     raw.load()
                     # Re-encode to PNG and discard EXIF/location/metadata.
-                    normalized = ImageOps.exif_transpose(raw).convert("RGB")
-                    edge = min(cls.MODEL_IMAGE_EDGE, max_edge or cls.MODEL_IMAGE_EDGE)
-                    if max(normalized.size) > edge:
-                        normalized.thumbnail(
+                    oriented = ImageOps.exif_transpose(raw)
+                    if max(oriented.size) > edge:
+                        oriented.thumbnail(
                             (edge, edge),
                             Image.Resampling.LANCZOS,
                         )
+                    normalized = oriented.convert("RGB")
                     buffer = io.BytesIO()
                     normalized.save(buffer, format="PNG", optimize=True)
                     image = buffer.getvalue()
