@@ -78,6 +78,7 @@ A entrega ocorre em **dois níveis distintos**:
 Os requisitos de publicação, o estado funcional, as evidências disponíveis
 e os próximos passos estão detalhados no
 [roadmap de fechamento da v0.9.12](docs/ROADMAP_v0.9.12_RELEASE_STATUS.md),
+no [inventário das funções dos ZIPs e lacunas](docs/ZIP_CAPABILITY_GAP_2026-10-19.md),
 nas [notas da rc.3](docs/RELEASE_NOTES_v0.9.12-rc.3.md) e no
 [roteiro físico Ubuntu](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.12.md).
 O [workflow estável](.github/workflows/release-v0.9.12.yml)
@@ -85,6 +86,27 @@ continua explicitamente bloqueado até uma revisão específica após o
 aceite de todos os gates. Não alterar tags candidatas existentes,
 não iniciar serviços automaticamente e não publicar promessas de
 compatibilidade física sem registros.
+
+### Funções locais acrescentadas após a candidata rc.3
+
+A `main` passou a oferecer **análise numérica de cores/luminosidade de uma
+foto**, usando Pillow, e **giro ou movimento de páginas de PDF** em uma cópia
+nova, usando um executável local opcional. Ações com arquivos exigem
+confirmação; o resultado da foto fica apenas na resposta. O PDF original não
+é substituído. Essas funções **não estão no wheel imutável da rc.3** e ainda
+não foram homologadas no notebook. Com a janela aberta, exemplos de pedidos
+com caminhos reais sob seu diretório pessoal:
+
+```text
+Analise as cores da foto /home/usuario/Imagens/foto.png
+Gire as páginas 1,3 do PDF /home/usuario/Documentos/a.pdf em 90 graus e salve em /home/usuario/Documentos/girado.pdf
+Mova a página 2 do PDF /home/usuario/Documentos/a.pdf para a posição 1 e salve em /home/usuario/Documentos/ordenado.pdf
+```
+
+O [inventário detalhado](docs/ZIP_CAPABILITY_GAP_2026-10-19.md) registra o
+que cada fonte já inspirou e o que ainda falta. O giro/movimento exige a
+instalação separada e verificada do mecanismo opcional; `--feature-check`
+mostra apenas descoberta de recursos, nunca uma operação real aprovada.
 
 **Após atualizar no Ubuntu, executar os gates:**
 
@@ -176,9 +198,9 @@ porque um ZIP foi anexado.
 | Capacidade no Nexus Core | Estado atual | Limite |
 | --- | --- | --- |
 | Conversa e visão locais | Parcial; serviço de modelos sob demanda | Inferência e hardware dependem do teste físico. |
-| Imagens | Efeitos, recorte, cartaz e conversões limitadas | Geração fotográfica livre ainda não existe. |
+| Imagens | Efeitos, recorte, cartaz, resumo de luminosidade/cores e conversões limitadas | Geração fotográfica livre e camadas ainda não existem. |
 | Documentos | Metadados, conversão e extração de texto limitadas | Edição estruturada ainda não existe. |
-| PDF | Texto, prévia, extração de páginas e junção de dois arquivos | Componentes opcionais e fidelidade real ainda sem aceite. |
+| PDF | Texto, prévia, extração, junção, giro e movimento de páginas em arquivo novo | Componentes opcionais e fidelidade real ainda sem aceite. |
 | Inspeção de arquivos | Leitura estática autorizada de formatos conhecidos | Não executa alvos nem faz engenharia reversa profunda. |
 
 **Licenças e distribuição:** a [auditoria técnica das fontes](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md)
@@ -198,10 +220,10 @@ Isso não muda a identidade pública do assistente nem declara integração plen
 | Voz local Vosk, sintetização, escolha da voz, pausa/retomada e permissões faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/voice/`, `nexus/desktop/confirmation.py`, testes de voz | Registro Ubuntu 26.04: Vosk isolado transcreveu, mas **escuta contínua falhou**; TTS/visão com latência elevada. |
 | Imagem, tela, câmera V4L2, autorização, prévia e respostas faladas | **PARCIAL; FÍSICO PENDENTE** | `nexus/vision/`, `nexus/desktop/window.py`, testes visuais | Câmera e inferência foram exercitadas parcialmente; correção da resposta visual e latência ainda sem aceite. |
 | Ações desktop, arquivos, navegador e navegação X11 | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/desktop*.py`, `filesystem.py`, `desktop_apps.py` | Automação X11 limitada e revalidada; **não** declarar digitação genérica Wayland funcional. |
-| Edição de fotos local: 12 efeitos, alfa PNG/WebP, recorte/redimensionamento e cartaz PNG | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `tests/test_image_geometry_v0912.py` | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
+| Edição de fotos local: 12 efeitos, alfa PNG/WebP, recorte/redimensionamento, cartaz PNG e resumo de luminosidade | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `image_colors.py`, testes | Pillow não gera livremente fotografias por IA; testar imagem/saída real e ergonomia. |
 | Conversão e metadados de imagem PNG/JPEG/WebP/PSD/TIFF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `scripts/validate_craft_cli.py` | Executável opcional não homologado no Ubuntu; comandos avançados não conectados. |
 | Conversão e texto de documentos DOCX/ODT/RTF/MD/TXT | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py` | Extrai texto DOCX/ODT/RTF para TXT novo sob autorização; edição estruturada pendente. |
-| Texto, metadados, prévia, extração e junção de PDF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py`, `pdf_combine.py` | Extração limitada a 20 páginas explícitas; junção de exatamente dois PDFs. Divisão, OCR e anotações pendentes; mecanismo opcional não homologado. |
+| Texto, metadados, prévia, extração, junção, giro e movimento de páginas de PDF | **PARCIAL; FÍSICO PENDENTE** | `nexus/tools/creative.py`, `craft_inspect.py`, `pdf_render.py`, `pdf_extract.py`, `pdf_combine.py`, `pdf_organize.py` | Extração/giro limitados a 20 páginas explícitas; movimento de uma página, junção de dois PDFs. Divisão, OCR e anotações pendentes; mecanismo opcional não homologado. |
 | Inspeção estática: SHA-256, ELF/PE/Mach-O/WASM/APK/JAR/ZIP/JS/Electron | **INTEGRADO/CI (motor próprio)** | `nexus/tools/static_analysis.py`, `wasm_structure.py` | Sem desmontagem, decompilação, execução de alvo ou monitoramento de processos. |
 | Teste real dos componentes opcionais `--smoke --advanced` | **INTEGRADO/CI; FÍSICO PENDENTE** | `scripts/validate_craft_cli.py`, testes de contrato | A CI usa dublês; nenhuma conversão real do notebook pode ser declarada aprovada ainda. |
 | Diagnóstico de funções locais (`--feature-check`) | **INTEGRADO/CI; FÍSICO PENDENTE** | `nexus/tools/craft_capabilities.py` | Consulta explícita sem arquivos, somente versões e ajuda; não atesta resultado real. |
@@ -255,9 +277,9 @@ Preparação já feita no código da 0.9.12: um diagnóstico opt-in lê versão 
 - Avaliar um subconjunto fixo de comandos seguros; revisões, comentários, controle de alterações, citações e formatação ABNT somente após validação de fidelidade e exemplos reais. **O componente externo estudado é alpha**: preservar metadados/elementos não suportados ou informar claramente a perda.
 - **Saída/gate:** diff antes/depois quando possível, DOCX que abre em leitores independentes, inspeção de layout e testes de ida-e-volta por formato.
 
-**G4 — PDF: edição, extração e auditoria documental (PARCIAL: texto, metadados, prévia, extração e junção; demais operações PENDENTES).**
+**G4 — PDF: edição, extração e auditoria documental (PARCIAL: texto, metadados, prévia, extração, junção, giro e movimento de página; demais operações PENDENTES).**
 
-- Operações inicialmente fixas: pesquisar/extrair texto e páginas, **juntar, separar, girar, reordenar**; extração e junção de dois PDFs já têm adaptadores de cópia com confirmação, mas **separar, girar e reordenar ainda faltam**. A validação estrutural básica não confirma fidelidade ou páginas reais.
+- Operações inicialmente fixas: pesquisar/extrair texto e páginas, **juntar, separar, girar, reordenar**; extração, junção, giro e movimento de uma página já têm adaptadores de cópia com confirmação. **Separação em vários arquivos e reordenação arbitrária ainda faltam.** A validação estrutural básica não confirma fidelidade ou páginas reais.
 - Segunda camada: marcas de texto, comentários, preenchimento de formulário, bookmarks, propriedades e inspeção/auditoria de redações com comandos tipados; distinguir **cobertura visual** de **redação irreversível verificada**.
 - OCR offline opcional com modelos locais e limites de imagem/idioma; validar se o PDF tem restrições de cópia, e não contornar permissões/proteções automaticamente. Assinatura digital e criptografia exigem revisão independente antes de incorporar qualquer efeito jurídico ou de segurança.
 - **Saída/gate:** PDF parseável por leitor independente, operações corretas em arquivos multi-página, testes adversariais, original intacto, fidelidade e tempos medidos.

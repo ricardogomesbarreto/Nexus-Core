@@ -27,7 +27,7 @@ TOOLS = frozenset({
     "desktop_navigate", "terminal_sandbox", "system_info",
     "edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local",
     "craft_inspect_local", "inspect_artifact_local", "pdf_extract_pages_local",
-    "pdf_combine_local", "pdf_render_local",
+    "pdf_combine_local", "pdf_organize_local", "pdf_render_local", "image_colors_local",
 })
 TOOL_EVENTS = {"craft_convert_local": "converter_arquivo",
                "craft_inspect_local": "consultar_metadados"}

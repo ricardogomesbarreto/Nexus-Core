@@ -153,7 +153,7 @@ def smoke_cli(name: str, executable: str, work: Path) -> bool:
 
 
 def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
-    """Run info, Word text and PdfCraft render/extract/combine on synthetic files."""
+    """Run info, Word text and PDF render/extract/combine/edit on synthetic files."""
     from nexus.tools.craft_inspect import _safe_summary
     from nexus.tools.pdf_extract import _validate_pdf_copy
     from nexus.tools.pdf_render import _validate_png
@@ -214,6 +214,16 @@ def smoke_advanced_cli(name: str, executable: str, work: Path) -> bool:
             return False
         try:
             _validate_pdf_copy(combined.read_bytes())
+        except (ValueError, OSError):
+            return False
+        rotated = work / "pdf-girado.pdf"
+        if not _execute([executable, "edit", str(source), "--out", str(rotated),
+                         "--rotate", "1:90"]):
+            return False
+        if rotated.is_symlink() or not rotated.is_file() or rotated.stat().st_size > _MAX_RESULT:
+            return False
+        try:
+            _validate_pdf_copy(rotated.read_bytes())
         except (ValueError, OSError):
             return False
     return True
