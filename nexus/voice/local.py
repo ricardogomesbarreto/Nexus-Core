@@ -306,6 +306,19 @@ class LocalRecognizer(_StoppableProcess):
             raise VoiceError("Não reconheci fala. Tente novamente.")
         return text[:4000]
 
+    @staticmethod
+    def _aligned_pcm(pending: bytes, chunk: bytes) -> tuple[bytes, bytes]:
+        """Preserve the last byte across arbitrary Linux pipe read boundaries.
+
+        Vosk requires little-endian signed 16-bit samples; read(4096) may
+        legally return any number of bytes. Feeding an odd-length block shifts
+        sample framing and can destroy intelligible audio in long sessions.
+        """
+        data = pending + chunk
+        if len(data) & 1:
+            return data[:-1], data[-1:]
+        return data, b""
+
     def recognize_continuous(
         self, cancelled: Callable[[], bool] | None = None,
         on_audio_level: Callable[[int], None] | None = None,
@@ -341,6 +354,7 @@ class LocalRecognizer(_StoppableProcess):
             last_voice = 0.0
             partial_text = ""
             last_partial_change = 0.0
+            pending_pcm = b""
             # PipeWire streams have no fixed end time. Buffered .read(8000)
             # can stall while waiting for exactly 8000 bytes, ignoring pause,
             # timeout or a changed input source. A pollable Linux fd permits
@@ -382,6 +396,9 @@ class LocalRecognizer(_StoppableProcess):
                     frames = process.stdout.read(8000)
                 if not frames:
                     break
+                frames, pending_pcm = self._aligned_pcm(pending_pcm, frames)
+                if not frames:
+                    continue
                 now = monotonic()
                 level = self.peak_level(frames)
                 if on_audio_level is not None and monotonic() >= next_level:
