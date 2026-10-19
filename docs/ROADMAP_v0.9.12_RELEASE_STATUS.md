@@ -10,6 +10,10 @@ Não renomeia o produto nem transfere interfaces de projetos externos.
 O [inventário auditado dos ZIPs em 19/10](ZIP_CAPABILITY_GAP_2026-10-19.md)
 detalha cada fonte, as funções implementadas depois da candidata rc.3 e as
 lacunas. Este incremento de código **não altera** a tag rc.3 nem o gate G0.
+O [quadro de recursos offline](OFFLINE_WORKBENCH_2026-10-19.md) detalha
+notas, transformações de dados, medição local e as capacidades mais extensas
+ainda não integradas. O teste de voz agora exige duas respostas faladas com
+retomada da escuta, sem antecipar a homologação física.
 
 ## Balanço do ciclo
 

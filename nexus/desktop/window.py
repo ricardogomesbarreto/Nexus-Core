@@ -30,6 +30,7 @@ from nexus.desktop.image_preview import load_image_preview, PREVIEW_EXTENSIONS
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
 from nexus.desktop.runtime_log import live_event
 from nexus.desktop.tool_labels import action_label, resource_label
+from nexus.desktop.workbench import open_notes, open_data_tools, open_benchmark
 from nexus.desktop.presentation import (
     COLORS, DEFAULT_FONT, configure_presentation, message_size,
     composer_count, activity_state,
@@ -168,6 +169,8 @@ class DesktopWindow:
         self._recognition_failures = 0
         self._listen_retries = 0
         self._test_voice_turns_remaining = 0
+        self._test_voice_reply_pending = False
+        self._test_voice_speech_generation = None
         self._resource_budget = ResourceBudget.detect()
         self._speak_generation = 0
         self._speaking = False
@@ -183,6 +186,13 @@ class DesktopWindow:
         )
         root.minsize(770, 570)
         root.configure(bg="#f5f1f3")
+        menu = tk.Menu(root)
+        resources = tk.Menu(menu, tearoff=False)
+        resources.add_command(label="Anotações locais…", command=lambda: open_notes(root))
+        resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
+        resources.add_command(label="Medir CPU local…", command=lambda: open_benchmark(root))
+        menu.add_cascade(label="Recursos", menu=resources)
+        root.configure(menu=menu)
         welcome_text, readiness_caption = desktop_startup_message(app)
 
         # Use the portable 'clam' theme for dependable branded button colors
@@ -546,17 +556,19 @@ class DesktopWindow:
         root.after(120, self._start_spoken_welcome)
 
     def _start_voice_diagnostic(self) -> None:
-        """Only real recognized user speech completes the two-turn test."""
+        """Require two answered, spoken turns followed by resumed listening."""
         if self._closing:
             return
         self._test_voice_turns_remaining = 2
+        self._test_voice_reply_pending = False
+        self._test_voice_speech_generation = None
         live_event("teste", "iniciado", source="voz")
         self._append(
             "Nexus Core",
             "Teste de escuta contínua iniciado. Faça duas perguntas em voz "
             "alta, aguardando o fim de cada resposta. O terminal mostrará "
-            "recebido após a primeira e concluido após a segunda "
-            "transcrição real. Nenhuma transcrição será gravada no log.",
+            "recebido após a primeira resposta falada e concluido após a segunda, "
+            "quando a escuta recomeçar. Nenhuma transcrição será gravada no log.",
             "assistant",
         )
         if not self._voice_active:
@@ -925,6 +937,8 @@ class DesktopWindow:
         if not self._busy or self._closing or self._cancel_requested:
             return
         self._cancel_requested = True
+        self._test_voice_reply_pending = False
+        self._test_voice_speech_generation = None
         live_event("cancelamento", "solicitado")
         if self._operation_kind == "chat":
             self.session.cancel_current()
@@ -1935,14 +1949,6 @@ class DesktopWindow:
                     elif kind == "transcript" and utterance:
                         self._listen_retries = 0
                         self._recognition_failures = 0
-                        if self._test_voice_turns_remaining > 0:
-                            self._test_voice_turns_remaining -= 1
-                            live_event(
-                                "teste",
-                                ("concluido" if self._test_voice_turns_remaining == 0
-                                 else "recebido"),
-                                source="voz",
-                            )
                         if self._unclear_browser_command(utterance):
                             self._append("Você", utterance, "user")
                             note = ("Não entendi o comando com segurança. "
@@ -1955,6 +1961,8 @@ class DesktopWindow:
                         elif self._live_camera is not None and self._camera_question(utterance):
                             self._ask_live_camera(utterance)
                         else:
+                            if self._test_voice_turns_remaining > 0:
+                                self._test_voice_reply_pending = True
                             self.input.delete("1.0", "end")
                             self.input.insert("1.0", utterance)
                             self._send(channel="voz")
@@ -1999,6 +2007,17 @@ class DesktopWindow:
                     if generation == self._startup_welcome_generation:
                         self._startup_welcome_generation = None
                     self._start_listening()
+                    if generation == self._test_voice_speech_generation:
+                        self._test_voice_speech_generation = None
+                        if kind == "speak_done" and self._listening and self._voice_active:
+                            self._test_voice_turns_remaining -= 1
+                            live_event(
+                                "teste",
+                                ("concluido" if self._test_voice_turns_remaining == 0
+                                 else "recebido"), source="voz",
+                            )
+                        else:
+                            live_event("teste", "falhou", source="voz")
         while True:
             try:
                 reply = self._replies.get_nowait()
@@ -2016,6 +2035,7 @@ class DesktopWindow:
                                tool=tool_result.tool_name)
                 self._finish_operation()
                 if cancelled or reply.outcome.error_code == "CANCELLED":
+                    self._test_voice_reply_pending = False
                     self._append("Nexus Core", "Solicitação cancelada.", "assistant")
                     self.status.configure(text="Solicitação cancelada")
                     self._start_listening()
@@ -2028,7 +2048,14 @@ class DesktopWindow:
                               or ("Escuta pausada" if not self._voice_active
                                   else "Pronto para conversar"))
                     )
-                    if not (reply.outcome.success and self._say_response(reply.text)):
+                    spoken = reply.outcome.success and self._say_response(reply.text)
+                    if self._test_voice_reply_pending:
+                        self._test_voice_reply_pending = False
+                        if spoken:
+                            self._test_voice_speech_generation = self._speak_generation
+                        else:
+                            live_event("teste", "falhou", source="voz")
+                    if not spoken:
                         self._start_listening()
             else:
                 self._busy = False

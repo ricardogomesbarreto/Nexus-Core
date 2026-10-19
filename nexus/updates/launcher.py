@@ -19,6 +19,7 @@ READ_ONLY_FLAGS = frozenset((
     "--help", "-h", "--version", "--status",
     "--acceptance-log",
     "--resource-check",
+    "--benchmark",
     "--craft-capabilities",
     "--feature-check",
     "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
@@ -28,9 +29,16 @@ READ_ONLY_FLAGS = frozenset((
     "--devices-check", "--devices-preview-stdin",
 ))
 
+# Explicit local note/text operations should never start a release check.
+LOCAL_ONLY_FLAGS = frozenset((
+    "--note-create", "--note-update", "--note-get", "--note-list",
+    "--note-search", "--note-delete", "--data-tool",
+))
+
 
 def should_run_maintenance(arguments: list[str]) -> bool:
-    return not any(argument in READ_ONLY_FLAGS for argument in arguments)
+    return not any(argument in READ_ONLY_FLAGS | LOCAL_ONLY_FLAGS
+                   for argument in arguments)
 
 
 def cli() -> None:

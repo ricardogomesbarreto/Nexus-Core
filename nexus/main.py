@@ -226,6 +226,8 @@ def cli(argv: list[str] | None = None) -> None:
         "--resource-check", action="store_true",
         help="resume memória Linux e modelos carregados no Ollama local, sem inferência",
     )
+    actions.add_argument("--benchmark", action="store_true",
+                         help="mede CPU local por 400 ms, sem arquivo ou rede")
     actions.add_argument(
         "--craft-capabilities", action="store_true",
         help=argparse.SUPPRESS,
@@ -292,6 +294,17 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--knowledge-search", metavar="TEXT", help="pesquisa trechos de documentos")
     actions.add_argument("--knowledge-delete", metavar="ID", type=int, help="remove documento e trechos indexados")
     actions.add_argument("--knowledge-context", metavar="TEXT", help="recupera trechos de conhecimento explicitamente")
+    actions.add_argument("--note-create", metavar="TITLE", help="cria anotação local com corpo lido da entrada padrão")
+    actions.add_argument("--note-update", metavar="ID", type=int, help="atualiza anotação; --note-title e corpo pela entrada padrão")
+    actions.add_argument("--note-get", metavar="ID", type=int, help="lê uma anotação local")
+    actions.add_argument("--note-list", action="store_true", help="lista títulos de anotações locais")
+    actions.add_argument("--note-search", metavar="TEXT", help="pesquisa títulos e texto de anotações locais")
+    actions.add_argument("--note-delete", metavar="ID", type=int, help="exclui uma anotação local")
+    actions.add_argument("--data-tool", choices=("sha256", "base64-encode", "base64-decode",
+                                                "hex-encode", "hex-decode", "url-encode", "url-decode"),
+                         help="processa texto UTF-8 da entrada padrão local, até 64 KiB")
+    parser.add_argument("--note-title", metavar="TITLE", help="novo título de --note-update")
+    parser.add_argument("--note-limit", type=int, default=20, help="quantidade de anotações listadas: 1 a 50")
     parser.add_argument("--knowledge-limit", type=int, default=5, help="resultados: 1 a 20")
     parser.add_argument("--knowledge-with-memory", action="store_true",
                         help="inclui memórias explícitas em --knowledge-context")
@@ -302,6 +315,39 @@ def cli(argv: list[str] | None = None) -> None:
         help="diretório local montado como somente leitura no sandbox",
     )
     args = parser.parse_args(argv)
+    note_actions = (args.note_create is not None, args.note_update is not None,
+                    args.note_get is not None, args.note_list,
+                    args.note_search is not None, args.note_delete is not None)
+    if args.note_title is not None and args.note_update is None:
+        parser.error("--note-title exige --note-update")
+    if args.note_update is not None and args.note_title is None:
+        parser.error("--note-update exige --note-title")
+    if not 1 <= args.note_limit <= 50 or (args.note_limit != 20 and not (args.note_list or args.note_search is not None)):
+        parser.error("--note-limit deve ser 1 a 50 e exige listagem ou pesquisa")
+    if any(note_actions) or args.data_tool is not None:
+        if (args.knowledge_limit != 5 or args.knowledge_with_memory
+                or args.memory_days != 90 or args.memory_confirm
+                or args.workspace is not None or args.vision_question is not None
+                or args.vision_model != "gemma3:4b" or args.note_title is not None
+                and args.note_update is None):
+            parser.error("Anotações e dados são comandos locais isolados")
+        if args.data_tool is not None:
+            from nexus.tools.data_local import MAX_BYTES, transform_text
+            try:
+                payload = sys.stdin.buffer.read(MAX_BYTES + 1)
+                print(transform_text(args.data_tool, payload))
+            except ValueError as exc:
+                parser.error(str(exc))
+            return
+        from nexus.notes.cli import execute_notes
+        code = execute_notes(args)
+        if code:
+            raise SystemExit(code)
+        return
+    if args.benchmark:
+        from nexus.platforms.benchmark import benchmark_cpu
+        print(json.dumps(benchmark_cpu(), ensure_ascii=False))
+        return
     if args.acceptance_log:
         from nexus.platforms.acceptance import run_acceptance
         raise SystemExit(run_acceptance())

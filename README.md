@@ -89,6 +89,19 @@ compatibilidade física sem registros.
 
 ### Funções locais acrescentadas após a candidata rc.3
 
+**Recursos adicionados após a candidata:** o menu nativo **Recursos** abre
+anotações Markdown voluntárias no PostgreSQL, transformações locais de texto
+(SHA-256, Base64, hexadecimal e URL) e uma medição curta de CPU. Os comandos
+`--note-create`, `--note-list`, `--note-get`, `--note-update`, `--note-search`,
+`--note-delete`, `--data-tool` e `--benchmark` oferecem acesso no terminal.
+As notas não são enviadas automaticamente ao Ollama nem usadas para responder
+perguntas. As transformações são limitadas e não equivalem a criptografia.
+O diagnóstico de escuta contínua só fecha depois de duas respostas faladas e
+retomada do microfone; ainda requer comprovação no Ubuntu real. O
+[quadro de recursos offline](docs/OFFLINE_WORKBENCH_2026-10-19.md) separa
+essas funções das integrações mais extensas ainda pendentes.
+
+
 A `main` passou a oferecer **análise numérica de cores/luminosidade de uma
 foto**, usando Pillow, e **giro ou movimento de páginas de PDF** em uma cópia
 nova, usando um executável local opcional. Ações com arquivos exigem
