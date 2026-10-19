@@ -424,6 +424,16 @@ Ollama e PostgreSQL continuam sob demanda, sem autostart e sem serviço extra.
 
 ## Novas capacidades offline — etapa complementar da v0.9.12
 
+**Mapas locais em prévia:** em **Recursos → Mapas locais…**, escolha um arquivo
+`.pmtiles` raster PNG/JPEG/WebP da sua pasta pessoal. A interface nativa
+mostra um mosaico de cada vez, com setas e zoom, sem rede, navegador, servidor
+ou importação ao PostgreSQL. O instalador Ubuntu instala o leitor Python
+opcional; mapas e respectivas licenças/créditos devem ser obtidos pelo usuário.
+Arquivos vetoriais, busca por endereço e mapa contínuo ainda não funcionam.
+Veja a [avaliação das sete referências offline](docs/THIRD_PARTY_OFFLINE_FIT_2026-10-19.md).
+Esta é uma atualização do código em avaliação: **não libera a tag estável
+v0.9.12** antes do aceite físico e da CI do SHA final.
+
 Esta etapa mantém **a mesma versão e aparência** e amplia ferramentas existentes,
 sem iniciar servidores de terceiros:
 

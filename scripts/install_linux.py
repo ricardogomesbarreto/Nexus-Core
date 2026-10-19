@@ -530,7 +530,7 @@ def _install_managed_python_locked(home: Path):
     # keeping the development checkout in the same filesystem location.
     _run(
         [str(python), "-m", "pip", "install", "--disable-pip-version-check",
-         "--no-input", str(ROOT) + "[voice,vision]"],
+         "--no-input", str(ROOT) + "[voice,vision,maps]"],
         timeout=600, cwd=ROOT,
     )
     from nexus.updates.verification import (

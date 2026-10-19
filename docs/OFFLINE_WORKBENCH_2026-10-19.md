@@ -10,7 +10,7 @@ recursos próprios; nenhum serviço web do pacote é iniciado na instalação.
 | Biblioteca de informação offline | Painel nativo de importação explícita de `.txt`/`.md`, pesquisa de trechos no PostgreSQL e exclusão com confirmação | Leitor de acervos enciclopédicos e outros formatos, downloads, referências verificadas e pesquisa por voz |
 | Assistente com documentos e busca semântica | Pergunta explícita sobre até três trechos textuais ao Ollama local, mostrando os trechos e seus IDs; sem acesso a ferramentas | Embeddings vetoriais, seleção semântica, provas de veracidade da resposta; não anunciar busca semântica |
 | Educação offline | Documentos textuais podem ser indexados explicitamente | Cursos, perfis, progresso e multiusuário não integrados |
-| Mapas offline | Nenhum mapa é carregado | Pacotes regionais, renderização, busca geográfica e licença/distribuição dos dados |
+| Mapas offline | Prévia nativa opcional de um mosaico raster `.pmtiles` escolhido localmente, com navegação e zoom | Mapas vetoriais, pacotes regionais, visualização contínua, busca geográfica e licença/distribuição dos dados |
 | Ferramentas de dados | Painel nativo e `--data-tool`: SHA-256, Base64, hexadecimal e URL para texto UTF-8 limitado | Criptografia autenticada, formatos binários e outras receitas não integradas; codificação/hash não fornecem sigilo |
 | Anotações | Painel nativo e CLI de notas Markdown em PostgreSQL, criação/edição/exclusão voluntárias | Sincronização, anexos e acesso por voz/chat sob SecurityGate ainda não integrados |
 | Medição de sistema | Medição voluntária e limitada de CPU (`--benchmark`) e diagnóstico passivo de RAM/swap (`--resource-check`) | Pontuação comparável entre hardware e ranking comunitário ausentes; nenhum dado é enviado |
@@ -62,6 +62,10 @@ ser medidos no notebook antes de baixar ou ativar serviços adicionais.
 Números da comparação são inventário do arquivo recebido, não prova de
 compatibilidade física ou de prontidão para distribuição. Nenhum código,
 catálogo ou acervo de terceiros foi copiado para dentro do Nexus nesta etapa.
+
+**Revisão posterior:** um leitor opcional de mapas foi instalado a partir da
+fonte oficial, sem incorporar seu código ao repositório. Veja a
+[análise de compatibilidade e limites](THIRD_PARTY_OFFLINE_FIT_2026-10-19.md).
 
 Exemplos explícitos no terminal, após instalar o checkout atual e iniciar
 somente os serviços necessários à edição de notas:
