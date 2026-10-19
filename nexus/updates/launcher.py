@@ -33,6 +33,8 @@ READ_ONLY_FLAGS = frozenset((
 LOCAL_ONLY_FLAGS = frozenset((
     "--note-create", "--note-update", "--note-get", "--note-list",
     "--note-search", "--note-delete", "--data-tool",
+    "--knowledge-import", "--knowledge-list", "--knowledge-search",
+    "--knowledge-delete", "--knowledge-context", "--knowledge-answer",
 ))
 
 

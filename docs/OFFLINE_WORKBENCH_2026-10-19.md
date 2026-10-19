@@ -7,8 +7,8 @@ recursos próprios; nenhum serviço web do pacote é iniciado na instalação.
 
 | Capacidade solicitada | Estado no Nexus Core após esta revisão | Lacuna real |
 | --- | --- | --- |
-| Biblioteca de informação offline | Importação explícita de `.txt`/`.md` com busca textual PostgreSQL e limites de leitura | Leitor de acervos enciclopédicos e outros formatos, downloads, referências verificadas e busca no chat mediante escolha explícita |
-| Assistente com documentos e busca semântica | Chat Ollama local, base documental e pesquisa textual PostgreSQL, separados por consentimento | Upload na janela, embeddings vetoriais, citações de trechos e verificação de pertinência; não anunciar busca semântica |
+| Biblioteca de informação offline | Painel nativo de importação explícita de `.txt`/`.md`, pesquisa de trechos no PostgreSQL e exclusão com confirmação | Leitor de acervos enciclopédicos e outros formatos, downloads, referências verificadas e pesquisa por voz |
+| Assistente com documentos e busca semântica | Pergunta explícita sobre até três trechos textuais ao Ollama local, mostrando os trechos e seus IDs; sem acesso a ferramentas | Embeddings vetoriais, seleção semântica, provas de veracidade da resposta; não anunciar busca semântica |
 | Educação offline | Documentos textuais podem ser indexados explicitamente | Cursos, perfis, progresso e multiusuário não integrados |
 | Mapas offline | Nenhum mapa é carregado | Pacotes regionais, renderização, busca geográfica e licença/distribuição dos dados |
 | Ferramentas de dados | Painel nativo e `--data-tool`: SHA-256, Base64, hexadecimal e URL para texto UTF-8 limitado | Criptografia autenticada, formatos binários e outras receitas não integradas; codificação/hash não fornecem sigilo |
@@ -23,7 +23,7 @@ recursos próprios; nenhum serviço web do pacote é iniciado na instalação.
   certifica conversa contínua. Erro de fala, pausa ou cancelamento deixam o
   diagnóstico pendente. Logs não incluem o conteúdo da fala.
 - O menu **Recursos** oferece **Anotações locais**, **Ferramentas de dados** e
-  **Medir CPU local**. Anotações somente entram no PostgreSQL quando o usuário
+  **Medir CPU local**, além da **Biblioteca local**. Anotações somente entram no PostgreSQL quando o usuário
   salva; exclusão pergunta antes de agir. A leitura da lista abre conexão
   somente ao abrir o painel. O painel de anotações usa trabalhador separado
   da thread Tk. Nada é adicionado automaticamente ao contexto do modelo.
@@ -31,6 +31,29 @@ recursos próprios; nenhum serviço web do pacote é iniciado na instalação.
   limite. Decodificação exige UTF-8 válido. O benchmark usa uma alocação de
   1 MiB e uma janela aproximada de 400 ms; sua taxa SHA-256 não é uma medida
   de temperatura, autonomia ou capacidade de inferência.
+- A biblioteca importa textos UTF-8 até 256 KiB do diretório pessoal com
+  acesso seguro por descritor, exige ação explícita na janela e mostra os
+  trechos realmente selecionados pela busca textual. **Perguntar aos
+  documentos** envia somente esses trechos ao Ollama em loopback e não oferece
+  ferramentas de execução ao modelo; a resposta gerada precisa ser conferida
+  nos trechos mostrados. Sem resultados, o Ollama não é acionado.
+
+## O que o ZIP contém e o que falta para a proposta
+
+São **664 arquivos** (cerca de 19 MB descompactados): aplicativo web e testes
+em TypeScript/React, scripts de instalação, manifestos de serviços,
+catálogos de conteúdo e dois acervos ZIM pequenos de demonstração (cerca
+de 4,4 MB cada). **Não há** acervos completos, cursos baixados, pacotes
+regionais de mapas, modelos Ollama prontos, vozes Vosk/Piper ou executável
+desktop Linux do Nexus. O conjunto original opera vários serviços em
+contêineres e pelo navegador; não é um pacote instalável do Nexus.
+
+Também faltam dados de licença, tamanho, integridade e atualização para
+cada acervo que se deseje disponibilizar; memória e espaço em disco devem
+ser medidos no notebook antes de baixar ou ativar serviços adicionais.
+Números da comparação são inventário do arquivo recebido, não prova de
+compatibilidade física ou de prontidão para distribuição. Nenhum código,
+catálogo ou acervo de terceiros foi copiado para dentro do Nexus nesta etapa.
 
 Exemplos explícitos no terminal, após instalar o checkout atual e iniciar
 somente os serviços necessários à edição de notas:
@@ -41,6 +64,9 @@ printf 'Meu texto local\n' | ~/.local/bin/nexus-core --note-create 'Rascunho'
 ~/.local/bin/nexus-core --note-get 1
 printf 'Texto revisado\n' | ~/.local/bin/nexus-core --note-update 1 --note-title 'Rascunho revisado'
 ~/.local/bin/nexus-core --note-search 'revisado'
+~/.local/bin/nexus-core --knowledge-import "$HOME/Documentos/aula.md"
+~/.local/bin/nexus-core --knowledge-search 'assunto'
+~/.local/bin/nexus-core --knowledge-answer 'assunto'
 printf 'Olá' | ~/.local/bin/nexus-core --data-tool sha256
 ~/.local/bin/nexus-core --benchmark
 ```

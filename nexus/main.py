@@ -294,6 +294,8 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--knowledge-search", metavar="TEXT", help="pesquisa trechos de documentos")
     actions.add_argument("--knowledge-delete", metavar="ID", type=int, help="remove documento e trechos indexados")
     actions.add_argument("--knowledge-context", metavar="TEXT", help="recupera trechos de conhecimento explicitamente")
+    actions.add_argument("--knowledge-answer", metavar="TEXT",
+                         help="pergunta explicitamente ao Ollama local sobre até três trechos encontrados")
     actions.add_argument("--note-create", metavar="TITLE", help="cria anotação local com corpo lido da entrada padrão")
     actions.add_argument("--note-update", metavar="ID", type=int, help="atualiza anotação; --note-title e corpo pela entrada padrão")
     actions.add_argument("--note-get", metavar="ID", type=int, help="lê uma anotação local")
@@ -364,7 +366,7 @@ def cli(argv: list[str] | None = None) -> None:
     knowledge_actions = (
         args.knowledge_import is not None, args.knowledge_list,
         args.knowledge_search is not None, args.knowledge_delete is not None,
-        args.knowledge_context is not None,
+        args.knowledge_context is not None, args.knowledge_answer is not None,
     )
     if sum(knowledge_actions) > 1 or (has_memory_action and any(knowledge_actions)):
         parser.error("Ações de memória e conhecimento devem ser executadas separadamente")

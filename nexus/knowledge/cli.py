@@ -5,6 +5,7 @@ import sys
 from nexus.config.settings import settings
 from nexus.database.errors import DatabaseError
 from nexus.knowledge.store import KnowledgeStoreError, KnowledgeValidationError, PostgreSQLKnowledgeBase
+from nexus.knowledge.answer import KnowledgeAnswerError
 from nexus.memory.store import MemoryStoreError, MemoryValidationError, PostgreSQLMemoryStore
 
 
@@ -38,11 +39,19 @@ def execute_knowledge_command(args, store_factory=PostgreSQLKnowledgeBase,
                     {"id": m.id, "content": m.content, "expires_at": m.expires_at.isoformat()}
                     for m in memory.search(query, limit=args.knowledge_limit)
                 ]
+        elif args.knowledge_answer is not None:
+            from nexus.knowledge.answer import answer_from_hits
+            from nexus.models.model_factory import build_model_router
+            hits = store.search(args.knowledge_answer, min(args.knowledge_limit, 3),
+                                for_context=True)
+            # A miss is answered locally without activating Ollama.
+            result = answer_from_hits(args.knowledge_answer, hits,
+                                      build_model_router(settings) if hits else None)
         else:
             raise KnowledgeValidationError("Ação de conhecimento não reconhecida.")
         print(json.dumps(result, ensure_ascii=False))
         return 0
-    except (KnowledgeStoreError, KnowledgeValidationError, MemoryStoreError,
+    except (KnowledgeAnswerError, KnowledgeStoreError, KnowledgeValidationError, MemoryStoreError,
             MemoryValidationError, DatabaseError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
