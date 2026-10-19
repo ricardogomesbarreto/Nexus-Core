@@ -11,10 +11,10 @@ e serviços sob demanda.
 
 | Capacidade observada | Estado NEXUS CORE nesta etapa | Próxima implementação |
 | --- | --- | --- |
-| Biblioteca Kiwix/ZIM | Diagnóstico passivo da presença de `kiwix-serve`; sem leitor nem indexação ZIM | Navegação ZIM autorizada, catálogos e download opcional com verificação de tamanho, licença e origem |
+| Biblioteca Kiwix/ZIM | Catálogo autorizado de metadados de `.zim` (nome, tamanho, tipo), sem abrir seu conteúdo; diagnóstico passivo de `kiwix-serve` | Navegação ZIM autorizada, catálogos e download opcional com verificação de tamanho, licença e origem |
 | Assistente Ollama + Qdrant | Ollama, documentos TXT/MD e busca textual **PostgreSQL** já existem; vetor **não** existe | Semântica opcional com pgvector **no PostgreSQL** (não tornar Qdrant obrigatório), ingestão consentida |
 | Educação Kolibri | Detecção passiva do executável, sem servidor | Adapter opcional para cursos/progresso com autorização e dados isolados |
-| Mapas ProtoMaps | Detecção passiva de utilitário `pmtiles`; sem mapa pronto | Leitor de PMTiles em tela local, pesquisa, dados regionais opt-in sem rede |
+| Mapas ProtoMaps | Catálogo autorizado de `.pmtiles` (nome/tamanho), detecção passiva do utilitário; sem visualizador | Leitor de PMTiles em tela local, pesquisa, dados regionais opt-in sem rede |
 | Ferramentas CyberChef | **Implementado subset original:** SHA-256, Base64, hexadecimal, URL percent-encoding e ROT13; até 8 KiB | Receitas tipadas adicionais após revisão; Base64/ROT13 não são criptografia |
 | Notas FlatNotes | **Implementado:** criação de arquivo `.md` privado `0600` via SecurityGate, saída nova; leitura/lista já existiam | Edição versionada, tags e busca no PostgreSQL, sem rodar FlatNotes |
 | Benchmark | Diagnóstico existente de RAM/CPU e recursos local; **sem score ou leaderboard** | Ensaio de desempenho opt-in, métricas reprodutíveis, ranking remoto jamais padrão |
@@ -28,7 +28,7 @@ e limites próprios. Não montar o socket Docker no assistente.
 
 ## Implementado no código do NEXUS CORE
 
-- `nexus/tools/offline_workspace.py`: notas locais protegidas, operações
+- `nexus/tools/offline_workspace.py`: notas locais protegidas, catálogo metadata-only de ZIM/PMTiles/MD/PDF e operações
   determinísticas de dados e inventário passivo.
 - `nexus/agent/planner.py`: frases portuguesas explícitas no turno atual,
   sem autorização por histórico ou parâmetros deduzidos pelo modelo.
@@ -40,6 +40,7 @@ e limites próprios. Não montar o socket Docker no assistente.
 
 Exemplos de conversa (substitua o HOME fictício pelo real):
 
+    Liste recursos offline em /home/usuario/Biblioteca
     Crie uma nota com o texto "Planejar a semana" em /home/usuario/Notas/semana.md
     Calcule SHA-256 do texto "exemplo"
     Codifique em base64 o texto "ação"
