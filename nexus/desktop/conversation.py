@@ -178,6 +178,17 @@ class ChatSession:
         if not result.success:
             return f"{action_label(result.tool_name)}: {result.error}"
         data = result.data
+        if result.tool_name == "local_library_catalog" and isinstance(data, dict):
+            items = data["items"]
+            detail = "\n".join(f"• {entry['name']} ({entry['kind']}, {entry['size']} bytes)"
+                               for entry in items[:20])
+            suffix = f"\n… mais {len(items) - 20} item(ns)." if len(items) > 20 else ""
+            return (f"Recursos offline encontrados: {len(items)} em {data['path']}."
+                    + ("\n" + detail if detail else "") + suffix)
+        if result.tool_name == "local_note_create" and isinstance(data, dict):
+            return f"Nota local criada: {data['path']}"
+        if result.tool_name == "local_data_transform" and isinstance(data, dict):
+            return f"Transformação local concluída ({data['operation']}): {data['result']}"
         if result.tool_name == "create_directory" and isinstance(data, dict):
             return f"Pasta criada: {data['path']}"
         if result.tool_name == "launch_application" and isinstance(data, dict):

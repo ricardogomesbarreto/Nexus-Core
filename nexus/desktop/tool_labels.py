@@ -2,6 +2,9 @@
 
 ACTION_LABELS = {
     "system_info": "Informações do sistema",
+    "local_note_create": "Criar nota Markdown",
+    "local_library_catalog": "Listar recursos offline",
+    "local_data_transform": "Transformar dados locais",
     "list_directory": "Listar pasta",
     "read_file": "Ler arquivo",
     "file_metadata": "Consultar arquivo",
