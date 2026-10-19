@@ -57,7 +57,7 @@ oito módulos foram copiados ou que serviços de terceiros foram instalados.
 O NEXUS CORE continua sendo um aplicativo desktop local e leve;
 não se transformou em servidor Docker.
 
-**Agora integrado ao código (sujeito a CI e aceite):** notas Markdown novas
+**Agora integrado ao código (sujeito a CI e aceite):** catálogo autorizado de nomes, tipos e tamanhos de arquivos ZIM/PMTiles/MD/PDF/EPUB (sem ler seus conteúdos), notas Markdown novas
 em arquivo privado `0600` com confirmação individual;
 SHA-256, Base64, hexadecimal, URL encode/decode e ROT13 local, por
 pedido explícito; inventário passivo que não inicia nem baixa programas;
@@ -75,6 +75,7 @@ RAM/disco e validação física.
 Exemplos de comandos na conversa:
 
 ```text
+Liste recursos offline em /home/usuario/Biblioteca
 Crie uma nota com o texto "Revisar exercícios" em /home/usuario/Notas/aula.md
 Calcule SHA-256 do texto "exemplo"
 Codifique em base64 o texto "ação"
