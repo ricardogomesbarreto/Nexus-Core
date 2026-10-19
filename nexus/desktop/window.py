@@ -28,6 +28,7 @@ from nexus.desktop.welcome import desktop_spoken_welcome, desktop_startup_messag
 from nexus.desktop.image_picker import image_filetypes, image_start_directory
 from nexus.desktop.image_preview import load_image_preview, PREVIEW_EXTENSIONS
 from nexus.desktop.microphone_indicator import MicrophoneIndicator
+from nexus.tools.offline_workspace import offline_capabilities
 from nexus.desktop.runtime_log import live_event
 from nexus.desktop.tool_labels import action_label, resource_label
 from nexus.desktop.presentation import (
@@ -766,13 +767,21 @@ class DesktopWindow:
 
     def _show_quick_guide(self) -> None:
         """A local description of available flows, not a claim of device readiness."""
+        resources = offline_capabilities()
+        ready = sum(1 for x in resources if x["status"] == "local_integrada")
+        optional = sum(1 for x in resources if x["status"] == "opcional_detectado_nao_iniciado")
         self.messagebox.showinfo(
             "Nexus Core — guia rápido",
             "Converse por texto ou voz quando o modelo local estiver disponível.\n\n"
             "• Imagem, tela e câmera exigem autorização por captura.\n"
             "• Edição de fotos e operações disponíveis de documento/PDF geram cópias novas.\n"
             "• Inspeção estática lê apenas arquivos autorizados.\n"
-            "• Algumas conversões e operações em PDF exigem componentes locais opcionais.\n\n"
+            "• Algumas conversões e operações em PDF exigem componentes locais opcionais.\n"
+            "• Notas: Crie uma nota com o texto \"Olá\" em /home/usuario/Notas/nota.md\n"
+            "• Dados: Calcule SHA-256 do texto \"exemplo\"\n"
+            "• Recursos locais: " + str(ready) + " funções leves prontas, " +
+            str(optional) + " componentes opcionais detectados (não iniciados).\n"
+            "• Biblioteca, cursos, mapas e catálogo exigem integração e aceite separados.\n\n"
             "Atalhos: Enter envia; Shift+Enter quebra linha;\n"
             "Ctrl+L foca a mensagem; Ctrl++ / Ctrl+- ajustam a leitura;\n"
             "Ctrl+Shift+M pausa/retoma a escuta;\n"
