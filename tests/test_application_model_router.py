@@ -141,8 +141,8 @@ def test_application_builds_agent_lazily_with_shared_executor(monkeypatch):
         assert app.tool_registry.list_tools() == [
             "craft_convert_local", "craft_inspect_local", "create_directory", "create_graphic_local",
             "desktop_navigate", "desktop_type_text", "desktop_window_info",
-            "edit_image_local", "file_metadata", "image_geometry_local", "inspect_artifact_local",
-            "launch_application", "list_directory", "open_default_browser", "pdf_combine_local", "pdf_extract_pages_local", "pdf_render_local", "read_file",
+            "edit_image_local", "file_metadata", "image_colors_local", "image_geometry_local", "inspect_artifact_local",
+            "launch_application", "list_directory", "open_default_browser", "pdf_combine_local", "pdf_extract_pages_local", "pdf_organize_local", "pdf_render_local", "read_file",
             "system_info", "terminal_sandbox",
         ]
     finally:

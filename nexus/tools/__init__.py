@@ -28,6 +28,8 @@ from nexus.tools.craft_inspect import CraftInspectTool
 from nexus.tools.pdf_render import PdfRenderTool
 from nexus.tools.pdf_extract import PdfExtractTool
 from nexus.tools.pdf_combine import PdfCombineTool
+from nexus.tools.pdf_organize import PdfOrganizeTool
+from nexus.tools.image_colors import ImageColorsTool
 
 
 __all__ = [
@@ -60,4 +62,6 @@ __all__ = [
     "PdfRenderTool",
     "PdfExtractTool",
     "PdfCombineTool",
+    "PdfOrganizeTool",
+    "ImageColorsTool",
 ]

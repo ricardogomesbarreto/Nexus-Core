@@ -1,5 +1,12 @@
 # Nexus Core v0.9.12 — Authorized Desktop Actions
 
+> **Aditivo de código após rc.3 (19/10/2026):** a `main` acrescenta análise
+> local de luminosidade/cores da foto autorizada e giro/movimento de páginas
+> PDF em arquivo novo, usando motor opcional. A candidata `rc.3` permanece
+> imutável; os binários externos, a fidelidade multipágina e o Ubuntu físico
+> não foram homologados. Consulte o
+> [inventário de lacunas](ZIP_CAPABILITY_GAP_2026-10-19.md).
+
 > **Atualização de fechamento — 18/10/2026:** a entrega do código da v0.9.12
 > permanece na `main` com workflow CI obrigatório. Há uma candidata
 > `v0.9.12-rc.3` destinada **somente a testes**, com wheel e SHA-256

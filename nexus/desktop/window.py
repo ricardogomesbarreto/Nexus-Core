@@ -1684,6 +1684,12 @@ class DesktopWindow:
             details.append(f"Comando: {self._display(request.data['command'])}")
         if request.tool_name == "pdf_extract_pages_local" and isinstance(request.data, dict):
             details.append(f"Páginas solicitadas: {self._display(request.data.get('pages', ''))}")
+        if request.tool_name == "pdf_organize_local" and isinstance(request.data, dict):
+            data = request.data
+            action = "Girar" if data.get("operation") == "rotate" else "Mover"
+            unit = "graus" if data.get("operation") == "rotate" else "posição"
+            details.append(f"{action} páginas: {self._display(data.get('pages', ''))}; "
+                           f"{self._display(data.get('value', ''))} {unit}")
         if request.tool_name == "launch_application" and isinstance(request.data, dict):
             details.append(f"Aplicativo: {self._display(request.data.get('application', ''))}")
         if request.tool_name == "desktop_type_text" and isinstance(request.data, dict):

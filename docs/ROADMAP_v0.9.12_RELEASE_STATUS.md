@@ -7,6 +7,9 @@
 Este documento complementa a seção [Roadmap consolidado](../README.md#roadmap-consolidado-e-auditoria-técnica--nexus-core)
 e substitui afirmações antigas de CI como indicadores do **estado atual**.
 Não renomeia o produto nem transfere interfaces de projetos externos.
+O [inventário auditado dos ZIPs em 19/10](ZIP_CAPABILITY_GAP_2026-10-19.md)
+detalha cada fonte, as funções implementadas depois da candidata rc.3 e as
+lacunas. Este incremento de código **não altera** a tag rc.3 nem o gate G0.
 
 ## Balanço do ciclo
 
@@ -17,8 +20,8 @@ Não renomeia o produto nem transfere interfaces de projetos externos.
 | Interface desktop vinho, mensagens, atalhos, preview, controles de voz, vision e privacidade | Código integrado/CI | Conferir fonte, escala, layout Wayland/X11 e responsividade na máquina real |
 | Áudio, Vosk, saída falada, escuta contínua | Código integrado; aceite físico **parcial** | Duas respostas consecutivas na janela, cancelamento e retomada após TTS |
 | Captura de imagem/tela/câmera e análise autorizada | Código integrado; aceite físico **parcial** | Prévia correta, consentimento repetido, qualidade e tempo de análise |
-| Criação/edição de fotos com Pillow e arquivos protegidos | Código integrado/CI | Verificar fidelidade, transparência e original intacto no notebook |
-| Documentos e PDFs, conversão/metadados, extração, render e junção de dois PDFs | Código integrado; **CLIs opcionais não homologados** | Executáveis reais, versão/fonte/hashes, saídas em leitores independentes |
+| Criação/edição de fotos e resumo de luminosidade com Pillow e arquivos protegidos | Código integrado/CI | Verificar fidelidade, transparência e original intacto no notebook |
+| Documentos e PDFs, conversão/metadados, extração, render, junção, giro e movimento de página | Código integrado; **CLIs opcionais não homologados** | Executáveis reais, versão/fonte/hashes, saídas em leitores independentes |
 | Análise REA estrutural offline | Código integrado/CI | Corpus defensivo, relatórios/limites, ausência de execução dos alvos |
 | REA profundo, OCR, geração generativa de imagens, edição de documento complexa | **Não implementado integralmente** | Arquitetura separada, isolamento, custo em RAM e novos gates específicos |
 | CI da 0.9.12, tags rc.1/rc.2 e publicação rc.3 | **1.798 testes aprovados na main**; rc.3 publicada com wheel e SHA256SUMS | Candidata imutável e verificável; não é release estável |
@@ -87,7 +90,7 @@ Somente o aceite físico completo poderá liberar a release estável.
 | G1 — Registro de adaptadores opcionais | Alta | Detecção de versão/capacidade; CLI real sob limites e consentimento |
 | G2 — Imagem profissional NEXUS | Alta | Recorte, escala e camadas opcionais; prévia/resultado fiel, sem editor clonado |
 | G3 — Documento estruturado | Alta | Estilos e tabelas/abertura cruzada com suíte independente; sem corrupção silenciosa |
-| G4 — PDF expandido | Alta | Rotação, separação, formulários e OCR somente com parser e verificação externos |
+| G4 — PDF expandido | Alta | Giro e movimento de uma página agora no adaptador; divisão em vários arquivos, formulários e OCR exigem parser e verificação externos |
 | G5 — Engenharia reversa defensiva | Média | Binários autorizados; isolamento real, evidência reprodutível, sem runtime no host sem consentimento |
 | G6 — Ollama/perfil eco | Alta | Modelo certo para RAM disponível, streaming, medição e cancelamento sem serviços fixos |
 | G7 — UX/voz/visão e acessibilidade | Alta | Wayland/X11, microfone contínuo, câmera, estados, qualidade e tempo reais |

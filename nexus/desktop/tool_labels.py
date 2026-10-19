@@ -16,6 +16,8 @@ ACTION_LABELS = {
     "craft_inspect_local": "Consultar metadados",
     "pdf_extract_pages_local": "Extrair páginas de PDF",
     "pdf_combine_local": "Juntar dois PDFs",
+    "pdf_organize_local": "Organizar páginas de PDF",
+    "image_colors_local": "Analisar cores da foto",
     "pdf_render_local": "Gerar prévia de PDF",
     "inspect_artifact_local": "Inspecionar arquivo",
     "edit_image_local": "Editar foto",

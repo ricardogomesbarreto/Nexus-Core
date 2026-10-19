@@ -184,8 +184,13 @@ class ChatSession:
             return f"Solicitei a abertura de {data['application']} no desktop."
         if result.tool_name == "open_default_browser" and isinstance(data, dict):
             return f"Solicitei a abertura do navegador padrão ({data['browser_id']})."
-        if result.tool_name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_render_local"} and isinstance(data, dict):
+        if result.tool_name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "pdf_render_local"} and isinstance(data, dict):
             return f"Arquivo criado no computador: {data['path']}"
+        if result.tool_name == "image_colors_local" and isinstance(data, dict):
+            return (f"Imagem com {data['width']} por {data['height']} pixels. "
+                    f"Luminosidade média: {data['brightness']} de 255; "
+                    f"{data['dark_percent']}% de pixels escuros e "
+                    f"{data['light_percent']}% de pixels claros.")
         if result.tool_name == "system_info" and isinstance(data, dict):
             parts = [
                 f"Sistema operacional: {data.get('system', 'desconhecido')}",

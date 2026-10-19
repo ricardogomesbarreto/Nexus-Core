@@ -224,6 +224,35 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
             "source_a": combined[1], "source_b": combined[2],
             "output": combined[3],
         }
+    pdf_path = r"(/[/\w .À-ÿ-]{1,400}\.pdf)"
+    rotation = re.fullmatch(
+        r"(?:gire|girar) as p[aá]ginas? "
+        r"([1-9]\d{0,3}(?:-[1-9]\d{0,3})?(?:,[1-9]\d{0,3}(?:-[1-9]\d{0,3})?)*) "
+        r"do pdf " + pdf_path + r" em (90|180|270) graus e salve em " + pdf_path,
+        current, re.IGNORECASE,
+    )
+    if rotation:
+        return "pdf_organize_local", {
+            "source": rotation[2], "output": rotation[4],
+            "operation": "rotate", "pages": rotation[1], "value": int(rotation[3]),
+        }
+    moved = re.fullmatch(
+        r"(?:mova|mover) a p[aá]gina ([1-9]\d{0,3}) "
+        r"do pdf " + pdf_path + r" para a posi[cç][aã]o ([1-9]\d{0,3}) "
+        r"e salve em " + pdf_path, current, re.IGNORECASE,
+    )
+    if moved:
+        return "pdf_organize_local", {
+            "source": moved[2], "output": moved[4],
+            "operation": "move", "pages": moved[1], "value": int(moved[3]),
+        }
+    colors = re.fullmatch(
+        r"(?:analise|analisar) as cores da (?:foto|imagem) "
+        r"(/[/\w .À-ÿ-]{1,400}\.(?:png|jpe?g|webp))",
+        current, re.IGNORECASE,
+    )
+    if colors:
+        return "image_colors_local", {"source": colors[1]}
     # Original Craft CLIs expose JSON-only metadata through 'info'. Route
     # explicit current-turn requests without loading the Ollama model.
     metadata = re.fullmatch(
@@ -447,7 +476,7 @@ class AgentPlanner:
                 raise ProposalError("Nome ou argumentos inválidos na proposta.")
             if name == "open_default_browser" and _simple_app_request(prompt) != "browser":
                 raise ProposalError("Abrir o navegador exige um pedido explícito e inequívoco.")
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local"}:
                 current = _current_message(prompt) or ""
                 normalized = unicodedata.normalize("NFKD", current).encode("ascii", "ignore").decode("ascii").lower()
                 intent = {
@@ -459,6 +488,8 @@ class AgentPlanner:
                     "pdf_render_local": r"\b(renderizar?|renderize)\b",
                     "pdf_extract_pages_local": r"\b(extrair?|extraia)\b",
                     "pdf_combine_local": r"\b(juntar?|junte|combinar?|combine)\b",
+                    "pdf_organize_local": r"\b(girar?|gire|mover?|mova)\b",
+                    "image_colors_local": r"\b(analise|analisar)\b",
                 }[name]
                 if not re.search(intent, normalized):
                     raise ProposalError("Criação e edição exigem pedido explícito neste turno.")
@@ -469,7 +500,7 @@ class AgentPlanner:
                 parameters = tool.contract.validate_inputs(arguments)
             except ContractViolation as exc:
                 raise ProposalError("Argumentos não obedecem ao contrato.") from exc
-            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local"}:
+            if name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "craft_inspect_local", "pdf_render_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "image_colors_local"}:
                 current = _current_message(prompt) or ""
                 if any(parameters[field] not in current for field in ("output", "source", "source_a", "source_b")
                        if field in parameters):
@@ -480,6 +511,10 @@ class AgentPlanner:
                     raise ProposalError("Informe a lista exata de páginas e os caminhos neste turno.")
                 if name == "pdf_combine_local" and _simple_creative_request(prompt) != (name, parameters):
                     raise ProposalError("Informe dois PDFs e o destino exatos, na ordem desejada neste turno.")
+                if name == "pdf_organize_local" and _simple_creative_request(prompt) != (name, parameters):
+                    raise ProposalError("Informe a operação, página, valor e caminhos exatos neste turno.")
+                if name == "image_colors_local" and _simple_creative_request(prompt) != (name, parameters):
+                    raise ProposalError("A análise de cores exige pedido explícito e caminho exato neste turno.")
                 if name == "craft_convert_local" and parameters.get("kind") == "document_text" and "texto" not in current.lower():
                     raise ProposalError("Extração de texto exige pedido explícito neste turno.")
                 if name == "craft_inspect_local" and not re.search(
