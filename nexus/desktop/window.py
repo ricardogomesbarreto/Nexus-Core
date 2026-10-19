@@ -1234,6 +1234,9 @@ class DesktopWindow:
 
     def _stop_speaking(self) -> None:
         """Invalidate a superseded TTS worker before its completion event."""
+        if self._test_voice_speech_generation == self._speak_generation:
+            self._test_voice_speech_generation = None
+            live_event("teste", "falhou", source="voz")
         self._speak_generation += 1
         self._speaking = False
         self.speaker.stop()

@@ -7,6 +7,25 @@ from threading import Event
 import pytest
 
 
+def test_cancelled_voice_playback_cannot_complete_diagnostic(monkeypatch):
+    from nexus.desktop import window as module
+    events = []
+    monkeypatch.setattr(module, "live_event", lambda kind, state, **kwargs:
+                        events.append((kind, state)))
+    ui = module.DesktopWindow.__new__(module.DesktopWindow)
+    ui._speak_generation = 4
+    ui._test_voice_speech_generation = 4
+    ui._test_voice_turns_remaining = 2
+    ui._speaking = True
+    class Speaker:
+        def stop(self): pass
+    ui.speaker = Speaker()
+    ui._stop_speaking()
+    assert ui._test_voice_speech_generation is None
+    assert ui._test_voice_turns_remaining == 2
+    assert ("teste", "falhou") in events
+
+
 @pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Exige Tk/Xvfb")
 def test_two_turns_are_not_credited_until_speech_finishes_and_listening_resumes(monkeypatch):
     import tkinter as tk
