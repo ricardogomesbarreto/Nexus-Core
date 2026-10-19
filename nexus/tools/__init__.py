@@ -30,7 +30,7 @@ from nexus.tools.pdf_extract import PdfExtractTool
 from nexus.tools.pdf_combine import PdfCombineTool
 from nexus.tools.pdf_organize import PdfOrganizeTool
 from nexus.tools.image_colors import ImageColorsTool
-from nexus.tools.offline_workspace import LocalNoteTool, LocalDataTool
+from nexus.tools.offline_workspace import LocalNoteTool, LocalDataTool, LocalLibraryCatalogTool
 
 
 __all__ = [
@@ -67,4 +67,5 @@ __all__ = [
     "ImageColorsTool",
     "LocalNoteTool",
     "LocalDataTool",
+    "LocalLibraryCatalogTool",
 ]
