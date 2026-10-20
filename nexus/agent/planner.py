@@ -303,6 +303,18 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
     )
     if inspection:
         return "inspect_artifact_local", {"source": inspection[1]}
+    # Optional REA CLI: only explicit analysis mode and path in this
+    # CURRENT message; never infer authorization from conversation history.
+    rea = re.fullmatch(
+        r"(?:analise|inspecione) (?:o )?(?:bin[aá]rio |arquivo )?"
+        r"(go|rust|dotnet|electron) (/[\\w ./À-ÿ-]{1,400}\\."
+        r"(?:elf|so|bin|exe|dll|asar))",
+        current, re.IGNORECASE,
+    )
+    if rea:
+        return "rea_static_local", {
+            "source": rea[2], "mode": rea[1].lower(),
+        }
     return None
 
 
