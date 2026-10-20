@@ -405,18 +405,16 @@ Ollama e PostgreSQL continuam sob demanda, sem autostart e sem serviço extra.
 [Inventário dos cinco ZIPs e gates de segurança](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md).
 [Auditoria complementar, achados e testes pendentes](docs/AUDIT_v0.9.12_2026-10-18.md).
 
-## Integração opcional REA — inspeção estática local (20/10/2026)
+## Análise estática local — ferramenta complementar da v0.9.12
 
-O arquivo enviado `rea-main.zip` contém o projeto **REA — Reverse Engineer
-Anything** (Node.js/TypeScript, licença MIT), voltado à engenharia reversa
-de executáveis e aplicações. O REA **não** é um editor de imagens,
-documentos ou PDFs e **não substitui** PhotoCraft, PdfCraft ou WordCraft.
-O NEXUS CORE já possui ferramentas básicas locais para arquivos e uma
-inspeção estática leve `inspect_artifact_local`; nesta etapa, adiciona o
-adaptador **opcional** `rea_static_local` sob o mesmo `SecurityGate`.
+O assistente agora admite a análise **opcional** de artefatos locais de
+programas compilados e aplicativos, além da inspeção leve já existente.
+A integração está protegida pelo `SecurityGate`: exige um caminho
+absoluto sob a HOME, modo específico e autorização individual. Não
+executa deliberadamente o arquivo examinado. O relatório bruto é
+descartado após um resumo limitado.
 
-O adaptador permite os seguintes pedidos **explícitos e com caminhos
-absolutos sob a HOME** (também por reconhecimento de voz):
+Exemplos de comandos por texto ou voz:
 
 ```text
 Analise o binário Rust /home/usuario/Projetos/app.elf
@@ -425,48 +423,24 @@ Inspecione o arquivo dotnet /home/usuario/Documentos/biblioteca.dll
 Analise o arquivo electron /home/usuario/Documentos/app.asar
 ```
 
-| Operação | CLI REA externo necessário | Limite |
-| --- | --- | --- |
-| Metadados de binário Go | `rea inspect-go-binary` | Inspeção estática local |
-| Metadados de binário Rust | `rea inspect-rust-binary` | Inspeção estática local |
-| Estrutura de assembly .NET | `rea inspect-managed-artifact` | Inspeção estática local |
-| Organização de aplicação Electron ASAR | `rea analyze-javascript-application` | Inspeção estática local |
+A análise profunda depende de um programa externo **opcional,
+previamente instalado**; a inspeção simples do Nexus continua disponível
+sem esse requisito. O assistente não instala dependências, não baixa
+executáveis e não liga servidores extras automaticamente. Consulte
+[requisitos técnicos e limites](docs/OPTIONAL_STATIC_ANALYSIS_v0.9.12.md)
+para verificar o motor, os formatos e as exigências de cada modo.
 
-**Requisitos opcionais:** REA pré-instalado de fonte confiável, Node.js
-compatível com o seu projeto (22.19+, 24.11+ ou 26+), e eventuais
-dependências específicas do analisador. Verifique `command -v rea`
-e `rea --help`. **Nenhum comando `npx`, download automático,
-`rea setup`, instalação do ZIP ou servidor MCP é executado pelo Nexus.**
-O código do REA não é incorporado ou copiado para o repositório.
-A análise básica de artefatos pelo próprio Nexus continua funcionando
-sem instalar REA.
+O uso de um programa de terceiros no computador **não equivale a
+sandbox nem garante ausência de rede**. Os testes automatizados validam
+a autorização, a seleção de ações e os limites do adaptador; somente
+um ensaio físico pode comprovar o comportamento do programa externo.
 
-**Limites de segurança e desempenho:** apenas quatro subcomandos fixos,
-uma origem local por turno, extensão compatível, no máximo 16 MiB por
-arquivo, 45 segundos por processo e saída JSON limitada a 1 MiB para
-resumo. A origem é aberta por descritor sem seguir links simbólicos,
-copiada para uma pasta `0700` e o relatório completo é descartado;
-não há execução deliberada do *alvo* nem salvamento do conteúdo nos
-logs. **O executável REA é um processo externo no host, não um sandbox:**
-o Nexus não garante ausência de acesso à rede ou a outros recursos por
-esse programa, nem comprova que a versão do CLI instalada realmente
-suporta todas as operações. Rode REA somente de fonte confiável e,
-para verificar funcionamento totalmente offline, desconecte a rede
-durante o aceite físico. O resumo confirma apenas a execução da
-ferramenta e os campos retornados; não comprova fidelidade da análise.
+### Instalação guiada e serviços locais
 
-**PhotoCraft/PdfCraft/WordCraft** permanecem ferramentas independentes
-e opcionais. Os recursos nativos de cartaz, edição de fotos, extração
-e organização de PDF e inspeção estática não são substituídos pelo REA.
-
-### Instalação guiada e PostgreSQL sob demanda
-
-O instalador agora confere/inicia o PostgreSQL local (quando autorizado)
-**antes de preparar ou baixar modelos**, evitando descobrir o banco
-parado somente após etapas demoradas. Essa mudança não habilita serviços
-no boot nem substitui credenciais existentes; `pg_isready` identifica
-disponibilidade do cluster, mas a etapa posterior ainda verifica
-autenticação real com o banco.
+O instalador passa a consultar/iniciar o PostgreSQL local, após
+confirmação quando necessário, **antes de preparar os modelos**,
+evitando uma falha tardia na instalação quando o serviço está parado.
+Não altera credenciais existentes ou habilita serviços no boot.
 
 ```bash
 cd "$HOME/Projetos/Nexus-Core"
@@ -476,16 +450,8 @@ NEXUS_RESOURCE_PROFILE=eco ~/.local/bin/nexus-core --desktop \
   2>&1 | tee "$HOME/nexus-core-desktop.log"
 ```
 
-Para testar REA sem instalá-lo pelo Nexus:
-```bash
-command -v rea
-rea --help
-```
-
-A CI valida contratos, autorização, caminhos, limite de dados, saída
-sanitizada e parser. Não representa teste físico do REA instalado,
-das ferramentas Craft reais, do microfone ou da câmera no notebook.
-A v0.9.12 estável continua condicionada à homologação física.
+A publicação estável da v0.9.12 segue bloqueada até a homologação física
+das ferramentas instaladas, escuta, visão e recursos do notebook.
 
 ## Novas capacidades offline — etapa complementar da v0.9.12
 
