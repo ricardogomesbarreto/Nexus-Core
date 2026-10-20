@@ -24,7 +24,7 @@ from nexus.tools import (
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
     EditImageTool, ImageGeometryTool, CreateGraphicTool, CraftConvertTool, InspectArtifactTool,
     CraftInspectTool, PdfRenderTool, PdfExtractTool, PdfCombineTool, PdfOrganizeTool,
-    ImageColorsTool,
+    ImageColorsTool, ReaStaticTool,
     ToolExecutor,
     ToolRegistry,
 )
