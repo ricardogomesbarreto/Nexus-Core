@@ -405,6 +405,54 @@ Ollama e PostgreSQL continuam sob demanda, sem autostart e sem serviço extra.
 [Inventário dos cinco ZIPs e gates de segurança](docs/ORIGINAL_ZIPS_CRAFT_REA_OLLAMA_v0.9.12.md).
 [Auditoria complementar, achados e testes pendentes](docs/AUDIT_v0.9.12_2026-10-18.md).
 
+## Análise estática local — ferramenta complementar da v0.9.12
+
+O assistente agora admite a análise **opcional** de artefatos locais de
+programas compilados e aplicativos, além da inspeção leve já existente.
+A integração está protegida pelo `SecurityGate`: exige um caminho
+absoluto sob a HOME, modo específico e autorização individual. Não
+executa deliberadamente o arquivo examinado. O relatório bruto é
+descartado após um resumo limitado.
+
+Exemplos de comandos por texto ou voz:
+
+```text
+Analise o binário Rust /home/usuario/Projetos/app.elf
+Analise o binário Go /home/usuario/Projetos/servidor.bin
+Inspecione o arquivo dotnet /home/usuario/Documentos/biblioteca.dll
+Analise o arquivo electron /home/usuario/Documentos/app.asar
+```
+
+A análise profunda depende de um programa externo **opcional,
+previamente instalado**; a inspeção simples do Nexus continua disponível
+sem esse requisito. O assistente não instala dependências, não baixa
+executáveis e não liga servidores extras automaticamente. Consulte
+[requisitos técnicos e limites](docs/OPTIONAL_STATIC_ANALYSIS_v0.9.12.md)
+para verificar o motor, os formatos e as exigências de cada modo.
+
+O uso de um programa de terceiros no computador **não equivale a
+sandbox nem garante ausência de rede**. Os testes automatizados validam
+a autorização, a seleção de ações e os limites do adaptador; somente
+um ensaio físico pode comprovar o comportamento do programa externo.
+
+### Instalação guiada e serviços locais
+
+O instalador passa a consultar/iniciar o PostgreSQL local, após
+confirmação quando necessário, **antes de preparar os modelos**,
+evitando uma falha tardia na instalação quando o serviço está parado.
+Não altera credenciais existentes ou habilita serviços no boot.
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+bash scripts/nexus_core_session.sh start
+python3 scripts/install_linux.py
+NEXUS_RESOURCE_PROFILE=eco ~/.local/bin/nexus-core --desktop \
+  2>&1 | tee "$HOME/nexus-core-desktop.log"
+```
+
+A publicação estável da v0.9.12 segue bloqueada até a homologação física
+das ferramentas instaladas, escuta, visão e recursos do notebook.
+
 ## Novas capacidades offline — etapa complementar da v0.9.12
 
 Esta etapa mantém **a mesma versão e aparência** e amplia ferramentas existentes,

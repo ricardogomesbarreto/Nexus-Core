@@ -24,7 +24,7 @@ from nexus.tools import (
     DesktopWindowInfoTool, DesktopTypeTextTool, DesktopNavigateTool,
     EditImageTool, ImageGeometryTool, CreateGraphicTool, CraftConvertTool, InspectArtifactTool,
     CraftInspectTool, PdfRenderTool, PdfExtractTool, PdfCombineTool, PdfOrganizeTool,
-    ImageColorsTool,
+    ImageColorsTool, ReaStaticTool,
     ToolExecutor,
     ToolRegistry,
 )
@@ -61,7 +61,7 @@ class NexusApplication:
             DesktopWindowInfoTool(), DesktopTypeTextTool(), DesktopNavigateTool(),
             EditImageTool(), ImageGeometryTool(), CreateGraphicTool(), CraftConvertTool(),
             InspectArtifactTool(), CraftInspectTool(), PdfRenderTool(), PdfExtractTool(),
-            PdfCombineTool(), PdfOrganizeTool(), ImageColorsTool(),
+            PdfCombineTool(), PdfOrganizeTool(), ImageColorsTool(), ReaStaticTool(),
         ):
             self.tool_registry.register(tool)
 
