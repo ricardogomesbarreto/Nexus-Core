@@ -59,6 +59,7 @@ __all__ = [
     "CreateGraphicTool",
     "CraftConvertTool",
     "InspectArtifactTool",
+    "ReaStaticTool",
     "CraftInspectTool",
     "PdfRenderTool",
     "PdfExtractTool",
