@@ -307,7 +307,7 @@ def _simple_creative_request(prompt: str) -> tuple[str, dict[str, Any]] | None:
     # CURRENT message; never infer authorization from conversation history.
     rea = re.fullmatch(
         r"(?:analise|inspecione) (?:o )?(?:bin[aá]rio |arquivo )?"
-        r"(go|rust|dotnet|electron) (/[\\w ./À-ÿ-]{1,400}\\."
+        r"(go|rust|dotnet|electron) (/[\w ./À-ÿ-]{1,400}\."
         r"(?:elf|so|bin|exe|dll|asar))",
         current, re.IGNORECASE,
     )
