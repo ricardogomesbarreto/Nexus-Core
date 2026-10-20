@@ -662,13 +662,16 @@ def main(argv: list[str] | None = None) -> int:
         print("Instalação interrompida: configure credenciais PostgreSQL locais "
               "e tente novamente.", file=sys.stderr)
         return 2
-    if not prepare_local_models():
-        print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
-              file=sys.stderr)
-        return 2
+    # The user's PostgreSQL cluster may be stopped deliberately to conserve
+    # RAM. Check it BEFORE downloading or preparing large local models.
+    # Starting the cluster is explicit; no unit is enabled at boot.
     if not ensure_postgresql_running_for_install():
         print("Instalação adiada: PostgreSQL local precisa estar ativo para "
               "validar as credenciais; o ambiente anterior foi preservado.",
+              file=sys.stderr)
+        return 2
+    if not prepare_local_models():
+        print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
               file=sys.stderr)
         return 2
     try:
