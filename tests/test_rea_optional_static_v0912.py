@@ -159,3 +159,22 @@ def test_invalid_or_oversized_rea_output_is_rejected(tmp_path, monkeypatch):
     assert not executor.execute(
         "rea_static_local", source=str(source), mode="dotnet",
     ).success
+
+
+def test_installer_prioritizes_postgresql_before_model_setup():
+    """Regression for the Ubuntu log: db was discovered stopped too late."""
+    import inspect
+    from scripts import install_linux
+
+    source = inspect.getsource(install_linux.main)
+    assert source.index("if not ensure_postgresql_running_for_install():") < (
+        source.index("if not prepare_local_models():")
+    )
+
+
+def test_optional_rea_source_is_not_the_same_as_document_editing():
+    from nexus.tools import ReaStaticTool, CraftConvertTool
+
+    assert ReaStaticTool.name == "rea_static_local"
+    assert CraftConvertTool.name == "craft_convert_local"
+    assert ReaStaticTool.risk_level == CraftConvertTool.risk_level
