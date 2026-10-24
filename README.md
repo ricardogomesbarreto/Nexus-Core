@@ -10,12 +10,34 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.14 na main; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.14%20na%20main-722F37">
+  <img alt="Código v0.9.15; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.15-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## 0.9.15 — proteção contra pressão de memória
+
+O perfil `eco` verifica a memória **imediatamente antes de iniciar a
+inferência**. Abaixo de 1 GiB disponível, uma nova conversa ou análise
+visual informa que é preciso liberar memória, sem começar a carregar outro
+modelo. Para visão, consulta também o tamanho em disco do modelo instalado
+**somente no Ollama local** e reserva 512 MiB de margem; quando a estimativa
+não cabe na RAM disponível, explica o bloqueio por texto e voz e sugere
+fechar aplicativos pesados ou configurar um modelo visual menor já instalado.
+Não baixa modelos, não troca o modelo escolhido silenciosamente e não para
+serviços de outros aplicativos. Tamanho em disco é apenas uma estimativa:
+passar na verificação não garante uso de memória ou latência aceitáveis.
+
+Arquivos e capturas visuais autorizados são reduzidos diretamente ao limite
+de resolução do perfil `eco` (até 768 px) antes da prévia e do segundo preparo
+para o modelo; isso evita um intermediário de até 1536 px nessa configuração.
+O perfil `balanced` mantém a resolução anterior. Veja [notas, testes e
+limites](docs/RELEASE_NOTES_v0.9.15.md).
+
+**Publicação:** versão de código para validação; CI do SHA final e aceite
+físico do Ubuntu permanecem necessários para qualquer tag estável.
 
 ## 0.9.14 — código integrado, cancelamento visual e privacidade da câmera
 
@@ -2780,6 +2802,7 @@ rastreáveis no GitHub:
 | v0.9.12 | Authorized Desktop Actions — integrado à main; aceite físico pendente; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.12.md) |
 | v0.9.13 | Código de redução de memória integrado à main; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.13.md) |
 | v0.9.14 | Código de câmera e cancelamento visual integrado à main; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.14.md) |
+| v0.9.15 | Proteção contra pressão de memória no perfil eco; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.15.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -6497,8 +6520,7 @@ física e publicação estável continuam pendentes. Evoluções futuras incluem
 
 **Estimativa de planejamento para concluir a linha 0.9.x no Ubuntu Desktop
 (CI 24.04; aceite físico por versão pendente):** v0.9.12 integrada ao código,
-com seu aceite físico e dois marcos de desenvolvimento restantes sujeitos
-aos resultados dos testes:
+com seu aceite físico e marcos de desenvolvimento sujeitos aos resultados dos testes:
 
 | Marco proposto | Critério principal |
 | --- | --- |
@@ -6506,8 +6528,9 @@ aos resultados dos testes:
 | v0.9.12 | Código integrado para ações desktop autorizadas por operação e frase exata de pasta; homologação física pendente. Teclado em outras janelas continua X11. |
 | v0.9.13 | Redução de memória do desktop integrada à main; encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria permanece pendente. |
 | v0.9.14 | Correção de condição de corrida da câmera e cancelamento visual integrada; aceite físico Ubuntu, voz, Ollama, recuperação e Wayland/X11 ainda pendentes. |
+| v0.9.15 | Limite de memória antes da inferência e imagens preparadas na resolução do perfil eco; resultados reais de RAM, swap e latência no notebook ainda pendentes. |
 
-A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.14:
+A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.15:
 novas falhas podem exigir versões adicionais. “Fazer tudo no computador” não
 é uma capacidade certificável sem delimitar ações e permissões. A publicação
 estável exige CI no commit final da `main` e homologação física registrada.

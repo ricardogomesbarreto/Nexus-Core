@@ -67,6 +67,25 @@ class FakeOpener:
         return self.response
 
 
+def test_model_size_uses_bounded_local_inventory_only():
+    opener = FakeOpener(response=FakeResponse(json.dumps({"models": [
+        {"name": "gemma3:4b", "size": 3 * 1024 ** 3},
+    ]}).encode()))
+    transport = OllamaTransport(opener=opener)
+    assert transport.model_size("gemma3:4b") == 3 * 1024 ** 3
+    assert opener.calls[0]["request"].full_url == "http://127.0.0.1:11434/api/tags"
+    assert opener.calls[0]["request"].get_method() == "GET"
+
+
+@pytest.mark.parametrize("size", [None, True, 0, -1, "3000", 1 << 51])
+def test_invalid_model_size_cannot_bypass_memory_check(size):
+    response = FakeResponse(json.dumps({"models": [
+        {"name": "gemma3:4b", "size": size},
+    ]}).encode())
+    with pytest.raises(OllamaInvalidJSONError):
+        OllamaTransport(opener=FakeOpener(response=response)).model_size("gemma3:4b")
+
+
 def test_ollama_transport_posts_chat_payload():
     opener = FakeOpener(
         response=FakeResponse(

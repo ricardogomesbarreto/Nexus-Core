@@ -11,7 +11,7 @@ from PIL import Image
 
 from nexus.config.settings import Settings
 from nexus.desktop.runtime_log import live_event
-from nexus.models.contracts import ModelRequest
+from nexus.models.contracts import ModelProviderResourceError, ModelRequest
 from nexus.models.model_factory import build_model_router
 from nexus.models.resource_budget import ResourceBudget
 from nexus.vision.local import LocalVision
@@ -103,6 +103,20 @@ def test_factory_uses_eco_options_but_never_activates_ollama(monkeypatch):
     assert payload["keep_alive"] == "0s"
     assert "tools" not in payload
     assert timeout == 120
+
+
+def test_eco_prevents_text_model_load_during_critical_pressure(monkeypatch):
+    eco = ResourceBudget.detect(requested="eco", total_bytes=6*GIB,
+                                available_bytes=617*MIB, cores=8)
+    monkeypatch.setattr(ResourceBudget, "detect", lambda **kw: eco)
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 617))
+    transport = Transport()
+    router = build_model_router(Settings(), transport_factory=lambda **kw: transport)
+    with pytest.raises(ModelProviderResourceError):
+        router.generate(ModelRequest(prompt="Oi", context_length=1024))
+    assert transport.calls == []
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 1536))
+    assert router.generate(ModelRequest(prompt="Oi", context_length=1024)).content
 
 
 def test_multimodal_eco_reduces_pixels_without_persisting_frames(monkeypatch):

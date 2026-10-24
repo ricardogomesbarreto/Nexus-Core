@@ -53,6 +53,10 @@ class ModelProviderTimeoutError(
     """
 
 
+class ModelProviderResourceError(ModelProviderError):
+    """Local memory pressure makes loading the model unsafe."""
+
+
 def _validate_non_blank_text(
     field_name: str,
     value: str,

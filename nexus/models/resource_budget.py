@@ -78,6 +78,16 @@ class ResourceBudget:
     vision_edge: int
     keep_alive: str
 
+    @staticmethod
+    def available_now_mib() -> int | None:
+        """Recheck current pressure before inference, not just at startup."""
+        _total, available = _memory_bytes()
+        return available // (1024 * 1024) if available is not None else None
+
+    def text_memory_low(self) -> bool:
+        available = self.available_now_mib()
+        return self.mode == "eco" and available is not None and available < 1024
+
     @classmethod
     def detect(cls, *, requested: str | None = None,
                total_bytes: int | None = None,

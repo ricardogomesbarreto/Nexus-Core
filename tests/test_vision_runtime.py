@@ -7,6 +7,7 @@ import pytest
 from PIL import Image
 
 from nexus.config.settings import Settings
+from nexus.models.resource_budget import ResourceBudget
 from nexus.vision.local import LocalVision, VisionError, VisionInputError, vision_dependencies
 
 
@@ -65,6 +66,50 @@ def test_already_cancelled_visual_request_skips_model_lookup():
         service.describe(image_bytes(), is_cancelled=lambda: True)
 
 
+def test_eco_refuses_large_model_before_normalizing_or_sending_image(monkeypatch):
+    class Inventory:
+        sent = False
+
+        def list_models(self): return ["gemma3:4b"]
+        def model_size(self, name): return 3 * 1024 ** 3
+        def chat(self, *, payload, timeout):
+            self.sent = True
+            raise AssertionError("memory gate must stop inference")
+
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2048))
+    transport = Inventory()
+    service = LocalVision(Settings(), transport=transport)
+    monkeypatch.setattr(service, "_normalize_image",
+                        lambda *a, **kw: (_ for _ in ()).throw(AssertionError("decode")))
+    with pytest.raises(VisionError, match="2048 MiB disponíveis") as error:
+        service.describe(b"private-frame")
+    assert "Nenhuma imagem foi enviada" in str(error.value)
+    assert not transport.sent
+
+
+def test_eco_allows_model_when_local_memory_estimate_has_headroom(monkeypatch):
+    class Inventory:
+        def list_models(self): return ["gemma3:4b"]
+        def model_size(self, name): return 2 * 1024 ** 3
+        def chat(self, *, payload, timeout):
+            return {"done": True, "message": {"content": "Uma imagem."}}
+
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 3072))
+    assert LocalVision(Settings(), transport=Inventory()).describe(image_bytes())[
+        "description"] == "Uma imagem."
+
+
+def test_eco_blocks_vision_under_one_gib_without_model_metadata(monkeypatch):
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 617))
+    transport = Transport({})
+    with pytest.raises(VisionError, match="abaixo de 1 GiB"):
+        LocalVision(Settings(), transport=transport).describe(image_bytes())
+    assert transport.calls == []
+
+
 @pytest.mark.parametrize("response", [
     {}, {"done": False, "message": {"content": "unfinished"}},
     {"done": True, "message": {}},
@@ -94,7 +139,7 @@ def test_capture_backends_use_fixed_arguments(monkeypatch):
     calls = []
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/bin/" + n)
     monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
-    service._capture = lambda args: calls.append(args) or image_bytes()
+    service._capture = lambda args, **kwargs: calls.append(args) or image_bytes()
     monkeypatch.setattr(service, "selected_screen", lambda *, window: calls.append(
         ("portal", window)) or image_bytes())
     service.screen()
@@ -157,11 +202,26 @@ def test_capture_applies_os_file_size_limit(monkeypatch):
     assert options["preexec_fn"] == LocalVision._limit_capture_output
 
 
+def test_capture_can_normalize_directly_to_eco_edge(monkeypatch):
+    class Result:
+        returncode = 0
+
+    def run(argv, *, stdout, **kwargs):
+        output = io.BytesIO()
+        Image.new("RGB", (1800, 1200), "purple").save(output, "PNG")
+        stdout.write(output.getvalue())
+        return Result()
+
+    monkeypatch.setattr("nexus.vision.local.subprocess.run", run)
+    with Image.open(io.BytesIO(LocalVision._capture(["capture-test"], max_edge=768))) as out:
+        assert max(out.size) <= 768
+
+
 def test_camera_skips_initial_exposure_frames(monkeypatch):
     service = LocalVision(Settings())
     commands = []
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/usr/bin/ffmpeg")
-    service._capture = lambda args: commands.append(args) or image_bytes()
+    service._capture = lambda args, **kwargs: commands.append(args) or image_bytes()
     assert service.camera(0).startswith(b"\x89PNG")
     assert len(commands) == 1  # One authorized still photo, no continuous preview.
     assert commands[0][commands[0].index("-vf") + 1] == r"select=gte(n\,8)"
@@ -174,7 +234,7 @@ def test_black_camera_capture_is_not_sent_to_visual_model(monkeypatch):
     Image.new("RGB", (100, 80), (0, 0, 0)).save(blank, "PNG")
     service = LocalVision(Settings())
     monkeypatch.setattr("nexus.vision.local.shutil.which", lambda n: "/usr/bin/ffmpeg")
-    service._capture = lambda args: blank.getvalue()
+    service._capture = lambda args, **kwargs: blank.getvalue()
     with pytest.raises(VisionError, match="praticamente preta"):
         service.camera(0)
 

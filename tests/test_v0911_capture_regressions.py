@@ -71,7 +71,7 @@ def test_camera_inventory_filters_metadata_nodes(monkeypatch):
 def test_camera_failure_explains_device_and_action_without_raw_ffmpeg_output(monkeypatch):
     monkeypatch.setattr(vision_module.shutil, "which", lambda name: "/usr/bin/ffmpeg")
 
-    def fail_capture(command):
+    def fail_capture(command, **kwargs):
         raise VisionError("Não foi possível capturar imagem local.")
 
     monkeypatch.setattr(LocalVision, "_capture", staticmethod(fail_capture))
