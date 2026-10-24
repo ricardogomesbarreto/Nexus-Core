@@ -11,11 +11,30 @@
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
   <img alt="Código v0.9.12 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.12%20na%20main-722F37">
+  <img alt="Código v0.9.13 em desenvolvimento" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.13%20em%20PR-8A5A67">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## 0.9.13 — código em desenvolvimento, memória do perfil eco
+
+Esta branch incrementa o pacote para **0.9.13** como próxima etapa de código.
+O histórico exibido na janela fica limitado a 32.000 caracteres e a
+normalização de imagens grandes reduz as alocações intermediárias, em especial
+JPEG antes da conversão para RGB. No teste local controlado de um JPEG
+3000×2400 → 768 pixels, a mediana do pico de memória do processo caiu de
+103.412 para 38.492 KiB em cinco execuções isoladas por versão. Essa medida
+não inclui o Ollama nem prova o comportamento no notebook. O perfil `eco`
+continua descarregando o modelo após a requisição; a voz, câmera, Wayland e
+memória total ainda exigem teste físico. [Notas e limites](docs/RELEASE_NOTES_v0.9.13.md).
+
+**Estado de publicação:** esta versão está em PR encadeada sobre as melhorias
+locais da 0.9.12, com CI do SHA final pendente; nenhuma nova tag estável foi
+criada. A candidata [v0.9.12-rc.3](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3)
+permanece disponível para o aceite físico da 0.9.12. Encadeamento de tarefas
+com aprovações individuais continua como etapa futura, ainda não entregue.
 
 Assistente pessoal de inteligência artificial **local-first, modular e seguro**, desenvolvido para execução no desktop Linux sobre fronteiras explícitas entre inteligência, autorização e execução.
 
@@ -2742,6 +2761,7 @@ rastreáveis no GitHub:
 | v0.9.10 | Spoken Voice Selection — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.10.md) |
 | v0.9.11 | First-Run PostgreSQL Authentication — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.11.md) |
 | v0.9.12 | Authorized Desktop Actions — integrado à main; aceite físico pendente; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.12.md) |
+| v0.9.13 | Código de redução de memória em PR; sem tag, CI e aceite físico pendentes | [Notas](docs/RELEASE_NOTES_v0.9.13.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -6466,7 +6486,7 @@ aos resultados dos testes:
 | --- | --- |
 | v0.9.11 | Implementado no código: login PostgreSQL antes de ativar o instalador; diagnóstico e orientação Ollama/Vosk sem alegar teste físico. |
 | v0.9.12 | Código integrado para ações desktop autorizadas por operação e frase exata de pasta; homologação física pendente. Teclado em outras janelas continua X11. |
-| v0.9.13 | Encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria; hoje cada turno executa no máximo uma ferramenta. |
+| v0.9.13 | Redução de memória do desktop em PR; encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria permanece pendente. |
 | v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
 
 A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.14:

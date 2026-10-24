@@ -5,6 +5,7 @@ import io
 import pytest
 
 from nexus.platforms import acceptance
+from nexus.config.settings import settings
 from nexus.updates import launcher
 
 
@@ -14,7 +15,7 @@ def _passive(monkeypatch, *, camera=None):
     def invoke(args, **kwargs):
         called.append(tuple(args))
         assert args == ["--version"]
-        return True, "Nexus Core 0.9.12\n"
+        return True, f"Nexus Core {settings.version}\n"
 
     def diagnose(args, **kwargs):
         called.append(tuple(args))
@@ -51,7 +52,7 @@ def test_noninteractive_log_never_opens_microphone_or_camera(monkeypatch):
 def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch):
     _passive(monkeypatch, camera=[{"index": 2, "name": "Sensitive Camera"}])
     monkeypatch.setattr(acceptance, "_invoke", lambda args, **kw: (
-        (True, "Nexus Core 0.9.12\n") if args == ["--version"] else
+        (True, f"Nexus Core {settings.version}\n") if args == ["--version"] else
         (True, "╚════╝\nNEXUSCOREOK\nfinalizado\n")
     ))
 

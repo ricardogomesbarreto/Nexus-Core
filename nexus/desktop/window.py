@@ -73,6 +73,11 @@ class _WidgetChoice:
 
 
 class DesktopWindow:
+    # Limit the Text widget independently of the six-turn model context and
+    # the optional on-disk archive. A long voice session must not retain every
+    # rendered message in Tk's edit buffer.
+    MAX_VISIBLE_TRANSCRIPT_CHARS = 32_000
+
     def __init__(
         self, root, app, confirmation: DesktopConfirmation,
         speaker=None, recognizer=None, vision=None,
@@ -885,6 +890,17 @@ class DesktopWindow:
         self.transcript.insert("end", f"{message}\n",
                                "message-user" if tag == "user" else "message-assistant")
         self.transcript.insert("end", "\n")
+        total = self.transcript.count("1.0", "end-1c", "chars")[0]
+        if total > self.MAX_VISIBLE_TRANSCRIPT_CHARS:
+            cutoff = self.transcript.index(
+                f"end-1c - {self.MAX_VISIBLE_TRANSCRIPT_CHARS} chars"
+            )
+            # Prefer removing complete old messages. If the newest message
+            # itself is very long, retain its last 32k characters instead.
+            paragraph = self.transcript.search("\n\n", cutoff, stopindex="end")
+            if paragraph and self.transcript.compare(paragraph, "<", "end-3c"):
+                cutoff = self.transcript.index(f"{paragraph}+2c")
+            self.transcript.delete("1.0", cutoff)
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
