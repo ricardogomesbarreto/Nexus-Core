@@ -10,17 +10,31 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.12 integrado; release pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.12%20na%20main-722F37">
-  <img alt="Código v0.9.13 em desenvolvimento" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.13%20em%20PR-8A5A67">
+  <img alt="Código v0.9.14 em desenvolvimento" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.14%20em%20desenvolvimento-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
 
-## 0.9.13 — código em desenvolvimento, memória do perfil eco
+## 0.9.14 — código em desenvolvimento, cancelamento visual e privacidade da câmera
 
-Esta branch incrementa o pacote para **0.9.13** como próxima etapa de código.
+Esta etapa corrige o fluxo em que a leitura de um quadro poderia terminar
+depois de desligar a webcam e repor a imagem em memória. A câmera encerrada
+não devolve quadros, mesmo quando o processo FFmpeg ainda está finalizando.
+Uma captura demorada cancelada antes de terminar não abre prévia nem envia
+a imagem para a análise local. O cancelamento de uma inferência Ollama já
+iniciada ainda não interrompe imediatamente o processamento do modelo.
+[Testes, riscos e roteiro físico](docs/RELEASE_NOTES_v0.9.14.md).
+
+**Publicação:** código em desenvolvimento; a tag estável continua pendente
+de CI do SHA final e aceite físico no Ubuntu. A candidata
+[`v0.9.12-rc.3`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3)
+continua sendo um snapshot técnico, sem homologação completa.
+
+## 0.9.13 — memória do perfil eco
+
+O código **0.9.13** foi integrado à `main` como etapa de otimização.
 O histórico exibido na janela fica limitado a 32.000 caracteres e a
 normalização de imagens grandes reduz as alocações intermediárias, em especial
 JPEG antes da conversão para RGB. No teste local controlado de um JPEG
@@ -30,9 +44,8 @@ não inclui o Ollama nem prova o comportamento no notebook. O perfil `eco`
 continua descarregando o modelo após a requisição; a voz, câmera, Wayland e
 memória total ainda exigem teste físico. [Notas e limites](docs/RELEASE_NOTES_v0.9.13.md).
 
-**Estado de publicação:** esta versão está em PR encadeada sobre as melhorias
-locais da 0.9.12, com CI do SHA final pendente; nenhuma nova tag estável foi
-criada. A candidata [v0.9.12-rc.3](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3)
+**Estado de publicação:** código integrado à `main`; nenhuma nova tag estável
+foi criada. A candidata [v0.9.12-rc.3](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3)
 permanece disponível para o aceite físico da 0.9.12. Encadeamento de tarefas
 com aprovações individuais continua como etapa futura, ainda não entregue.
 

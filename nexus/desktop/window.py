@@ -1454,6 +1454,8 @@ class DesktopWindow:
 
     def _describe_live_frame(self, frame: bytes, question: str) -> None:
         try:
+            if self._cancel_requested or self._closing:
+                raise VisionError("Análise cancelada.")
             service = self.vision if self.vision is not None else LocalVision(settings)
             result = service.describe(frame, question=question)
             description = result.get("description") if isinstance(result, dict) else None
@@ -1634,6 +1636,8 @@ class DesktopWindow:
     def _analyze_vision(self, source: str, selection, question: str) -> None:
         """Worker only: never touch Tk from this thread or persist image bytes."""
         try:
+            if self._cancel_requested or self._closing:
+                raise VisionError("Análise cancelada.")
             service = self.vision if self.vision is not None else LocalVision(settings)
             if source == "file":
                 image = service.image_from_file(selection)
@@ -1645,6 +1649,10 @@ class DesktopWindow:
                 image = service.selected_screen(window=False)
             else:
                 image = service.screen()
+            # Portal selection and hardware capture can take seconds. If the
+            # user cancelled meanwhile, do not preview or send the frame.
+            if self._cancel_requested or self._closing:
+                raise VisionError("Análise cancelada.")
             # Only user-authorized captures reach the GUI preview queue.
             # No image is retained in the conversation history.
             self._camera_frames.put((source, image))

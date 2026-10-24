@@ -3,6 +3,8 @@ import json
 import io
 import os
 import time
+from queue import Queue
+from threading import Event, Thread
 
 import pytest
 
@@ -70,6 +72,41 @@ class FakeVision:
         if self.raise_error:
             raise VisionError("Modelo visual local indisponível.")
         return {"model": "gemma3:4b", "description": "Um diagrama de redes."}
+
+
+def test_cancelled_capture_does_not_preview_or_invoke_model():
+    """A portal/camera capture may finish after cancellation was requested."""
+    entered, release = Event(), Event()
+
+    class SlowVision:
+        described = False
+
+        def screen(self):
+            entered.set()
+            assert release.wait(2)
+            return b"private-capture"
+
+        def describe(self, image, *, question):
+            self.described = True
+            return {"description": "should not appear"}
+
+    vision = SlowVision()
+    window = object.__new__(DesktopWindow)
+    window.vision = vision
+    window._cancel_requested = False
+    window._closing = False
+    window._camera_frames = Queue()
+    window._vision_events = Queue()
+    worker = Thread(target=window._analyze_vision, args=("screen", None, "teste"))
+    worker.start()
+    assert entered.wait(2)
+    window._cancel_requested = True
+    release.set()
+    worker.join(2)
+    assert not worker.is_alive()
+    assert not vision.described
+    assert window._camera_frames.empty()
+    assert window._vision_events.get_nowait() == ("error", "teste", "Análise cancelada.")
 
 
 def spin(root, condition, timeout=6):
