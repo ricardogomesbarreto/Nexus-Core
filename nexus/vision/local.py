@@ -18,6 +18,7 @@ import subprocess
 import tempfile
 import warnings
 from pathlib import Path
+from typing import Callable
 
 from nexus.config.settings import Settings
 from nexus.models.resource_budget import ResourceBudget
@@ -349,11 +350,19 @@ class LocalVision:
         )
 
     def describe(self, image: bytes, *, question: str | None = None,
-                 model: str = "gemma3:4b") -> dict:
+                 model: str = "gemma3:4b",
+                 is_cancelled: Callable[[], bool] | None = None) -> dict:
+        def check_cancelled() -> None:
+            if is_cancelled is not None and is_cancelled():
+                raise VisionError("Análise cancelada.")
+
+        check_cancelled()
         prompt = self.validate_question(question)
         model_name = self._installed_vision_model(self.validate_model(model))
+        check_cancelled()
         normalized = self._normalize_image(
             image, max_edge=self.resource_budget.vision_edge)
+        check_cancelled()
         payload = {
             "model": model_name,
             "messages": [{
@@ -364,6 +373,7 @@ class LocalVision:
             "options": self.resource_budget.vision_options(),
             "keep_alive": self.resource_budget.keep_alive,
         }
+        check_cancelled()
         try:
             response = self.transport.chat(
                 payload=payload, timeout=self.settings.local_model_timeout
