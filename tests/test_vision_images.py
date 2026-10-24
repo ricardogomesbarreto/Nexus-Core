@@ -5,6 +5,7 @@ import pytest
 from PIL import Image, PngImagePlugin
 
 from nexus.config.settings import Settings
+from nexus.models.resource_budget import ResourceBudget
 from nexus.security.paths import PathSecurity
 from nexus.vision.local import LocalVision, VisionInputError, VisionError
 
@@ -67,6 +68,18 @@ def test_file_inside_home_allowed_and_outside_denied(tmp_path):
     symlink.symlink_to(allowed)
     with pytest.raises(VisionInputError):
         service.image_from_file(symlink)
+
+
+def test_eco_file_preview_is_normalized_at_model_resolution(tmp_path, monkeypatch):
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    service, home = make_vision(tmp_path)
+    assert service.resource_budget.mode == "eco"
+    picture = home / "large.png"
+    picture.write_bytes(sample(width=1800, height=1200))
+    data = service.image_from_file(picture)
+    with Image.open(io.BytesIO(data)) as normalized:
+        assert max(normalized.size) <= service.resource_budget.vision_edge
+        assert normalized.info == {}
 
 
 def test_file_swap_to_symlink_is_blocked(tmp_path):

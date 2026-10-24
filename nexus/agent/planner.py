@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from nexus.models.contracts import ModelError, ModelProviderTimeoutError, ModelProviderUnavailableError, ModelRequest, ModelResponse
+from nexus.models.contracts import ModelError, ModelProviderResourceError, ModelProviderTimeoutError, ModelProviderUnavailableError, ModelRequest, ModelResponse
 from nexus.security import PermissionDecision
 from nexus.tools import ContractViolation, ToolExecutor, ToolRegistry, ToolResult
 
@@ -584,6 +584,14 @@ class AgentPlanner:
             return AgentOutcome(
                 False, error="O modelo local demorou para responder. Tente uma pergunta mais curta ou confira o Ollama.",
                 error_code="MODEL_TIMEOUT",
+            )
+        except ModelProviderResourceError:
+            return AgentOutcome(
+                False,
+                error="A memória disponível está muito baixa para iniciar o modelo local. "
+                      "Feche aplicativos pesados, confira 'free -h' e 'ollama ps' "
+                      "e tente novamente. Nenhuma inferência foi iniciada.",
+                error_code="RESOURCE_PRESSURE",
             )
         except ModelProviderUnavailableError:
             return AgentOutcome(

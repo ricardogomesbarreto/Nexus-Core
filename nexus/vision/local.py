@@ -155,7 +155,7 @@ class LocalVision:
                     data.extend(chunk)
         except (OSError, PermissionError) as exc:
             raise VisionInputError("Imagem fora do HOME autorizado ou inacessível.") from exc
-        return self._normalize_image(bytes(data))
+        return self._normalize_image(bytes(data), max_edge=self.resource_budget.vision_edge)
 
     @classmethod
     def _limit_capture_output(cls) -> None:
@@ -167,7 +167,7 @@ class LocalVision:
         )
 
     @classmethod
-    def _capture(cls, command: list[str]) -> bytes:
+    def _capture(cls, command: list[str], *, max_edge: int | None = None) -> bytes:
         # No shell; stdout is an anonymous OS temporary file, not a saved screenshot.
         # Bounded subprocess runtime and file size prevent unbounded pipe allocation.
         try:
@@ -182,7 +182,8 @@ class LocalVision:
                 if output.tell() > cls.MAX_INPUT_BYTES:
                     raise VisionInputError("Captura maior que 6 MiB.")
                 output.seek(0)
-                return cls._normalize_image(output.read(cls.MAX_INPUT_BYTES + 1))
+                return cls._normalize_image(output.read(cls.MAX_INPUT_BYTES + 1),
+                                            max_edge=max_edge)
         except (subprocess.TimeoutExpired, OSError) as exc:
             raise VisionError("Captura local falhou ou ultrapassou o tempo limite.") from exc
 
@@ -195,7 +196,8 @@ class LocalVision:
             binary = shutil.which("import")
             if not binary:
                 raise VisionError("X11 exige ImageMagick (comando import).")
-            return self._capture([binary, "-window", "root", "png:-"])
+            return self._capture([binary, "-window", "root", "png:-"],
+                                 max_edge=self.resource_budget.vision_edge)
         raise VisionError("Não há sessão gráfica Wayland/X11 disponível.")
 
     def selected_screen(self, *, window: bool = True) -> bytes:
@@ -207,7 +209,7 @@ class LocalVision:
             # capability, with a bounded read and the normal image sanitizer.
             with selected.open("rb") as stream:
                 data = stream.read(self.MAX_INPUT_BYTES + 1)
-            return self._normalize_image(data)
+            return self._normalize_image(data, max_edge=self.resource_budget.vision_edge)
         except PortalError as exc:
             raise VisionError(str(exc)) from exc
         except OSError as exc:
@@ -279,8 +281,8 @@ class LocalVision:
         """
         from PIL import Image, ImageStat
         with Image.open(io.BytesIO(image)) as frame:
+            frame.thumbnail((96, 96))
             sample = frame.convert("L")
-            sample.thumbnail((96, 96))
             mean = ImageStat.Stat(sample).mean[0]
             _low, high = sample.getextrema()
             return mean < 10 and high < 28
@@ -299,7 +301,7 @@ class LocalVision:
                 "-f", "video4linux2", "-i", f"/dev/video{index}",
                 "-vf", r"select=gte(n\,8)",
                 "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "pipe:1",
-            ])
+            ], max_edge=self.resource_budget.vision_edge)
             if self._camera_frame_is_dark(image):
                 raise VisionError(
                     f"A câmera {index} retornou uma imagem praticamente preta. "
@@ -349,6 +351,42 @@ class LocalVision:
             "A imagem não foi enviada a outro serviço."
         )
 
+    def _check_visual_memory(self, model_name: str) -> None:
+        """Avoid starting a large model when the eco profile is under pressure.
+
+        Ollama's disk size is only a hint, not an exact RAM prediction. The
+        check is deliberately conservative; it never unloads another app's
+        model or silently changes the requested vision model.
+        """
+        if self.resource_budget.mode != "eco":
+            return
+        available = self.resource_budget.available_now_mib()
+        if available is None:
+            return
+        if available < 1024:
+            raise VisionError(
+                "Memória disponível abaixo de 1 GiB. A análise visual foi "
+                "interrompida antes de carregar o modelo. Feche aplicativos "
+                "pesados e confira 'free -h' e 'ollama ps'."
+            )
+        query_size = getattr(self.transport, "model_size", None)
+        if not callable(query_size):
+            return  # An injected adapter cannot provide a size estimate.
+        try:
+            size = query_size(model_name)
+        except OllamaTransportError as exc:
+            raise VisionError("Não foi possível verificar o tamanho do modelo visual local.") from exc
+        if type(size) is not int or size <= 0:
+            raise VisionError("Tamanho do modelo visual local inválido.")
+        size_mib = (size + 1024 * 1024 - 1) // (1024 * 1024)
+        if size_mib + 512 > available:
+            raise VisionError(
+                f"Memória insuficiente para análise visual no perfil eco: "
+                f"{available} MiB disponíveis, modelo '{model_name}' com "
+                f"{size_mib} MiB em disco. Feche aplicativos pesados ou "
+                "configure um modelo visual local menor. Nenhuma imagem foi enviada."
+            )
+
     def describe(self, image: bytes, *, question: str | None = None,
                  model: str = "gemma3:4b",
                  is_cancelled: Callable[[], bool] | None = None) -> dict:
@@ -359,6 +397,8 @@ class LocalVision:
         check_cancelled()
         prompt = self.validate_question(question)
         model_name = self._installed_vision_model(self.validate_model(model))
+        check_cancelled()
+        self._check_visual_memory(model_name)
         check_cancelled()
         normalized = self._normalize_image(
             image, max_edge=self.resource_budget.vision_edge)

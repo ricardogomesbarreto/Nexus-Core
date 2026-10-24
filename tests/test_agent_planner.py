@@ -178,6 +178,16 @@ def test_model_unavailable_does_not_execute(tmp_path):
     assert medium.calls == []
 
 
+def test_low_memory_error_is_clear_and_does_not_execute(tmp_path):
+    from nexus.models.contracts import ModelProviderResourceError
+    agent, _, medium = planner(tmp_path, ModelProviderResourceError("private"))
+    outcome = agent.run("agir")
+    assert outcome.error_code == "RESOURCE_PRESSURE"
+    assert "memória disponível" in outcome.error
+    assert "private" not in outcome.error
+    assert medium.calls == []
+
+
 def test_incomplete_model_response_is_rejected(tmp_path):
     agent, router, _ = planner(tmp_path, "irrelevante")
     router.generate = lambda _: ModelResponse("{}", "test", False, 0, 0)

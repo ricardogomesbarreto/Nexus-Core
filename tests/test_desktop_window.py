@@ -93,6 +93,63 @@ def test_desktop_conversation_and_confirmation_on_graphical_display():
 
 
 @pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Requer display Linux")
+def test_low_memory_warning_is_visible_and_spoken_without_inference():
+    import tkinter as tk
+
+    root = tk.Tk()
+    confirmation = DesktopConfirmation()
+    spoken = []
+
+    class Agent:
+        def run(self, prompt, is_cancelled=None, **kwargs):
+            return AgentOutcome(False, error="Memória disponível muito baixa.",
+                                error_code="RESOURCE_PRESSURE")
+
+    class Application:
+        agent = Agent()
+        def shutdown(self): pass
+
+    class Speaker:
+        def speak(self, text, voice): spoken.append(text)
+        def stop(self): pass
+
+    class Recognizer:
+        def recognize_continuous(self, cancelled):
+            while not cancelled():
+                time.sleep(0.01)
+            return ""
+        def stop(self): pass
+
+    try:
+        window = DesktopWindow(root, Application(), confirmation,
+                               speaker=Speaker(), recognizer=Recognizer())
+        window.input.insert("1.0", "Explique redes")
+        window._send()
+        deadline = time.monotonic() + 5
+        while not spoken and time.monotonic() < deadline:
+            root.update()
+            time.sleep(0.01)
+        assert spoken == ["Memória disponível muito baixa."]
+        assert "Memória disponível muito baixa." in window.transcript.get("1.0", "end")
+        window._close()
+        close_deadline = time.monotonic() + 5
+        while time.monotonic() < close_deadline:
+            try:
+                root.update()
+                if not root.winfo_exists():
+                    break
+            except tk.TclError:
+                break  # The Tk application has already been destroyed.
+            time.sleep(0.01)
+    finally:
+        confirmation.close()
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
+
+
+@pytest.mark.skipif(not os.environ.get("DISPLAY"), reason="Requer display Linux")
 def test_missing_voice_model_is_visible_without_blocking_text_chat():
     import tkinter as tk
     from nexus.voice import VoiceError

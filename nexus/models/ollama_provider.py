@@ -6,6 +6,7 @@ from nexus.models.contracts import (
     ModelProviderError,
     ModelProviderTimeoutError,
     ModelProviderUnavailableError,
+    ModelProviderResourceError,
     ModelRequest,
     ModelResponse,
     ModelValidationError,
@@ -122,6 +123,8 @@ class OllamaProvider:
             payload["options"]["num_predict"] = request.max_output_tokens
         budget = getattr(self, "resource_budget", None)
         if budget is not None:
+            if budget.text_memory_low():
+                raise ModelProviderResourceError("Memória livre insuficiente para iniciar o modelo local.")
             # Bounded to avoid thermal load and simultaneous large models.
             payload["options"].update(budget.text_options(
                 request.context_length, request.max_output_tokens,

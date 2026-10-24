@@ -2088,7 +2088,8 @@ class DesktopWindow:
                               or ("Escuta pausada" if not self._voice_active
                                   else "Pronto para conversar"))
                     )
-                    spoken = reply.outcome.success and self._say_response(reply.text)
+                    spoken = (reply.outcome.success or
+                              reply.outcome.error_code == "RESOURCE_PRESSURE") and self._say_response(reply.text)
                     if self._test_voice_reply_pending:
                         self._test_voice_reply_pending = False
                         if spoken:

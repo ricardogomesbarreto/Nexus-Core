@@ -118,6 +118,23 @@ class OllamaTransport:
 
     def list_models(self, *, timeout: float = 5.0) -> list[str]:
         """Read installed Ollama model names on loopback only (no pulls)."""
+        models = self._local_model_entries(timeout=timeout)
+        return [
+            entry["name"] for entry in models
+            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
+        ]
+
+    def model_size(self, name: str, *, timeout: float = 5.0) -> int:
+        """Read the installed model's disk size (a conservative RAM hint)."""
+        for entry in self._local_model_entries(timeout=timeout):
+            if isinstance(entry, dict) and entry.get("name") == name:
+                size = entry.get("size")
+                if type(size) is int and 0 < size <= 1 << 50:
+                    return size
+                break
+        raise OllamaInvalidJSONError("Tamanho do modelo local indisponível.")
+
+    def _local_model_entries(self, *, timeout: float) -> list:
         request = Request(f"{self.base_url}/api/tags", method="GET")
         try:
             with self.opener(request, timeout=timeout) as response:
@@ -134,7 +151,4 @@ class OllamaTransport:
             raise OllamaInvalidJSONError("Resposta dos modelos é inválida.") from exc
         if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
             raise OllamaInvalidJSONError("Ollama não retornou a lista de modelos.")
-        return [
-            entry["name"] for entry in payload["models"]
-            if isinstance(entry, dict) and isinstance(entry.get("name"), str)
-        ]
+        return payload["models"]
