@@ -2774,7 +2774,8 @@ rastreáveis no GitHub:
 | v0.9.10 | Spoken Voice Selection — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.10.md) |
 | v0.9.11 | First-Run PostgreSQL Authentication — integrado à main; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.11.md) |
 | v0.9.12 | Authorized Desktop Actions — integrado à main; aceite físico pendente; sem tag | [Notas](docs/RELEASE_NOTES_v0.9.12.md) |
-| v0.9.13 | Código de redução de memória em PR; sem tag, CI e aceite físico pendentes | [Notas](docs/RELEASE_NOTES_v0.9.13.md) |
+| v0.9.13 | Código de redução de memória integrado à main; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.13.md) |
+| v0.9.14 | Correção do desligamento da câmera e do cancelamento visual em desenvolvimento; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.14.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -6499,8 +6500,8 @@ aos resultados dos testes:
 | --- | --- |
 | v0.9.11 | Implementado no código: login PostgreSQL antes de ativar o instalador; diagnóstico e orientação Ollama/Vosk sem alegar teste físico. |
 | v0.9.12 | Código integrado para ações desktop autorizadas por operação e frase exata de pasta; homologação física pendente. Teclado em outras janelas continua X11. |
-| v0.9.13 | Redução de memória do desktop em PR; encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria permanece pendente. |
-| v0.9.14 | Corrigir falhas encontradas no aceite físico Ubuntu/X11, instalação, voz, visão, Ollama e recuperação; verificar pacote e documentação antes de propor release. |
+| v0.9.13 | Redução de memória do desktop integrada à main; encadear tarefas limitadas sob aprovações individuais, cancelamento e trilha de auditoria permanece pendente. |
+| v0.9.14 | Correção de condição de corrida da câmera e cancelamento visual em desenvolvimento; aceite físico Ubuntu, voz, Ollama, recuperação e Wayland/X11 ainda pendentes. |
 
 A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.14:
 novas falhas podem exigir versões adicionais. “Fazer tudo no computador” não
