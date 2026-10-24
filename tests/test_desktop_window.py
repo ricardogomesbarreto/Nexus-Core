@@ -132,8 +132,14 @@ def test_low_memory_warning_is_visible_and_spoken_without_inference():
         assert spoken == ["Memória disponível muito baixa."]
         assert "Memória disponível muito baixa." in window.transcript.get("1.0", "end")
         window._close()
-        while root.winfo_exists() and time.monotonic() < deadline:
-            root.update()
+        close_deadline = time.monotonic() + 5
+        while time.monotonic() < close_deadline:
+            try:
+                root.update()
+                if not root.winfo_exists():
+                    break
+            except tk.TclError:
+                break  # The Tk application has already been destroyed.
             time.sleep(0.01)
     finally:
         confirmation.close()
