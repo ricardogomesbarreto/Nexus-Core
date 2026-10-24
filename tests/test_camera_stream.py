@@ -3,6 +3,7 @@
 import os
 import io
 import time
+from threading import Event, Thread
 
 import pytest
 
@@ -77,3 +78,38 @@ def test_stalled_camera_never_presents_an_old_frame_as_live(monkeypatch):
     assert "não enviou uma imagem recente" in error
     stream._frame_at = 104.0
     assert stream.latest(max_age=3.0) == (3, b"old-private-frame", None)
+
+
+def test_stop_during_read_never_republishes_private_frame(monkeypatch):
+    entered, release = Event(), Event()
+
+    class Process:
+        class Output:
+            def fileno(self): return 10
+            def close(self): pass
+        stdout = Output()
+
+        def __init__(self): self.stopped = False
+        def poll(self): return 0 if self.stopped else None
+        def terminate(self): self.stopped = True
+        def wait(self, timeout=None): return 0
+        def kill(self): self.stopped = True
+
+    def delayed_read(fd, size):
+        entered.set()
+        assert release.wait(2)
+        return b"\xff\xd8private\xff\xd9"
+
+    monkeypatch.setattr(camera_module.select, "select", lambda *args: ([10], [], []))
+    monkeypatch.setattr(camera_module.os, "read", delayed_read)
+    stream = CameraStream(0)
+    stream._process = Process()
+    stream._thread = Thread(target=stream._read_frames)
+    stream._thread.start()
+    assert entered.wait(2)
+    stream.stop()  # The worker has not returned from read yet.
+    assert stream.latest()[1] is None
+    release.set()
+    stream._thread.join(2)
+    assert not stream._thread.is_alive()
+    assert stream.latest() == (0, None, None)

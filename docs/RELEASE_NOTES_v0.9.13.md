@@ -1,8 +1,7 @@
-# Nexus Core 0.9.13 — desenvolvimento: memória do desktop
+# Nexus Core 0.9.13 — código integrado: memória do desktop
 
-Esta é uma versão **de código em PR**, ainda não integrada à `main`, sem
-tag/release estável nem homologação do Ubuntu físico. Baseia-se na PR de
-recursos locais da 0.9.12. O aceite físico e o publicador estável da
+Esta é uma versão **de código integrada à main**, sem
+tag/release estável nem homologação do Ubuntu físico. O aceite físico e o publicador estável da
 0.9.12 continuam pendentes; não alterar as tags candidatas existentes.
 
 ## Entrega verificável

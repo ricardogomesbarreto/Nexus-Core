@@ -75,7 +75,7 @@ class CameraStream:
                 if not chunk:
                     break
                 buffer.extend(chunk)
-                while buffer:
+                while buffer and not self._stop.is_set():
                     start = buffer.find(b"\xff\xd8")
                     if start < 0:
                         # The start marker may straddle two OS reads.
@@ -94,6 +94,10 @@ class CameraStream:
                     del buffer[:end + 2]
                     if len(frame) <= self.MAX_FRAME_BYTES:
                         with self._lock:
+                            # stop() may return while this worker is still
+                            # unwinding. Never publish a private frame then.
+                            if self._stop.is_set():
+                                break
                             self._frame = frame
                             self._frame_at = monotonic()
                             self._sequence += 1
@@ -133,6 +137,8 @@ class CameraStream:
 
     def latest(self, *, max_age: float | None = None) -> tuple[int, bytes | None, str | None]:
         with self._lock:
+            if self._stop.is_set():
+                return self._sequence, None, None
             if self._error is not None:
                 return self._sequence, self._frame, self._error
             if (max_age is not None and self._frame is not None
