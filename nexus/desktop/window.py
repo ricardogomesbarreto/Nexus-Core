@@ -1457,7 +1457,7 @@ class DesktopWindow:
             if self._cancel_requested or self._closing:
                 raise VisionError("Análise cancelada.")
             service = self.vision if self.vision is not None else LocalVision(settings)
-            result = service.describe(frame, question=question)
+            result = self._describe_authorized_image(service, frame, question)
             description = result.get("description") if isinstance(result, dict) else None
             if not isinstance(description, str) or not description.strip():
                 raise VisionError("Resposta visual local inválida.")
@@ -1656,7 +1656,7 @@ class DesktopWindow:
             # Only user-authorized captures reach the GUI preview queue.
             # No image is retained in the conversation history.
             self._camera_frames.put((source, image))
-            result = service.describe(image, question=question)
+            result = self._describe_authorized_image(service, image, question)
             if not isinstance(result, dict) or not isinstance(
                 result.get("description"), str
             ) or not result["description"].strip():
@@ -1668,6 +1668,15 @@ class DesktopWindow:
             self._vision_events.put(
                 ("error", question, "Falha ao capturar ou analisar imagem local.")
             )
+
+    def _describe_authorized_image(self, service, image: bytes, question: str) -> dict:
+        """Check cancellation during preparation in the built-in vision engine."""
+        if isinstance(service, LocalVision):
+            return service.describe(
+                image, question=question,
+                is_cancelled=lambda: self._cancel_requested or self._closing,
+            )
+        return service.describe(image, question=question)
 
     def _listen(self, generation: int) -> None:
         try:

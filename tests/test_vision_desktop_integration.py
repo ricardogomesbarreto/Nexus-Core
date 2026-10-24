@@ -11,7 +11,8 @@ import pytest
 from nexus.agent import AgentOutcome
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.window import DesktopWindow
-from nexus.vision.local import VisionError
+from nexus.vision.local import LocalVision, VisionError
+from nexus.config.settings import Settings
 
 
 class FakeAgent:
@@ -107,6 +108,19 @@ def test_cancelled_capture_does_not_preview_or_invoke_model():
     assert not vision.described
     assert window._camera_frames.empty()
     assert window._vision_events.get_nowait() == ("error", "teste", "Análise cancelada.")
+
+
+def test_desktop_passes_cancel_signal_to_local_visual_model():
+    class NoTransport:
+        def list_models(self):
+            raise AssertionError("cancelled requests must not query Ollama")
+
+    window = object.__new__(DesktopWindow)
+    window._cancel_requested = True
+    window._closing = False
+    service = LocalVision(Settings(), transport=NoTransport())
+    with pytest.raises(VisionError, match="Análise cancelada"):
+        window._describe_authorized_image(service, b"private-frame", "teste")
 
 
 def spin(root, condition, timeout=6):
