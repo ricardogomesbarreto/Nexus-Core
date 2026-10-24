@@ -409,7 +409,7 @@ def test_bootstrap_installs_package_not_editable_checkout(tmp_path, monkeypatch)
     assert (home / "current").resolve().name == "v" + settings.version
     pip_args, kwargs = calls[0]
     assert "-e" not in pip_args
-    assert str(install_linux.ROOT) + "[voice,vision]" in pip_args
+    assert str(install_linux.ROOT) + "[voice,vision,maps]" in pip_args
     assert kwargs["cwd"] == install_linux.ROOT
     assert calls[-2][0][-1] == "--platform-check"
     assert calls[-1][0] == "verified"

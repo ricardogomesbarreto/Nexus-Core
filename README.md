@@ -89,6 +89,23 @@ compatibilidade física sem registros.
 
 ### Funções locais acrescentadas após a candidata rc.3
 
+**Recursos adicionados após a candidata:** o menu nativo **Recursos** abre
+anotações Markdown voluntárias, uma biblioteca textual com importação e pesquisa
+no PostgreSQL, transformações locais de texto
+(SHA-256, Base64, hexadecimal e URL) e uma medição curta de CPU. Os comandos
+`--note-create`, `--note-list`, `--note-get`, `--note-update`, `--note-search`,
+`--note-delete`, `--data-tool` e `--benchmark` oferecem acesso no terminal.
+As notas não são enviadas automaticamente ao Ollama nem usadas para responder
+perguntas. A biblioteca só envia até três trechos recuperados para o Ollama se
+o usuário escolher **Perguntar aos documentos** ou `--knowledge-answer`;
+a pesquisa é textual, e a resposta gerada deve ser conferida nos trechos.
+As transformações são limitadas e não equivalem a criptografia.
+O diagnóstico de escuta contínua só fecha depois de duas respostas faladas e
+retomada do microfone; ainda requer comprovação no Ubuntu real. O
+[quadro de recursos offline](docs/OFFLINE_WORKBENCH_2026-10-19.md) separa
+essas funções das integrações mais extensas ainda pendentes.
+
+
 A `main` passou a oferecer **análise numérica de cores/luminosidade de uma
 foto**, usando Pillow, e **giro ou movimento de páginas de PDF** em uma cópia
 nova, usando um executável local opcional. Ações com arquivos exigem
@@ -454,6 +471,16 @@ A publicação estável da v0.9.12 segue bloqueada até a homologação física
 das ferramentas instaladas, escuta, visão e recursos do notebook.
 
 ## Novas capacidades offline — etapa complementar da v0.9.12
+
+**Mapas locais em prévia:** em **Recursos → Mapas locais…**, escolha um arquivo
+`.pmtiles` raster PNG/JPEG/WebP da sua pasta pessoal. A interface nativa
+mostra um mosaico de cada vez, com setas e zoom, sem rede, navegador, servidor
+ou importação ao PostgreSQL. O instalador Ubuntu instala o leitor Python
+opcional; mapas e respectivas licenças/créditos devem ser obtidos pelo usuário.
+Arquivos vetoriais, busca por endereço e mapa contínuo ainda não funcionam.
+Veja a [avaliação das sete referências offline](docs/THIRD_PARTY_OFFLINE_FIT_2026-10-19.md).
+Esta é uma atualização do código em avaliação: **não libera a tag estável
+v0.9.12** antes do aceite físico e da CI do SHA final.
 
 Esta etapa mantém **a mesma versão e aparência** e amplia ferramentas existentes,
 sem iniciar servidores de terceiros:
