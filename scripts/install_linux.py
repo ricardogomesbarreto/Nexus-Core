@@ -52,6 +52,15 @@ def installed(command: str) -> bool:
     return shutil.which(command) is not None
 
 
+def _service_active_for_install(scope: str, unit: str) -> bool:
+    args = ["systemctl", "--user"] if scope == "user" else ["systemctl"]
+    try:
+        _run([*args, "is-active", "--quiet", unit], timeout=5)
+        return True
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def _run(args: list[str], *, input_text=None, timeout=300,
          capture=False, progress=False, cwd=None, env=None) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -211,6 +220,10 @@ def _user_ollama_service(binary: Path) -> None:
     unit.chmod(0o600)
     _run(["systemctl", "--user", "daemon-reload"], timeout=30)
     _run(["systemctl", "--user", "start", unit.name], timeout=30)
+    from nexus.platforms.session_services import record_started_service
+    if not record_started_service("user", unit.name):
+        print("Serviço Ollama iniciado pelo instalador sem registro para parada "
+              "automática; confira a sessão e pare manualmente ao terminar.")
 
 
 def prepare_local_models() -> bool:
@@ -226,7 +239,13 @@ def prepare_local_models() -> bool:
         binary = str(managed)
         if installed("systemctl"):
             try:
+                already_running = _service_active_for_install("user", "nexus-core-ollama.service")
                 _run(["systemctl", "--user", "start", "nexus-core-ollama.service"], timeout=30)
+                if not already_running:
+                    from nexus.platforms.session_services import record_started_service
+                    if not record_started_service("user", "nexus-core-ollama.service"):
+                        print("Ollama iniciado sem registro para parada automática; "
+                              "pare manualmente ao terminar.")
             except (OSError, subprocess.SubprocessError):
                 print("Não foi possível iniciar o serviço Ollama do usuário.")
                 return False
@@ -261,7 +280,13 @@ def prepare_local_models() -> bool:
             and installed("sudo") and installed("systemctl")
             and confirm("Iniciar o serviço Ollama existente via sudo systemctl?")):
         try:
+            already_running = _service_active_for_install("system", "ollama.service")
             _run(["sudo", "systemctl", "start", "ollama"], timeout=30)
+            if not already_running:
+                from nexus.platforms.session_services import record_started_service
+                if not record_started_service("system", "ollama.service"):
+                    print("Ollama iniciado sem registro para parada automática; "
+                          "pare manualmente ao terminar.")
         except (OSError, subprocess.SubprocessError):
             print("Serviço Ollama não pôde ser iniciado.")
             return False
@@ -487,7 +512,13 @@ def ensure_postgresql_running_for_install() -> bool:
         print("Inicie o PostgreSQL quando for instalar; nenhuma unidade habilitada.")
         return False
     try:
+        already_running = _service_active_for_install("system", unit)
         _run(["sudo", "systemctl", "start", unit], timeout=35)
+        if not already_running:
+            from nexus.platforms.session_services import record_started_service
+            if not record_started_service("system", unit):
+                print("PostgreSQL iniciado sem registro para parada automática; "
+                      "pare manualmente ao terminar.")
     except (OSError, subprocess.SubprocessError):
         print("PostgreSQL não pôde ser iniciado. Confira o estado do serviço.")
         return False
