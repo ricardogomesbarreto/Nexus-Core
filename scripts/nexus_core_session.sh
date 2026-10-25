@@ -155,6 +155,17 @@ if [[ "$action" == "status" ]]; then
   if ollama_ready; then printf '[NEXUS] Ollama: pronto\n'
   else printf '[NEXUS] Ollama: indisponível\n'; fi
 elif [[ "$action" == "start" || "$action" == "desktop" ]]; then
+  if [[ "$action" == "desktop" ]]; then
+    # Also release services if the installed launcher fails or the GUI exits
+    # without reaching its Python cleanup. The stop action is idempotent.
+    cleanup_desktop() {
+      local exit_status=$?
+      trap - EXIT
+      NEXUS_STOP_NONINTERACTIVE=1 bash "$0" stop || true
+      exit "$exit_status"
+    }
+    trap cleanup_desktop EXIT
+  fi
   start_services
   if [[ "$action" == "desktop" ]]; then
     executable="${HOME}/.local/bin/nexus-core"
@@ -162,13 +173,15 @@ elif [[ "$action" == "start" || "$action" == "desktop" ]]; then
       printf '[ERRO] Nexus Core não encontrado: %s. Execute python3 scripts/install_linux.py.\n' "$executable" >&2
       exit 1
     fi
-    exec "$executable" --desktop
+    "$executable" --desktop
   fi
 else
   prepare_state
   if [[ -f "$state_file" ]]; then
     remaining="$(mktemp "$state_dir/.remaining.XXXXXX")"
-    while IFS=$'\t' read -r scope unit identity; do
+    mapfile -t started < "$state_file"
+    for ((index=${#started[@]}-1; index>=0; index--)); do
+      IFS=$'\t' read -r scope unit identity <<< "${started[index]}"
       if [[ ! "$identity" =~ ^[a-fA-F0-9]{32}$ ]] ||
          { [[ "$scope" != system || "$unit" != ollama.service && "$unit" != "$pg_unit" ]] &&
            [[ "$scope" != user || "$unit" != nexus-core-ollama.service ]]; }; then
@@ -178,11 +191,18 @@ else
         printf '[SERVIÇO] Parando instância iniciada pelo Nexus: %s\n' "$unit"
         if [[ "$scope" == user ]]; then
           if ! systemctl --user stop "$unit"; then printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"; fi
-        elif ! sudo systemctl stop "$unit"; then
-          printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"
+        else
+          if [[ "${NEXUS_STOP_NONINTERACTIVE:-0}" == 1 ]]; then
+            if ! sudo -n systemctl stop "$unit"; then
+              printf '[SERVIÇO] Sem autorização sudo em cache para parar %s; rode stop manualmente.\n' "$unit" >&2
+              printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"
+            fi
+          elif ! sudo systemctl stop "$unit"; then
+            printf '%s\t%s\t%s\n' "$scope" "$unit" "$identity" >> "$remaining"
+          fi
         fi
       fi
-    done < "$state_file"
+    done
     if [[ -s "$remaining" ]]; then mv -- "$remaining" "$state_file"
     else rm -f -- "$remaining" "$state_file"; fi
   fi

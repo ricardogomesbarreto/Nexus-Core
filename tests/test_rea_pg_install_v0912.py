@@ -45,6 +45,8 @@ def test_stopped_postgresql_is_started_only_after_explicit_consent(monkeypatch):
                 "16 main 5433 down postgres /tmp/16 /tmp/16.log\n"
                 "18 main 5432 down postgres /tmp/18 /tmp/18.log\n"
             ), returncode=0)
+        if argv[:3] == ["systemctl", "is-active", "--quiet"]:
+            raise subprocess.CalledProcessError(3, argv)
         if argv[:3] == ["sudo", "systemctl", "start"]:
             assert argv[3] == "postgresql@18-main.service"
             started = True

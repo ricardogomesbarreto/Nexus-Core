@@ -2186,7 +2186,7 @@ class DesktopWindow:
             self._finish_close()
 
 
-def launch_desktop() -> int:
+def _run_desktop_window() -> int:
     try:
         import tkinter as tk
     except ImportError:
@@ -2223,3 +2223,12 @@ def launch_desktop() -> int:
         except tk.TclError:
             pass
     return 0
+
+
+def launch_desktop() -> int:
+    """Release Nexus-owned services after the GUI has closed or failed."""
+    try:
+        return _run_desktop_window()
+    finally:
+        from nexus.platforms.session_services import stop_owned_services
+        stop_owned_services()
