@@ -177,6 +177,24 @@ elif [[ "$action" == "start" || "$action" == "desktop" ]]; then
   fi
 else
   prepare_state
+  # A second invocation (including the fallback EXIT trap) must not stop
+  # services while another GUI process still holds its desktop lease.
+  lease_file="$state_dir/desktop.lock"
+  if [[ -L "$lease_file" || ( -e "$lease_file" &&
+        ( ! -f "$lease_file" || ! -O "$lease_file" || "$(stat -c %a -- "$lease_file")" != 600 ) ) ]]; then
+    printf '[ERRO] Trava privada da sessão inválida.\n' >&2
+    exit 1
+  fi
+  (umask 077; : >> "$lease_file")
+  if ! command -v flock >/dev/null 2>&1; then
+    printf '[ERRO] flock indisponível para parada segura da sessão.\n' >&2
+    exit 1
+  fi
+  exec {lease_fd}<> "$lease_file"
+  if ! flock -n "$lease_fd"; then
+    printf '[SERVIÇO] Outra janela do Nexus ativa; parada adiada.\n'
+    exit 0
+  fi
   if [[ -f "$state_file" ]]; then
     remaining="$(mktemp "$state_dir/.remaining.XXXXXX")"
     mapfile -t started < "$state_file"

@@ -10,12 +10,25 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.16; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.16-722F37">
+  <img alt="Código v0.9.17; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.17-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## 0.9.17 — uma janela ativa por sessão
+
+Uma segunda janela do Nexus agora é recusada enquanto a primeira funciona,
+sem parar Ollama ou PostgreSQL usados pela janela ativa. O comando de parada
+também adia o desligamento dos serviços enquanto ela estiver aberta. Após
+fechá-la, o Nexus tenta a parada automática das instâncias registradas na
+sessão, conforme a v0.9.16. A trava privada usa `flock` no Linux; não cria
+serviços de inicialização automática. Consulte [notas e teste em dois
+terminais](docs/RELEASE_NOTES_v0.9.17.md).
+
+**Publicação:** código para validação; faltam teste físico no Ubuntu e gates
+de uma tag estável.
 
 ## 0.9.16 — encerramento automático da sessão
 
@@ -2826,6 +2839,7 @@ rastreáveis no GitHub:
 | v0.9.14 | Código de câmera e cancelamento visual integrado à main; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.14.md) |
 | v0.9.15 | Proteção contra pressão de memória no perfil eco; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.15.md) |
 | v0.9.16 | Desligamento automático dos serviços iniciados pela sessão; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.16.md) |
+| v0.9.17 | Proteção contra duas janelas desligarem os serviços da sessão; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.17.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -6553,6 +6567,7 @@ com seu aceite físico e marcos de desenvolvimento sujeitos aos resultados dos t
 | v0.9.14 | Correção de condição de corrida da câmera e cancelamento visual integrada; aceite físico Ubuntu, voz, Ollama, recuperação e Wayland/X11 ainda pendentes. |
 | v0.9.15 | Limite de memória antes da inferência e imagens preparadas na resolução do perfil eco; resultados reais de RAM, swap e latência no notebook ainda pendentes. |
 | v0.9.16 | Encerramento dos serviços registrados quando a janela fecha; validar autenticação gráfica e preservação de instâncias preexistentes no Ubuntu. |
+| v0.9.17 | Uma janela por sessão; parada manual adiada enquanto ela estiver ativa; validar no Ubuntu Wayland. |
 
 A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.15:
 novas falhas podem exigir versões adicionais. “Fazer tudo no computador” não

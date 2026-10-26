@@ -34,6 +34,7 @@ PACKAGES_FOR_MISSING = {
     "ffmpeg": ("ffmpeg",),
     "xdg-settings": ("xdg-utils",),
     "gtk-launch": ("libgtk-3-bin",),
+    "flock": ("util-linux",),
     "python3-tk": ("python3-tk",),
     "python3-venv": ("python3-venv",),
 }

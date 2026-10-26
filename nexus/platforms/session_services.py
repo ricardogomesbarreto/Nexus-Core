@@ -4,10 +4,13 @@ The desktop uses this on exit, including the direct managed launcher path.
 The session shell script uses the same private record for terminal sessions.
 """
 
+from contextlib import contextmanager
+import fcntl
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -91,12 +94,61 @@ def record_started_service(scope: str, unit: str) -> bool:
         return False
 
 
-def stop_owned_services() -> bool:
+@contextmanager
+def desktop_session_lease():
+    """Allow one GUI at a time while keeping the runtime record private.
+
+    None means there is no managed runtime state; False means another GUI
+    holds the lease (or the lease file is unsafe); True holds this lease.
+    """
+    record = _record_path(create=True)
+    if record is None:
+        yield None
+        return
+    path = record.parent / "desktop.lock"
+    descriptor = None
+    try:
+        descriptor = os.open(path, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        status = os.fstat(descriptor)
+        if (not stat.S_ISREG(status.st_mode) or status.st_uid != os.getuid()
+                or status.st_mode & 0o777 != 0o600):
+            os.close(descriptor)
+            descriptor = None
+        else:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (BlockingIOError, OSError):
+        if descriptor is not None:
+            os.close(descriptor)
+            descriptor = None
+    if descriptor is None:
+        yield False
+        return
+    try:
+        yield True
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+
+
+def stop_owned_services(*, lease_held: bool = False) -> bool:
     """Noninteractive shutdown; retain failed entries for manual retry.
 
     Never stop an already running third-party service or a restarted instance.
     A missing sudo credential is reported promptly rather than hanging the GUI.
     """
+    if not lease_held:
+        with desktop_session_lease() as acquired:
+            if acquired is False:
+                print("[NEXUS] Outra janela ativa ou trava insegura; parada adiada.",
+                      file=sys.stderr)
+                return False
+            return _stop_owned_services()
+    return _stop_owned_services()
+
+
+def _stop_owned_services() -> bool:
     path = _record_path()
     if path is None or not path.exists():
         return True

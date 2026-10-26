@@ -2227,8 +2227,14 @@ def _run_desktop_window() -> int:
 
 def launch_desktop() -> int:
     """Release Nexus-owned services after the GUI has closed or failed."""
-    try:
-        return _run_desktop_window()
-    finally:
-        from nexus.platforms.session_services import stop_owned_services
-        stop_owned_services()
+    from nexus.platforms.session_services import desktop_session_lease, stop_owned_services
+
+    with desktop_session_lease() as acquired:
+        if acquired is False:
+            print("Nexus Core já está aberto nesta sessão ou a trava está inválida.",
+                  file=sys.stderr)
+            return 3
+        try:
+            return _run_desktop_window()
+        finally:
+            stop_owned_services(lease_held=acquired is True)
