@@ -21,7 +21,7 @@ def test_desktop_finally_cleans_up_even_when_startup_raises(monkeypatch):
 
     called = []
     monkeypatch.setattr(window, "_run_desktop_window", lambda: 2)
-    monkeypatch.setattr(services, "stop_owned_services", lambda: called.append("stop"))
+    monkeypatch.setattr(services, "stop_owned_services", lambda **kwargs: called.append("stop"))
     assert window.launch_desktop() == 2
     assert called == ["stop"]
 

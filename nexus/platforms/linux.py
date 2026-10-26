@@ -17,7 +17,7 @@ import sys
 UBUNTU_RELEASE = re.compile(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", re.ASCII)
 REQUIRED_BINARIES = (
     "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg",
-    "xdg-settings", "gtk-launch",
+    "xdg-settings", "gtk-launch", "flock",
 )
 OPTIONAL_BINARIES = (
     "xdotool", "ollama", "docker",
@@ -25,7 +25,7 @@ OPTIONAL_BINARIES = (
 UBUNTU_PACKAGES = (
     "python3-venv", "python3-tk", "postgresql", "postgresql-client",
     "espeak-ng", "alsa-utils", "ffmpeg",
-    "xdg-utils", "libgtk-3-bin",
+    "xdg-utils", "libgtk-3-bin", "util-linux",
 )
 
 
