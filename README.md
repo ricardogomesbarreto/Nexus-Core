@@ -6914,10 +6914,10 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Code Version:          v0.9.12 (INTEGRATED IN MAIN; NOT RELEASED)
-Release Name:          Authorized Desktop Actions
-Release Tag:          v0.9.12 NOT YET PUBLISHED (PHYSICAL ACCEPTANCE REQUIRED)
-Implementation:        ONE HOME CHILD BY EXACT PHRASE; APPROVED APP LAUNCH
+Code Version:          v0.9.17 (CODE IN MAIN; PHYSICAL ACCEPTANCE PENDING)
+Release Name:          Desktop Session Coordination
+Release Tag:          v0.9.12-rc.3 CANDIDATE; NO STABLE 0.9.X TAG
+Implementation:        LOCAL DESKTOP, VOICE, VISION, AUTHORIZED ACTIONS
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION
 Tests:                 PYTHON 3.12 / POSTGRESQL 16 / DOCKER / XVFB / ESPEAK NG
 Primary Platform:      Linux
@@ -6930,7 +6930,7 @@ Model Runtime:         Ollama
 Reference Model:       qwen3:1.7b
 Production Provider:   ollama
 Desktop Interface:     NATIVE TK CONVERSATION (LINUX)
-Voice:                 ESPEAK NG F/M; VOSK AUTOMATIC LISTENING WITH PAUSE
+Voice:                 VOSK; LOCAL TTS F/M; PHYSICAL ACCEPTANCE PENDING
 Agent / Tool Calling:  ONE PROPOSAL PER TURN, EXECUTOR MEDIATED
 Development Status:    ACTIVE
 ────────────────────────────────────────────────────────
