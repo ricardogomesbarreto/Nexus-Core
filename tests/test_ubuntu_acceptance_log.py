@@ -41,6 +41,7 @@ def test_noninteractive_log_never_opens_microphone_or_camera(monkeypatch):
     output = io.StringIO()
     assert acceptance.run_acceptance(out=output, interactive=False) == 0
     report = output.getvalue()
+    assert f"REGISTRO DE ACEITE LOCAL v{settings.version}" in report
     assert "[PASSOU] Câmeras acessíveis — quantidade=1" in report
     assert "[PENDENTE] Captura de câmera" in report
     assert "[PENDENTE] Sinal do microfone" in report
@@ -70,7 +71,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"])
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"] + ["n"] * 6)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -82,6 +83,8 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     assert "[PENDENTE] Voz feminina e masculina" in report
     assert "[PENDENTE] Abrir aplicativo autorizado" in report
     assert "[PENDENTE] Navegador padrão" in report
+    assert "[PENDENTE] Serviços iniciados pelo Nexus" in report
+    assert "[PENDENTE] PDF produzido" in report
     assert "[RELATADO] Criar pasta autorizada" in report
     assert "[RELEASE] PENDENTE" in report
     for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK"):
@@ -100,7 +103,7 @@ def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monke
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""])
+    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 6)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -140,7 +143,7 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"])
+    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 6)
     prompts = []
     def ask(question):
         prompts.append(question)

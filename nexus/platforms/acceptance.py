@@ -100,7 +100,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     def begin(label: str):
         print(f"[EXECUTANDO] {label}", file=out, flush=True)
 
-    print("NEXUS CORE — REGISTRO DE ACEITE LOCAL v0.9.12", file=out, flush=True)
+    print(f"NEXUS CORE — REGISTRO DE ACEITE LOCAL v{settings.version}", file=out, flush=True)
     print("Saída resumida para compartilhar: sem senha, áudio, transcrição ou imagem.", file=out, flush=True)
     print("As etapas RELATADO são declarações do operador; não são prova automática.", file=out, flush=True)
     print("Na parte manual, f indica falha após teste; n ou Enter deixa pendente.", file=out, flush=True)
@@ -175,9 +175,12 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     print("[MANUAL] Abra o assistente em OUTRO terminal: ~/.local/bin/nexus-core --desktop", file=out, flush=True)
     for label, instruction in (
         ("Chat na janela", "Uma pergunta nova recebeu resposta pertinente sem repetir a anterior?"),
-        ("Escuta contínua", "Ele respondeu a mais de uma fala sem apertar botão?"),
-        ("Voz feminina e masculina", "Você ouviu as duas vozes e testou pausa/retomada?"),
-        ("Câmera e análise", "Você viu prévia, print e descrição coerente após permissão?"),
+        ("Escuta contínua", "Na janela, duas solicitações consecutivas receberam "
+         "respostas faladas, com escuta retomada sem apertar botão?"),
+        ("Voz feminina e masculina", "Ambas as vozes foram audíveis; pausa, "
+         "retomada e cancelamento funcionaram?"),
+        ("Câmera e análise", "Após consentimento, viu prévia e foto, recebeu "
+         "descrição coerente e resposta falada? Mediu a latência?"),
         ("Criar pasta autorizada",
          "No chat, peça 'Crie uma pasta chamada NexusCoreTeste'; "
          "negue uma vez, repita e autorize. O programa respeitou as decisões?"),
@@ -188,6 +191,18 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "No chat, peça 'Abra o gerenciador de arquivos'; "
          "negue uma vez, repita e autorize. Abriu somente depois da confirmação?"),
         ("Permissões", "Você testou confirmar por botão, texto e voz e cancelar?"),
+        ("Perfil eco no notebook", "Com o observador de recursos, mediu RAM, "
+         "swap, latência e descarga do modelo após a análise, sem travar?"),
+        ("Serviços preexistentes", "Com PostgreSQL e Ollama ativos antes do "
+         "Nexus, fechou a janela e confirmou que ambos permaneceram ativos?"),
+        ("Serviços iniciados pelo Nexus", "Com serviços inicialmente parados, "
+         "abriu e fechou o Nexus e confirmou que só os iniciados por ele pararam?"),
+        ("Imagem produzida", "Abriu o arquivo de imagem real; conferiu "
+         "conteúdo, permissões e original intacto após negar/autorizar?"),
+        ("Documento produzido", "Abriu o documento de saída real em um "
+         "leitor independente e conferiu o conteúdo e o original?"),
+        ("PDF produzido", "Abriu o PDF de saída real em um leitor "
+         "independente e conferiu páginas, conteúdo e original?"),
     ):
         log(label, _observation(instruction, ask=ask, interactive=interactive, out=out), "observação humana")
     log("Automação de teclado em Wayland", "PENDENTE" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "NÃO APLICÁVEL",

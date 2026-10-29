@@ -30,6 +30,32 @@ terminais](docs/RELEASE_NOTES_v0.9.17.md).
 **Publicação:** código para validação; faltam teste físico no Ubuntu e gates
 de uma tag estável.
 
+### Aceite da instalação 0.9.17
+
+Para acompanhar memória, swap, modelos carregados e tempo enquanto testa a
+janela, execute a partir do repositório atualizado:
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
+git switch main && git pull --ff-only
+python3 scripts/install_linux.py
+NEXUS_RESOURCE_PROFILE=eco python3 scripts/observe_desktop.py
+bash scripts/nexus_core_session.sh start
+~/.local/bin/nexus-core --acceptance-log
+bash scripts/nexus_core_session.sh stop
+```
+
+Feche a janela antes do diagnóstico; `start` reabre os serviços necessários
+para os testes isolados, e `stop` libera somente instâncias registradas pelo
+Nexus. O observador acompanha a sessão em
+tempo real, sem salvar conteúdo das perguntas; o resumo informa os extremos
+medidos, sem afirmar que o computador não travou. A consulta de aceite registra
+separadamente voz em dois turnos, câmera e fala, permissões, serviços
+preexistentes/iniciados pelo Nexus e arquivos reais de imagem, documento e
+PDF. Ausência de teste ou de CLI opcional continua pendente. Consulte o
+[roteiro físico 0.9.17](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.17.md); nenhum
+resultado automatizado substitui a observação no seu notebook.
+
 ## 0.9.16 — encerramento automático da sessão
 
 Ao usar **Desligar assistente**, o comando de voz explícito de desligamento
