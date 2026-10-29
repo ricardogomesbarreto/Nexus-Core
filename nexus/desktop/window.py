@@ -608,9 +608,11 @@ class DesktopWindow:
                 "Negue uma tentativa, repita e autorize. A pasta só deve "
                 "ser criada após sua aprovação.")),
             ("Aplicativo: como testar", lambda: self._show_test_instructions(
-                "Aplicativo", "Digite no chat: Abra o navegador. "
-                "Negue uma tentativa, repita e autorize. Confira o "
-                "registro de autorização e a execução da ferramenta.")),
+                "Aplicativo", "Peça 'Abra o navegador' e confira que o "
+                "navegador padrão abre sem confirmação. Para testar uma "
+                "autorização, peça 'Abra o gerenciador de arquivos': negue "
+                "uma vez, repita e autorize. Confira os registros da "
+                "ferramenta e da autorização.")),
             ("Imagem: selecionar com consentimento",
              lambda: self._request_vision("file")),
             ("Arquivo: inspeção estática local", lambda: self._show_test_instructions(
