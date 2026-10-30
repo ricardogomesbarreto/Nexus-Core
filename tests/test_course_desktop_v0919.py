@@ -125,7 +125,7 @@ def test_library_course_button_loads_metadata_without_database(monkeypatch, tmp_
     monkeypatch.setattr(offline_course, "load_course",
                         lambda directory: seen.append(directory) or prepared)
     monkeypatch.setattr(course_panel, "open_course",
-                        lambda root, course: seen.append(course))
+                        lambda root, course, **profile: seen.append(course))
     root = tk.Tk()
     root.withdraw()
     try:
