@@ -44,6 +44,14 @@ de voz. Existe uma busca por embeddings **apenas em até oito trechos recentes**
 usando modelo Ollama já instalado e selecionado pelo usuário. A
 leitura pontual de ZIM depende de zim-tools instalado pelo usuário.
 
+**Cursos offline nativos (v0.9.19 em Draft):** a Biblioteca pode abrir uma pasta
+com manifesto course.json (versão 1) e até 20 aulas TXT/Markdown, sem servidor.
+Há leitura sob clique, exercícios por aula, progresso temporário, sugestões
+heurísticas a partir dos acertos e gravação/restauração opcional do progresso
+no PostgreSQL local. Veja o [curso original de demonstração](examples/offline_course)
+e a [documentação de cursos](docs/OFFLINE_COURSES_v0.9.19.md).
+Não há integração completa Kolibri nem tutoria adaptativa automática.
+
 ## 0.9.18 — estudo local e prévia de voz
 
 Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão
