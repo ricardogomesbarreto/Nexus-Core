@@ -182,27 +182,6 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
         show(message)
         status.configure(text=f"Exercícios respondidos: {done}/{len(session.questions)}.")
 
-    def search_lessons():
-        query = search_entry.get().strip()
-        if not 2 <= len(query) <= 120 or query == "Buscar nas aulas (2–120 caracteres)":
-            status.configure(text="Informe um termo com 2 a 120 caracteres.")
-            return
-        status.configure(text="Pesquisando aulas locais de forma limitada…")
-        from nexus.study.course_search import search_course
-        try:
-            matches = search_course(course, query, limit=8)
-        except CourseError:
-            status.configure(text="Pesquisa indisponível; confira os arquivos autorizados.")
-            return
-        if matches:
-            show("\n\n".join(
-                f"Aula {match.lesson_index + 1} — {match.lesson_title}\n{match.excerpt}"
-                for match in matches
-            ))
-        else:
-            show("Nenhuma aula contém a expressão consultada.")
-        status.configure(text=f"{len(matches)} resultados, sem salvar índice ou conteúdo.")
-
     def suggest_step():
         advice = recommend_study_step(recent_scores)
         show(f"Recomendação indicativa: {advice.level}\n"
@@ -269,20 +248,18 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
             status.configure(text=f"{result} aulas registradas no PostgreSQL local.")
         window.after(100, poll_progress)
 
-    ttk.Button(
-        search_row, text="Pesquisar no curso", command=search_lessons,
-        style="Nexus.TButton",
-    ).pack(side="right")
     def search_lessons():
         nonlocal search_busy
         if search_busy:
             status.configure(text="A pesquisa local anterior ainda está em andamento.")
             return
-        term = simpledialog.askstring(
-            "Nexus Core — pesquisa no curso",
-            "Qual termo ou expressão deseja localizar nas aulas?",
-            parent=window,
-        )
+        term = search_entry.get().strip()
+        if not term or term == "Buscar nas aulas (2–120 caracteres)":
+            term = simpledialog.askstring(
+                "Nexus Core — pesquisa no curso",
+                "Qual termo ou expressão deseja localizar nas aulas?",
+                parent=window,
+            )
         if term is None:
             return
         if not 2 <= len(term.strip()) <= 120 or "\n" in term or "\r" in term:
@@ -398,13 +375,19 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
         stop_speech()
         window.destroy()
 
+    # Single search control, reusing the existing row instead of adding
+    # a fourth row of buttons at the minimum 600x450 window size.
+    ttk.Button(
+        search_row, text="Pesquisar no curso", command=search_lessons,
+        style="Nexus.TButton",
+    ).pack(side="right")
+
     buttons = (
         ("Ler aula", read_selected), ("Concluir aula", mark_completed),
         ("Próxima aula", next_lesson), ("Gerar exercícios", start_exercises),
         ("Responder exercício", answer_exercise), ("Sugerir próximo passo", suggest_step),
         ("Salvar progresso", lambda: run_progress("save")),
         ("Carregar progresso", lambda: run_progress("load")),
-        ("Pesquisar no curso", search_lessons),
         ("Ouvir aula", speak_lesson),
         ("Pausar/retomar áudio", toggle_speech_pause),
         ("Parar áudio", stop_speech),
