@@ -167,19 +167,26 @@ def open_library(root, app):
         except Exception:
             return "Feminina"
 
+    def playback_profile():
+        return {
+            "voice": chosen_voice(),
+            "speed": getattr(app, "_speech_speed_percent", 100) / 100,
+            "volume": getattr(app, "_speech_volume_percent", 100),
+        }
+
     def practice():
         if busy:
             status.configure(text="Aguarde a operação atual.")
             return
         from nexus.desktop.study_panel import open_study
-        open_study(root, voice=chosen_voice())
+        open_study(root, **playback_profile())
 
     def create_card():
         if busy or not source_hits:
             status.configure(text="Pesquise um assunto primeiro para selecionar o primeiro trecho.")
             return
         from nexus.desktop.study_panel import open_study
-        open_study(root, source_hits[0], voice=chosen_voice())
+        open_study(root, source_hits[0], **playback_profile())
 
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
