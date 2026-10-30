@@ -22,8 +22,8 @@ def test_semantic_button_does_not_embed_on_open_and_reuses_sources(monkeypatch):
         def initialize(self): pass
         def close(self): pass
         def list_documents(self, limit=20): return []
-        def recent_chunks(self, limit):
-            assert limit == 8
+        def semantic_candidates(self, query, limit):
+            assert query == "energia da luz" and limit == 8
             events.append("sample")
             return [hit]
 
