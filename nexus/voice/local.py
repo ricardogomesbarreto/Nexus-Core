@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import signal
 import select
 import shutil
 import subprocess
@@ -27,28 +28,61 @@ class _StoppableProcess:
     def __init__(self):
         self._lock = Lock()
         self._process = None
+        self._paused = False
 
     def _set_process(self, process):
         with self._lock:
             self._process = process
+            self._paused = False
 
     def _clear_process(self, process):
         with self._lock:
             if self._process is process:
                 self._process = None
+                self._paused = False
 
     def stop(self) -> None:
         with self._lock:
             process = self._process
             if process is not None and process.poll() is None:
                 try:
+                    if self._paused:
+                        # SIGTERM may remain pending for a stopped Linux process.
+                        process.send_signal(signal.SIGCONT)
+                        self._paused = False
                     process.terminate()
-                except ProcessLookupError:
+                except (ProcessLookupError, OSError):
                     pass
 
 
 class LocalSpeaker(_StoppableProcess):
     """Vozes locais PT-BR; Piper/RHVoice quando presentes, eSpeak como reserva."""
+
+    def pause(self) -> bool:
+        """Pause only the current owned Linux subprocess (never system audio)."""
+        with self._lock:
+            process = self._process
+            if process is None or process.poll() is not None or self._paused:
+                return False
+            try:
+                process.send_signal(signal.SIGSTOP)
+            except (ProcessLookupError, OSError, AttributeError):
+                return False
+            self._paused = True
+            return True
+
+    def resume(self) -> bool:
+        """Resume the same owned subprocess without replaying the message."""
+        with self._lock:
+            process = self._process
+            if process is None or process.poll() is not None or not self._paused:
+                return False
+            try:
+                process.send_signal(signal.SIGCONT)
+            except (ProcessLookupError, OSError, AttributeError):
+                return False
+            self._paused = False
+            return True
 
     VOICES = {"Feminina": "pt-br+f3", "Masculina": "pt-br+m3"}
     MAX_SPEECH = 2400
