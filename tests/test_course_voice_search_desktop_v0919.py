@@ -116,7 +116,7 @@ def test_course_voice_uses_selected_local_profile_pause_and_stop(monkeypatch, tm
         assert len(controllers) == 1
         text, selected_voice, opts = called[0]
         assert selected_voice == "Masculina"
-        assert len(text) == 2400
+        assert len(text) == 2399  # One character reserved for TTS punctuation
         assert opts["speed"] == 1.25 and opts["volume"] == 75
         assert callable(opts["cancelled"])
         actions["Pausar/retomar áudio"].invoke()
@@ -214,7 +214,7 @@ def test_course_narration_uses_sequential_bounded_segments(monkeypatch, tmp_path
         _until(root, lambda: "Narração concluída" in
                " ".join(w.cget("text") for w in _widgets(panel, ttk.Label)))
         assert len(calls) <= 4
-        assert all(0 < len(part) <= 2400 for part in calls)
+        assert all(0 < len(part) <= 2399 for part in calls)
         assert sum(len(part) for part in calls) <= 9600
     finally:
         release.set()
