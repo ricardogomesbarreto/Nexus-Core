@@ -71,29 +71,7 @@ def open_library(root, app):
                     result = inspect_kolibri_export(value)
                     queue.put((operation, result, None, None))
                     return
-                if operation == "kolibri_export":
-            source_hits = []
-            if error:
-                status.configure(text="Exportação Kolibri indisponível ou protegida.")
-            else:
-                lines = [
-                    f"Canal {item.channel_id} · banco {item.database_bytes} bytes"
-                    for item in result.channels
-                ]
-                header = (
-                    f"Exportação Kolibri: {len(result.channels)} canais. "
-                    f"Diretório de recursos: {'encontrado' if result.has_content_storage else 'ausente'}."
-                )
-                display.configure(state="normal")
-                display.delete("1.0", "end")
-                display.insert("1.0", header + "\n\n" +
-                               ("\n".join(lines) if lines else
-                                "Nenhum banco de canal identificável."))
-                display.configure(state="disabled")
-                status.configure(text="Inspeção somente de metadados; nenhum canal importado.")
-            window.after(80, poll)
-            return
-        if operation == "course":
+                if operation == "course":
                     from nexus.study.offline_course import load_course
                     result = load_course(value)
                     queue.put((operation, result, None, None))
@@ -132,7 +110,7 @@ def open_library(root, app):
                     hits = store.search(topic, 3, for_context=True)
                     result = answer_from_hits(prompt, hits,
                                               app.model_router if hits else None)
-                elif operation in ("answer", "summary", "study_plan"):
+                elif operation in ("answer", "summary", "study_plan", "tutor"):
                     hits = store.search(value, 3, for_context=True)
                     prompt = value
                     if operation == "summary":
@@ -381,6 +359,28 @@ def open_library(root, app):
             window.after(80, poll)
             return
         busy = False
+        if operation == "kolibri_export":
+            source_hits = []
+            if error:
+                status.configure(text="Exportação Kolibri indisponível ou protegida.")
+            else:
+                lines = [
+                    f"Canal {item.channel_id} · banco {item.database_bytes} bytes"
+                    for item in result.channels
+                ]
+                header = (
+                    f"Exportação Kolibri: {len(result.channels)} canais. "
+                    f"Diretório de recursos: {'encontrado' if result.has_content_storage else 'ausente'}."
+                )
+                display.configure(state="normal")
+                display.delete("1.0", "end")
+                display.insert("1.0", header + "\n\n" +
+                               ("\n".join(lines) if lines else
+                                "Nenhum banco de canal identificável."))
+                display.configure(state="disabled")
+                status.configure(text="Inspeção somente de metadados; nenhum canal importado.")
+            window.after(80, poll)
+            return
         if operation == "course":
             if error:
                 status.configure(text="Curso indisponível. Confira course.json e os arquivos TXT/MD.")
