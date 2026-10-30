@@ -70,6 +70,40 @@ def test_course_panel_reads_only_after_click_and_offers_quiz(monkeypatch, tmp_pa
         root.destroy()
 
 
+def test_course_search_button_is_on_demand_and_displays_excerpts(monkeypatch, tmp_path):
+    import tkinter as tk
+    from tkinter import ttk
+    from nexus.desktop import course_panel
+    import nexus.study.course_search as course_search
+    from nexus.study.offline_course import OfflineCourse, CourseLesson
+
+    course = OfflineCourse(tmp_path, "Curso local", (
+        CourseLesson("Biologia", "biologia.md"),
+    ))
+    calls = []
+    def fake_search(chosen, question, *, limit):
+        calls.append((chosen, question, limit))
+        return [course_search.CourseSearchHit(0, "Biologia",
+                                             "A fotossíntese utiliza luz.")]
+
+    monkeypatch.setattr(course_search, "search_course", fake_search)
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        panel = course_panel.open_course(root, course)
+        assert calls == []
+        entries = find_all(panel, ttk.Entry)
+        assert len(entries) == 1
+        entries[0].delete(0, "end")
+        entries[0].insert(0, "fotossintese")
+        buttons = {x.cget("text"): x for x in find_all(panel, ttk.Button)}
+        buttons["Pesquisar no curso"].invoke()
+        assert calls == [(course, "fotossintese", 8)]
+        assert "fotossíntese" in find_all(panel, tk.Text)[0].get("1.0", "end")
+    finally:
+        root.destroy()
+
+
 def test_library_course_button_loads_metadata_without_database(monkeypatch, tmp_path):
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
