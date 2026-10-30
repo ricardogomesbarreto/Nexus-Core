@@ -60,6 +60,8 @@ def test_kolibri_export_ui_never_starts_service_or_imports(monkeypatch, tmp_path
                                for x in children(window, ttk.Label)))
         assert events == []
         buttons = {x.cget("text"): x for x in children(window, ttk.Button)}
+        assert (buttons["Inspecionar exportação Kolibri"].master is not
+                buttons["Catálogo offline"].master)
         buttons["Inspecionar exportação Kolibri"].invoke()
         wait(root, lambda: "Canal " + "a" * 32 in children(window, tk.Text)[0].get("1.0", "end"))
         assert events == ["consent", str(export)]
