@@ -16,7 +16,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Configurar velocidade/volume/características | Novo/parcial | Velocidade 75–125%, volume 50–150%, persistidos; características avançadas pendentes |
 | 4 | Reconhecimento de fala | Existente | Vosk local |
 | 5 | Conversação contínua | Existente, validar | Escuta em ciclos; testar hardware |
-| 6 | Ler textos/documentos em voz alta | Parcial/novo | Leitura de trecho da Biblioteca; não PDF integral |
+| 6 | Ler textos/documentos em voz alta | Parcial/novo | Leitura de trechos da Biblioteca e narração opt-in de até 2.400 caracteres de aula; não PDF integral |
 | 7 | Transcrição de áudio | Novo | WAV PCM 16 kHz ou MP3/OGG/FLAC/M4A via FFmpeg local opcional; sem persistência |
 | 8 | Pausar/interromper/retomar | Novo/parcial | SIGSTOP/SIGCONT no subprocesso de fala do Nexus, opções no menu e leitura; áudio físico ainda não validado |
 | 9 | Processamento local | Existente/novo | Sem upload ou servidor adicional |
@@ -31,7 +31,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Biblioteca de documentos | Existente | Importação opt-in TXT/MD |
 | 4 | Pesquisa em documentos | Existente | PostgreSQL FTS |
 | 5 | Pesquisa com IA | Existente | Perguntas sobre trechos via Ollama local |
-| 6 | Cursos offline | Novo/parcial | Cursos nativos com aulas TXT/MD, busca local, exercícios e progresso PostgreSQL opt-in; inspeção de exportação KOLIBRI_DATA somente metadados; execução Kolibri pendente |
+| 6 | Cursos offline | Novo/parcial | Cursos nativos TXT/MD, busca por texto, narração local, exercícios e progresso PostgreSQL opt-in; inspeção de exportação KOLIBRI_DATA somente metadados; execução Kolibri pendente |
 | 7 | Mapas offline | Parcial | Prévia PMTiles anterior |
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
@@ -58,7 +58,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 11 | Acompanhamento de aprendizagem | Novo/parcial | Resultado de exercícios e conclusão de cursos por opt-in PostgreSQL; sugestão indicativa, sem domínio adaptativo |
 | 12 | Conversação educacional | Novo/parcial | Ação guiada da Biblioteca; modo tutor contínuo pendente |
 | 13 | Revisão de conteúdos | Existente/novo | Cartões, histórico e exercícios por aula em cursos nativos |
-| 14 | Aprendizagem multimodal | Parcial | Recursos gerais de imagem/voz; tutor integrado pendente |
+| 14 | Aprendizagem multimodal | Parcial | Leitura por voz em aulas TXT/MD; multimodalidade imagem/voz no tutor integrado ainda pendente |
 
 ## Regras transversais
 
