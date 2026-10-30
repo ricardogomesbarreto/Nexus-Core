@@ -123,3 +123,15 @@ def test_rejects_missing_manifest_and_empty_course(tmp_path):
     guard = course(tmp_path, lessons=[{"title": "A", "file": "missing.md"}])
     with pytest.raises(CourseError):
         load_course(tmp_path, guard)
+
+
+def test_bundled_course_example_is_readable_offline():
+    from nexus.config.settings import PROJECT_ROOT
+    root = PROJECT_ROOT.resolve()
+    demo = root / "examples" / "offline_course"
+    guard = policy(root)
+    loaded = load_course(demo, guard)
+    assert len(loaded.lessons) == 2
+    assert "Ciências" in loaded.title
+    assert "fotossíntese" in read_lesson(loaded, 0, guard)
+    assert "evaporação" in read_lesson(loaded, 1, guard)
