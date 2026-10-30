@@ -28,6 +28,46 @@ def _read_positive(path: str) -> int | None:
         return None
 
 
+def _cgroup_directories(base: str, controller: str) -> tuple[Path, ...]:
+    """Return bounded cgroup ancestors for this process, without path escape.
+
+    Linux systemd often assigns the application to a nested user.slice.
+    Reading only /sys/fs/cgroup/memory.max would miss MemoryMax on that
+    subtree. We read sysfs metadata for the ancestors as well as the root.
+    """
+    root = Path(base)
+    try:
+        lines = Path("/proc/self/cgroup").read_text(encoding="ascii")[:4096].splitlines()
+    except (OSError, ValueError):
+        return (root,)
+    relative = None
+    for line in lines:
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        hierarchy, controllers, path = parts
+        if (hierarchy == "0" and not controllers and controller == "unified") or (
+            controller != "unified" and controller in controllers.split(",")
+        ):
+            relative = path
+            break
+    if relative is None or not relative.startswith("/"):
+        return (root,)
+    segments = [p for p in relative.split("/") if p]
+    if len(segments) > 20 or any(
+        p in (".", "..") or len(p) > 160
+        or not all(c.isascii() and (c.isalnum() or c in "._-:") for c in p)
+        for p in segments
+    ):
+        return (root,)
+    paths = [root]
+    current = root
+    for segment in segments:
+        current = current / segment
+        paths.append(current)
+    return tuple(paths)
+
+
 def _memory_bytes() -> tuple[int | None, int | None]:
     """Use the smallest active Linux memory cap, including cgroup v1/v2.
 
@@ -50,45 +90,48 @@ def _memory_bytes() -> tuple[int | None, int | None]:
 
     # v1 often reports a near-2**63 sentinel for an unlimited container.
     # Discard implausible values and combine every *real* cap conservatively.
-    caps = (
-        ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.current"),
-        ("/sys/fs/cgroup/memory/memory.limit_in_bytes",
-         "/sys/fs/cgroup/memory/memory.usage_in_bytes"),
-    )
-    for limit_path, usage_path in caps:
-        limit = _read_positive(limit_path)
-        if limit is None or limit >= (1 << 60):
-            continue
-        if total is None or limit < total:
-            total = limit
-        usage = _read_positive(usage_path)
-        if usage is not None:
-            remaining = max(0, limit - usage)
-            available = min(available, remaining) if available is not None else remaining
-        elif available is not None:
-            available = min(available, limit)
+    for directories, limit_name, usage_name in (
+        (_cgroup_directories("/sys/fs/cgroup", "unified"),
+         "memory.max", "memory.current"),
+        (_cgroup_directories("/sys/fs/cgroup/memory", "memory"),
+         "memory.limit_in_bytes", "memory.usage_in_bytes"),
+    ):
+        for directory in directories:
+            limit = _read_positive(str(directory / limit_name))
+            if limit is None or limit >= (1 << 60):
+                continue
+            if total is None or limit < total:
+                total = limit
+            usage = _read_positive(str(directory / usage_name))
+            if usage is not None:
+                remaining = max(0, limit - usage)
+                available = min(available, remaining) if available is not None else remaining
+            elif available is not None:
+                available = min(available, limit)
     if total is not None and available is not None:
         available = min(total, available)
     return total, available
 
 
 def _cpu_quota_cores() -> int | None:
-    """Read CPU quotas; never change frequencies, priorities or CPU affinity."""
-    try:
-        parts = Path("/sys/fs/cgroup/cpu.max").read_text(encoding="ascii").split()
-        if len(parts) == 2 and parts[0] != "max":
-            quota = _positive_int(parts[0])
-            period = _positive_int(parts[1])
-            if quota is not None and period is not None:
-                return max(1, (quota + period - 1) // period)
-    except (OSError, ValueError):
-        pass
-    quota = _read_positive("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
-    period = _read_positive("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
-    if quota is not None and period is not None:
-        return max(1, (quota + period - 1) // period)
-    return None
-
+    """Honor the strictest CPU quota along this process's cgroup ancestry."""
+    limits = []
+    for directory in _cgroup_directories("/sys/fs/cgroup", "unified"):
+        try:
+            parts = (directory / "cpu.max").read_text(encoding="ascii").split()
+            if len(parts) == 2 and parts[0] != "max":
+                quota = _positive_int(parts[0])
+                period = _positive_int(parts[1])
+                if quota is not None and period is not None:
+                    limits.append(max(1, (quota + period - 1) // period))
+        except (OSError, ValueError):
+            pass
+    for directory in _cgroup_directories("/sys/fs/cgroup/cpu", "cpu"):
+        quota = _read_positive(str(directory / "cpu.cfs_quota_us"))
+        period = _read_positive(str(directory / "cpu.cfs_period_us"))
+        if quota is not None and period is not None:
+            limits.append(max(1, (quota + period - 1) // period))
+    return min(limits) if limits else None
 
 def _logical_cores() -> int:
     try:
