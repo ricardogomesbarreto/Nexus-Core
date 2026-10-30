@@ -40,7 +40,7 @@ def test_readonly_os_release_parsing(content, expected):
     (DEBIAN, "Linux", "linux_other_distro_future", False),
     (ARCH, "Linux", "linux_other_distro_future", False),
     (STEAMOS, "Linux", "linux_other_distro_future", False),
-    (FEDORA, "Linux", "linux_other_distro_future", False),
+    (FEDORA, "Linux", "fedora_compatible", True),
     (UBUNTU, "Darwin", "non_linux", False),
 ])
 def test_explicit_installer_support_boundary(os_release, system, target, supported):
@@ -132,7 +132,7 @@ def test_cli_platform_check_rejects_mixed_operations(arguments):
 
 
 @pytest.mark.parametrize("distro_text", [
-    DEBIAN, ARCH, STEAMOS, FEDORA, 'ID=ubuntu\nVERSION_ID=rolling\n',
+    DEBIAN, ARCH, STEAMOS, 'ID=ubuntu\nVERSION_ID=rolling\n',
 ])
 def test_installer_refuses_all_unverified_distros_before_commands(
     distro_text, monkeypatch, capsys,
