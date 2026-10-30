@@ -55,6 +55,11 @@ def open_library(root, app):
         def worker():
             store = None
             try:
+                if operation == "transcribe":
+                    from nexus.voice.file_transcription import LocalWavTranscriber
+                    result = LocalWavTranscriber().transcribe(value)
+                    queue.put((operation, result, None, None))
+                    return
                 store = PostgreSQLKnowledgeBase(settings)
                 store.initialize()
                 if operation == "import":
@@ -111,6 +116,20 @@ def open_library(root, app):
         ):
             work("delete", document_ids[positions[0]])
 
+    def transcribe_audio():
+        if busy:
+            return
+        path = filedialog.askopenfilename(
+            parent=window, title="Transcrever WAV local",
+            filetypes=(("Áudio WAV PCM", "*.wav"),),
+        )
+        if path and messagebox.askyesno(
+            "Nexus Core — transcrição local",
+            "Transcrever este WAV localmente com Vosk? O áudio não será salvo na biblioteca.",
+            parent=window,
+        ):
+            work("transcribe", path)
+
     def practice():
         if busy:
             status.configure(text="Aguarde a operação atual.")
@@ -132,7 +151,8 @@ def open_library(root, app):
                           ("Perguntar aos documentos", ask),
                           ("Excluir selecionado", remove),
                           ("Criar cartão do 1º trecho", create_card),
-                          ("Revisar cartões", practice))):
+                          ("Revisar cartões", practice),
+                          ("Transcrever WAV local", transcribe_audio))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
@@ -147,6 +167,16 @@ def open_library(root, app):
             window.after(80, poll)
             return
         busy = False
+        if operation == "transcribe":
+            source_hits = []
+            display.configure(state="normal")
+            display.delete("1.0", "end")
+            display.insert("1.0", result if not error else
+                           "Transcrição indisponível. Confira o WAV e o modelo Vosk local.")
+            display.configure(state="disabled")
+            status.configure(text="Transcrição local concluída; não salva." if not error else error)
+            window.after(80, poll)
+            return
         if error:
             source_hits = []
             status.configure(text=error)
