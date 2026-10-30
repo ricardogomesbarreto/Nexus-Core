@@ -188,3 +188,13 @@ def test_cgroup_path_traversal_is_never_followed(monkeypatch):
         Path("/sys/fs/cgroup"),
     )
     assert budget._memory_bytes() == (5 * GIB, 4 * GIB)
+
+
+def test_unverifiable_memory_fails_safe_into_eco(monkeypatch):
+    simulate(monkeypatch, {})
+    monkeypatch.setattr(budget.os, "sched_getaffinity", lambda pid: set(range(8)))
+    profile = budget.ResourceBudget.detect(requested="auto")
+    assert profile.mode == "eco"
+    assert profile.num_thread == 2
+    assert profile.keep_alive == "0s"
+    assert profile.total_ram_mib is None
