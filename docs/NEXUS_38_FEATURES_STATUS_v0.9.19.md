@@ -31,7 +31,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Biblioteca de documentos | Existente | Importação opt-in TXT/MD |
 | 4 | Pesquisa em documentos | Existente | PostgreSQL FTS |
 | 5 | Pesquisa com IA | Existente | Perguntas sobre trechos via Ollama local |
-| 6 | Cursos offline | Novo/parcial | Cursos nativos com manifesto, aulas TXT/MD, exercícios e progresso PostgreSQL opt-in; inspeção de exportação KOLIBRI_DATA somente metadados; execução Kolibri pendente |
+| 6 | Cursos offline | Novo/parcial | Cursos nativos com aulas TXT/MD, busca local, exercícios e progresso PostgreSQL opt-in; inspeção de exportação KOLIBRI_DATA somente metadados; execução Kolibri pendente |
 | 7 | Mapas offline | Parcial | Prévia PMTiles anterior |
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
