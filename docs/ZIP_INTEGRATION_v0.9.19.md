@@ -29,6 +29,14 @@ mínima e local, sem integração das aplicações terceiras como serviços.
 | NOMAD | `nexus/knowledge/offline_catalog.py`: inventário de ZIM e materiais educativos | Lista somente metadados de até 60 arquivos em pasta escolhida; não lê ZIM nem roda Kolibri |
 | NOMAD | `nexus/desktop/library_panel.py`: botão de catálogo | Sem recursão, download, instalação ou servidores |
 
+## Resumo e roteiro de estudos local
+
+Na Biblioteca, **Resumir trechos com IA local** e **Plano de estudo com IA
+local** consultam até três trechos recuperados explicitamente do PostgreSQL
+e enviam apenas esse contexto ao Ollama local. Não geram arquivo, não salvam
+o plano nem prometem personalização pedagógica. Se não houver fonte, não
+carregam modelo. O conteúdo é gerado e exige conferência humana.
+
 ## Compatibilidade e privacidade
 
 - PostgreSQL permanece o único banco do NEXUS CORE.
