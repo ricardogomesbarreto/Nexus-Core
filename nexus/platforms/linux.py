@@ -1,7 +1,7 @@
 """NEXUS CORE v0.8.2: passive desktop-Linux platform inventory.
 
-Ubuntu releases with a valid VERSION_ID and Python 3.12+ may use the installer.
-Unknown distributions are reported but no package-manager action is inferred.
+Ubuntu and allowlisted Fedora versions with Python 3.12+ may use the installer.
+Unknown distributions remain passive and cannot run package-manager actions.
 This module does not open hardware, connect to networks or start services.
 """
 from dataclasses import dataclass
