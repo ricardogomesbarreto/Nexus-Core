@@ -292,22 +292,29 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
         if voice not in LocalSpeaker.VOICES:
             status.configure(text="Voz local inválida.")
             return
-        # A lesson can be 64 KiB; narrate a bounded excerpt in the eco profile.
-        excerpt = lesson_text[:LocalSpeaker.MAX_SPEECH]
-        if not excerpt.strip():
+        # A lesson can be 64 KiB; narrate up to four sequential short segments.
+        # Do not start multiple synthesizers or keep audio processes in parallel.
+        from nexus.voice.text_segments import speech_segments
+        segments = speech_segments(lesson_text, size=LocalSpeaker.MAX_SPEECH, limit=4)
+        if not segments:
             return
         speech_cancel = Event()
         speaker = LocalSpeaker()
         speech_busy = True
         speech_paused = False
-        status.configure(text="Narrando até 2.400 caracteres com voz local…")
+        status.configure(
+            text=f"Narrando {len(segments)} trechos, até 9.600 caracteres com voz local…"
+        )
         options = {"cancelled": speech_cancel.is_set}
         if speed != 1.0 or volume != 100:
             options.update({"speed": speed, "volume": volume})
 
         def worker():
             try:
-                speaker.speak(excerpt, voice, **options)
+                for segment in segments:
+                    if speech_cancel.is_set():
+                        break
+                    speaker.speak(segment, voice, **options)
                 activity_events.put(("speech", None, None))
             except Exception:
                 activity_events.put((
