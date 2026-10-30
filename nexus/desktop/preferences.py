@@ -27,6 +27,8 @@ class DesktopPreferences:
     listening_enabled: bool = True
     geometry: str = "980x720"
     remember_history: bool = True
+    voice_speed_percent: int = 100
+    voice_volume_percent: int = 100
 
     MAX_BYTES = 4096
     VERSION = 1
@@ -59,6 +61,12 @@ class DesktopPreferences:
                 raise PreferenceStoreError(f"A preferência '{key}' é inválida.")
         if self.audio_backend not in self.VALID_AUDIO or not isinstance(self.audio_backend, str):
             raise PreferenceStoreError("A fonte de microfone salva é inválida.")
+        if (type(self.voice_speed_percent) is not int
+                or not 75 <= self.voice_speed_percent <= 125):
+            raise PreferenceStoreError("Velocidade da voz salva fora de 75–125%.")
+        if (type(self.voice_volume_percent) is not int
+                or not 50 <= self.voice_volume_percent <= 150):
+            raise PreferenceStoreError("Volume da voz salvo fora de 50–150%.")
         if not isinstance(self.geometry, str):
             raise PreferenceStoreError("O tamanho da janela é inválido.")
         match = self.GEOMETRY.fullmatch(self.geometry)
