@@ -80,6 +80,7 @@ class LocalZimReader:
                     close_fds=True,
                 )
                 payload = bytearray()
+                completed = False
                 try:
                     deadline = monotonic() + self.MAX_SECONDS
                     while True:
@@ -98,10 +99,15 @@ class LocalZimReader:
                             raise ZimArticleError(
                                 "Artigo acima do limite de leitura local."
                             )
+                    completed = True
                 finally:
-                    if process.poll() is None:
+                    if not completed and process.poll() is None:
                         process.kill()
-                    process.wait(timeout=3)
+                    try:
+                        process.wait(timeout=1 if completed else 3)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait(timeout=3)
                     process.stdout.close()
                 if process.returncode != 0:
                     raise ZimArticleError("Artigo não encontrado ou ZIM incompatível.")
