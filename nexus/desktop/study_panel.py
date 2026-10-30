@@ -315,10 +315,23 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
             if error:
                 status.configure(text=error)
             else:
-                show("\n".join(f"Trecho {chunk}: {correct}/{total} acertos"
-                               for chunk, correct, total in result)
-                     if result else "Nenhum resultado de sessão registrado.")
-                status.configure(text=f"{len(result)} sessões recentes.")
+                from nexus.study.recommendations import recommend_study_step
+                rows = list(reversed(result))
+                relevant = [
+                    (correct, total) for chunk, correct, total in rows
+                    if source_hit is None or chunk == source_hit.chunk_id
+                ]
+                advice = recommend_study_step(relevant)
+                history = ("\n".join(
+                    f"Trecho {chunk}: {correct}/{total} acertos"
+                    for chunk, correct, total in result
+                ) if result else "Nenhum resultado de sessão registrado.")
+                show(
+                    history + "\n\nSugestão indicativa: " + advice.level +
+                    f" ({advice.accuracy_percent}% em {advice.questions} questões).\n" +
+                    advice.action + "\nO nível não é alterado automaticamente."
+                )
+                status.configure(text=f"{len(result)} sessões recentes; sugestão local.")
             window.after(80, poll)
             return
         if error:
