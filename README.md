@@ -17,6 +17,25 @@
 
 # Nexus Core
 
+## Fedora Linux — instalação em validação na v0.9.19
+
+O instalador guiado `python3 scripts/install_linux.py` passou a aceitar
+**Fedora Workstation 43–45**, detectado estritamente por `ID=fedora` e
+Python 3.12+. Utiliza **dnf** (nunca apt no Fedora), PostgreSQL/Ollama
+sob demanda, confirmação antes de instalar pacotes ou modelos e ambiente
+Python isolado. O Fedora exige `postgresql-setup --initdb` **apenas em
+bancos novos**, executado manualmente pelo administrador; o Nexus não
+inicializa ou apaga dados do banco automaticamente.
+
+[Guia Fedora, dependências, comandos e aceite físico](docs/FEDORA_COMPATIBILITY_v0.9.19.md).
+[Auditoria das oito capacidades da suíte offline](docs/OFFLINE_SUITE_STATUS_v0.9.19.md).
+
+**Ainda não homologado fisicamente no Fedora.** A CI existente executa
+testes de simulação Fedora em runner Linux, não substitui testes em Fedora
+real. Kiwix, Kolibri, Qdrant, CyberChef, FlatNotes, ProtoMaps e Supply
+Depot não devem ser apresentados como integrações completas.
+
+
 ## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
 
 ## Estabilização de recursos e compatibilidade Linux — v0.9.19 (Draft)
