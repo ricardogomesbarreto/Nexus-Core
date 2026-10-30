@@ -295,7 +295,7 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
         # A lesson can be 64 KiB; narrate up to four sequential short segments.
         # Do not start multiple synthesizers or keep audio processes in parallel.
         from nexus.voice.text_segments import speech_segments
-        segments = speech_segments(lesson_text, size=LocalSpeaker.MAX_SPEECH, limit=4)
+        segments = speech_segments(lesson_text, size=LocalSpeaker.MAX_SPEECH - 1, limit=4)
         if not segments:
             return
         speech_cancel = Event()
