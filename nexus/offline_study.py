@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 _MAX_TEXT = 16000
 _MAX_QUESTIONS = 10
-_SENTENCE = re.compile(r"(?<=[.!?])\\s+")
+_SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
 
 @dataclass(frozen=True)
@@ -30,10 +30,10 @@ def generate_cloze_questions(text: str, *, limit: int = 5) -> list[StudyQuestion
         raise ValueError("trecho excede o limite de 16000 caracteres")
     questions: list[StudyQuestion] = []
     seen: set[str] = set()
-    for sentence in _SENTENCE.split(re.sub(r"\\s+", " ", text).strip()):
+    for sentence in _SENTENCE.split(re.sub(r"\s+", " ", text).strip()):
         if not 30 <= len(sentence) <= 350:
             continue
-        candidates = re.findall(r"(?u)\\b[^\\W\\d_][\\wÀ-ÿ-]{5,}\\b", sentence)
+        candidates = re.findall(r"(?u)\b[^\W\d_][\wÀ-ÿ-]{5,}\b", sentence)
         if not candidates:
             continue
         answer = max(candidates, key=lambda word: (len(word), word.casefold()))
@@ -41,7 +41,7 @@ def generate_cloze_questions(text: str, *, limit: int = 5) -> list[StudyQuestion
         if key in seen:
             continue
         seen.add(key)
-        start = re.search(r"(?<!\\w)" + re.escape(answer) + r"(?!\\w)", sentence)
+        start = re.search(r"(?<!\w)" + re.escape(answer) + r"(?!\w)", sentence)
         if start is None:
             continue
         question = sentence[:start.start()] + "_____" + sentence[start.end():]
