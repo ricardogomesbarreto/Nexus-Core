@@ -807,21 +807,23 @@ def main(argv: list[str] | None = None) -> int:
     if not install_system_packages():
         print("Instalação interrompida: requisitos da distribuição ainda ausentes.", file=sys.stderr)
         return 2
-    # Initialize Fedora's PostgreSQL cluster explicitly if it does not
-    # exist, outside this installer; never run a destructive initdb here.
-    if not ensure_postgresql_running_for_install():
-        print("Instalação adiada: PostgreSQL local não está pronto. "
-              "No Fedora novo, inicialize uma única vez com "
-              "sudo postgresql-setup --initdb, após conferir os dados existentes.",
+    # Fedora packages do not initialize PostgreSQL automatically. We never
+    # run initdb; users must first review any existing database files.
+    if profile.distro == "fedora" and not ensure_postgresql_running_for_install():
+        print("Instalação Fedora adiada: inicialize o banco apenas se novo "
+              "(sudo postgresql-setup --initdb) e inicie o serviço sob demanda.",
               file=sys.stderr)
         return 2
     if not provision_postgresql():
         print("Instalação interrompida: configure credenciais PostgreSQL locais "
               "e tente novamente.", file=sys.stderr)
         return 2
-    # The user's PostgreSQL cluster may be stopped deliberately to conserve
-    # RAM. Check it BEFORE downloading or preparing large local models.
-    # Starting the cluster is explicit; no unit is enabled at boot.
+    # Preserve the existing Ubuntu provisioning-first contract and tests.
+    if profile.distro == "ubuntu" and not ensure_postgresql_running_for_install():
+        print("Instalação adiada: PostgreSQL local precisa estar ativo para "
+              "validar as credenciais; o ambiente anterior foi preservado.",
+              file=sys.stderr)
+        return 2
 
     if not prepare_local_models():
         print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
