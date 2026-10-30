@@ -6,15 +6,16 @@ automática de materiais antes do clique nem criação de arquivos ou banco.
 from __future__ import annotations
 
 from queue import Empty, Queue
-from threading import Thread
+from threading import Event, Thread
 
 from nexus.config.settings import settings
 from nexus.study.offline_course import OfflineCourse, CourseError, read_lesson
+from nexus.study.course_search import search_course
 from nexus.study.recommendations import recommend_study_step
 from nexus.study_session import StudySession
 
 
-def open_course(root, course: OfflineCourse):
+def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, volume=100):
     import tkinter as tk
     from tkinter import simpledialog, ttk
 
@@ -62,6 +63,12 @@ def open_course(root, course: OfflineCourse):
     session_counted = False
     progress_events = Queue()
     progress_busy = False
+    activity_events = Queue()
+    search_busy = False
+    speech_busy = False
+    speech_paused = False
+    speech_cancel = Event()
+    speaker = None
 
     def show(text):
         display.configure(state="normal")
@@ -95,6 +102,7 @@ def open_course(root, course: OfflineCourse):
         except CourseError as exc:
             status.configure(text=str(exc))
             return
+        stop_speech()
         read_index = index
         lesson_text = text
         session = None
@@ -119,6 +127,7 @@ def open_course(root, course: OfflineCourse):
         if target >= len(course.lessons):
             status.configure(text="Esta é a última aula do curso.")
             return
+        stop_speech()
         listing.selection_clear(0, "end")
         listing.selection_set(target)
         listing.see(target)
@@ -264,12 +273,141 @@ def open_course(root, course: OfflineCourse):
         search_row, text="Pesquisar no curso", command=search_lessons,
         style="Nexus.TButton",
     ).pack(side="right")
+    def search_lessons():
+        nonlocal search_busy
+        if search_busy:
+            status.configure(text="A pesquisa local anterior ainda está em andamento.")
+            return
+        term = simpledialog.askstring(
+            "Nexus Core — pesquisa no curso",
+            "Qual termo ou expressão deseja localizar nas aulas?",
+            parent=window,
+        )
+        if term is None:
+            return
+        if not 2 <= len(term.strip()) <= 120 or "\n" in term or "\r" in term:
+            status.configure(text="Digite de 2 a 120 caracteres em uma única linha.")
+            return
+        search_busy = True
+        status.configure(text="Pesquisando somente as aulas autorizadas…")
+
+        def worker():
+            try:
+                hits = search_course(course, term, limit=8)
+                activity_events.put(("search", hits, None))
+            except Exception:
+                activity_events.put((
+                    "search", None,
+                    "Pesquisa indisponível; confira os arquivos da pasta escolhida.",
+                ))
+
+        Thread(target=worker, name="nexus-offline-course-search", daemon=True).start()
+
+    def speak_lesson():
+        nonlocal speech_busy, speech_paused, speaker, speech_cancel
+        if speech_busy:
+            status.configure(text="Já existe uma leitura de aula. Use Pausar ou Parar áudio.")
+            return
+        if read_index is None or selected() != read_index or not lesson_text:
+            status.configure(text="Selecione e leia uma aula antes de iniciar a voz.")
+            return
+        from nexus.voice.local import LocalSpeaker
+        if voice not in LocalSpeaker.VOICES:
+            status.configure(text="Voz local inválida.")
+            return
+        # A lesson can be 64 KiB; narrate a bounded excerpt in the eco profile.
+        excerpt = lesson_text[:LocalSpeaker.MAX_SPEECH]
+        if not excerpt.strip():
+            return
+        speech_cancel = Event()
+        speaker = LocalSpeaker()
+        speech_busy = True
+        speech_paused = False
+        status.configure(text="Narrando até 2.400 caracteres com voz local…")
+        options = {"cancelled": speech_cancel.is_set}
+        if speed != 1.0 or volume != 100:
+            options.update({"speed": speed, "volume": volume})
+
+        def worker():
+            try:
+                speaker.speak(excerpt, voice, **options)
+                activity_events.put(("speech", None, None))
+            except Exception:
+                activity_events.put((
+                    "speech", None,
+                    "Leitura em voz indisponível; confira Piper/RHVoice/eSpeak.",
+                ))
+
+        Thread(target=worker, name="nexus-offline-course-speech", daemon=True).start()
+
+    def toggle_speech_pause():
+        nonlocal speech_paused
+        if not speech_busy or speaker is None:
+            status.configure(text="Nenhuma narração ativa para pausar.")
+            return
+        action = speaker.resume if speech_paused else speaker.pause
+        try:
+            changed = action()
+        except Exception:
+            changed = False
+        if changed:
+            speech_paused = not speech_paused
+            status.configure(text="Narração pausada." if speech_paused
+                             else "Narração retomada.")
+        else:
+            status.configure(text="Não foi possível alterar a pausa da voz.")
+
+    def stop_speech():
+        nonlocal speech_paused
+        speech_paused = False
+        speech_cancel.set()
+        if speaker is not None:
+            speaker.stop()
+
+    def poll_activity():
+        nonlocal speech_busy, speech_paused, search_busy
+        if not window.winfo_exists():
+            return
+        try:
+            kind, result, error = activity_events.get_nowait()
+        except Empty:
+            window.after(100, poll_activity)
+            return
+        if kind == "search":
+            search_busy = False
+            if error:
+                status.configure(text=error)
+            elif not result:
+                show("Nenhum trecho corresponde à pesquisa neste curso.")
+                status.configure(text="Nenhuma correspondência literal encontrada.")
+            else:
+                show("\n\n".join(
+                    f"Aula {match.lesson_index + 1}: {match.lesson_title}\n"
+                    f"{match.excerpt}" for match in result
+                ))
+                status.configure(
+                    text=f"{len(result)} trechos encontrados nas aulas autorizadas."
+                )
+        elif kind == "speech":
+            speech_busy = False
+            speech_paused = False
+            status.configure(text=error or "Narração concluída ou interrompida.")
+        window.after(100, poll_activity)
+
+    def close_course():
+        stop_speech()
+        window.destroy()
+
     buttons = (
         ("Ler aula", read_selected), ("Concluir aula", mark_completed),
         ("Próxima aula", next_lesson), ("Gerar exercícios", start_exercises),
         ("Responder exercício", answer_exercise), ("Sugerir próximo passo", suggest_step),
         ("Salvar progresso", lambda: run_progress("save")),
         ("Carregar progresso", lambda: run_progress("load")),
+        ("Pesquisar no curso", search_lessons),
+        ("Ouvir aula", speak_lesson),
+        ("Pausar/retomar áudio", toggle_speech_pause),
+        ("Parar áudio", stop_speech),
     )
     for column in range(3):
         controls.columnconfigure(column, weight=1)
@@ -282,5 +420,7 @@ def open_course(root, course: OfflineCourse):
     refresh()
     if course.lessons:
         listing.selection_set(0)
+    window.protocol("WM_DELETE_WINDOW", close_course)
     window.after(100, poll_progress)
+    window.after(100, poll_activity)
     return window
