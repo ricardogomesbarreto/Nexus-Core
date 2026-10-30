@@ -17,6 +17,24 @@
 
 # Nexus Core
 
+## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
+
+**Em revisão; NÃO é release estável.** A branch de desenvolvimento acrescenta
+exercícios locais a partir de trechos autorizados, leitura de trechos em voz alta
+com interrupção, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
+inventário **somente de metadados** de arquivos ZIM e materiais educativos
+em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
+local com exclusão vinculada à fonte. Nada inicia servidores, baixa modelos,
+copia código de terceiros ou modifica o visual aprovado.
+
+O [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102)
+continua sem merge, e o aceite físico de áudio/Tk/PostgreSQL no Ubuntu e a CI
+do SHA final são necessários. Consulte a
+[matriz detalhada dos 38 requisitos](docs/NEXUS_38_FEATURES_STATUS_v0.9.19.md)
+e a [auditoria dos três ZIPs](docs/ZIP_INTEGRATION_v0.9.19.md).
+**Não estão implementados** busca semântica por embeddings, leitura de ZIM,
+serviços de cursos Kolibri, tutor adaptativo ou clonagem de voz.
+
 ## 0.9.18 — estudo local e prévia de voz
 
 Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão
