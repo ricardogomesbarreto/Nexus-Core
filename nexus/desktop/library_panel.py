@@ -71,9 +71,14 @@ def open_library(root, app):
                     result = store.ingest(value)
                 elif operation == "search":
                     result = store.search(value, 5)
-                elif operation == "answer":
+                elif operation in ("answer", "summary", "study_plan"):
                     hits = store.search(value, 3, for_context=True)
-                    result = answer_from_hits(value, hits,
+                    prompt = value
+                    if operation == "summary":
+                        prompt = "Resuma com fontes os trechos sobre: " + value[:120]
+                    elif operation == "study_plan":
+                        prompt = "Proponha etapas de estudo baseadas nas fontes sobre: " + value[:100]
+                    result = answer_from_hits(prompt, hits,
                                               app.model_router if hits else None)
                 elif operation == "delete":
                     result = store.delete(value)
@@ -112,6 +117,16 @@ def open_library(root, app):
         value = current_query()
         if value is not None:
             work("answer", value)
+
+    def summarize():
+        value = current_query()
+        if value is not None:
+            work("summary", value)
+
+    def study_plan():
+        value = current_query()
+        if value is not None:
+            work("study_plan", value)
 
     def remove():
         positions = listing.curselection()
@@ -175,7 +190,9 @@ def open_library(root, app):
                           ("Criar cartão do 1º trecho", create_card),
                           ("Revisar cartões", practice),
                           ("Transcrever WAV local", transcribe_audio),
-                          ("Catálogo offline", browse_offline_catalog))):
+                          ("Catálogo offline", browse_offline_catalog),
+                          ("Resumir trechos com IA local", summarize),
+                          ("Plano de estudo com IA local", study_plan))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
@@ -226,7 +243,7 @@ def open_library(root, app):
             if operation == "search":
                 lines = [f"Fonte {h.document_id}:{h.chunk_id} · {h.name}\n{h.text}"
                          for h in result]
-            elif operation == "answer":
+            elif operation in ("answer", "summary", "study_plan"):
                 lines = [result["answer"], "", "Trechos consultados:"]
                 lines += [f"{s['document_id']}:{s['chunk_id']} · {s['name']}\n{s['excerpt']}"
                           for s in result["sources"]]
