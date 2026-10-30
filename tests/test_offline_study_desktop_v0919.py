@@ -97,7 +97,10 @@ def test_offline_catalog_button_does_not_use_database_for_catalog(monkeypatch, t
     monkeypatch.setattr(library_panel, "PostgreSQLKnowledgeBase", FakeLibrary)
     monkeypatch.setattr(filedialog, "askdirectory", lambda **kw: str(tmp_path))
     monkeypatch.setattr(catalog, "list_offline_materials",
-                        lambda path: [catalog.OfflineMaterial("wiki.zim", "ZIM local", 12)])
+                        lambda path: [
+                            catalog.OfflineMaterial("wiki.zim", "ZIM local", 12),
+                            catalog.OfflineMaterial("curso.pdf", "Documento", 14),
+                        ])
     root = tk.Tk()
     root.withdraw()
     try:
@@ -107,5 +110,9 @@ def test_offline_catalog_button_does_not_use_database_for_catalog(monkeypatch, t
         actions = {w.cget("text"): w for w in widgets(panel, ttk.Button)}
         actions["Catálogo offline"].invoke()
         until(root, lambda: "wiki.zim" in widgets(panel, tk.Text)[0].get("1.0", "end"))
+        rendered = widgets(panel, tk.Text)[0].get("1.0", "end")
+        assert "wiki.zim" in rendered and "curso.pdf" in rendered
+        assert "\\n" not in rendered  # literal slash+n must never be displayed
+        assert "\n" in rendered
     finally:
         root.destroy()
