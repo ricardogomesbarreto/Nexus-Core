@@ -63,6 +63,8 @@ def test_level_aware_tutor_requires_explicit_click_and_sources(monkeypatch):
         buttons = {x.cget("text"): x for x in find_all(win, ttk.Button)}
         buttons["Tutor guiado por fontes"].invoke()
         await_ready(lambda: len(calls) == 1)
+        await_ready(lambda: "3 etapas sobre algoritmos" in
+                    find_all(win, tk.Text)[0].get("1.0", "end"))
         assert "técnico" in calls[0][0]
         assert calls[0][1] == [hit]
         assert calls[0][2] is app.model_router
