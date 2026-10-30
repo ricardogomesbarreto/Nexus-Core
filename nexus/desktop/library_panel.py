@@ -94,7 +94,7 @@ def open_library(root, app):
                     hits = store.search(topic, 3, for_context=True)
                     result = answer_from_hits(prompt, hits,
                                               app.model_router if hits else None)
-                elif operation in ("answer", "summary", "study_plan", "tutor"):
+                elif operation in ("answer", "summary", "study_plan"):
                     hits = store.search(value, 3, for_context=True)
                     prompt = value
                     if operation == "summary":
