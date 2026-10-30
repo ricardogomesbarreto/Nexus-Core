@@ -7,7 +7,7 @@ from nexus.config.settings import settings
 from nexus.study.store import PostgreSQLStudyCards, StudyError
 
 
-def open_study(root, source_hit=None, *, voice="Feminina"):
+def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100):
     import tkinter as tk
     from tkinter import messagebox, ttk
 
@@ -226,8 +226,12 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
 
         def worker():
             try:
+                options = {"cancelled": speech_cancel.is_set}
+                if speed != 1.0 or volume != 100:
+                    options["speed"] = speed
+                    options["volume"] = volume
                 speaker.speak(excerpt[:LocalSpeaker.MAX_SPEECH], selected_voice,
-                              cancelled=speech_cancel.is_set)
+                              **options)
                 speech_messages.put(None)
             except Exception:
                 speech_messages.put("Leitura de voz indisponível. Confira Piper/RHVoice/eSpeak.")
