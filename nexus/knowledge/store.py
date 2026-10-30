@@ -302,6 +302,28 @@ class PostgreSQLKnowledgeBase:
 
         return self._transaction(action)
 
+    def recent_chunks(self, limit: int = 8) -> list[KnowledgeHit]:
+        """Amostra limitada de trechos recentes para pesquisa semântica opt-in.
+
+        Não percorre todo o corpus nem inicia modelos. Resultados são dados
+        textuais já autorizados na Biblioteca, por ordem de documento recente.
+        """
+        if type(limit) is not int or not 1 <= limit <= 8:
+            raise KnowledgeValidationError("Limite de amostra semântica inválido.")
+
+        def action(cursor):
+            cursor.execute("""
+                SELECT d.id, c.id, d.name, c.ordinal, c.body
+                FROM nexus_knowledge_chunks c
+                JOIN nexus_knowledge_documents d ON d.id = c.document_id
+                ORDER BY d.id DESC, c.ordinal ASC LIMIT %s
+            """, (limit,))
+            rows = cursor.fetchall()
+            self._audit(cursor, "CONTEXT", count=len(rows))
+            return [KnowledgeHit(int(r[0]), int(r[1]), r[2], int(r[3]), r[4])
+                    for r in rows]
+        return self._transaction(action)
+
     def delete(self, document_id: int) -> bool:
         identifier = self._positive_id(document_id)
 
