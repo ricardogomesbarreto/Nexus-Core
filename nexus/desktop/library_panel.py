@@ -55,6 +55,11 @@ def open_library(root, app):
         def worker():
             store = None
             try:
+                if operation == "zim_article":
+                    from nexus.knowledge.zim_article import LocalZimReader
+                    result = LocalZimReader().read(*value)
+                    queue.put((operation, result, None, None))
+                    return
                 if operation == "catalog":
                     from nexus.knowledge.offline_catalog import list_offline_materials
                     result = list_offline_materials(value)
@@ -136,6 +141,31 @@ def open_library(root, app):
         ):
             work("delete", document_ids[positions[0]])
 
+    def read_zim_article():
+        if busy:
+            return
+        from tkinter import simpledialog
+        archive = filedialog.askopenfilename(
+            parent=window, title="Selecionar enciclopédia ZIM",
+            filetypes=(("Arquivo ZIM", "*.zim"),),
+        )
+        if not archive:
+            return
+        url = simpledialog.askstring(
+            "Nexus Core — artigo ZIM",
+            "Informe o caminho/URL do artigo dentro do ZIM (ex.: Wikipedia.html):",
+            parent=window,
+        )
+        if not url:
+            return
+        if messagebox.askyesno(
+            "Nexus Core — enciclopédia offline",
+            "Ler somente este artigo do ZIM selecionado usando zimdump local? "
+            "Nenhum servidor será iniciado.",
+            parent=window,
+        ):
+            work("zim_article", (archive, url.strip()))
+
     def browse_offline_catalog():
         if busy:
             return
@@ -198,6 +228,7 @@ def open_library(root, app):
                           ("Revisar cartões", practice),
                           ("Transcrever WAV local", transcribe_audio),
                           ("Catálogo offline", browse_offline_catalog),
+                          ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
                           ("Plano de estudo com IA local", study_plan))):
         ttk.Button(controls, text=label, command=action,
@@ -214,6 +245,16 @@ def open_library(root, app):
             window.after(80, poll)
             return
         busy = False
+        if operation == "zim_article":
+            source_hits = []
+            display.configure(state="normal")
+            display.delete("1.0", "end")
+            display.insert("1.0", result if not error else
+                           "Não foi possível ler o artigo. Confira o ZIM e zim-tools.")
+            display.configure(state="disabled")
+            status.configure(text="Artigo consultado localmente, sem salvar." if not error else error)
+            window.after(80, poll)
+            return
         if operation == "catalog":
             source_hits = []
             lines = ([f"{m.filename} · {m.category} · {m.bytes} bytes" for m in result]
