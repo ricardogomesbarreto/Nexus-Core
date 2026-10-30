@@ -52,6 +52,8 @@ def test_course_search_only_after_explicit_button(monkeypatch, tmp_path):
         panel = ui.open_course(root, course)
         actions = {w.cget("text"): w for w in _widgets(panel, ttk.Button)}
         assert calls == []
+        assert sum(w.cget("text") == "Pesquisar no curso"
+                   for w in _widgets(panel, ttk.Button)) == 1
         actions["Pesquisar no curso"].invoke()
         _until(root, lambda: "converte energia" in
                _widgets(panel, tk.Text)[0].get("1.0", "end"))
