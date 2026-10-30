@@ -105,3 +105,59 @@ def test_library_course_button_loads_metadata_without_database(monkeypatch, tmp_
         assert seen == [str(tmp_path), prepared]
     finally:
         root.destroy()
+
+
+def test_course_progress_is_only_saved_or_loaded_on_click(monkeypatch, tmp_path):
+    import tkinter as tk
+    from tkinter import messagebox, ttk
+    from nexus.desktop import course_panel
+    import nexus.study.offline_course_progress as progress_module
+    from nexus.study.offline_course import OfflineCourse, CourseLesson
+
+    value = OfflineCourse(tmp_path, "Curso demonstrativo", (
+        CourseLesson("Aula principal", "a.md"),
+    ))
+    state = {"saved": None, "writes": 0, "loads": 0}
+
+    class FakeProgress:
+        def __init__(self, settings): pass
+        def save(self, course, completed):
+            assert course is value
+            state["saved"] = set(completed)
+            state["writes"] += 1
+            return len(completed)
+        def load(self, course):
+            assert course is value
+            state["loads"] += 1
+            return set(state["saved"] or ())
+
+    monkeypatch.setattr(progress_module, "PostgreSQLOfflineCourseProgress", FakeProgress)
+    monkeypatch.setattr(course_panel, "read_lesson", lambda c, i:
+                        "A fotossíntese transforma energia luminosa em energia química.")
+    monkeypatch.setattr(messagebox, "askyesno", lambda *a, **kw: True)
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        panel = course_panel.open_course(root, value)
+        actions = {w.cget("text"): w for w in find_all(panel, ttk.Button)}
+        listing = find_all(panel, tk.Listbox)[0]
+        assert state == {"saved": None, "writes": 0, "loads": 0}
+        actions["Ler aula"].invoke()
+        actions["Concluir aula"].invoke()
+        assert "✓" in listing.get(0)
+        assert state["writes"] == 0
+        actions["Salvar progresso"].invoke()
+        eventually(root, lambda: state["writes"] == 1)
+        assert state["saved"] == {0}
+        panel.destroy()
+
+        new_panel = course_panel.open_course(root, value)
+        new_list = find_all(new_panel, tk.Listbox)[0]
+        new_actions = {w.cget("text"): w for w in find_all(new_panel, ttk.Button)}
+        assert "□" in new_list.get(0)
+        assert state["loads"] == 0
+        new_actions["Carregar progresso"].invoke()
+        eventually(root, lambda: "✓" in new_list.get(0))
+        assert state["loads"] == 1
+    finally:
+        root.destroy()
