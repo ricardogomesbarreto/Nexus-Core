@@ -126,11 +126,20 @@ def test_fedora_postgres_start_uses_only_systemd_and_never_initdb(monkeypatch):
     monkeypatch.setattr(services, "record_started_service", lambda scope, unit: True)
     assert install_linux.ensure_postgresql_running_fedora() is True
     assert calls == [
-        ["pg_isready", "-q", "-h", "127.0.0.1"],
+        ["pg_isready", "-q", "-h", "127.0.0.1", "-p", "5432"],
         ["sudo", "systemctl", "start", "postgresql.service"],
         ["pg_isready", "-q", "-h", "127.0.0.1"],
     ]
     assert not any("initdb" in str(call) or "enable" in str(call) for call in calls)
+
+
+def test_fedora_rejects_bad_postgres_port_before_any_side_effect(monkeypatch):
+    monkeypatch.setattr(install_linux, "linux_profile", profile)
+    monkeypatch.setattr(install_linux, "installed", lambda _: True)
+    monkeypatch.setenv("NEXUS_DATABASE_PORT", "5432;sudo")
+    monkeypatch.setattr(install_linux, "_run",
+                        lambda *a, **kw: pytest.fail("Invalid port cannot probe or start"))
+    assert install_linux.ensure_postgresql_running_fedora() is False
 
 
 def test_fedora_postgres_may_not_start_after_refusal(monkeypatch):
