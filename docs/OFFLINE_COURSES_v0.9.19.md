@@ -19,7 +19,7 @@ Exemplo de course.json:
 }
 ~~~
 
-**Ler aula** abre apenas o arquivo escolhido. **Concluir aula** marca o item na memória. **Gerar exercícios** constrói lacunas literais do trecho lido, sem IA. **Responder exercício** confere a resposta literalmente (sem diferenças de caixa e espaços externos). **Próxima aula** não lê arquivos automaticamente.
+**Pesquisar no curso** busca texto e expressões em até vinte aulas autorizadas, sob solicitação, com tolerância a acentos/maiúsculas e até oito trechos retornados, sem criar índice persistente. A busca é literal normalizada, não semântica. **Ler aula** abre apenas o arquivo escolhido. **Concluir aula** marca o item na memória. **Gerar exercícios** constrói lacunas literais do trecho lido, sem IA. **Responder exercício** confere a resposta literalmente (sem diferenças de caixa e espaços externos). **Próxima aula** não lê arquivos automaticamente.
 
 **Sugerir próximo passo** usa somente a pontuação da sessão: com menos de cinco questões recomenda praticar; abaixo de 60% propõe revisão; de 60% até menos de 85% recomenda aplicação; a partir de 85% propõe desafios. É heurística, não avaliação semântica nem diagnóstico de aprendizagem. Na janela de cartões, o histórico PostgreSQL previamente autorizado também pode oferecer sugestão por fonte.
 
