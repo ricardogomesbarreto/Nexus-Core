@@ -181,6 +181,7 @@ class DesktopWindow:
         self._resource_budget = ResourceBudget.detect()
         self._speak_generation = 0
         self._speaking = False
+        self._voice_paused = False
         self._startup_welcome_generation = None
         self._closing = False
         self._permission_dialog: PermissionDialog | None = None
@@ -201,6 +202,7 @@ class DesktopWindow:
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
         resources.add_command(label="Medir CPU local…", command=lambda: open_benchmark(root))
         resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
+        resources.add_command(label="Pausar/retomar fala", command=self._toggle_pause_voice)
         menu.add_cascade(label="Recursos", menu=resources)
         root.configure(menu=menu)
         welcome_text, readiness_caption = desktop_startup_message(app)
@@ -1087,6 +1089,7 @@ class DesktopWindow:
         self._speak_generation += 1
         generation = self._speak_generation
         self._speaking = True
+        self._voice_paused = False
         self._speak_started = monotonic()
         live_event("fala", "iniciado")
         self._start_worker(self._speak, text, self.voice_choice.get(), generation)
@@ -1340,6 +1343,26 @@ class DesktopWindow:
             self.status.configure(text="Conversa contínua sem palavra de ativação")
         self._save_desktop_preferences()
 
+    def _toggle_pause_voice(self) -> None:
+        """Pause/resume only the assistant's own TTS process on Linux."""
+        if not self._speaking:
+            self.status.configure(text="Nenhuma fala ativa para pausar.")
+            return
+        if self._voice_paused:
+            result = getattr(self.speaker, "resume", lambda: False)()
+            if result:
+                self._voice_paused = False
+                self.status.configure(text="Fala retomada.")
+            else:
+                self.status.configure(text="Não foi possível retomar a fala.")
+        else:
+            result = getattr(self.speaker, "pause", lambda: False)()
+            if result:
+                self._voice_paused = True
+                self.status.configure(text="Fala pausada. Use Recursos para retomar.")
+            else:
+                self.status.configure(text="Não foi possível pausar a fala agora.")
+
     def _stop_speaking(self) -> None:
         """Invalidate a superseded TTS worker before its completion event."""
         if self._test_voice_speech_generation == self._speak_generation:
@@ -1347,6 +1370,7 @@ class DesktopWindow:
             live_event("teste", "falhou", source="voz")
         self._speak_generation += 1
         self._speaking = False
+        self._voice_paused = False
         self.speaker.stop()
 
     def _toggle_speech(self) -> None:
