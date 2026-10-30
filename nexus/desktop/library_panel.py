@@ -66,7 +66,34 @@ def open_library(root, app):
         def worker():
             store = None
             try:
-                if operation == "course":
+                if operation == "kolibri_export":
+                    from nexus.knowledge.kolibri_export import inspect_kolibri_export
+                    result = inspect_kolibri_export(value)
+                    queue.put((operation, result, None, None))
+                    return
+                if operation == "kolibri_export":
+            source_hits = []
+            if error:
+                status.configure(text="Exportação Kolibri indisponível ou protegida.")
+            else:
+                lines = [
+                    f"Canal {item.channel_id} · banco {item.database_bytes} bytes"
+                    for item in result.channels
+                ]
+                header = (
+                    f"Exportação Kolibri: {len(result.channels)} canais. "
+                    f"Diretório de recursos: {'encontrado' if result.has_content_storage else 'ausente'}."
+                )
+                display.configure(state="normal")
+                display.delete("1.0", "end")
+                display.insert("1.0", header + "\n\n" +
+                               ("\n".join(lines) if lines else
+                                "Nenhum banco de canal identificável."))
+                display.configure(state="disabled")
+                status.configure(text="Inspeção somente de metadados; nenhum canal importado.")
+            window.after(80, poll)
+            return
+        if operation == "course":
                     from nexus.study.offline_course import load_course
                     result = load_course(value)
                     queue.put((operation, result, None, None))
@@ -227,6 +254,24 @@ def open_library(root, app):
         ):
             work("zim_article", (archive, url.strip()))
 
+    def inspect_kolibri():
+        if busy:
+            status.configure(text="Aguarde a operação em andamento.")
+            return
+        directory = filedialog.askdirectory(
+            parent=window, title="Escolher KOLIBRI_DATA dentro do HOME",
+        )
+        if not directory:
+            return
+        if messagebox.askyesno(
+            "Nexus Core — exportação Kolibri",
+            "Examinar somente os nomes e tamanhos dos canais da pasta "
+            "KOLIBRI_DATA? Não serão lidos bancos SQLite, nem iniciados "
+            "serviços ou importações.",
+            parent=window,
+        ):
+            work("kolibri_export", directory)
+
     def open_offline_course():
         if busy:
             status.configure(text="Aguarde a operação em andamento.")
@@ -308,6 +353,7 @@ def open_library(root, app):
                           ("Transcrever áudio local", transcribe_audio),
                           ("Catálogo offline", browse_offline_catalog),
                           ("Abrir curso offline", open_offline_course),
+                          ("Inspecionar exportação Kolibri", inspect_kolibri),
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
                           ("Plano de estudo com IA local", study_plan),
