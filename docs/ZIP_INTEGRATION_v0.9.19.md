@@ -96,7 +96,7 @@ Ajustes de voz de **velocidade 75%, 100%, 125%** e **volume 50%, 75%,
 validadas e retrocompatíveis com JSON v1. eSpeak usa flags próprias;
 Piper/RHVoice geram WAV local e, apenas quando há ajustes, FFmpeg processa
 a velocidade/ganho antes da reprodução. A falta do FFmpeg gera erro claro,
-sem download automático. A pausa com retomada exata não foi implementada.
+sem download automático. Foi acrescentada pausa/retomada do processo local em Linux com SIGSTOP/SIGCONT; a precisão da retomada audível ainda exige teste físico.
 
 O catálogo ZIM agora pode ler um **artigo individual identificado pela URL**
 via `zimdump show`, sem iniciar `kiwix-serve`. A leitura usa descritor
