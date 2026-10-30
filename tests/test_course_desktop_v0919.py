@@ -86,7 +86,7 @@ def test_course_search_button_is_on_demand_and_displays_excerpts(monkeypatch, tm
         return [course_search.CourseSearchHit(0, "Biologia",
                                              "A fotossíntese utiliza luz.")]
 
-    monkeypatch.setattr(course_search, "search_course", fake_search)
+    monkeypatch.setattr(course_panel, "search_course", fake_search)
     root = tk.Tk()
     root.withdraw()
     try:
@@ -98,8 +98,9 @@ def test_course_search_button_is_on_demand_and_displays_excerpts(monkeypatch, tm
         entries[0].insert(0, "fotossintese")
         buttons = {x.cget("text"): x for x in find_all(panel, ttk.Button)}
         buttons["Pesquisar no curso"].invoke()
+        eventually(root, lambda: "fotossíntese" in
+                   find_all(panel, tk.Text)[0].get("1.0", "end"))
         assert calls == [(course, "fotossintese", 8)]
-        assert "fotossíntese" in find_all(panel, tk.Text)[0].get("1.0", "end")
     finally:
         root.destroy()
 
