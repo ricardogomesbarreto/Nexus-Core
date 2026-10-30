@@ -324,6 +324,64 @@ class PostgreSQLKnowledgeBase:
                     for r in rows]
         return self._transaction(action)
 
+    def semantic_candidates(self, query: str, limit: int = 8) -> list[KnowledgeHit]:
+        """Sample bounded sources for opt-in embedding comparisons.
+
+        Blend up to four lexical hits across the PostgreSQL FTS index with
+        representatives of distinct recently imported documents. No vectors,
+        models, network or full-corpus scan; never exceeds eight excerpts.
+        """
+        term = self._valid_query(query)
+        if type(limit) is not int or not 1 <= limit <= 8:
+            raise KnowledgeValidationError("Limite de candidatos semânticos inválido.")
+        escaped = term.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        pattern = "%" + escaped + "%"
+        select = (
+            "SELECT d.id, c.id, d.name, c.ordinal, c.body "
+            "FROM nexus_knowledge_chunks c JOIN nexus_knowledge_documents d "
+            "ON d.id = c.document_id "
+        )
+
+        def action(cursor):
+            cursor.execute(
+                select +
+                "WHERE to_tsvector('simple', c.body) @@ plainto_tsquery('simple', %s) "
+                "OR c.body ILIKE %s ESCAPE '!' "
+                "ORDER BY ts_rank(to_tsvector('simple', c.body), "
+                "plainto_tsquery('simple', %s)) DESC, d.id DESC, c.ordinal ASC "
+                "LIMIT %s",
+                (term, pattern, term, min(4, limit)),
+            )
+            selected = []
+            seen = set()
+
+            def append(rows):
+                for row in rows:
+                    chunk_id = int(row[1])
+                    if chunk_id not in seen and len(selected) < limit:
+                        selected.append(KnowledgeHit(
+                            int(row[0]), chunk_id, row[2], int(row[3]), row[4],
+                        ))
+                        seen.add(chunk_id)
+
+            append(cursor.fetchall())
+            if len(selected) < limit:
+                # One early chunk from each recently imported document.
+                cursor.execute(
+                    select + "WHERE c.ordinal = 0 ORDER BY d.id DESC LIMIT 16"
+                )
+                append(cursor.fetchall())
+            if len(selected) < limit:
+                # Fill remaining slots from recent excerpts if corpus is tiny.
+                cursor.execute(
+                    select + "ORDER BY d.id DESC, c.ordinal ASC LIMIT 16"
+                )
+                append(cursor.fetchall())
+            self._audit(cursor, "CONTEXT", count=len(selected))
+            return selected
+
+        return self._transaction(action)
+
     def delete(self, document_id: int) -> bool:
         identifier = self._positive_id(document_id)
 
