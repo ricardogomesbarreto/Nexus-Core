@@ -51,7 +51,7 @@ carregam modelo. O conteúdo é gerado e exige conferência humana.
 
 ## Itens ainda não integrados dos 38 recursos desejados
 
-**VoiceStudio**: painel de velocidade/volume, pausa/retomada em ponto exato,
+**VoiceStudio**: ajustes adicionais de áudio e pausa/retomada em ponto exato,
 processamento avançado de áudio, ASR em outros formatos, melhorias físicas de
 latência e testes contínuos de microfone. Voz masc./fem., fala, Vosk, controle
 de interrupção e conversação contínua têm implementação preexistente, mas
@@ -92,7 +92,7 @@ python -m pytest -q tests/test_offline_study.py tests/test_study_session.py \
 ## Ampliação da etapa seguinte
 
 Ajustes de voz de **velocidade 75%, 100%, 125%** e **volume 50%, 75%,
-100%, 125%, 150%** estão no painel principal. São preferências locais,
+100%, 125%, 150%** estão em **Recursos → Configurar voz local**. São preferências locais,
 validadas e retrocompatíveis com JSON v1. eSpeak usa flags próprias;
 Piper/RHVoice geram WAV local e, apenas quando há ajustes, FFmpeg processa
 a velocidade/ganho antes da reprodução. A falta do FFmpeg gera erro claro,
@@ -122,7 +122,9 @@ recuperados do PostgreSQL e exibe até cinco resultados com pontuação de cosse
 O modelo precisa ser indicado explicitamente pelo usuário, estar instalado e
 ter tamanho informado de até 900 MiB. As entradas e respostas são limitadas,
 o parâmetro `keep_alive: 0` solicita descarregar o modelo. Nenhum embedding
-fica salvo no disco. **Essa é uma amostra semântica limitada**, não indexação
+fica salvo no disco. Antes de carregar o modelo, é verificada a memória
+realmente disponível; sem margem suficiente a operação é recusada.
+**Essa é uma amostra semântica limitada**, não indexação
 semântica global de todos os documentos. O modo anterior FTS segue disponível.
 
 A configuração de velocidade e volume foi deslocada para **Recursos →
