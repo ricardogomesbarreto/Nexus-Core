@@ -19,6 +19,26 @@
 
 ## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
 
+## Estabilização de recursos e compatibilidade Linux — v0.9.19 (Draft)
+
+A nova adaptação de desempenho considera a RAM realmente disponível ao
+processo, incluindo cgroups v1/v2 e limites hierárquicos do systemd/container,
+além de afinidade e quotas de CPU. Em até 4 GiB aplica parâmetros ultraleves
+de inferência; até 8 GiB utiliza eco e em máquinas maiores o modo automático
+pode utilizar equilibrado se houver memória livre. A interface Tk diminui
+a frequência de verificações ociosas de 80 para 250 ms, preservando 80 ms
+durante atividades; o indicador de conectividade é consultado com limites.
+
+O diagnóstico `nexus-core --resource-check` informa o novo
+`effective_profile` (sem executar inferência e sem iniciar serviços).
+Veja os [limites por hardware, comandos e testes de aceite]
+(docs/LOW_RESOURCE_COMPATIBILITY_v0.9.19.md).
+**A compatibilidade alvo é Linux desktop; não é garantia de execução em
+qualquer hardware, Windows ou macOS.** Esta rodada é de estabilização,
+não de mudança visual, e não altera a licença, arquitetura local-first
+ou política de serviços sob demanda.
+
+
 **Em revisão; NÃO é release estável.** A branch de desenvolvimento acrescenta
 exercícios locais a partir de trechos autorizados, leitura de trechos em voz alta
 com interrupção e pausa/retomada do processo de fala local, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
