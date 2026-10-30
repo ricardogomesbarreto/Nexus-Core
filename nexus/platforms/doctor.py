@@ -84,7 +84,7 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
     ) if x in required]
     blockers = []
     if not profile.installer_supported:
-        blockers.append("linux_installer_prerequisites_not_met")
+        blockers.append("fedora_install_prerequisites_not_met" if profile.distro == "fedora" else "ubuntu_install_prerequisites_not_met")
     if known_missing:
         blockers.append("missing_desktop_packages")
     if pg["reachable"] is not True:
