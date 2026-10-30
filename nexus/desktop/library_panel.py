@@ -386,7 +386,7 @@ def open_library(root, app):
                 status.configure(text="Curso indisponível. Confira course.json e os arquivos TXT/MD.")
             else:
                 from nexus.desktop.course_panel import open_course
-                open_course(root, result)
+                open_course(root, result, **playback_profile())
                 status.configure(text=f"Curso local aberto: {len(result.lessons)} aulas.")
             window.after(80, poll)
             return
