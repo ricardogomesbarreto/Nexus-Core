@@ -77,8 +77,8 @@ def open_library(root, app):
                     queue.put((operation, result, None, None))
                     return
                 if operation == "transcribe":
-                    from nexus.voice.file_transcription import LocalWavTranscriber
-                    result = LocalWavTranscriber().transcribe(value)
+                    from nexus.voice.audio_transcription import LocalAudioTranscriber
+                    result = LocalAudioTranscriber().transcribe(value)
                     queue.put((operation, result, None, None))
                     return
                 store = PostgreSQLKnowledgeBase(settings)
@@ -234,12 +234,13 @@ def open_library(root, app):
         if busy:
             return
         path = filedialog.askopenfilename(
-            parent=window, title="Transcrever WAV local",
-            filetypes=(("Áudio WAV PCM", "*.wav"),),
+            parent=window, title="Transcrever áudio local",
+            filetypes=(("Áudio local", "*.wav *.mp3 *.ogg *.flac *.m4a"),),
         )
         if path and messagebox.askyesno(
             "Nexus Core — transcrição local",
-            "Transcrever este WAV localmente com Vosk? O áudio não será salvo na biblioteca.",
+            "Transcrever áudio com Vosk e FFmpeg locais, quando necessário? "
+            "O arquivo e o texto não serão salvos na biblioteca.",
             parent=window,
         ):
             work("transcribe", path)
@@ -282,7 +283,7 @@ def open_library(root, app):
                           ("Excluir selecionado", remove),
                           ("Criar cartão do 1º trecho", create_card),
                           ("Revisar cartões", practice),
-                          ("Transcrever WAV local", transcribe_audio),
+                          ("Transcrever áudio local", transcribe_audio),
                           ("Catálogo offline", browse_offline_catalog),
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
@@ -331,7 +332,7 @@ def open_library(root, app):
             display.configure(state="normal")
             display.delete("1.0", "end")
             display.insert("1.0", result if not error else
-                           "Transcrição indisponível. Confira o WAV e o modelo Vosk local.")
+                           "Transcrição indisponível. Confira o arquivo, FFmpeg e Vosk local.")
             display.configure(state="disabled")
             status.configure(text="Transcrição local concluída; não salva." if not error else error)
             window.after(80, poll)
