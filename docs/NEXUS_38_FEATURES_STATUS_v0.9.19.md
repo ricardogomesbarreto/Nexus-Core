@@ -31,7 +31,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Biblioteca de documentos | Existente | Importação opt-in TXT/MD |
 | 4 | Pesquisa em documentos | Existente | PostgreSQL FTS |
 | 5 | Pesquisa com IA | Existente | Perguntas sobre trechos via Ollama local |
-| 6 | Cursos offline | Parcial/novo | Catálogo de materiais de curso; execução Kolibri pendente |
+| 6 | Cursos offline | Novo/parcial | Cursos nativos com manifesto, aulas TXT/MD, exercícios e progresso PostgreSQL opt-in; execução Kolibri pendente |
 | 7 | Mapas offline | Parcial | Prévia PMTiles anterior |
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
@@ -46,8 +46,8 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | Nº | Requisito | Situação | Observações |
 |---|---|---|---|
 | 1 | Tutor com IA | Novo/parcial | Orientação por níveis no Ollama local e fontes; tutor adaptativo pendente |
-| 2 | Explicações personalizadas | Novo/parcial | Níveis Iniciante/Intermediário/Avançado por sessão; memória do perfil pendente |
-| 3 | Aprendizagem por etapas | Novo/parcial | Prompt orienta explicação em 3 etapas com fontes; progressão adaptativa pendente |
+| 2 | Explicações personalizadas | Novo/parcial | Níveis selecionados e sugestão heurística por acertos; perfil adaptativo automático pendente |
+| 3 | Aprendizagem por etapas | Novo/parcial | Tutor em 3 etapas e sequência de aulas de curso nativo; progressão adaptativa pendente |
 | 4 | Perguntas e respostas | Existente | Chat e pergunta aos documentos |
 | 5 | Análise de documentos | Existente | TXT/MD, contexto textual local |
 | 6 | Resumos educativos | Novo/parcial | Ação dedicada na Biblioteca com Ollama local e fonte; conferir resultado |
@@ -55,9 +55,9 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 8 | Correção de exercícios | Novo/parcial | Literal, sem análise semântica |
 | 9 | Resolução orientada | Parcial | Chat geral; passos pedagógicos específicos pendentes |
 | 10 | Planos de estudo | Novo/parcial | Roteiro textual com trechos no Ollama; sem plano persistente/adaptativo |
-| 11 | Acompanhamento de aprendizagem | Novo/parcial | Resultado opt-in PostgreSQL, sem domínio adaptativo |
+| 11 | Acompanhamento de aprendizagem | Novo/parcial | Resultado de exercícios e conclusão de cursos por opt-in PostgreSQL; sugestão indicativa, sem domínio adaptativo |
 | 12 | Conversação educacional | Novo/parcial | Ação guiada da Biblioteca; modo tutor contínuo pendente |
-| 13 | Revisão de conteúdos | Existente/novo | Cartões e histórico de sessões |
+| 13 | Revisão de conteúdos | Existente/novo | Cartões, histórico e exercícios por aula em cursos nativos |
 | 14 | Aprendizagem multimodal | Parcial | Recursos gerais de imagem/voz; tutor integrado pendente |
 
 ## Regras transversais
