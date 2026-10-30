@@ -283,6 +283,19 @@ def prepare_local_models() -> bool:
     from time import monotonic, sleep
 
     binary = shutil.which("ollama")
+    if binary is None and linux_profile().distro == "fedora":
+        if installed("dnf") and installed("sudo") and confirm(
+            "Instalar Ollama dos repositórios oficiais Fedora via dnf (sem iniciar serviço)?"
+        ):
+            try:
+                _run(["sudo", "dnf", "install", "-y", "ollama"], timeout=600)
+                binary = shutil.which("ollama")
+            except (OSError, subprocess.SubprocessError):
+                print("Ollama não pôde ser instalado com dnf.")
+        if binary is None:
+            print("Instale Ollama pelos pacotes Fedora e repita a configuração "
+                  "para evitar downloads alternativos não verificados.")
+            return False
     managed = settings.data_dir / "runtime" / "ollama" / "bin" / "ollama"
     if binary is None and managed.is_file() and not managed.is_symlink():
         binary = str(managed)
@@ -306,12 +319,17 @@ def prepare_local_models() -> bool:
             print("systemd de usuário indisponível; instale/inicie Ollama e tente novamente.")
             return False
         if not installed("zstd"):
-            if not installed("sudo") or not confirm("Instalar zstd pelos pacotes Ubuntu?"):
+            if not installed("sudo") or not confirm(
+                "Instalar zstd pelo gerenciador nativo desta distribuição?"
+            ):
                 print("zstd é necessário para descompactar o pacote oficial Ollama.")
                 return False
             try:
-                _run(["sudo", "apt-get", "update"], timeout=300)
-                _run(["sudo", "apt-get", "install", "-y", "zstd"], timeout=600)
+                if linux_profile().distro == "fedora":
+                    _run(["sudo", "dnf", "install", "-y", "zstd"], timeout=600)
+                else:
+                    _run(["sudo", "apt-get", "update"], timeout=300)
+                    _run(["sudo", "apt-get", "install", "-y", "zstd"], timeout=600)
             except (OSError, subprocess.SubprocessError):
                 print("Não foi possível instalar zstd.")
                 return False
@@ -444,6 +462,13 @@ def prepare_neural_voice(home: Path) -> bool:
 def prepare_female_voice() -> bool:
     """Install Ubuntu's open RHVoice Leticia voice when explicitly selected."""
     from nexus.voice.local import LocalSpeaker
+    if linux_profile().distro == "fedora":
+        if LocalSpeaker.female_voice_ready():
+            print("Voz RHVoice Letícia disponível no Fedora.")
+            return True
+        print("RHVoice Letícia opcional: não instalar pacotes Ubuntu no Fedora; "
+              "eSpeak NG PT-BR permanece disponível.")
+        return False
     if LocalSpeaker.female_voice_ready():
         print("Voz feminina RHVoice Letícia já instalada.")
         return True
@@ -756,7 +781,7 @@ def write_recovery_launcher(home: Path) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu Desktop")
+    parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu/Fedora Desktop")
     parser.add_argument("--check", action="store_true",
                         help="mostra diagnóstico somente leitura, em qualquer distribuição")
     args = parser.parse_args(argv)
@@ -774,12 +799,21 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     profile = linux_profile()
     if not profile.installer_supported:
-        print("Instalação requer Ubuntu reconhecido e Python 3.12+; "
-              "em outras distribuições use --check. Nada foi instalado.", file=sys.stderr)
+        print("Instalação requer Ubuntu reconhecido ou Fedora 43–45 com "
+              "Python 3.12+; em outras distribuições use --check. "
+              "Nada foi instalado.", file=sys.stderr)
         return 2
-    print(f"NEXUS CORE — instalação guiada para Ubuntu {profile.release}.")
+    print(f"NEXUS CORE — instalação guiada para {profile.distro} {profile.release}.")
     if not install_system_packages():
-        print("Instalação interrompida: requisitos do Ubuntu ainda ausentes.", file=sys.stderr)
+        print("Instalação interrompida: requisitos da distribuição ainda ausentes.", file=sys.stderr)
+        return 2
+    # Initialize Fedora's PostgreSQL cluster explicitly if it does not
+    # exist, outside this installer; never run a destructive initdb here.
+    if not ensure_postgresql_running_for_install():
+        print("Instalação adiada: PostgreSQL local não está pronto. "
+              "No Fedora novo, inicialize uma única vez com "
+              "sudo postgresql-setup --initdb, após conferir os dados existentes.",
+              file=sys.stderr)
         return 2
     if not provision_postgresql():
         print("Instalação interrompida: configure credenciais PostgreSQL locais "
@@ -788,11 +822,7 @@ def main(argv: list[str] | None = None) -> int:
     # The user's PostgreSQL cluster may be stopped deliberately to conserve
     # RAM. Check it BEFORE downloading or preparing large local models.
     # Starting the cluster is explicit; no unit is enabled at boot.
-    if not ensure_postgresql_running_for_install():
-        print("Instalação adiada: PostgreSQL local precisa estar ativo para "
-              "validar as credenciais; o ambiente anterior foi preservado.",
-              file=sys.stderr)
-        return 2
+
     if not prepare_local_models():
         print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
               file=sys.stderr)
@@ -819,7 +849,8 @@ def main(argv: list[str] | None = None) -> int:
     print("Executar: ~/.local/bin/nexus-core")
     print("PostgreSQL: login local somente leitura confirmado antes da ativação.")
     print("Diagnóstico adicional: ~/.local/bin/nexus-core --ubuntu-preflight "
-          "(sem teste físico de áudio, câmera ou inferência).")
+          "(preflight local compatível com Linux; sem teste físico de áudio, "
+          "câmera ou inferência).")
     print("Atualizações automáticas: " + ("ativadas" if enabled else "desativadas"))
     print("Ollama e modelo de conversa encontrados; inferência real depende do teste local.")
     if not installed("docker"):
