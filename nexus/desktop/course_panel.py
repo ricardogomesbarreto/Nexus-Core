@@ -34,6 +34,11 @@ def open_course(root, course: OfflineCourse):
     listing = tk.Listbox(panel, height=5, exportselection=False,
                          bg="#ffffff", fg="#382631", selectbackground="#722F37")
     listing.pack(fill="x")
+    search_row = ttk.Frame(panel, style="Nexus.App.TFrame")
+    search_row.pack(fill="x", pady=(5, 0))
+    search_entry = ttk.Entry(search_row)
+    search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+    search_entry.insert(0, "Buscar nas aulas (2–120 caracteres)")
     reading = ttk.Frame(panel, style="Nexus.App.TFrame")
     reading.pack(fill="both", expand=True, pady=(7, 0))
     display = tk.Text(reading, height=10, wrap="word", state="disabled",
@@ -168,6 +173,27 @@ def open_course(root, course: OfflineCourse):
         show(message)
         status.configure(text=f"Exercícios respondidos: {done}/{len(session.questions)}.")
 
+    def search_lessons():
+        query = search_entry.get().strip()
+        if not 2 <= len(query) <= 120 or query == "Buscar nas aulas (2–120 caracteres)":
+            status.configure(text="Informe um termo com 2 a 120 caracteres.")
+            return
+        status.configure(text="Pesquisando aulas locais de forma limitada…")
+        from nexus.study.course_search import search_course
+        try:
+            matches = search_course(course, query, limit=8)
+        except CourseError:
+            status.configure(text="Pesquisa indisponível; confira os arquivos autorizados.")
+            return
+        if matches:
+            show("\n\n".join(
+                f"Aula {match.lesson_index + 1} — {match.lesson_title}\n{match.excerpt}"
+                for match in matches
+            ))
+        else:
+            show("Nenhuma aula contém a expressão consultada.")
+        status.configure(text=f"{len(matches)} resultados, sem salvar índice ou conteúdo.")
+
     def suggest_step():
         advice = recommend_study_step(recent_scores)
         show(f"Recomendação indicativa: {advice.level}\n"
@@ -234,6 +260,10 @@ def open_course(root, course: OfflineCourse):
             status.configure(text=f"{result} aulas registradas no PostgreSQL local.")
         window.after(100, poll_progress)
 
+    ttk.Button(
+        search_row, text="Pesquisar no curso", command=search_lessons,
+        style="Nexus.TButton",
+    ).pack(side="right")
     buttons = (
         ("Ler aula", read_selected), ("Concluir aula", mark_completed),
         ("Próxima aula", next_lesson), ("Gerar exercícios", start_exercises),
