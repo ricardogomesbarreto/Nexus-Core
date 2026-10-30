@@ -200,6 +200,7 @@ class DesktopWindow:
         resources.add_command(label="Mapas locais…", command=lambda: open_maps(root))
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
         resources.add_command(label="Medir CPU local…", command=lambda: open_benchmark(root))
+        resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
         menu.add_cascade(label="Recursos", menu=resources)
         root.configure(menu=menu)
         welcome_text, readiness_caption = desktop_startup_message(app)
@@ -391,32 +392,18 @@ class DesktopWindow:
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
         self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
-        # Separate compact controls avoid widening the existing voice toolbar.
-        voice_profile = ttk.Frame(footer, style="Nexus.App.TFrame")
-        voice_profile.pack(fill="x", pady=(2, 0))
-        ttk.Label(voice_profile, text="Velocidade:", style="Nexus.Caption.TLabel").pack(
-            side="left", padx=(0, 5))
-        self.voice_speed_choice = ttk.Combobox(
-            voice_profile, values=("75%", "100%", "125%"), state="readonly", width=6,
+        # Settings live in a small on-demand dialog. Keeping them outside the
+        # fixed-height footer preserves the conversation area at 770x570.
+        self._speech_speed_percent = (
+            self._saved_preferences.voice_speed_percent
+            if self._saved_preferences is not None else 100
         )
-        saved_speed = (self._saved_preferences.voice_speed_percent
-                       if self._saved_preferences is not None else 100)
-        self.voice_speed_choice.set(f"{saved_speed}%")
-        self.voice_speed_choice.pack(side="left")
-        ttk.Label(voice_profile, text="Volume:", style="Nexus.Caption.TLabel").pack(
-            side="left", padx=(12, 5))
-        self.voice_volume_choice = ttk.Combobox(
-            voice_profile, values=("50%", "75%", "100%", "125%", "150%"),
-            state="readonly", width=6,
+        self._speech_volume_percent = (
+            self._saved_preferences.voice_volume_percent
+            if self._saved_preferences is not None else 100
         )
-        saved_volume = (self._saved_preferences.voice_volume_percent
-                        if self._saved_preferences is not None else 100)
-        self.voice_volume_choice.set(f"{saved_volume}%")
-        self.voice_volume_choice.pack(side="left")
-        self._speech_speed_percent = saved_speed
-        self._speech_volume_percent = saved_volume
-        self.voice_speed_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
-        self.voice_volume_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        self.voice_speed_choice = None
+        self.voice_volume_choice = None
         ttk.Label(voice_controls, text="Entrada:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
@@ -683,6 +670,43 @@ class DesktopWindow:
         self.status.configure(text=f"Prévia da voz {voice.lower()} no dispositivo local.")
         if not self._say_response(f"Olá. Sou o Nexus Core. Esta é a voz {voice.lower()}."):
             self._start_listening()
+
+    def _open_voice_profile(self) -> None:
+        """Voice preferences on demand: no extra fixed row at 770x570."""
+        from tkinter import ttk
+        dialog = self._voice_profile_dialog if hasattr(self, "_voice_profile_dialog") else None
+        if dialog is not None and dialog.winfo_exists():
+            dialog.lift()
+            return
+        import tkinter as tk
+        dialog = tk.Toplevel(self.root)
+        self._voice_profile_dialog = dialog
+        dialog.title("Nexus Core — Configurar voz local")
+        dialog.geometry("390x190")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        frame = ttk.Frame(dialog, padding=16, style="Nexus.App.TFrame")
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="Velocidade da fala",
+                  style="Nexus.Section.TLabel").grid(row=0, column=0, sticky="w")
+        self.voice_speed_choice = ttk.Combobox(
+            frame, values=("75%", "100%", "125%"), state="readonly", width=8,
+        )
+        self.voice_speed_choice.set(f"{self._speech_speed_percent}%")
+        self.voice_speed_choice.grid(row=0, column=1, sticky="w", padx=12, pady=5)
+        ttk.Label(frame, text="Volume da voz",
+                  style="Nexus.Section.TLabel").grid(row=1, column=0, sticky="w")
+        self.voice_volume_choice = ttk.Combobox(
+            frame, values=("50%", "75%", "100%", "125%", "150%"),
+            state="readonly", width=8,
+        )
+        self.voice_volume_choice.set(f"{self._speech_volume_percent}%")
+        self.voice_volume_choice.grid(row=1, column=1, sticky="w", padx=12, pady=5)
+        self.voice_speed_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        self.voice_volume_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        ttk.Button(frame, text="Concluir", command=dialog.destroy,
+                   style="Nexus.TButton").grid(row=2, column=1, pady=(18, 0))
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
 
     def _select_voice_profile(self, event=None) -> None:
         """Apply numeric UI choices on Tk thread; store only allowlisted values."""
