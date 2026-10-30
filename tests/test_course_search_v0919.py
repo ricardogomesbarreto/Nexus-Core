@@ -42,7 +42,7 @@ def test_search_by_phrase_case_and_accent(tmp_path):
     matches = search_course(course, "FOTOSSINTESE", paths=guard)
     assert len(matches) == 1
     assert matches[0] == CourseSearchHit(
-        0, "Sol", "# Sol A fotossíntese utiliza a energia solar para produzir açúcares."
+        0, "Sol", "A fotossíntese utiliza a energia solar para produzir açúcares."
     )
     solar = search_course(course, "energia solar", paths=guard)
     assert [x.lesson_index for x in solar] == [0, 2]
