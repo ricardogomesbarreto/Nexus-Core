@@ -173,7 +173,7 @@ class LocalSpeaker(_StoppableProcess):
             self._speak_natural(text, cancelled, voice=voice, speed=speed, volume=volume)
             return
         if voice == "Feminina" and self.female_voice_ready():
-            self._speak_natural(text, cancelled, voice=voice)
+            self._speak_natural(text, cancelled, voice=voice, speed=speed, volume=volume)
             return
         binary = shutil.which("espeak-ng")
         if binary is None:
