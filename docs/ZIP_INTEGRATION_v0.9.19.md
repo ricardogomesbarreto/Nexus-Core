@@ -175,3 +175,22 @@ atividades/arquivos nem inicia Kolibri, Docker, portas, downloads ou importaçõ
 O limite é de 60 bancos de canais em até 300 entradas de diretório, com
 proteção contra links simbólicos. A leitura/conversão integral de cursos
 Kolibri permanece pendente. [Instruções e limitações](KOLIBRI_EXPORT_v0.9.19.md).
+
+## Pesquisa e narração de aulas offline sob demanda
+
+O leitor de cursos nativos agora oferece **Pesquisar no curso**, com busca
+textual normalizada (maiúsculas/acentos), limitada ao manifesto autorizado,
+no máximo vinte arquivos TXT/Markdown e oito excertos retornados. Não cria
+índice local persistente, não acessa rede nem utiliza Ollama.
+
+A janela oferece **Ouvir aula**, **Pausar/retomar áudio** e **Parar áudio**.
+O usuário precisa primeiro selecionar e ler uma aula; a narração cobre até
+2.400 caracteres por clique, usando voz masculina/feminina e velocidade/volume
+selecionados no NEXUS CORE. Apenas processos TTS de propriedade do assistente
+podem ser pausados/retomados; trocar de aula ou fechar a janela encerra a fala.
+Não há leitura de arquivos em segundo plano nem download de vozes.
+
+Testes específicos:
+`tests/test_course_search_v0919.py` e
+`tests/test_course_voice_search_desktop_v0919.py` (Tk/Xvfb simulado).
+Aceite físico de áudio/latência no Ubuntu segue obrigatório.
