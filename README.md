@@ -10,12 +10,39 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.17; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.17-722F37">
+  <img alt="Código v0.9.18; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.18-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## 0.9.18 — estudo local e prévia de voz
+
+Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão
+do 1º trecho**. O usuário escreve a pergunta e uma resposta que conste no
+trecho; confirma o salvamento e revisa em **Revisar cartões**. A resposta só
+aparece ao clicar **Mostrar resposta**; **Acertei** agenda a próxima revisão
+em 1, 3, 7 ou 14 dias e **Repetir** em 10 minutos. Excluir o documento remove
+os cartões vinculados. Tudo fica no PostgreSQL local, com limites de tamanho,
+sem carregar o Ollama nem importar arquivos automaticamente. É uma prática
+manual e verificável, sem promessa de geração autônoma de aulas ou avaliação
+pedagógica. A biblioteca e as notas locais continuam independentes.
+
+No painel **Testes locais**, **Voz: ouvir seleção atual** reproduz uma amostra
+curta da voz feminina ou masculina escolhida. Respeita a opção de resposta em
+voz, interrompe a escuta antes da reprodução e retoma após a fala; não grava
+o microfone. O mecanismo continua sendo o instalado localmente (RHVoice,
+Piper ou eSpeak NG como reserva), sem incorporar um estúdio pesado ao desktop.
+
+Os três anexos foram analisados como referências técnicas, sem copiar código,
+pacotes, modelos ou interfaces. O [inventário de adequação](docs/ZIP_INTEGRATION_v0.9.18.md)
+distingue essas funções dos recursos extensos ainda não integrados. Veja
+[notas da v0.9.18](docs/RELEASE_NOTES_v0.9.18.md) e
+[roteiro físico 0.9.18](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.18.md).
+
+**Publicação:** versão de código para validação; aceite físico no Ubuntu e CI
+do SHA final da `main` continuam exigidos antes de uma tag estável.
 
 ## 0.9.17 — uma janela ativa por sessão
 
@@ -2866,6 +2893,7 @@ rastreáveis no GitHub:
 | v0.9.15 | Proteção contra pressão de memória no perfil eco; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.15.md) |
 | v0.9.16 | Desligamento automático dos serviços iniciados pela sessão; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.16.md) |
 | v0.9.17 | Proteção contra duas janelas desligarem os serviços da sessão; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.17.md) |
+| v0.9.18 | Cartões de estudo locais vinculados à biblioteca e prévia da voz selecionada; sem tag estável; aceite físico pendente | [Notas](docs/RELEASE_NOTES_v0.9.18.md) |
 
 O histórico inicial v0.1.x–v0.3.x segue no roadmap detalhado abaixo.
 Consulte a página de [releases](https://github.com/ricardogomesbarreto/Nexus-Core/releases)
@@ -6594,6 +6622,7 @@ com seu aceite físico e marcos de desenvolvimento sujeitos aos resultados dos t
 | v0.9.15 | Limite de memória antes da inferência e imagens preparadas na resolução do perfil eco; resultados reais de RAM, swap e latência no notebook ainda pendentes. |
 | v0.9.16 | Encerramento dos serviços registrados quando a janela fecha; validar autenticação gráfica e preservação de instâncias preexistentes no Ubuntu. |
 | v0.9.17 | Uma janela por sessão; parada manual adiada enquanto ela estiver ativa; validar no Ubuntu Wayland. |
+| v0.9.18 | Prática de cartões com fonte explícita no PostgreSQL e prévia de voz sob comando; validar leitura, banco, áudio e desempenho no notebook. |
 
 A quantidade é uma **estimativa**, não um compromisso de terminar em v0.9.15:
 novas falhas podem exigir versões adicionais. “Fazer tudo no computador” não
@@ -6914,8 +6943,8 @@ devem ser consideradas separadamente.
 ```text
 ────────────────────────────────────────────────────────
 Project:               Nexus Core
-Code Version:          v0.9.17 (CODE IN MAIN; PHYSICAL ACCEPTANCE PENDING)
-Release Name:          Desktop Session Coordination
+Code Version:          v0.9.18 (CODE IN MAIN; PHYSICAL ACCEPTANCE PENDING)
+Release Name:          Local Study and Voice Preview
 Release Tag:          v0.9.12-rc.3 CANDIDATE; NO STABLE 0.9.X TAG
 Implementation:        LOCAL DESKTOP, VOICE, VISION, AUTHORIZED ACTIONS
 Release Validation:    GITHUB ACTIONS CI REQUIRED FOR PUBLICATION

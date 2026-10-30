@@ -71,7 +71,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"] + ["n"] * 6)
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"] + ["n"] * 8)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -85,6 +85,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     assert "[PENDENTE] Navegador padrão" in report
     assert "[PENDENTE] Serviços iniciados pelo Nexus" in report
     assert "[PENDENTE] PDF produzido" in report
+    assert "[PENDENTE] Cartões de estudo" in report
     assert "[RELATADO] Criar pasta autorizada" in report
     assert "[RELEASE] PENDENTE" in report
     for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK"):
@@ -103,7 +104,7 @@ def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monke
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 6)
+    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 8)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -143,7 +144,7 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 6)
+    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 8)
     prompts = []
     def ask(question):
         prompts.append(question)
