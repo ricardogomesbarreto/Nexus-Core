@@ -824,11 +824,12 @@ def main(argv: list[str] | None = None) -> int:
               "e tente novamente.", file=sys.stderr)
         return 2
     # Preserve the existing Ubuntu provisioning-first contract and tests.
-    if profile.distro == "ubuntu" and not ensure_postgresql_running_for_install():
-        print("Instalação adiada: PostgreSQL local precisa estar ativo para "
-              "validar as credenciais; o ambiente anterior foi preservado.",
-              file=sys.stderr)
-        return 2
+    if profile.distro == "ubuntu":
+        if not ensure_postgresql_running_for_install():
+            print("Instalação adiada: PostgreSQL local precisa estar ativo para "
+                  "validar as credenciais; o ambiente anterior foi preservado.",
+                  file=sys.stderr)
+            return 2
 
     if not prepare_local_models():
         print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
