@@ -50,11 +50,11 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Aprendizagem por etapas | Pendente | Sem percurso adaptativo |
 | 4 | Perguntas e respostas | Existente | Chat e pergunta aos documentos |
 | 5 | Análise de documentos | Existente | TXT/MD, contexto textual local |
-| 6 | Resumos educativos | Parcial | Ollama com trechos; fluxo dedicado pendente |
+| 6 | Resumos educativos | Novo/parcial | Ação dedicada na Biblioteca com Ollama local e fonte; conferir resultado |
 | 7 | Exercícios personalizados | Novo/parcial | Lacunas determinísticas a partir de fonte |
 | 8 | Correção de exercícios | Novo/parcial | Literal, sem análise semântica |
 | 9 | Resolução orientada | Parcial | Chat geral; passos pedagógicos específicos pendentes |
-| 10 | Planos de estudo | Pendente | Não gerados nesta versão |
+| 10 | Planos de estudo | Novo/parcial | Roteiro textual sob demanda no Ollama; sem plano persistente/adaptativo |
 | 11 | Acompanhamento de aprendizagem | Novo/parcial | Resultado opt-in PostgreSQL, sem domínio adaptativo |
 | 12 | Conversação educacional | Parcial | Chat local, sem modo tutor dedicado |
 | 13 | Revisão de conteúdos | Existente/novo | Cartões e histórico de sessões |
