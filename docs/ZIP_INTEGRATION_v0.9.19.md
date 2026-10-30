@@ -88,3 +88,25 @@ python -m pytest -q tests/test_offline_study.py tests/test_study_session.py \
   tests/test_voice_file_transcription_v0919.py \
   tests/test_offline_catalog_v0919.py tests/test_study_progress_v0919.py
 ```
+
+## Ampliação da etapa seguinte
+
+Ajustes de voz de **velocidade 75%, 100%, 125%** e **volume 50%, 75%,
+100%, 125%, 150%** estão no painel principal. São preferências locais,
+validadas e retrocompatíveis com JSON v1. eSpeak usa flags próprias;
+Piper/RHVoice geram WAV local e, apenas quando há ajustes, FFmpeg processa
+a velocidade/ganho antes da reprodução. A falta do FFmpeg gera erro claro,
+sem download automático. A pausa com retomada exata não foi implementada.
+
+O catálogo ZIM agora pode ler um **artigo individual identificado pela URL**
+via `zimdump show`, sem iniciar `kiwix-serve`. A leitura usa descritor
+autorizado, subprocesso sem shell, limites de tempo/saída e extração textual
+básica de HTML; exige `zim-tools` instalado opcionalmente. Não são
+implementados busca de texto integral no ZIM, exibição com imagens ou gestão
+de bibliotecas gigantes. Testar com ZIM real no Ubuntu é obrigatório.
+
+O botão **Tutor guiado por fontes** usa três níveis explícitos (Iniciante,
+Intermediário e Avançado). A pergunta é estruturada em até 160 caracteres
+e segue a implementação existente que utiliza somente até três fontes
+locais para solicitar resposta ao Ollama. Não faz diagnóstico do aluno,
+nem adapta conteúdo automaticamente entre sessões.
