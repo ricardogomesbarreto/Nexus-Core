@@ -55,6 +55,11 @@ def open_library(root, app):
         def worker():
             store = None
             try:
+                if operation == "catalog":
+                    from nexus.knowledge.offline_catalog import list_offline_materials
+                    result = list_offline_materials(value)
+                    queue.put((operation, result, None, None))
+                    return
                 if operation == "transcribe":
                     from nexus.voice.file_transcription import LocalWavTranscriber
                     result = LocalWavTranscriber().transcribe(value)
@@ -116,6 +121,14 @@ def open_library(root, app):
         ):
             work("delete", document_ids[positions[0]])
 
+    def browse_offline_catalog():
+        if busy:
+            return
+        directory = filedialog.askdirectory(parent=window,
+                                            title="Escolher pasta de materiais offline")
+        if directory:
+            work("catalog", directory)
+
     def transcribe_audio():
         if busy:
             return
@@ -161,7 +174,8 @@ def open_library(root, app):
                           ("Excluir selecionado", remove),
                           ("Criar cartão do 1º trecho", create_card),
                           ("Revisar cartões", practice),
-                          ("Transcrever WAV local", transcribe_audio))):
+                          ("Transcrever WAV local", transcribe_audio),
+                          ("Catálogo offline", browse_offline_catalog))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
@@ -176,6 +190,19 @@ def open_library(root, app):
             window.after(80, poll)
             return
         busy = False
+        if operation == "catalog":
+            source_hits = []
+            lines = ([f"{m.filename} · {m.category} · {m.bytes} bytes" for m in result]
+                     if not error else ["Catálogo indisponível ou diretório não autorizado."])
+            display.configure(state="normal")
+            display.delete("1.0", "end")
+            display.insert("1.0", "\\n".join(lines) if lines else
+                           "Nenhum arquivo ZIM ou material de curso encontrado na pasta.")
+            display.configure(state="disabled")
+            status.configure(text=f"{len(result)} materiais identificados (metadados)." if not error
+                             else error)
+            window.after(80, poll)
+            return
         if operation == "transcribe":
             source_hits = []
             display.configure(state="normal")
