@@ -49,6 +49,7 @@ def open_study(root, source_hit=None):
     current = None
     revealed = False
     busy = False
+    exercise_session = None
 
     def show(text):
         display.configure(state="normal")
@@ -127,9 +128,60 @@ def open_study(root, source_hit=None):
         ):
             run("delete", current.id)
 
+    def generate_exercises():
+        nonlocal exercise_session
+        if busy or source_hit is None:
+            status.configure(text="Pesquise um trecho na Biblioteca antes de gerar exercícios.")
+            return
+        from nexus.study_session import StudySession
+        from tkinter import simpledialog
+        if not messagebox.askyesno(
+            "Nexus Core — estudo",
+            "Criar questões locais a partir do trecho selecionado? Não serão salvas.",
+            parent=window,
+        ):
+            return
+        exercise_session = StudySession.from_text(source_hit.text, limit=5)
+        if not exercise_session.questions:
+            status.configure(text="O trecho não contém frases adequadas para questões.")
+            return
+        show(exercise_session.next_question().prompt)
+        status.configure(text=f"{len(exercise_session.questions)} questões locais criadas")
+
+    def answer_exercise():
+        nonlocal exercise_session
+        from tkinter import simpledialog
+        if exercise_session is None or exercise_session.completed:
+            status.configure(text="Gere questões antes de responder.")
+            return
+        response = simpledialog.askstring(
+            "Nexus Core — exercício", exercise_session.next_question().prompt,
+            parent=window,
+        )
+        if response is None:
+            return
+        try:
+            attempt = exercise_session.submit(response)
+        except (TypeError, ValueError):
+            status.configure(text="Resposta inválida ou acima do limite.")
+            return
+        correct, answered = exercise_session.score
+        message = ("Resposta literal correta." if attempt.correct else
+                   f"Resposta literal esperada: {attempt.question.expected_answer}")
+        message += f"\\nFonte: {attempt.question.source_excerpt}"
+        next_item = exercise_session.next_question()
+        if next_item:
+            message += f"\\n\\nPróxima questão:\\n{next_item.prompt}"
+        else:
+            message += f"\\n\\nSessão concluída: {correct}/{answered} respostas literais corretas."
+        show(message)
+        status.configure(text=f"Exercícios: {answered}/{len(exercise_session.questions)} respondidos")
+
     buttons = (("Criar cartão", create), ("Atualizar revisões", lambda: run("refresh")),
                ("Mostrar resposta", reveal), ("Acertei", lambda: grade(True)),
-               ("Repetir", lambda: grade(False)), ("Excluir cartão", remove))
+               ("Repetir", lambda: grade(False)), ("Excluir cartão", remove),
+               ("Gerar exercícios do trecho", generate_exercises),
+               ("Responder exercício", answer_exercise))
     for column in range(3):
         controls.columnconfigure(column, weight=1)
     for index, (label, action) in enumerate(buttons):
