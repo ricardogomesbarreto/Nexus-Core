@@ -22,6 +22,7 @@
 **Em revisão; NÃO é release estável.** A branch de desenvolvimento acrescenta
 exercícios locais a partir de trechos autorizados, leitura de trechos em voz alta
 com interrupção e pausa/retomada do processo de fala local, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
+além de MP3/OGG/FLAC/M4A com FFmpeg local opcional,
 inventário **somente de metadados** de arquivos ZIM e materiais educativos
 em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
 local com exclusão vinculada à fonte. A Biblioteca oferece ainda ações
