@@ -24,7 +24,9 @@ exercícios locais a partir de trechos autorizados, leitura de trechos em voz al
 com interrupção, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
 inventário **somente de metadados** de arquivos ZIM e materiais educativos
 em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
-local com exclusão vinculada à fonte. Nada inicia servidores, baixa modelos,
+local com exclusão vinculada à fonte. A Biblioteca oferece ainda ações
+explícitas de resumo e roteiro de estudo com Ollama, fundamentadas em até
+três trechos locais, sem salvar os textos gerados. Nada inicia servidores, baixa modelos,
 copia código de terceiros ou modifica o visual aprovado.
 
 O [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102)
