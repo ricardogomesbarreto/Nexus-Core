@@ -27,6 +27,17 @@ def open_library(root, app):
     query = ttk.Entry(panel)
     query.pack(fill="x", pady=(8, 4))
     query.insert(0, "Digite o assunto para buscar ou perguntar")
+    tutor_controls = ttk.Frame(panel, style="Nexus.App.TFrame")
+    tutor_controls.pack(fill="x", pady=(3, 0))
+    ttk.Label(tutor_controls, text="Nível do tutor:", style="Nexus.Caption.TLabel").pack(
+        side="left", padx=(0, 6))
+    tutor_level = ttk.Combobox(
+        tutor_controls, values=("Iniciante", "Intermediário", "Avançado"),
+        state="readonly", width=15,
+    )
+    tutor_level.set("Iniciante")
+    tutor_level.pack(side="left")
+
     reading = ttk.Frame(panel, style="Nexus.App.TFrame")
     reading.pack(fill="both", expand=True, pady=(6, 0))
     display = tk.Text(reading, height=12, wrap="word", state="disabled",
@@ -76,7 +87,14 @@ def open_library(root, app):
                     result = store.ingest(value)
                 elif operation == "search":
                     result = store.search(value, 5)
-                elif operation in ("answer", "summary", "study_plan"):
+                elif operation == "tutor":
+                    from nexus.study.tutor import tutor_question
+                    topic, level = value
+                    prompt = tutor_question(topic, level)
+                    hits = store.search(topic, 3, for_context=True)
+                    result = answer_from_hits(prompt, hits,
+                                              app.model_router if hits else None)
+                elif operation in ("answer", "summary", "study_plan", "tutor"):
                     hits = store.search(value, 3, for_context=True)
                     prompt = value
                     if operation == "summary":
@@ -127,6 +145,15 @@ def open_library(root, app):
         value = current_query()
         if value is not None:
             work("summary", value)
+
+    def tutor_guided():
+        value = current_query()
+        if value is None:
+            return
+        if len(value) > 65:
+            status.configure(text="Para o tutor, use um assunto de até 65 caracteres.")
+            return
+        work("tutor", (value, tutor_level.get()))
 
     def study_plan():
         value = current_query()
@@ -230,7 +257,8 @@ def open_library(root, app):
                           ("Catálogo offline", browse_offline_catalog),
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
-                          ("Plano de estudo com IA local", study_plan))):
+                          ("Plano de estudo com IA local", study_plan),
+                          ("Tutor guiado por fontes", tutor_guided))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
