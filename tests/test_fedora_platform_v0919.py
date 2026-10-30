@@ -128,7 +128,7 @@ def test_fedora_postgres_start_uses_only_systemd_and_never_initdb(monkeypatch):
     assert calls == [
         ["pg_isready", "-q", "-h", "127.0.0.1", "-p", "5432"],
         ["sudo", "systemctl", "start", "postgresql.service"],
-        ["pg_isready", "-q", "-h", "127.0.0.1"],
+        ["pg_isready", "-q", "-h", "127.0.0.1", "-p", "5432"],
     ]
     assert not any("initdb" in str(call) or "enable" in str(call) for call in calls)
 
