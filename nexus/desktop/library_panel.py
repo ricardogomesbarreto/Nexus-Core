@@ -66,6 +66,11 @@ def open_library(root, app):
         def worker():
             store = None
             try:
+                if operation == "course":
+                    from nexus.study.offline_course import load_course
+                    result = load_course(value)
+                    queue.put((operation, result, None, None))
+                    return
                 if operation == "zim_article":
                     from nexus.knowledge.zim_article import LocalZimReader
                     result = LocalZimReader().read(*value)
@@ -222,6 +227,23 @@ def open_library(root, app):
         ):
             work("zim_article", (archive, url.strip()))
 
+    def open_offline_course():
+        if busy:
+            status.configure(text="Aguarde a operação em andamento.")
+            return
+        directory = filedialog.askdirectory(
+            parent=window, title="Selecionar pasta com course.json e aulas TXT/MD",
+        )
+        if not directory:
+            return
+        if messagebox.askyesno(
+            "Nexus Core — cursos locais",
+            "Abrir o manifesto e os metadados das aulas desta pasta? "
+            "Não inicia Kolibri ou outro serviço e não importa os arquivos.",
+            parent=window,
+        ):
+            work("course", directory)
+
     def browse_offline_catalog():
         if busy:
             return
@@ -285,6 +307,7 @@ def open_library(root, app):
                           ("Revisar cartões", practice),
                           ("Transcrever áudio local", transcribe_audio),
                           ("Catálogo offline", browse_offline_catalog),
+                          ("Abrir curso offline", open_offline_course),
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
                           ("Plano de estudo com IA local", study_plan),
@@ -304,6 +327,15 @@ def open_library(root, app):
             window.after(80, poll)
             return
         busy = False
+        if operation == "course":
+            if error:
+                status.configure(text="Curso indisponível. Confira course.json e os arquivos TXT/MD.")
+            else:
+                from nexus.desktop.course_panel import open_course
+                open_course(root, result)
+                status.configure(text=f"Curso local aberto: {len(result.lessons)} aulas.")
+            window.after(80, poll)
+            return
         if operation == "zim_article":
             source_hits = []
             display.configure(state="normal")
