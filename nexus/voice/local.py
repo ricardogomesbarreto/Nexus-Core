@@ -182,9 +182,10 @@ class LocalSpeaker(_StoppableProcess):
             return
         try:
             process = subprocess.Popen(
-                ([binary, "-v", self.VOICES[voice], "-b", "1", "--stdin"]
+                ([binary, "-v", self.VOICES[voice], "-b", "1"]
                  + (["-s", str(round(175 * speed))] if speed != 1.0 else [])
-                 + (["-a", str(round(100 * volume / 100))] if volume != 100 else [])),
+                 + (["-a", str(volume)] if volume != 100 else [])
+                 + ["--stdin"]),
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE, text=True, encoding="utf-8",
             )
