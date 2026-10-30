@@ -1,13 +1,13 @@
 """Prática nativa de cartões locais. Sem download, servidor ou modelo extra."""
 
 from queue import Empty, Queue
-from threading import Thread
+from threading import Event, Thread
 
 from nexus.config.settings import settings
 from nexus.study.store import PostgreSQLStudyCards, StudyError
 
 
-def open_study(root, source_hit=None):
+def open_study(root, source_hit=None, *, voice="Feminina"):
     import tkinter as tk
     from tkinter import messagebox, ttk
 
@@ -50,6 +50,10 @@ def open_study(root, source_hit=None):
     revealed = False
     busy = False
     exercise_session = None
+    speech_messages = Queue()
+    speech_cancel = Event()
+    speech_busy = False
+    speaker = None
 
     def show(text):
         display.configure(state="normal")
@@ -177,11 +181,66 @@ def open_study(root, source_hit=None):
         show(message)
         status.configure(text=f"Exercícios: {answered}/{len(exercise_session.questions)} respondidos")
 
+    def read_excerpt():
+        nonlocal speech_busy, speaker, speech_cancel
+        if speech_busy:
+            status.configure(text="Leitura já em andamento. Use Parar leitura.")
+            return
+        if source_hit is not None:
+            excerpt = source_hit.text
+        elif current is not None and revealed:
+            excerpt = current.source_excerpt
+        else:
+            status.configure(text="Selecione um trecho na Biblioteca ou revele um cartão.")
+            return
+        if not excerpt.strip():
+            return
+        from nexus.voice.local import LocalSpeaker
+        speaker = LocalSpeaker()
+        speech_cancel = Event()
+        speech_busy = True
+        status.configure(text="Lendo trecho com voz local…")
+        selected_voice = voice if voice in LocalSpeaker.VOICES else "Feminina"
+
+        def worker():
+            try:
+                speaker.speak(excerpt[:LocalSpeaker.MAX_SPEECH], selected_voice,
+                              cancelled=speech_cancel.is_set)
+                speech_messages.put(None)
+            except Exception:
+                speech_messages.put("Leitura de voz indisponível. Confira Piper/RHVoice/eSpeak.")
+
+        Thread(target=worker, name="nexus-study-speech", daemon=True).start()
+
+    def stop_reading():
+        speech_cancel.set()
+        if speaker is not None:
+            speaker.stop()
+
+    def poll_speech():
+        nonlocal speech_busy
+        if not window.winfo_exists():
+            return
+        try:
+            result = speech_messages.get_nowait()
+        except Empty:
+            window.after(100, poll_speech)
+            return
+        speech_busy = False
+        status.configure(text=result or "Leitura de voz concluída ou interrompida.")
+        window.after(100, poll_speech)
+
+    def close_study():
+        stop_reading()
+        window.destroy()
+
     buttons = (("Criar cartão", create), ("Atualizar revisões", lambda: run("refresh")),
                ("Mostrar resposta", reveal), ("Acertei", lambda: grade(True)),
                ("Repetir", lambda: grade(False)), ("Excluir cartão", remove),
                ("Gerar exercícios do trecho", generate_exercises),
-               ("Responder exercício", answer_exercise))
+               ("Responder exercício", answer_exercise),
+               ("Ler trecho em voz alta", read_excerpt),
+               ("Parar leitura", stop_reading))
     for column in range(3):
         controls.columnconfigure(column, weight=1)
     for index, (label, action) in enumerate(buttons):
@@ -217,6 +276,8 @@ def open_study(root, source_hit=None):
             status.configure(text=f"{len(cards)} cartões disponíveis · operação concluída")
         window.after(80, poll)
 
+    window.protocol("WM_DELETE_WINDOW", close_study)
     run("refresh")
     window.after(80, poll)
+    window.after(100, poll_speech)
     return window
