@@ -96,3 +96,21 @@ def test_profile_controls_persist_on_desktop(monkeypatch, tmp_path):
         confirmation.close()
         try: root.destroy()
         except tk.TclError: pass
+
+
+def test_neural_voice_customization_never_runs_without_local_ffmpeg(
+    monkeypatch, tmp_path,
+):
+    model = tmp_path / "pt_BR-faber-medium.onnx"
+    model.write_bytes(b"model")
+    model.with_suffix(".onnx.json").write_text("{}")
+    monkeypatch.setattr(LocalSpeaker, "neural_voice_ready",
+                        classmethod(lambda cls: True))
+    monkeypatch.setattr(LocalSpeaker, "neural_model_path",
+                        classmethod(lambda cls: model))
+    monkeypatch.setattr(local_voice.shutil, "which",
+                        lambda name: None if name == "ffmpeg" else "/usr/bin/" + name)
+    monkeypatch.setattr(local_voice.subprocess, "Popen",
+                        lambda *a, **kw: pytest.fail("Não execute síntese sem filtro local"))
+    with pytest.raises(VoiceError, match="FFmpeg"):
+        LocalSpeaker().speak("Olá", "Masculina", speed=1.25)
