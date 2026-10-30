@@ -161,7 +161,7 @@ def test_closing_course_stops_ongoing_speech(monkeypatch, tmp_path):
         controls["Ler aula"].invoke()
         controls["Ouvir aula"].invoke()
         _until(root, signal.is_set)
-        panel.protocol("WM_DELETE_WINDOW")()
+        panel.tk.call(panel.protocol("WM_DELETE_WINDOW"))
         assert stopped.is_set()
         assert not panel.winfo_exists()
     finally:
