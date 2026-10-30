@@ -45,12 +45,12 @@ class LinuxProfile:
 
     @property
     def target(self) -> str:
-        if self.installer_supported:
-            return "ubuntu_compatible"
         if self.system != "Linux":
             return "non_linux"
+        if self.installer_supported:
+            return "fedora_compatible" if self.distro == "fedora" else "ubuntu_compatible"
         if self.distro == "fedora":
-            return "fedora_compatible" if self.installer_supported else "fedora_not_yet_validated"
+            return "fedora_not_yet_validated"
         if self.distro == "ubuntu":
             return "ubuntu_not_yet_validated"
         return "linux_other_distro_future"
