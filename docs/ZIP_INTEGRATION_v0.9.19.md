@@ -131,3 +131,14 @@ A configuração de velocidade e volume foi deslocada para **Recursos →
 Configurar voz local**, evitando reduzir a área de conversa na janela mínima
 (770×570). Uma execução anterior da CI detectou dois testes de layout falhos;
 a correção requer nova execução de CI no SHA final. A prévia física é pendente.
+
+## Transcrição de arquivos em formatos adicionais
+
+O botão de transcrição da Biblioteca agora permite selecionar `.wav`, `.mp3`,
+`.ogg`, `.flac` ou `.m4a` explicitamente. WAV PCM mono 16 kHz continua
+usando leitura direta; formatos comprimidos exigem **FFmpeg instalado localmente**
+e são decodificados em memória até 180 s para o Vosk já instalado. O arquivo
+de origem é aberto com descritor seguro, sem shell, servidor, microfone, rede
+ou armazenamento automático. Há limite de 32 MiB de entrada, timeout de 35 s
+na conversão e limite de bytes de PCM decodificado. Não processa vídeos e não
+promete transcrição em tempo real nem precisão de fala no hardware real.
