@@ -54,6 +54,7 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
     speech_messages = Queue()
     speech_cancel = Event()
     speech_busy = False
+    speech_paused = False
     speaker = None
 
     def show(text):
@@ -204,7 +205,7 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
         run("recent_sessions")
 
     def read_excerpt():
-        nonlocal speech_busy, speaker, speech_cancel
+        nonlocal speech_busy, speaker, speech_cancel, speech_paused
         if speech_busy:
             status.configure(text="Leitura já em andamento. Use Parar leitura.")
             return
@@ -221,6 +222,7 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
         speaker = LocalSpeaker()
         speech_cancel = Event()
         speech_busy = True
+        speech_paused = False
         status.configure(text="Lendo trecho com voz local…")
         selected_voice = voice if voice in LocalSpeaker.VOICES else "Feminina"
 
@@ -238,7 +240,22 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
 
         Thread(target=worker, name="nexus-study-speech", daemon=True).start()
 
+    def toggle_pause_reading():
+        nonlocal speech_paused
+        if not speech_busy or speaker is None:
+            status.configure(text="Nenhuma leitura ativa para pausar.")
+            return
+        action = speaker.resume if speech_paused else speaker.pause
+        if action():
+            speech_paused = not speech_paused
+            status.configure(text="Leitura pausada." if speech_paused
+                             else "Leitura retomada.")
+        else:
+            status.configure(text="A leitura não está disponível para pausa agora.")
+
     def stop_reading():
+        nonlocal speech_paused
+        speech_paused = False
         speech_cancel.set()
         if speaker is not None:
             speaker.stop()
@@ -267,6 +284,7 @@ def open_study(root, source_hit=None, *, voice="Feminina", speed=1.0, volume=100
                ("Responder exercício", answer_exercise),
                ("Ler trecho em voz alta", read_excerpt),
                ("Parar leitura", stop_reading),
+               ("Pausar/retomar leitura", toggle_pause_reading),
                ("Salvar progresso", save_progress),
                ("Histórico de sessões", show_history))
     for column in range(3):
