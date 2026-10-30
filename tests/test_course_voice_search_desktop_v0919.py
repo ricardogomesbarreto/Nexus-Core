@@ -169,3 +169,53 @@ def test_closing_course_stops_ongoing_speech(monkeypatch, tmp_path):
     finally:
         stopped.set()
         root.destroy()
+
+
+def test_course_narration_uses_sequential_bounded_segments(monkeypatch, tmp_path):
+    import tkinter as tk
+    from tkinter import ttk
+    import nexus.desktop.course_panel as ui
+    import nexus.voice.local as voice_module
+    from nexus.study.offline_course import OfflineCourse, CourseLesson
+
+    first = threading.Event()
+    release = threading.Event()
+    calls = []
+    class Speaker:
+        VOICES = {"Feminina": "", "Masculina": ""}
+        MAX_SPEECH = 2400
+        def speak(self, text, voice, **kwargs):
+            calls.append(text)
+            if len(calls) == 1:
+                first.set()
+                release.wait(3)
+        def stop(self):
+            release.set()
+        def pause(self):
+            return True
+        def resume(self):
+            return True
+
+    monkeypatch.setattr(voice_module, "LocalSpeaker", Speaker)
+    monkeypatch.setattr(ui, "read_lesson", lambda *_: ("Palavra " * 620))
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        panel = ui.open_course(
+            root, OfflineCourse(tmp_path, "Curso", (CourseLesson("Lição", "a.md"),))
+        )
+        controls = {w.cget("text"): w for w in _widgets(panel, ttk.Button)}
+        controls["Ler aula"].invoke()
+        controls["Ouvir aula"].invoke()
+        _until(root, first.is_set)
+        assert len(calls) == 1  # No parallel synthesizers.
+        release.set()
+        _until(root, lambda: len(calls) >= 2)
+        _until(root, lambda: "Narração concluída" in
+               " ".join(w.cget("text") for w in _widgets(panel, ttk.Label)))
+        assert len(calls) <= 4
+        assert all(0 < len(part) <= 2400 for part in calls)
+        assert sum(len(part) for part in calls) <= 9600
+    finally:
+        release.set()
+        root.destroy()
