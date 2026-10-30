@@ -26,7 +26,7 @@ inventário **somente de metadados** de arquivos ZIM e materiais educativos
 em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
 local com exclusão vinculada à fonte. A Biblioteca oferece ainda ações
 explícitas de resumo e roteiro de estudo com Ollama, fundamentadas em até
-três trechos locais, sem salvar os textos gerados. O painel principal também permite escolher
+três trechos locais, sem salvar os textos gerados. O menu **Recursos → Configurar voz local** também permite escolher
 velocidade/volume da voz de forma persistente; artigos específicos de ZIM
 podem ser lidos localmente com zim-tools opcional, e o tutor oferece três
 níveis com fontes explícitas, sem avaliação adaptativa automática. Nada inicia servidores, baixa modelos,
@@ -37,8 +37,10 @@ continua sem merge, e o aceite físico de áudio/Tk/PostgreSQL no Ubuntu e a CI
 do SHA final são necessários. Consulte a
 [matriz detalhada dos 38 requisitos](docs/NEXUS_38_FEATURES_STATUS_v0.9.19.md)
 e a [auditoria dos três ZIPs](docs/ZIP_INTEGRATION_v0.9.19.md).
-**Não estão implementados** busca semântica por embeddings, pesquisa textual
-completa em ZIM, serviços Kolibri, tutor adaptativo ou clonagem de voz. A
+**Ainda não estão implementados** indexação semântica de toda a biblioteca,
+pesquisa textual completa em ZIM, serviços Kolibri, tutor adaptativo ou clonagem
+de voz. Existe uma busca por embeddings **apenas em até oito trechos recentes**,
+usando modelo Ollama já instalado e selecionado pelo usuário. A
 leitura pontual de ZIM depende de zim-tools instalado pelo usuário.
 
 ## 0.9.18 — estudo local e prévia de voz
