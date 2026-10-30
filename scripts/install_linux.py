@@ -25,7 +25,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 MIN_VERSION = (3, 12)
 from nexus.platforms import UBUNTU_PACKAGES, linux_profile, platform_capabilities
+from nexus.platforms.linux import FEDORA_PACKAGES
 SYSTEM_PACKAGES = UBUNTU_PACKAGES
+FEDORA_REQUIREMENT_PACKAGES = {
+    "psql": ("postgresql",), "pg_isready": ("postgresql",),
+    "espeak-ng": ("espeak-ng",), "arecord": ("alsa-utils",),
+    "ffmpeg": ("ffmpeg-free",), "xdg-settings": ("xdg-utils",),
+    "gtk-launch": ("gtk3",), "flock": ("util-linux",),
+    "python3-tk": ("python3-tkinter",),
+    "python3-venv": ("python3", "python3-pip"),
+}
+
 PACKAGES_FOR_MISSING = {
     "psql": ("postgresql", "postgresql-client"),
     "pg_isready": ("postgresql", "postgresql-client"),
@@ -90,9 +100,12 @@ def install_system_packages() -> bool:
     A refusal or unresolved dependency blocks the bootstrap rather than
     falsely reporting the application as fully installed.
     """
-    if not _ubuntu_supported():
+    profile = linux_profile()
+    if not profile.installer_supported:
         print("Instalador não habilitado nesta distribuição; rode --check.")
         return False
+    if profile.distro == "fedora":
+        return install_fedora_packages()
     missing = system_requirements()
     if not missing:
         print("Dependências de sistema encontradas.")
@@ -119,6 +132,41 @@ def install_system_packages() -> bool:
     unresolved = system_requirements()
     if unresolved:
         print("Dependências ainda ausentes: " + ", ".join(unresolved))
+        return False
+    return True
+
+
+def install_fedora_packages() -> bool:
+    """Fedora-specific dependency setup; no apt, shell or boot enable."""
+    profile = linux_profile()
+    if not (profile.installer_supported and profile.distro == "fedora"):
+        return False
+    missing = system_requirements()
+    if not missing:
+        print("Dependências de sistema Fedora encontradas.")
+        return True
+    if any(name not in FEDORA_REQUIREMENT_PACKAGES for name in missing):
+        print("Dependência sem pacote Fedora conhecido; instalação interrompida.")
+        return False
+    packages = sorted({
+        package for requirement in missing
+        for package in FEDORA_REQUIREMENT_PACKAGES[requirement]
+    })
+    if not installed("dnf") or not installed("sudo"):
+        print("dnf/sudo indisponíveis; não foi instalada nenhuma dependência.")
+        return False
+    print("Pacotes Fedora necessários: " + ", ".join(packages))
+    if not confirm("Instalar pacotes oficiais Fedora com sudo dnf?"):
+        print("Instalação de pacotes Fedora recusada.")
+        return False
+    try:
+        _run(["sudo", "dnf", "install", "-y", *packages], timeout=600)
+    except (OSError, subprocess.SubprocessError):
+        print("dnf falhou; nenhuma dependência foi considerada instalada.")
+        return False
+    unresolved = system_requirements()
+    if unresolved:
+        print("Dependências Fedora ainda ausentes: " + ", ".join(unresolved))
         return False
     return True
 
@@ -459,6 +507,47 @@ def verify_local_postgresql(python: Path, home: Path) -> None:
         raise PostgreSQLAuthenticationError("Login PostgreSQL não confirmado.") from exc
 
 
+def ensure_postgresql_running_fedora() -> bool:
+    """Start only the configured Fedora system unit with explicit consent.
+
+    Never auto-run initdb, change pg_hba.conf, enable units at boot or
+    destroy an existing database. The user initializes Fedora PG separately.
+    """
+    if not (linux_profile().distro == "fedora"
+            and installed("pg_isready") and installed("systemctl")
+            and installed("sudo")):
+        return False
+    try:
+        _run(["pg_isready", "-q", "-h", "127.0.0.1"], timeout=5)
+        return True
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if not confirm("Iniciar PostgreSQL existente (postgresql.service), sem habilitar no boot?"):
+        print("PostgreSQL não iniciado; nenhuma unidade foi habilitada.")
+        return False
+    try:
+        active_before = _service_active_for_install("system", "postgresql.service")
+        _run(["sudo", "systemctl", "start", "postgresql.service"], timeout=40)
+        if not active_before:
+            from nexus.platforms.session_services import record_started_service
+            if not record_started_service("system", "postgresql.service"):
+                print("Serviço iniciado sem registro; pare manualmente quando terminar.")
+        from time import monotonic, sleep
+        deadline = monotonic() + 12
+        while monotonic() < deadline:
+            try:
+                _run(["pg_isready", "-q", "-h", "127.0.0.1"], timeout=5)
+                return True
+            except (OSError, subprocess.SubprocessError):
+                sleep(0.5)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    print("PostgreSQL Fedora não está pronto. Se for instalação nova, inicialize "
+          "uma única vez com: sudo postgresql-setup --initdb "
+          "(somente se não existir banco anterior).")
+    return False
+
+
 def ensure_postgresql_running_for_install() -> bool:
     """Request one-time service start when PostgreSQL is stopped.
 
@@ -466,6 +555,8 @@ def ensure_postgresql_running_for_install() -> bool:
     verify_local_postgresql() must still authenticate with SELECT 1; pg_isready
     by itself is not a successful authentication test.
     """
+    if linux_profile().distro == "fedora":
+        return ensure_postgresql_running_fedora()
     import re
     from time import monotonic, sleep
 
