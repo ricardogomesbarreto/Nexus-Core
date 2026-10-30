@@ -87,6 +87,12 @@ def open_library(root, app):
                     result = store.ingest(value)
                 elif operation == "search":
                     result = store.search(value, 5)
+                elif operation == "semantic":
+                    from nexus.knowledge.semantic_local import LocalSemanticReranker
+                    term, model_name = value
+                    hits = store.recent_chunks(8)
+                    result = (LocalSemanticReranker().rerank(term, hits, model_name)
+                              if hits else [])
                 elif operation == "tutor":
                     from nexus.study.tutor import tutor_question
                     topic, level = value
@@ -145,6 +151,29 @@ def open_library(root, app):
         value = current_query()
         if value is not None:
             work("summary", value)
+
+    def semantic_sample():
+        if busy:
+            return
+        from tkinter import simpledialog
+        term = current_query()
+        if term is None:
+            return
+        model_name = simpledialog.askstring(
+            "Nexus Core — similaridade semântica local",
+            "Nome EXATO do modelo de embeddings já instalado no Ollama:",
+            parent=window,
+        )
+        if not model_name:
+            return
+        if not messagebox.askyesno(
+            "Nexus Core — busca offline",
+            "Comparar a pergunta com até oito trechos recentes usando o "
+            "modelo de embeddings local? Não instala modelos nem salva vetores.",
+            parent=window,
+        ):
+            return
+        work("semantic", (term, model_name.strip()))
 
     def tutor_guided():
         value = current_query()
@@ -258,7 +287,8 @@ def open_library(root, app):
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
                           ("Plano de estudo com IA local", study_plan),
-                          ("Tutor guiado por fontes", tutor_guided))):
+                          ("Tutor guiado por fontes", tutor_guided),
+                          ("Similaridade semântica local", semantic_sample))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
@@ -316,7 +346,15 @@ def open_library(root, app):
             for doc in docs:
                 listing.insert("end", f"{doc.id} · {doc.name} · {doc.chunk_count} trechos")
             lines = []
-            if operation == "search":
+            if operation == "semantic":
+                source_hits = [match.hit for match in result]
+                lines = [f"Similaridade {match.score:.3f} · "
+                         f"Fonte {match.hit.document_id}:{match.hit.chunk_id}"
+                         f" · {match.hit.name}\n{match.hit.text}"
+                         for match in result]
+                if not lines:
+                    lines = ["Nenhum trecho disponível para a comparação local."]
+            elif operation == "search":
                 lines = [f"Fonte {h.document_id}:{h.chunk_id} · {h.name}\n{h.text}"
                          for h in result]
             elif operation in ("answer", "summary", "study_plan"):
