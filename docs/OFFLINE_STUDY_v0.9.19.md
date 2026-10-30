@@ -19,3 +19,9 @@ no ambiente do projeto, com o pacote `nexus_core` disponível no PYTHONPATH.
 
 Integrações de VoiceStudio e NOMAD permanecem separadas; serviços pesados,
 downloads de modelos e servidores não devem ser ativados automaticamente.
+
+## Etapa 2 — Sessão de exercícios
+
+O módulo `nexus/study_session.py` agora oferece `StudySession.from_text`, `next_question`, `submit`, `score` e `completed`. A sessão guarda respostas somente em memória, não envia dados a servidores e não modifica o PostgreSQL. O módulo `tests/test_study_session.py` cobre ordem das questões, acertos, conclusão, entradas inválidas e limites.
+
+**Pendências explícitas:** conectar à interface e à biblioteca com autorização; avaliar qualidade das lacunas em português; executar CI e testes no Ubuntu. Correção é literal, não pedagógica ou semântica. Nenhum serviço é iniciado automaticamente.
