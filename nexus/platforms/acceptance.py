@@ -203,6 +203,11 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "leitor independente e conferiu o conteúdo e o original?"),
         ("PDF produzido", "Abriu o PDF de saída real em um leitor "
          "independente e conferiu páginas, conteúdo e original?"),
+        ("Prévia de voz local", "Em Testes locais, ouviu a voz feminina e a "
+         "masculina escolhidas, com microfone retomado após cada amostra?"),
+        ("Cartões de estudo", "Na Biblioteca local, criou um cartão a partir "
+         "de um trecho, mostrou a resposta, revisou e confirmou o vínculo "
+         "e a exclusão ao remover o documento?"),
     ):
         log(label, _observation(instruction, ask=ask, interactive=interactive, out=out), "observação humana")
     log("Automação de teclado em Wayland", "PENDENTE" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "NÃO APLICÁVEL",

@@ -42,6 +42,7 @@ def open_library(root, app):
     controls.pack(fill="x", pady=(6, 0))
     queue = Queue()
     document_ids = []
+    source_hits = []
     busy = False
 
     def work(operation, value=None):
@@ -110,18 +111,34 @@ def open_library(root, app):
         ):
             work("delete", document_ids[positions[0]])
 
+    def practice():
+        if busy:
+            status.configure(text="Aguarde a operação atual.")
+            return
+        from nexus.desktop.study_panel import open_study
+        open_study(root)
+
+    def create_card():
+        if busy or not source_hits:
+            status.configure(text="Pesquise um assunto primeiro para selecionar o primeiro trecho.")
+            return
+        from nexus.desktop.study_panel import open_study
+        open_study(root, source_hits[0])
+
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
     for index, (label, action) in enumerate((("Importar texto", import_file),
                           ("Pesquisar trechos", search),
                           ("Perguntar aos documentos", ask),
-                          ("Excluir selecionado", remove))):
+                          ("Excluir selecionado", remove),
+                          ("Criar cartão do 1º trecho", create_card),
+                          ("Revisar cartões", practice))):
         ttk.Button(controls, text=label, command=action,
                    style="Nexus.TButton").grid(row=index // 2, column=index % 2,
                                                sticky="ew", padx=3, pady=2)
 
     def poll():
-        nonlocal busy, document_ids
+        nonlocal busy, document_ids, source_hits
         if not window.winfo_exists():
             return
         try:
@@ -131,8 +148,10 @@ def open_library(root, app):
             return
         busy = False
         if error:
+            source_hits = []
             status.configure(text=error)
         else:
+            source_hits = result if operation == "search" else []
             document_ids = [d.id for d in docs]
             listing.delete(0, "end")
             for doc in docs:

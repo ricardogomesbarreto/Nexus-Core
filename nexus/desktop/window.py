@@ -602,6 +602,7 @@ class DesktopWindow:
         ).pack(anchor="w", pady=(0, 10))
         steps = (
             ("Voz: testar duas falas", self._start_voice_diagnostic),
+            ("Voz: ouvir seleção atual", self._preview_selected_voice),
             ("Câmera: abrir com consentimento", self._vision_camera),
             ("Pasta: como testar", lambda: self._show_test_instructions(
                 "Pasta", "Digite no chat: Crie uma pasta chamada NexusCoreTeste. "
@@ -638,6 +639,24 @@ class DesktopWindow:
         self.messagebox.showinfo(
             f"NEXUS CORE — Teste de {title.lower()}", message, parent=self.root,
         )
+
+    def _preview_selected_voice(self) -> None:
+        """Explicitly play one short sample without loading a model or recording."""
+        if self._closing or self._busy or self._permission_dialog is not None:
+            self.status.configure(text="Aguarde a operação atual antes de ouvir a voz.")
+            return
+        if not self.speech_enabled.get():
+            self.status.configure(text="Ative Responder em voz para ouvir a seleção.")
+            return
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
+        if self._speaking:
+            self._stop_speaking()
+        voice = self.voice_choice.get()
+        self.status.configure(text=f"Prévia da voz {voice.lower()} no dispositivo local.")
+        if not self._say_response(f"Olá. Sou o Nexus Core. Esta é a voz {voice.lower()}."):
+            self._start_listening()
 
     def _save_desktop_preferences(self, event=None) -> None:
         """Persist only user choices on this Linux account, never credentials."""
