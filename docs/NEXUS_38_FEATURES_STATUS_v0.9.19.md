@@ -36,7 +36,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
 | 10 | Verificação SHA-256 | Existente | Ferramentas existentes |
-| 11 | Busca semântica | Pendente | PostgreSQL FTS não equivale a embeddings |
+| 11 | Busca semântica | Novo/parcial | Embeddings Ollama local sob autorização, amostra de oito trechos recentes; sem índice vetorial completo |
 | 12 | Catálogo de ferramentas | Parcial | Ferramentas internas; plugin manager ainda não integrado |
 | 13 | Avaliação de desempenho | Parcial | Monitor de recursos; benchmark de modelos pendente |
 | 14 | Organização de conhecimento | Existente | Biblioteca, notas e cartões por fontes |
