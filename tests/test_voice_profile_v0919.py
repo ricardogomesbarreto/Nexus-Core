@@ -114,3 +114,14 @@ def test_neural_voice_customization_never_runs_without_local_ffmpeg(
                         lambda *a, **kw: pytest.fail("Não execute síntese sem filtro local"))
     with pytest.raises(VoiceError, match="FFmpeg"):
         LocalSpeaker().speak("Olá", "Masculina", speed=1.25)
+
+
+def test_female_neural_engine_receives_custom_profile(monkeypatch):
+    captured = []
+    monkeypatch.setattr(LocalSpeaker, "female_voice_ready", staticmethod(lambda: True))
+    monkeypatch.setattr(
+        LocalSpeaker, "_speak_natural",
+        lambda self, text, cancelled, **kwargs: captured.append((text, kwargs)),
+    )
+    LocalSpeaker().speak("Olá", "Feminina", speed=.75, volume=50)
+    assert captured == [("Olá", {"voice": "Feminina", "speed": .75, "volume": 50})]
