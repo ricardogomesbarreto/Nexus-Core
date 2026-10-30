@@ -145,9 +145,19 @@ class ResourceBudget:
         )
         mode = ("eco" if low_memory else "balanced") if setting == "auto" else setting
         if mode == "eco":
+            total_mib = total_bytes // (1024 * 1024) if total_bytes else None
+            available_mib = (available_bytes // (1024 * 1024)
+                             if available_bytes is not None else None)
+            # Ultralight budgets only when the actual machine/container has
+            # <=4 GiB RAM. A 6.5 GiB notebook keeps its proven eco settings.
+            small_host = total_bytes is not None and total_bytes <= 4 * _GIB
+            if small_host:
+                return cls(
+                    mode, total_mib, available_mib,
+                    1, 768, 112, 768, 96, 512, "0s",
+                )
             return cls(
-                mode, total_bytes // (1024 * 1024) if total_bytes else None,
-                available_bytes // (1024 * 1024) if available_bytes is not None else None,
+                mode, total_mib, available_mib,
                 min(count, 2), 1024, 160, 1024, 144, 768, "0s",
             )
         return cls(
