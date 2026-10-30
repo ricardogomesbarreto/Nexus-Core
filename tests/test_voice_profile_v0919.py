@@ -85,6 +85,7 @@ def test_profile_controls_persist_on_desktop(monkeypatch, tmp_path):
     try:
         window = DesktopWindow(root, App(), confirmation, speaker=Speaker(),
                                recognizer=Recognizer(), preference_store=prefs)
+        window._open_voice_profile()
         window.voice_speed_choice.set("125%")
         window.voice_volume_choice.set("75%")
         window._select_voice_profile()
