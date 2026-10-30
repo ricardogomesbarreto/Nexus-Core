@@ -1,7 +1,7 @@
 """Testes sem rede, banco, Ollama ou interface gráfica."""
 import unittest
 
-from nexus_core.offline_study import generate_cloze_questions, check_exact_answer
+from nexus.offline_study import generate_cloze_questions, check_exact_answer
 
 
 class OfflineStudyTests(unittest.TestCase):
