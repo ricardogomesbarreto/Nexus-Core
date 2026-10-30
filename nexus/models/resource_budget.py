@@ -21,7 +21,19 @@ def _positive_int(text: str) -> int | None:
     return number if 0 < number < 1 << 60 else None
 
 
+def _read_positive(path: str) -> int | None:
+    try:
+        return _positive_int(Path(path).read_text(encoding="ascii"))
+    except (OSError, ValueError):
+        return None
+
+
 def _memory_bytes() -> tuple[int | None, int | None]:
+    """Use the smallest active Linux memory cap, including cgroup v1/v2.
+
+    The process must never budget against the host's free RAM when it is
+    constrained by a much smaller container/systemd memory allowance.
+    """
     total = available = None
     try:
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
@@ -35,35 +47,58 @@ def _memory_bytes() -> tuple[int | None, int | None]:
         total *= 1024
     if available is not None:
         available *= 1024
-    # Linux cgroup v2 is used on modern Ubuntu/Debian and other distros.
-    # cgroup v1 is supported for older container environments.
-    for name in ("/sys/fs/cgroup/memory.max",
-                 "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
-        try:
-            limit = _positive_int(Path(name).read_text(encoding="ascii"))
-        except (OSError, ValueError):
+
+    # v1 often reports a near-2**63 sentinel for an unlimited container.
+    # Discard implausible values and combine every *real* cap conservatively.
+    caps = (
+        ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory.current"),
+        ("/sys/fs/cgroup/memory/memory.limit_in_bytes",
+         "/sys/fs/cgroup/memory/memory.usage_in_bytes"),
+    )
+    for limit_path, usage_path in caps:
+        limit = _read_positive(limit_path)
+        if limit is None or limit >= (1 << 60):
             continue
-        if limit is not None and (total is None or limit < total):
+        if total is None or limit < total:
             total = limit
-        break
+        usage = _read_positive(usage_path)
+        if usage is not None:
+            remaining = max(0, limit - usage)
+            available = min(available, remaining) if available is not None else remaining
+        elif available is not None:
+            available = min(available, limit)
+    if total is not None and available is not None:
+        available = min(total, available)
+    return total, available
+
+
+def _cpu_quota_cores() -> int | None:
+    """Read CPU quotas; never change frequencies, priorities or CPU affinity."""
     try:
-        current = _positive_int(Path("/sys/fs/cgroup/memory.current").read_text())
-        if total is not None and current is not None:
-            remain = max(0, total - current)
-            available = min(available, remain) if available is not None else remain
+        parts = Path("/sys/fs/cgroup/cpu.max").read_text(encoding="ascii").split()
+        if len(parts) == 2 and parts[0] != "max":
+            quota = _positive_int(parts[0])
+            period = _positive_int(parts[1])
+            if quota is not None and period is not None:
+                return max(1, (quota + period - 1) // period)
     except (OSError, ValueError):
         pass
-    return total, available
+    quota = _read_positive("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+    period = _read_positive("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+    if quota is not None and period is not None:
+        return max(1, (quota + period - 1) // period)
+    return None
 
 
 def _logical_cores() -> int:
     try:
-        if hasattr(os, "sched_getaffinity"):
-            return max(1, len(os.sched_getaffinity(0)))
+        affinity = (max(1, len(os.sched_getaffinity(0)))
+                    if hasattr(os, "sched_getaffinity")
+                    else max(1, os.cpu_count() or 1))
     except OSError:
-        pass
-    return max(1, os.cpu_count() or 1)
-
+        affinity = max(1, os.cpu_count() or 1)
+    quota = _cpu_quota_cores()
+    return min(affinity, quota) if quota is not None else affinity
 
 @dataclass(frozen=True)
 class ResourceBudget:
