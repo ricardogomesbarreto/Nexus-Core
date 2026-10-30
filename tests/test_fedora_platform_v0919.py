@@ -152,3 +152,21 @@ def test_fedora_optional_rhvoice_never_uses_apt(monkeypatch):
     monkeypatch.setattr(install_linux, "_run",
                         lambda *a, **kw: pytest.fail("No Ubuntu apt on Fedora"))
     assert install_linux.prepare_female_voice() is False
+
+
+def test_linux_cli_aliases_preserve_privacy_and_do_not_boot_app(monkeypatch, capsys):
+    import nexus.main as entry
+    import nexus.platforms as platforms
+    monkeypatch.setattr(entry, "build_application",
+                        lambda *a, **kw: pytest.fail("Diagnostics cannot boot core"))
+    monkeypatch.setattr(platforms, "ubuntu_doctor",
+                        lambda: {"schema": "nexus.ubuntu-doctor.v1", "mode": "local_read_only"})
+    monkeypatch.setattr(platforms, "ubuntu_preflight",
+                        lambda: {"schema": "nexus.ubuntu-preflight.v1", "mode": "explicit_opt_in_local_checks"})
+    entry.cli(["--linux-doctor"])
+    assert json.loads(capsys.readouterr().out)["mode"] == "local_read_only"
+    entry.cli(["--linux-preflight"])
+    assert json.loads(capsys.readouterr().out)["mode"] == "explicit_opt_in_local_checks"
+    with pytest.raises(SystemExit) as exc:
+        entry.cli(["--linux-doctor", "--desktop"])
+    assert exc.value.code == 2
