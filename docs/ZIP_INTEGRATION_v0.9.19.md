@@ -116,8 +116,9 @@ nem adapta conteúdo automaticamente entre sessões.
 O botão **Similaridade semântica local** utiliza um modelo de embeddings
 **já instalado**. O Nexus consulta somente `/api/tags` e `/api/embed`
 no Ollama de loopback, sem redirecionamento HTTP, download ou inicialização
-automática. A pesquisa compara a pergunta com os **oito trechos mais recentes**
-recuperados do PostgreSQL e exibe até cinco resultados com pontuação de cosseno.
+automática. A pesquisa compara a pergunta com **até oito candidatos** recuperados do
+PostgreSQL: até quatro resultados por texto/FTS, complementados por trechos de
+documentos recentes distintos. Exibe até cinco resultados por cosseno.
 
 O modelo precisa ser indicado explicitamente pelo usuário, estar instalado e
 ter tamanho informado de até 900 MiB. As entradas e respostas são limitadas,
@@ -125,7 +126,7 @@ o parâmetro `keep_alive: 0` solicita descarregar o modelo. Nenhum embedding
 fica salvo no disco. Antes de carregar o modelo, é verificada a memória
 realmente disponível; sem margem suficiente a operação é recusada.
 **Essa é uma amostra semântica limitada**, não indexação
-semântica global de todos os documentos. O modo anterior FTS segue disponível.
+semântica global de todos os documentos nem busca exaustiva em toda a base. O modo anterior FTS segue disponível.
 
 A configuração de velocidade e volume foi deslocada para **Recursos →
 Configurar voz local**, evitando reduzir a área de conversa na janela mínima
@@ -162,3 +163,15 @@ Segurança: até 20 aulas, manifesto de 16 KiB, texto de 64 KiB por aula,
 total de 512 KiB, sem travessia de caminho, sem symlinks, sem servidor.
 Essa é uma **alternativa local de baixo consumo**, não execução do pacote
 Kolibri nem leitura de cursos e vídeos Kolibri.
+
+## Inspeção opcional de exportações Kolibri (somente metadados)
+
+A Biblioteca oferece **Inspecionar exportação Kolibri**, opção que reconhece
+a estrutura oficial `KOLIBRI_DATA/content/databases` e indica se existe
+`content/storage` em uma exportação copiada para o HOME autorizado. Lista
+somente IDs dos canais e tamanho dos bancos; não abre SQLite, não interpreta
+atividades/arquivos nem inicia Kolibri, Docker, portas, downloads ou importações.
+
+O limite é de 60 bancos de canais em até 300 entradas de diretório, com
+proteção contra links simbólicos. A leitura/conversão integral de cursos
+Kolibri permanece pendente. [Instruções e limitações](KOLIBRI_EXPORT_v0.9.19.md).
