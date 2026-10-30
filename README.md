@@ -52,6 +52,17 @@ no PostgreSQL local. Veja o [curso original de demonstração](examples/offline_
 e a [documentação de cursos](docs/OFFLINE_COURSES_v0.9.19.md).
 Não há integração completa Kolibri nem tutoria adaptativa automática.
 
+**Compatibilidade com exportações Kolibri (inspeção):** na Biblioteca, o botão
+**Inspecionar exportação Kolibri** permite selecionar uma pasta KOLIBRI_DATA
+previamente copiada para o HOME e consultar IDs/tamanhos de até 60 bancos de
+canais, sem abrir bancos SQLite ou iniciar servidor. Veja
+[limitações e instruções](docs/KOLIBRI_EXPORT_v0.9.19.md).
+
+**Pesquisa semântica híbrida limitada:** a amostra de até oito trechos agora
+combina até quatro candidatos encontrados por texto/FTS e representantes de
+documentos recentes distintos; só depois, mediante autorização, compara
+embeddings no Ollama local. Não existe índice semântico global persistente.
+
 ## 0.9.18 — estudo local e prévia de voz
 
 Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão
