@@ -130,19 +130,28 @@ def open_library(root, app):
         ):
             work("transcribe", path)
 
+    def chosen_voice():
+        selector = getattr(app, "voice_selector", None)
+        if selector is None:
+            return "Feminina"
+        try:
+            return selector.get()
+        except Exception:
+            return "Feminina"
+
     def practice():
         if busy:
             status.configure(text="Aguarde a operação atual.")
             return
         from nexus.desktop.study_panel import open_study
-        open_study(root)
+        open_study(root, voice=chosen_voice())
 
     def create_card():
         if busy or not source_hits:
             status.configure(text="Pesquise um assunto primeiro para selecionar o primeiro trecho.")
             return
         from nexus.desktop.study_panel import open_study
-        open_study(root, source_hits[0])
+        open_study(root, source_hits[0], voice=chosen_voice())
 
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
