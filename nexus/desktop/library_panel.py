@@ -343,6 +343,13 @@ def open_library(root, app):
         from nexus.desktop.study_panel import open_study
         open_study(root, source_hits[0], **playback_profile())
 
+    # Keep Kolibri discovery in the existing top controls row to avoid
+    # adding another button row at the smallest supported window size.
+    ttk.Button(
+        tutor_controls, text="Inspecionar exportação Kolibri",
+        command=inspect_kolibri, style="Nexus.TButton",
+    ).pack(side="right")
+
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
     for index, (label, action) in enumerate((("Importar texto", import_file),
@@ -354,7 +361,7 @@ def open_library(root, app):
                           ("Transcrever áudio local", transcribe_audio),
                           ("Catálogo offline", browse_offline_catalog),
                           ("Abrir curso offline", open_offline_course),
-                          ("Inspecionar exportação Kolibri", inspect_kolibri),
+
                           ("Ler artigo ZIM", read_zim_article),
                           ("Resumir trechos com IA local", summarize),
                           ("Plano de estudo com IA local", study_plan),
