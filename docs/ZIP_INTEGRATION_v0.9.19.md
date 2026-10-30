@@ -185,7 +185,7 @@ no máximo vinte arquivos TXT/Markdown e oito excertos retornados. Não cria
 
 A janela oferece **Ouvir aula**, **Pausar/retomar áudio** e **Parar áudio**.
 O usuário precisa primeiro selecionar e ler uma aula; a narração cobre até
-2.400 caracteres por clique, usando voz masculina/feminina e velocidade/volume
+9.600 caracteres por clique, em até quatro trechos sequenciais de 2.400, usando voz masculina/feminina e velocidade/volume
 selecionados no NEXUS CORE. Apenas processos TTS de propriedade do assistente
 podem ser pausados/retomados; trocar de aula ou fechar a janela encerra a fala.
 Não há leitura de arquivos em segundo plano nem download de vozes.
