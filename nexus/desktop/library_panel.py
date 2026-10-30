@@ -406,7 +406,7 @@ def open_library(root, app):
                      if not error else ["Catálogo indisponível ou diretório não autorizado."])
             display.configure(state="normal")
             display.delete("1.0", "end")
-            display.insert("1.0", "\\n".join(lines) if lines else
+            display.insert("1.0", "\n".join(lines) if lines else
                            "Nenhum arquivo ZIM ou material de curso encontrado na pasta.")
             display.configure(state="disabled")
             status.configure(text=f"{len(result)} materiais identificados (metadados)." if not error
