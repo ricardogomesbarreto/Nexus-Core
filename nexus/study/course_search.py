@@ -32,6 +32,43 @@ def _normalized(value: str) -> str:
     return "".join(ch for ch in folded if unicodedata.category(ch) != "Mn")
 
 
+
+def _excerpt_around_match(source: str, needle: str) -> str | None:
+    """Bounded source-context excerpt retaining original Unicode.
+
+    Map normalized-match offsets back to the displayed string in a single
+    pass, so combining accents and casefold expansions do not misplace the
+    snippet. The text may contain a long paragraph; never show it in full.
+    """
+    normalized = _normalized(source)
+    match = normalized.find(needle)
+    if match < 0:
+        return None
+    finish = match + len(needle)
+    offset = start = end = 0
+    begun = False
+    for index, character in enumerate(source):
+        width = len(_normalized(character))
+        if not begun and offset + width > match:
+            start = index
+            begun = True
+        offset += width
+        if begun and offset >= finish:
+            end = index + 1
+            break
+    window = MAX_SNIPPET - 2  # reserve space for edge ellipses
+    left = max(0, start - 45)
+    if end - left > window:
+        left = end - window
+    right = min(len(source), left + window)
+    if right - left < window:
+        left = max(0, right - window)
+    return (
+        ("…" if left else "") + source[left:right].strip() +
+        ("…" if right < len(source) else "")
+    )
+
+
 def search_course(
     course: OfflineCourse, query: str, *,
     limit: int = 8, paths: PathSecurity | None = None,
@@ -59,15 +96,9 @@ def search_course(
             if not paragraph.strip():
                 continue
             single = " ".join(paragraph.split())
-            if needle not in _normalized(single):
+            excerpt = _excerpt_around_match(single, needle)
+            if excerpt is None:
                 continue
-            # Display only a bounded excerpt around a match.
-            # Since normalized text can have differing codepoint lengths,
-            # show the beginning of the matched paragraph without unsafe
-            # Unicode offsets or revealing unrelated files.
-            excerpt = single[:MAX_SNIPPET]
-            if len(single) > MAX_SNIPPET:
-                excerpt = excerpt.rstrip() + "…"
             results.append(CourseSearchHit(index, lesson.title, excerpt))
             if len(results) >= limit:
                 return results
