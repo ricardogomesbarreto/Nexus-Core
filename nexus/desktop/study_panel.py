@@ -168,12 +168,12 @@ def open_study(root, source_hit=None):
         correct, answered = exercise_session.score
         message = ("Resposta literal correta." if attempt.correct else
                    f"Resposta literal esperada: {attempt.question.expected_answer}")
-        message += f"\\nFonte: {attempt.question.source_excerpt}"
+        message += f"\nFonte: {attempt.question.source_excerpt}"
         next_item = exercise_session.next_question()
         if next_item:
-            message += f"\\n\\nPróxima questão:\\n{next_item.prompt}"
+            message += f"\n\nPróxima questão:\n{next_item.prompt}"
         else:
-            message += f"\\n\\nSessão concluída: {correct}/{answered} respostas literais corretas."
+            message += f"\n\nSessão concluída: {correct}/{answered} respostas literais corretas."
         show(message)
         status.configure(text=f"Exercícios: {answered}/{len(exercise_session.questions)} respondidos")
 
