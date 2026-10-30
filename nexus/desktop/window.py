@@ -1952,7 +1952,12 @@ class DesktopWindow:
                 self._set_network_status("unknown")
 
     def _poll(self) -> None:
-        self._refresh_network_status()
+        # OS connectivity snapshot may traverse application state; refreshing
+        # it every 80 ms at idle adds avoidable wakeups on small computers.
+        now = monotonic()
+        if (now - getattr(self, "_network_last_refresh", -1e9) >= 2.0):
+            self._refresh_network_status()
+            self._network_last_refresh = now
         self._refresh_activity_badge()
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
@@ -2261,7 +2266,14 @@ class DesktopWindow:
             self._finish_close()
             return
         self._refresh_privacy_status()
-        self.root.after(80, self._poll)
+        from nexus.desktop.eco_scheduler import next_desktop_poll_ms
+        interval_ms = next_desktop_poll_ms(
+            busy=self._busy, listening=self._listening,
+            speaking=self._speaking, camera=self._live_camera is not None,
+            closing=self._closing,
+            pending_voice=bool(self._listen_pending_generations),
+        )
+        self.root.after(interval_ms, self._poll)
 
     def _close(self) -> None:
         if self._closing:
