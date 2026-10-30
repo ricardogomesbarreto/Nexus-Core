@@ -73,9 +73,31 @@ def _ollama_snapshot(connect=None) -> dict:
                 pass
 
 
+def _profile_snapshot() -> dict:
+    """Read-only effective hardware budget; no inference or service startup."""
+    from nexus.models.resource_budget import ResourceBudget
+    try:
+        profile = ResourceBudget.detect()
+    except (OSError, ValueError):
+        return {"status": "unavailable"}
+    if profile.total_ram_mib is None:
+        return {"status": "unavailable"}
+    return {
+        "status": "available",
+        "profile": profile.mode,
+        "effective_total_ram_mib": profile.total_ram_mib,
+        "effective_available_ram_mib": profile.available_ram_mib,
+        "inference_threads": profile.num_thread,
+        "text_context_tokens": profile.text_context,
+        "vision_max_edge_pixels": profile.vision_edge,
+        "model_keep_alive": profile.keep_alive,
+    }
+
+
 def inspect_resources(*, read_text=None, connect=None) -> dict:
     """No model names, prompts, images, service mutations or external traffic."""
     return {"schema": "nexus.resources.v1", "mode": "passive_local",
             "memory": _memory_snapshot(read_text),
+            "effective_profile": _profile_snapshot(),
             "ollama": _ollama_snapshot(connect),
             "inference_tested": False, "external_network_used": False}
