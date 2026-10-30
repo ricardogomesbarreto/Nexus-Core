@@ -391,6 +391,32 @@ class DesktopWindow:
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
         self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
+        # Separate compact controls avoid widening the existing voice toolbar.
+        voice_profile = ttk.Frame(footer, style="Nexus.App.TFrame")
+        voice_profile.pack(fill="x", pady=(2, 0))
+        ttk.Label(voice_profile, text="Velocidade:", style="Nexus.Caption.TLabel").pack(
+            side="left", padx=(0, 5))
+        self.voice_speed_choice = ttk.Combobox(
+            voice_profile, values=("75%", "100%", "125%"), state="readonly", width=6,
+        )
+        saved_speed = (self._saved_preferences.voice_speed_percent
+                       if self._saved_preferences is not None else 100)
+        self.voice_speed_choice.set(f"{saved_speed}%")
+        self.voice_speed_choice.pack(side="left")
+        ttk.Label(voice_profile, text="Volume:", style="Nexus.Caption.TLabel").pack(
+            side="left", padx=(12, 5))
+        self.voice_volume_choice = ttk.Combobox(
+            voice_profile, values=("50%", "75%", "100%", "125%", "150%"),
+            state="readonly", width=6,
+        )
+        saved_volume = (self._saved_preferences.voice_volume_percent
+                        if self._saved_preferences is not None else 100)
+        self.voice_volume_choice.set(f"{saved_volume}%")
+        self.voice_volume_choice.pack(side="left")
+        self._speech_speed_percent = saved_speed
+        self._speech_volume_percent = saved_volume
+        self.voice_speed_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        self.voice_volume_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
         ttk.Label(voice_controls, text="Entrada:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
@@ -658,6 +684,21 @@ class DesktopWindow:
         if not self._say_response(f"Olá. Sou o Nexus Core. Esta é a voz {voice.lower()}."):
             self._start_listening()
 
+    def _select_voice_profile(self, event=None) -> None:
+        """Apply numeric UI choices on Tk thread; store only allowlisted values."""
+        try:
+            speed = int(self.voice_speed_choice.get().removesuffix("%"))
+            volume = int(self.voice_volume_choice.get().removesuffix("%"))
+            if speed not in (75, 100, 125) or volume not in (50, 75, 100, 125, 150):
+                raise ValueError
+        except (ValueError, AttributeError):
+            self.status.configure(text="Configuração de voz inválida.")
+            return
+        self._speech_speed_percent = speed
+        self._speech_volume_percent = volume
+        self._save_desktop_preferences()
+        self.status.configure(text=f"Voz local: velocidade {speed}%, volume {volume}%.")
+
     def _save_desktop_preferences(self, event=None) -> None:
         """Persist only user choices on this Linux account, never credentials."""
         if self._preference_store is None or self._closing:
@@ -675,6 +716,8 @@ class DesktopWindow:
                 listening_enabled=self._voice_active,
                 geometry=geometry,
                 remember_history=self.archive_enabled.get(),
+                voice_speed_percent=getattr(self, "_speech_speed_percent", 100),
+                voice_volume_percent=getattr(self, "_speech_volume_percent", 100),
             )
             # In the brief period before the Tk window is mapped, geometry
             # may still be 1x1. Never destroy a valid stored size for that.
@@ -1727,10 +1770,16 @@ class DesktopWindow:
                 # The real eSpeak process must recheck after Popen: stop()
                 # can race with process registration. Injected speakers keep
                 # their original two-argument interface.
-                self.speaker.speak(
-                    text, voice,
-                    cancelled=lambda: self._closing or generation != self._speak_generation,
-                )
+                options = {
+                    "cancelled": lambda: self._closing or generation != self._speak_generation,
+                }
+                # Keep defaults compatible with legacy speakers and tests.
+                speed = getattr(self, "_speech_speed_percent", 100)
+                volume = getattr(self, "_speech_volume_percent", 100)
+                if speed != 100 or volume != 100:
+                    options["speed"] = speed / 100
+                    options["volume"] = volume
+                self.speaker.speak(text, voice, **options)
             else:
                 self.speaker.speak(text, voice)
             self._audio_events.put(("speak_done", "", generation))
