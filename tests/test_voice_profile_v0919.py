@@ -50,8 +50,8 @@ def test_espeak_respects_requested_speed_volume_without_shell(monkeypatch):
     monkeypatch.setattr(local_voice.subprocess, "Popen", spawn)
     speaker = LocalSpeaker()
     speaker.speak("Teste", "Feminina", speed=1.25, volume=75)
-    assert commands[0][:6] == ["/usr/bin/espeak-ng", "-v", "pt-br+f3", "-b", "1", "--stdin"]
-    assert commands[0][6:] == ["-s", "219", "-a", "75"]
+    assert commands[0] == ["/usr/bin/espeak-ng", "-v", "pt-br+f3", "-b", "1",
+                           "-s", "219", "-a", "75", "--stdin"]
     with pytest.raises(VoiceError):
         speaker.speak("Teste", speed=2.0)
     with pytest.raises(VoiceError):
