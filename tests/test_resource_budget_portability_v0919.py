@@ -30,7 +30,9 @@ def test_automatic_profile_uses_v2_memory_cap_not_host_ram(monkeypatch):
     assert (total, available) == (4 * GIB, GIB)
     profile = budget.ResourceBudget.detect(requested="auto")
     assert profile.mode == "eco"
-    assert profile.num_thread == 2
+    assert profile.num_thread == 1
+    assert profile.text_context == 768
+    assert profile.vision_edge == 512
     assert profile.available_ram_mib == 1024
 
 
@@ -103,3 +105,31 @@ def test_no_readable_proc_info_fails_conservatively(monkeypatch):
     total, available = budget._memory_bytes()
     assert total is None and available is None
     assert budget.ResourceBudget.available_now_mib() is None
+
+
+@pytest.mark.parametrize("ram_gib,expected_threads,expected_edge", [
+    (2, 1, 512), (4, 1, 512), (6, 2, 768), (8, 2, 768),
+    (16, 4, 1536), (32, 4, 1536),
+])
+def test_auto_tiers_by_effective_ram(ram_gib, expected_threads, expected_edge):
+    profile = budget.ResourceBudget.detect(
+        requested="auto", total_bytes=ram_gib * GIB,
+        available_bytes=max(1, ram_gib - 1) * GIB, cores=16,
+    )
+    assert profile.num_thread == expected_threads
+    assert profile.vision_edge == expected_edge
+    if ram_gib <= 8:
+        assert profile.mode == "eco"
+        assert profile.keep_alive == "0s"
+    else:
+        assert profile.mode == "balanced"
+
+
+def test_manual_balanced_does_not_silently_change_to_eco():
+    # Explicit configuration remains user controlled; GUI warnings and
+    # runtime pressure checks still protect individual model requests.
+    profile = budget.ResourceBudget.detect(
+        requested="balanced", total_bytes=4 * GIB,
+        available_bytes=2 * GIB, cores=4,
+    )
+    assert profile.mode == "balanced"
