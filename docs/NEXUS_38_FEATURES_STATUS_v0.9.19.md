@@ -17,7 +17,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 4 | Reconhecimento de fala | Existente | Vosk local |
 | 5 | Conversação contínua | Existente, validar | Escuta em ciclos; testar hardware |
 | 6 | Ler textos/documentos em voz alta | Parcial/novo | Leitura de trecho da Biblioteca; não PDF integral |
-| 7 | Transcrição de áudio | Novo | Apenas WAV PCM 16 kHz mono escolhido, sem persistência |
+| 7 | Transcrição de áudio | Novo | WAV PCM 16 kHz ou MP3/OGG/FLAC/M4A via FFmpeg local opcional; sem persistência |
 | 8 | Pausar/interromper/retomar | Novo/parcial | SIGSTOP/SIGCONT no subprocesso de fala do Nexus, opções no menu e leitura; áudio físico ainda não validado |
 | 9 | Processamento local | Existente/novo | Sem upload ou servidor adicional |
 | 10 | Otimização de áudio | Pendente de medição | Perfil eco existente, latência/fluidez física não comprovadas |
