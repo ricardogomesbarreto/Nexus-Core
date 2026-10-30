@@ -238,14 +238,14 @@ def cli(argv: list[str] | None = None) -> None:
     )
     actions.add_argument(
         "--platform-check", action="store_true",
-        help="diagnóstico passivo Ubuntu/Linux, sem alterar o sistema",
+        help="diagnóstico passivo Linux Ubuntu/Fedora, sem alterar o sistema",
     )
     actions.add_argument(
-        "--ubuntu-doctor", action="store_true",
+        "--ubuntu-doctor", "--linux-doctor", action="store_true", dest="ubuntu_doctor",
         help="verifica PostgreSQL e Ollama somente no loopback local, sem alterações",
     )
     actions.add_argument(
-        "--ubuntu-preflight", action="store_true",
+        "--ubuntu-preflight", "--linux-preflight", action="store_true", dest="ubuntu_preflight",
         help="testa login PostgreSQL somente leitura, modelo Ollama local e dependências de voz",
     )
     actions.add_argument(
