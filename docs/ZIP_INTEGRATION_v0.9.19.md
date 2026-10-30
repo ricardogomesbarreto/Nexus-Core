@@ -57,8 +57,8 @@ latência e testes contínuos de microfone. Voz masc./fem., fala, Vosk, controle
 de interrupção e conversação contínua têm implementação preexistente, mas
 necessitam de aceite real de hardware.
 
-**NOMAD**: leitura e pesquisa dentro de arquivos ZIM, execução opcional e
-controlada de cursos Kolibri, mapa avançado, pesquisa **semântica por embeddings**,
+**NOMAD**: pesquisa integral nos arquivos ZIM, execução opcional e
+controlada de cursos Kolibri, mapa avançado, **indexação vetorial completa**,
 catálogo executável de apps e benchmark de inferência de ponta a ponta.
 Biblioteca .txt/.md, FTS PostgreSQL, consulta via Ollama, notas, conversões,
 SHA-256 e mapas PMTiles já existiam; não foram reimplementados nesta branch.
@@ -110,3 +110,22 @@ Intermediário e Avançado). A pergunta é estruturada em até 160 caracteres
 e segue a implementação existente que utiliza somente até três fontes
 locais para solicitar resposta ao Ollama. Não faz diagnóstico do aluno,
 nem adapta conteúdo automaticamente entre sessões.
+
+## Similaridade semântica leve com Ollama (opt-in)
+
+O botão **Similaridade semântica local** utiliza um modelo de embeddings
+**já instalado**. O Nexus consulta somente `/api/tags` e `/api/embed`
+no Ollama de loopback, sem redirecionamento HTTP, download ou inicialização
+automática. A pesquisa compara a pergunta com os **oito trechos mais recentes**
+recuperados do PostgreSQL e exibe até cinco resultados com pontuação de cosseno.
+
+O modelo precisa ser indicado explicitamente pelo usuário, estar instalado e
+ter tamanho informado de até 900 MiB. As entradas e respostas são limitadas,
+o parâmetro `keep_alive: 0` solicita descarregar o modelo. Nenhum embedding
+fica salvo no disco. **Essa é uma amostra semântica limitada**, não indexação
+semântica global de todos os documentos. O modo anterior FTS segue disponível.
+
+A configuração de velocidade e volume foi deslocada para **Recursos →
+Configurar voz local**, evitando reduzir a área de conversa na janela mínima
+(770×570). Uma execução anterior da CI detectou dois testes de layout falhos;
+a correção requer nova execução de CI no SHA final. A prévia física é pendente.
