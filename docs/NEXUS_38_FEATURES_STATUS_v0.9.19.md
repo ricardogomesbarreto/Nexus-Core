@@ -31,12 +31,12 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 3 | Biblioteca de documentos | Existente | Importação opt-in TXT/MD |
 | 4 | Pesquisa em documentos | Existente | PostgreSQL FTS |
 | 5 | Pesquisa com IA | Existente | Perguntas sobre trechos via Ollama local |
-| 6 | Cursos offline | Novo/parcial | Cursos nativos com manifesto, aulas TXT/MD, exercícios e progresso PostgreSQL opt-in; execução Kolibri pendente |
+| 6 | Cursos offline | Novo/parcial | Cursos nativos com manifesto, aulas TXT/MD, exercícios e progresso PostgreSQL opt-in; inspeção de exportação KOLIBRI_DATA somente metadados; execução Kolibri pendente |
 | 7 | Mapas offline | Parcial | Prévia PMTiles anterior |
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
 | 10 | Verificação SHA-256 | Existente | Ferramentas existentes |
-| 11 | Busca semântica | Novo/parcial | Embeddings Ollama local sob autorização, amostra de oito trechos recentes; sem índice vetorial completo |
+| 11 | Busca semântica | Novo/parcial | Embeddings Ollama sob autorização em até 8 candidatos (FTS + trechos de documentos distintos); sem índice vetorial completo |
 | 12 | Catálogo de ferramentas | Parcial | Ferramentas internas; plugin manager ainda não integrado |
 | 13 | Avaliação de desempenho | Parcial | Monitor de recursos; benchmark de modelos pendente |
 | 14 | Organização de conhecimento | Existente | Biblioteca, notas e cartões por fontes |
