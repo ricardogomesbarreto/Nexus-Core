@@ -50,6 +50,7 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
     revealed = False
     busy = False
     exercise_session = None
+    exercise_progress_saved = False
     speech_messages = Queue()
     speech_cancel = Event()
     speech_busy = False
@@ -133,7 +134,7 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
             run("delete", current.id)
 
     def generate_exercises():
-        nonlocal exercise_session
+        nonlocal exercise_session, exercise_progress_saved
         if busy or source_hit is None:
             status.configure(text="Pesquise um trecho na Biblioteca antes de gerar exercícios.")
             return
@@ -146,6 +147,7 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
         ):
             return
         exercise_session = StudySession.from_text(source_hit.text, limit=5)
+        exercise_progress_saved = False
         if not exercise_session.questions:
             status.configure(text="O trecho não contém frases adequadas para questões.")
             return
@@ -180,6 +182,26 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
             message += f"\n\nSessão concluída: {correct}/{answered} respostas literais corretas."
         show(message)
         status.configure(text=f"Exercícios: {answered}/{len(exercise_session.questions)} respondidos")
+
+    def save_progress():
+        if source_hit is None or exercise_session is None or not exercise_session.completed:
+            status.configure(text="Conclua os exercícios de um trecho da Biblioteca.")
+            return
+        if exercise_progress_saved or busy:
+            status.configure(text="Progresso já registrado ou operação em andamento.")
+            return
+        if not messagebox.askyesno(
+            "Nexus Core — progresso",
+            "Salvar somente o resultado desta sessão no PostgreSQL local? "
+            "As respostas não serão armazenadas.",
+            parent=window,
+        ):
+            return
+        correct, total = exercise_session.score
+        run("record_session", source_hit.chunk_id, correct, total)
+
+    def show_history():
+        run("recent_sessions")
 
     def read_excerpt():
         nonlocal speech_busy, speaker, speech_cancel
@@ -240,7 +262,9 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
                ("Gerar exercícios do trecho", generate_exercises),
                ("Responder exercício", answer_exercise),
                ("Ler trecho em voz alta", read_excerpt),
-               ("Parar leitura", stop_reading))
+               ("Parar leitura", stop_reading),
+               ("Salvar progresso", save_progress),
+               ("Histórico de sessões", show_history))
     for column in range(3):
         controls.columnconfigure(column, weight=1)
     for index, (label, action) in enumerate(buttons):
@@ -250,7 +274,7 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
     due_list.bind("<<ListboxSelect>>", select)
 
     def poll():
-        nonlocal busy, cards, current, revealed
+        nonlocal busy, cards, current, revealed, exercise_progress_saved
         if not window.winfo_exists():
             return
         try:
@@ -259,6 +283,22 @@ def open_study(root, source_hit=None, *, voice="Feminina"):
             window.after(80, poll)
             return
         busy = False
+        if operation == "record_session":
+            if not error:
+                exercise_progress_saved = True
+            status.configure(text=(error or "Resultado registrado no PostgreSQL local, sem respostas."))
+            window.after(80, poll)
+            return
+        if operation == "recent_sessions":
+            if error:
+                status.configure(text=error)
+            else:
+                show("\n".join(f"Trecho {chunk}: {correct}/{total} acertos"
+                               for chunk, correct, total in result)
+                     if result else "Nenhum resultado de sessão registrado.")
+                status.configure(text=f"{len(result)} sessões recentes.")
+            window.after(80, poll)
+            return
         if error:
             status.configure(text=error)
         else:
