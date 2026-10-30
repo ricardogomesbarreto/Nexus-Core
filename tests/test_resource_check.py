@@ -90,3 +90,40 @@ def test_visual_request_respects_adaptive_model_residency(monkeypatch, profile, 
     LocalVision(Settings(), transport=transport).describe(image_bytes())
     payload, _ = transport.calls[0]
     assert payload["keep_alive"] == expected
+
+
+def test_resource_check_reports_effective_profile_without_model_activation(monkeypatch):
+    from nexus.models.resource_budget import ResourceBudget
+    import nexus.platforms.resources as resource_module
+    detected = ResourceBudget.detect(
+        requested="auto", total_bytes=4 * 1024 ** 3,
+        available_bytes=1200 * 1024 ** 2, cores=16,
+    )
+    monkeypatch.setattr(ResourceBudget, "detect", lambda **kw: detected)
+    result = resource_module.inspect_resources(
+        read_text=lambda: MEMINFO, connect=LocalConnection,
+    )
+    assert result["effective_profile"] == {
+        "status": "available", "profile": "eco",
+        "effective_total_ram_mib": 4096,
+        "effective_available_ram_mib": 1200,
+        "inference_threads": 1,
+        "text_context_tokens": 768,
+        "vision_max_edge_pixels": 512,
+        "model_keep_alive": "0s",
+    }
+    assert not result["inference_tested"]
+    assert result["external_network_used"] is False
+
+
+def test_resource_check_unverifiable_memory_is_not_claimed(monkeypatch):
+    from nexus.models.resource_budget import ResourceBudget
+    import nexus.platforms.resources as resource_module
+    detected = ResourceBudget.detect(
+        requested="auto", total_bytes=32 * 1024 ** 3,
+        available_bytes=20 * 1024 ** 3, cores=8,
+    )
+    from dataclasses import replace
+    monkeypatch.setattr(ResourceBudget, "detect",
+                        lambda **kw: replace(detected, total_ram_mib=None))
+    assert resource_module._profile_snapshot() == {"status": "unavailable"}
