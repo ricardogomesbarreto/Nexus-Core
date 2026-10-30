@@ -542,8 +542,13 @@ def ensure_postgresql_running_fedora() -> bool:
             and installed("pg_isready") and installed("systemctl")
             and installed("sudo")):
         return False
+    port_text = os.environ.get("NEXUS_DATABASE_PORT", "5432")
+    if not port_text.isdecimal() or not 1 <= int(port_text) <= 65535:
+        print("Porta PostgreSQL inválida; serviço não foi alterado.")
+        return False
+    probe = ["pg_isready", "-q", "-h", "127.0.0.1", "-p", port_text]
     try:
-        _run(["pg_isready", "-q", "-h", "127.0.0.1"], timeout=5)
+        _run(probe, timeout=5)
         return True
     except (OSError, subprocess.SubprocessError):
         pass
@@ -561,7 +566,7 @@ def ensure_postgresql_running_fedora() -> bool:
         deadline = monotonic() + 12
         while monotonic() < deadline:
             try:
-                _run(["pg_isready", "-q", "-h", "127.0.0.1"], timeout=5)
+                _run(probe, timeout=5)
                 return True
             except (OSError, subprocess.SubprocessError):
                 sleep(0.5)
