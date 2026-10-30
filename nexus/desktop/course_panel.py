@@ -63,10 +63,13 @@ def open_course(root, course: OfflineCourse):
         return indexes[0] if indexes else None
 
     def refresh():
+        previous = selected()
         listing.delete(0, "end")
         for index, lesson in enumerate(course.lessons):
             marker = "✓" if index in completed else "□"
             listing.insert("end", f"{marker} {index + 1}. {lesson.title}")
+        if previous is not None and previous < len(course.lessons):
+            listing.selection_set(previous)
         status.configure(text=f"{len(completed)}/{len(course.lessons)} aulas marcadas "
                               "como concluídas nesta sessão.")
 
