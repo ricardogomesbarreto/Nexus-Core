@@ -181,8 +181,8 @@ def open_course(root, course: OfflineCourse):
         if progress_busy:
             status.configure(text="Há outra operação de progresso em andamento.")
             return
+        from tkinter import messagebox
         if operation == "save":
-            from tkinter import messagebox
             if not messagebox.askyesno(
                 "Nexus Core — progresso do curso",
                 "Salvar apenas as aulas marcadas no PostgreSQL local? "
@@ -190,6 +190,12 @@ def open_course(root, course: OfflineCourse):
                 parent=window,
             ):
                 return
+        elif completed and not messagebox.askyesno(
+            "Nexus Core — restaurar progresso",
+            "Substituir as marcações atuais pelas que foram salvas anteriormente?",
+            parent=window,
+        ):
+            return
         progress_busy = True
         snapshot = set(completed)
         status.configure(text="Acessando PostgreSQL local sob solicitação…")
