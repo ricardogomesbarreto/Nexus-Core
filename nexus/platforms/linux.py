@@ -14,6 +14,7 @@ import shutil
 import sys
 
 
+FEDORA_RELEASE = re.compile(r"[0-9]{2}", re.ASCII)
 UBUNTU_RELEASE = re.compile(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", re.ASCII)
 REQUIRED_BINARIES = (
     "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg",
@@ -21,6 +22,11 @@ REQUIRED_BINARIES = (
 )
 OPTIONAL_BINARIES = (
     "xdotool", "ollama", "docker",
+)
+FEDORA_PACKAGES = (
+    "python3", "python3-tkinter", "python3-pip", "postgresql",
+    "postgresql-server", "espeak-ng", "alsa-utils", "ffmpeg-free",
+    "xdg-utils", "gtk3", "util-linux",
 )
 UBUNTU_PACKAGES = (
     "python3-venv", "python3-tk", "postgresql", "postgresql-client",
@@ -43,6 +49,8 @@ class LinuxProfile:
             return "ubuntu_compatible"
         if self.system != "Linux":
             return "non_linux"
+        if self.distro == "fedora":
+            return "fedora_compatible" if self.installer_supported else "fedora_not_yet_validated"
         if self.distro == "ubuntu":
             return "ubuntu_not_yet_validated"
         return "linux_other_distro_future"
@@ -85,9 +93,12 @@ def linux_profile(
     if session not in ("x11", "wayland"):
         session = "unknown"
     supported = (
-        system == "Linux" and distro == "ubuntu"
-        and UBUNTU_RELEASE.fullmatch(release) is not None
-        and sys.version_info >= (3, 12)
+        system == "Linux" and sys.version_info >= (3, 12)
+        and (
+            (distro == "ubuntu" and UBUNTU_RELEASE.fullmatch(release) is not None)
+            or (distro == "fedora" and FEDORA_RELEASE.fullmatch(release) is not None
+                and 43 <= int(release) <= 45)
+        )
     )
     return LinuxProfile(system, distro, release, session, supported)
 
@@ -143,8 +154,9 @@ def platform_capabilities(
         "ollama_model_tested": False,
         "changes_performed": False,
         "notes": (
-            "Instalação Ubuntu condicionada a Python 3.12+, dependências e "
-            "verificação local do PostgreSQL; outras distros somente diagnóstico. "
+            "Instalação Ubuntu ou Fedora 43–45 condicionada a Python 3.12+, "
+            "pacotes nativos e autenticação PostgreSQL local; "
+            "outras distros somente diagnóstico. "
             "A interface Tk pode funcionar em Wayland, "
             "mas automação de teclado por xdotool exige sessão X11 local."
         ),
