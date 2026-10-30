@@ -110,7 +110,7 @@ def open_library(root, app):
                     hits = store.search(topic, 3, for_context=True)
                     result = answer_from_hits(prompt, hits,
                                               app.model_router if hits else None)
-                elif operation in ("answer", "summary", "study_plan", "tutor"):
+                elif operation in ("answer", "summary", "study_plan"):
                     hits = store.search(value, 3, for_context=True)
                     prompt = value
                     if operation == "summary":
@@ -444,7 +444,7 @@ def open_library(root, app):
             elif operation == "search":
                 lines = [f"Fonte {h.document_id}:{h.chunk_id} · {h.name}\n{h.text}"
                          for h in result]
-            elif operation in ("answer", "summary", "study_plan"):
+            elif operation in ("answer", "summary", "study_plan", "tutor"):
                 lines = [result["answer"], "", "Trechos consultados:"]
                 lines += [f"{s['document_id']}:{s['chunk_id']} · {s['name']}\n{s['excerpt']}"
                           for s in result["sources"]]
