@@ -5,6 +5,12 @@ from types import SimpleNamespace
 import pytest
 
 from nexus.knowledge.semantic_local import LocalSemanticReranker, SemanticSearchError
+from nexus.models.resource_budget import ResourceBudget
+
+
+@pytest.fixture(autouse=True)
+def enough_test_memory(monkeypatch):
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", lambda: 8192)
 
 
 class FakeConnection:
@@ -97,3 +103,16 @@ def test_bad_vectors_rejected():
         LocalSemanticReranker(connection_factory=FakeConnection).rerank(
             "tema", hits(), "embed-small",
         )
+
+
+def test_low_memory_blocks_optional_embedding_before_loading(monkeypatch):
+    FakeConnection.instances = []
+    FakeConnection.responses = [
+        (200, {"models": [{"name": "embed-small", "size": 500_000_000}]}),
+    ]
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", lambda: 200)
+    with pytest.raises(SemanticSearchError, match="Memória"):
+        LocalSemanticReranker(connection_factory=FakeConnection).rerank(
+            "tema", hits(), "embed-small"
+        )
+    assert sum(len(item.calls) for item in FakeConnection.instances) == 1
