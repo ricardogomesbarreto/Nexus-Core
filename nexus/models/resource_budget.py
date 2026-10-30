@@ -183,8 +183,9 @@ class ResourceBudget:
                 available_bytes = actual_available
         count = _logical_cores() if cores is None else max(1, int(cores))
         low_memory = (
-            (total_bytes is not None and total_bytes <= 8 * _GIB)
-            or (available_bytes is not None and available_bytes <= 2 * _GIB)
+            total_bytes is None or available_bytes is None
+            or total_bytes <= 8 * _GIB
+            or available_bytes <= 2 * _GIB
         )
         mode = ("eco" if low_memory else "balanced") if setting == "auto" else setting
         if mode == "eco":
