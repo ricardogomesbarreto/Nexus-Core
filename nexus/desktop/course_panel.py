@@ -5,6 +5,10 @@ automática de materiais antes do clique nem criação de arquivos ou banco.
 """
 from __future__ import annotations
 
+from queue import Empty, Queue
+from threading import Thread
+
+from nexus.config.settings import settings
 from nexus.study.offline_course import OfflineCourse, CourseError, read_lesson
 from nexus.study.recommendations import recommend_study_step
 from nexus.study_session import StudySession
@@ -51,6 +55,8 @@ def open_course(root, course: OfflineCourse):
     lesson_text = ""
     session = None
     session_counted = False
+    progress_events = Queue()
+    progress_busy = False
 
     def show(text):
         display.configure(state="normal")
@@ -170,10 +176,64 @@ def open_course(root, course: OfflineCourse):
              "Esta sugestão não altera automaticamente seu nível nem salva resultados.")
         status.configure(text="Sugestão calculada apenas com esta sessão local.")
 
+    def run_progress(operation):
+        nonlocal progress_busy
+        if progress_busy:
+            status.configure(text="Há outra operação de progresso em andamento.")
+            return
+        if operation == "save":
+            from tkinter import messagebox
+            if not messagebox.askyesno(
+                "Nexus Core — progresso do curso",
+                "Salvar apenas as aulas marcadas no PostgreSQL local? "
+                "Nenhum conteúdo, caminho ou resposta será armazenado.",
+                parent=window,
+            ):
+                return
+        progress_busy = True
+        snapshot = set(completed)
+        status.configure(text="Acessando PostgreSQL local sob solicitação…")
+
+        def worker():
+            try:
+                from nexus.study.offline_course_progress import PostgreSQLOfflineCourseProgress
+                store = PostgreSQLOfflineCourseProgress(settings)
+                result = (store.save(course, snapshot)
+                          if operation == "save" else store.load(course))
+                progress_events.put((operation, result, None))
+            except Exception:
+                progress_events.put((operation, None,
+                                     "Progresso indisponível. Confira o PostgreSQL local."))
+
+        Thread(target=worker, name="nexus-offline-course-progress", daemon=True).start()
+
+    def poll_progress():
+        nonlocal progress_busy
+        if not window.winfo_exists():
+            return
+        try:
+            operation, result, error = progress_events.get_nowait()
+        except Empty:
+            window.after(100, poll_progress)
+            return
+        progress_busy = False
+        if error:
+            status.configure(text=error)
+        elif operation == "load":
+            completed.clear()
+            completed.update(result)
+            refresh()
+            status.configure(text=f"{len(completed)} aulas restauradas do PostgreSQL local.")
+        else:
+            status.configure(text=f"{result} aulas registradas no PostgreSQL local.")
+        window.after(100, poll_progress)
+
     buttons = (
         ("Ler aula", read_selected), ("Concluir aula", mark_completed),
         ("Próxima aula", next_lesson), ("Gerar exercícios", start_exercises),
         ("Responder exercício", answer_exercise), ("Sugerir próximo passo", suggest_step),
+        ("Salvar progresso", lambda: run_progress("save")),
+        ("Carregar progresso", lambda: run_progress("load")),
     )
     for column in range(3):
         controls.columnconfigure(column, weight=1)
@@ -186,4 +246,5 @@ def open_course(root, course: OfflineCourse):
     refresh()
     if course.lessons:
         listing.selection_set(0)
+    window.after(100, poll_progress)
     return window
