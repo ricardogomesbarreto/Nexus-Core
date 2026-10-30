@@ -133,3 +133,58 @@ def test_manual_balanced_does_not_silently_change_to_eco():
         available_bytes=2 * GIB, cores=4,
     )
     assert profile.mode == "balanced"
+
+
+
+def test_nested_systemd_v2_user_slice_memory_and_cpu_caps(monkeypatch):
+    root = "/sys/fs/cgroup/user.slice/user-1000.slice/app.slice"
+    simulate(monkeypatch, {
+        "/proc/self/cgroup": "0::/user.slice/user-1000.slice/app.slice\n",
+        "/proc/meminfo": "MemTotal: 33554432 kB\nMemAvailable: 25165824 kB\n",
+        "/sys/fs/cgroup/memory.max": "max",
+        "/sys/fs/cgroup/user.slice/memory.max": str(16 * GIB),
+        "/sys/fs/cgroup/user.slice/memory.current": str(3 * GIB),
+        root + "/memory.max": str(3 * GIB),
+        root + "/memory.current": str(2400 * MIB),
+        "/sys/fs/cgroup/cpu.max": "max 100000",
+        "/sys/fs/cgroup/user.slice/cpu.max": "400000 100000",
+        root + "/cpu.max": "150000 100000",
+    })
+    monkeypatch.setattr(budget.os, "sched_getaffinity", lambda pid: set(range(24)))
+    total, free = budget._memory_bytes()
+    assert total == 3 * GIB
+    assert free == (3 * GIB - 2400 * MIB)
+    profile = budget.ResourceBudget.detect()
+    assert profile.mode == "eco"
+    assert profile.num_thread == 1  # Host memory is 3 GiB; ultra-light.
+    assert budget._logical_cores() == 2
+
+
+def test_nested_v1_memory_and_cpu_limits(monkeypatch):
+    root_mem = "/sys/fs/cgroup/memory/docker/abc"
+    root_cpu = "/sys/fs/cgroup/cpu/docker/abc"
+    simulate(monkeypatch, {
+        "/proc/self/cgroup": "7:memory:/docker/abc\n6:cpu,cpuacct:/docker/abc\n",
+        "/proc/meminfo": "MemTotal: 16777216 kB\nMemAvailable: 12582912 kB\n",
+        root_mem + "/memory.limit_in_bytes": str(4 * GIB),
+        root_mem + "/memory.usage_in_bytes": str(3 * GIB),
+        root_cpu + "/cpu.cfs_quota_us": "200000",
+        root_cpu + "/cpu.cfs_period_us": "100000",
+    })
+    monkeypatch.setattr(budget.os, "sched_getaffinity", lambda pid: set(range(8)))
+    assert budget._memory_bytes() == (4 * GIB, GIB)
+    assert budget._logical_cores() == 2
+
+
+def test_cgroup_path_traversal_is_never_followed(monkeypatch):
+    simulate(monkeypatch, {
+        "/proc/self/cgroup": "0::/user.slice/../../etc\n",
+        "/proc/meminfo": "MemTotal: 8388608 kB\nMemAvailable: 4194304 kB\n",
+        "/sys/fs/cgroup/memory.max": str(5 * GIB),
+        "/sys/fs/cgroup/memory.current": str(GIB),
+        "/sys/fs/cgroup/user.slice/../../etc/memory.max": "1",
+    })
+    assert budget._cgroup_directories("/sys/fs/cgroup", "unified") == (
+        Path("/sys/fs/cgroup"),
+    )
+    assert budget._memory_bytes() == (5 * GIB, 4 * GIB)
