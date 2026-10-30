@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 from nexus.config.local_endpoint import normalize_local_http_origin
+from nexus.models.resource_budget import ResourceBudget
 
 
 class SemanticSearchError(RuntimeError):
@@ -107,6 +108,13 @@ class LocalSemanticReranker:
         if type(size) is not int or not 0 < size <= self.MAX_MODEL_SIZE:
             raise SemanticSearchError(
                 "Modelo de embeddings grande demais ou sem tamanho verificado."
+            )
+        # Never start loading a model when the laptop is already under pressure.
+        available = ResourceBudget.available_now_mib()
+        required = max(1024, math.ceil(1.6 * size / (1024 * 1024)))
+        if available is None or available < required:
+            raise SemanticSearchError(
+                "Memória livre insuficiente ou não verificável para embeddings locais."
             )
         embedded = self._request(
             "POST", "/api/embed",
