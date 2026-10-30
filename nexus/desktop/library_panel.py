@@ -122,7 +122,7 @@ def open_library(root, app):
                 elif operation == "semantic":
                     from nexus.knowledge.semantic_local import LocalSemanticReranker
                     term, model_name = value
-                    hits = store.recent_chunks(8)
+                    hits = store.semantic_candidates(term, 8)
                     result = (LocalSemanticReranker().rerank(term, hits, model_name)
                               if hits else [])
                 elif operation == "tutor":
@@ -200,8 +200,9 @@ def open_library(root, app):
             return
         if not messagebox.askyesno(
             "Nexus Core — busca offline",
-            "Comparar a pergunta com até oito trechos recentes usando o "
-            "modelo de embeddings local? Não instala modelos nem salva vetores.",
+            "Comparar a pergunta com até oito trechos (busca textual e amostra "
+            "de documentos recentes) usando um modelo local? "
+            "Não instala modelos nem salva vetores.",
             parent=window,
         ):
             return
