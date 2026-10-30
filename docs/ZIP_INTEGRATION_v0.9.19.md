@@ -142,3 +142,23 @@ de origem é aberto com descritor seguro, sem shell, servidor, microfone, rede
 ou armazenamento automático. Há limite de 32 MiB de entrada, timeout de 35 s
 na conversão e limite de bytes de PCM decodificado. Não processa vídeos e não
 promete transcrição em tempo real nem precisão de fala no hardware real.
+
+## Cursos offline nativos e recomendações de estudo
+
+A Biblioteca também abre **uma pasta escolhida pelo usuário** contendo um
+manifesto JSON versionado e até vinte aulas TXT/Markdown com leitura individual.
+A janela de cursos permite marcar conclusão, exercitar lacunas literais por
+aula, receber sugestões indicativas a partir dos acertos e avançar sem abrir
+automaticamente os próximos arquivos. Um exemplo original está em
+[examples/offline_course](../examples/offline_course).
+
+**Persistência:** explicitamente confirmada para salvar/restaurar, somente
+índices de aulas concluídas e uma chave SHA-256 na tabela PostgreSQL local;
+nenhum texto/arquivo/caminho/áudio/resposta é salvo nesse fluxo. A memória
+temporária da janela pode ser descartada ao fechar. Não há sincronização
+remota. Consulte [OFFLINE_COURSES_v0.9.19.md](OFFLINE_COURSES_v0.9.19.md).
+
+Segurança: até 20 aulas, manifesto de 16 KiB, texto de 64 KiB por aula,
+total de 512 KiB, sem travessia de caminho, sem symlinks, sem servidor.
+Essa é uma **alternativa local de baixo consumo**, não execução do pacote
+Kolibri nem leitura de cursos e vídeos Kolibri.
