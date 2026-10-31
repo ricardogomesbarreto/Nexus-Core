@@ -1,4 +1,5 @@
 """Biblioteca textual nativa, opt-in, baseada no PostgreSQL local."""
+import gc
 from queue import Empty, Queue
 from threading import Thread
 
@@ -26,6 +27,10 @@ def open_library(root, app):
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
 
+    # Destroyed Tk widgets can remain in reference cycles from previous
+    # windows. Collect them on the UI thread before the initial worker starts;
+    # a daemon thread must not finalize Tcl objects it does not own.
+    gc.collect()
     window = tk.Toplevel(root)
     window.title("Nexus Core — Biblioteca local")
     window.geometry("820x580")
