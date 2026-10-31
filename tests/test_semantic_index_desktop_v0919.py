@@ -62,7 +62,9 @@ def test_index_requires_selection_and_consent(monkeypatch):
                          for w in labels()))
         assert events == []
         menu = panel.nametowidget(panel.cget("menu"))
+        assert menu.type(0) == "cascade"
         actions = panel.nametowidget(menu.entrycget(0, "menu"))
+        assert actions.type(0) == "command"
         actions.invoke(0)
         assert events == []  # No document selected.
         listing = next(w for w in panel.winfo_children()[0].winfo_children()

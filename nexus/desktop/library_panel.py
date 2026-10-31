@@ -423,7 +423,7 @@ def open_library(root, app):
     index_menu.add_command(label="Indexar documento selecionado…", command=semantic_index)
     index_menu.add_command(label="Pesquisar no índice…", command=semantic_index_search)
     index_menu.add_command(label="Remover índice do documento…", command=semantic_index_clear)
-    library_menu = tk.Menu(window)
+    library_menu = tk.Menu(window, tearoff=False)
     library_menu.add_cascade(label="Índice semântico", menu=index_menu)
     window.configure(menu=library_menu)
     # Keep both menus attached to the Toplevel and tear down their Tcl objects
