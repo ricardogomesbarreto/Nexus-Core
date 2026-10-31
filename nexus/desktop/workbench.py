@@ -5,7 +5,7 @@ from threading import Thread
 
 from nexus.config.settings import settings
 from nexus.notes.store import NoteError, PostgreSQLNotes
-from nexus.tools.data_local import MAX_BYTES, OPERATIONS, transform_text
+from nexus.tools.data_local import MAX_BYTES, OPERATIONS, transform_text, transform_recipe
 
 
 def open_notes(root):
@@ -152,6 +152,10 @@ def open_data_tools(root):
     choice = ttk.Combobox(panel, values=OPERATIONS, state="readonly")
     choice.set("sha256")
     choice.pack(fill="x")
+    ttk.Label(panel, text="Receita opcional: operações separadas por vírgula (até 8).",
+              style="Nexus.Caption.TLabel").pack(anchor="w", pady=(6, 0))
+    recipe = ttk.Entry(panel)
+    recipe.pack(fill="x")
     source = tk.Text(panel, height=6, wrap="word", bg="#ffffff", fg="#382631")
     source.pack(fill="both", expand=True, pady=(8, 4))
     status = ttk.Label(panel, text="Entrada máxima: 64 KiB", style="Nexus.Caption.TLabel")
@@ -166,7 +170,9 @@ def open_data_tools(root):
             status.configure(text="Entrada acima de 64 KiB.")
             return
         try:
-            result = transform_text(choice.get(), value)
+            steps = recipe.get().strip()
+            result = (transform_recipe(steps.split(","), value) if steps
+                      else transform_text(choice.get(), value))
         except ValueError as exc:
             status.configure(text=str(exc))
             return
@@ -184,15 +190,15 @@ def open_data_tools(root):
 def open_benchmark(root):
     import tkinter as tk
     from tkinter import ttk
-    from nexus.platforms.benchmark import benchmark_cpu
+    from nexus.platforms.benchmark import benchmark_local
 
     window = tk.Toplevel(root)
     window.title("Nexus Core — Medição local")
     panel = ttk.Frame(window, padding=18, style="Nexus.App.TFrame")
     panel.pack(fill="both", expand=True)
-    ttk.Label(panel, text="MEDIÇÃO VOLUNTÁRIA DE CPU",
+    ttk.Label(panel, text="MEDIÇÃO VOLUNTÁRIA DE CPU E MEMÓRIA",
               style="Nexus.Section.TLabel").pack(anchor="w")
-    status = ttk.Label(panel, text="Usa cerca de 400 ms de CPU; sem rede nem ranking.",
+    status = ttk.Label(panel, text="Dura cerca de 800 ms, usa 8 MiB de RAM; sem rede nem ranking.",
                        style="Nexus.Caption.TLabel")
     status.pack(anchor="w", pady=8)
     results = Queue()
@@ -209,8 +215,12 @@ def open_benchmark(root):
             return
         busy = False
         button.configure(state="normal")
-        status.configure(text=(f"SHA-256: {result['cpu_hash_mib_per_s']} MiB/s "
-                               f"em {result['elapsed_ms']} ms. Não mede temperatura."))
+        if result is None:
+            status.configure(text="Não foi possível concluir a medição local.")
+        else:
+            status.configure(text=(f"SHA-256: {result['cpu_hash_mib_per_s']} MiB/s · "
+                                   f"cópia RAM: {result['memory_copy_mib_per_s']} MiB/s · "
+                                   f"{result['elapsed_ms']} ms. Não mede temperatura."))
 
     def run():
         nonlocal busy
@@ -219,7 +229,13 @@ def open_benchmark(root):
         busy = True
         button.configure(state="disabled")
         status.configure(text="Medindo localmente…")
-        Thread(target=lambda: results.put(benchmark_cpu()),
+        def measure():
+            try:
+                result = benchmark_local()
+            except (ValueError, MemoryError, OSError):
+                result = None
+            results.put(result)
+        Thread(target=measure,
                name="nexus-benchmark", daemon=True).start()
         window.after(80, poll)
 

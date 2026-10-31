@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.18; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.18-722F37">
+  <img alt="Código v0.9.19.dev0; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19.dev0-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -35,6 +35,18 @@ testes de simulação Fedora em runner Linux, não substitui testes em Fedora
 real. Kiwix, Kolibri, Qdrant, CyberChef, FlatNotes, ProtoMaps e Supply
 Depot não devem ser apresentados como integrações completas.
 
+**Ferramentas locais em revisão no PR #102:** o painel de dados agora oferece
+SHA-512, SHA3-256, BLAKE2b-256, Base32, ROT13, formatação JSON e receitas de
+até oito operações, com limite de 64 KiB também em cada etapa. No terminal:
+`printf 'texto' | nexus-core --data-recipe base64-encode,base64-decode`.
+`nexus-core --benchmark-full` mede SHA-256 e cópia de um bloco de RAM de
+4 MiB por cerca de 400 ms cada, sem disco, rede, pontuação ou ranking. O menu
+**Recursos → Aplicativos locais** lista navegador padrão, arquivos e terminal;
+há ação explícita para abrir, com confirmação para arquivos e terminal. Não
+instala programas, baixa imagens ou administra contêineres. Esses acréscimos
+não completam as oito integrações externas; veja a matriz de estado abaixo.
+[Detalhes, comandos e limites dessa rodada](docs/LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md).
+
 
 ## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
 
@@ -50,8 +62,7 @@ durante atividades; o indicador de conectividade é consultado com limites.
 
 O diagnóstico `nexus-core --resource-check` informa o novo
 `effective_profile` (sem executar inferência e sem iniciar serviços).
-Veja os [limites por hardware, comandos e testes de aceite]
-(docs/LOW_RESOURCE_COMPATIBILITY_v0.9.19.md).
+Veja os [limites por hardware, comandos e testes de aceite](docs/LOW_RESOURCE_COMPATIBILITY_v0.9.19.md).
 **A compatibilidade alvo é Linux desktop; não é garantia de execução em
 qualquer hardware, Windows ou macOS.** Esta rodada é de estabilização,
 não de mudança visual, e não altera a licença, arquitetura local-first

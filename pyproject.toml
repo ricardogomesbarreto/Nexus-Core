@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-core"
-version = "0.9.18"
+version = "0.9.19.dev0"
 description = "Assistente pessoal local para Linux, com execução controlada"
 readme = "README.md"
 requires-python = ">=3.12"

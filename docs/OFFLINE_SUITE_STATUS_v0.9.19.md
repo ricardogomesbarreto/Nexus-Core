@@ -11,10 +11,10 @@ ser confundidas.
 | AI Assistant — **Ollama + Qdrant** | `nexus/models/`, `nexus/knowledge/store.py`, `semantic_local.py` | **Parcial**: chat Ollama, PostgreSQL local, pesquisa FTS e comparação de até oito trechos; Qdrant **não integrado** | Medir RAM, qualidade e avaliar índice vetorial opcional sem daemon obrigatório |
 | Education Platform — **Kolibri** | `nexus/study/offline_course.py`, `course_panel.py`, `knowledge/kolibri_export.py` | **Parcial**: cursos TXT/MD nativos, exercícios e progresso opcional PostgreSQL; apenas inspeção de metadados Kolibri, sem aulas Kolibri completas e sem multiusuário Kolibri | Exportação real, consentimento, segurança e execução sob demanda |
 | Offline Maps — **ProtoMaps** | `nexus/maps/local.py`, `nexus/desktop/maps_panel.py` | **Parcial**: abrir mosaicos raster PMTiles com limites e navegação; sem renderizador vetorial, download de regiões ou busca de lugares | Arquivo raster real, uso de RAM, licenças e renderização |
-| Data Tools — **CyberChef** | `nexus/tools/data_local.py`, interface de dados | **Parcial/equivalente nativo**: SHA-256, Base64, hex e URL (até 64 KiB); **não é o CyberChef completo** | Outras operações locais aprovadas e testes de vetores |
+| Data Tools — **CyberChef** | `nexus/tools/data_local.py`, interface de dados | **Parcial/equivalente nativo**: SHA-256/512, SHA3-256, BLAKE2b-256, Base32/64, hex, URL, ROT13 e JSON; receitas até oito passos, 64 KiB por etapa; **não é o CyberChef completo** | Testar fluxos reais e ampliar operações apenas com casos de uso definidos |
 | Notes — **FlatNotes** | `nexus/notes/store.py`, painel de notas | **Equivalente nativo parcial**: Markdown CRUD e FTS no PostgreSQL; sem servidor/aplicativo FlatNotes | Experiência de edição, pesquisa e testes de escala |
-| System Benchmark — Built-in | `nexus/platforms/benchmark.py` | **Parcial**: SHA-256 local por 400 ms, não representa desempenho geral; sem Builder Tags/ranking | Benchmark CPU/RAM/IO calibrado e opt-in, sem telemetria externa |
-| Supply Depot — Built-in | `nexus/tools/terminal.py` | **Não implementado**: Docker sandbox autorizado não é catálogo de aplicativos, nem provisiona contêineres BYO | Catálogo assinado/allowlisted, política de volumes e isolamento, opt-in |
+| System Benchmark — Built-in | `nexus/platforms/benchmark.py` | **Parcial**: medição voluntária de SHA-256 e cópia em RAM, ~800 ms e 8 MiB de buffers; não é escore geral; sem disco, tags/ranking | Validar dados no hardware e decidir se IO/etiquetas oferecem valor sem desgaste ou telemetria |
+| Supply Depot — Built-in | `nexus/desktop/apps_catalog.py`, `nexus/tools/desktop_apps.py` | **Parcial/equivalente nativo**: catálogo restrito de navegador padrão, arquivos e terminal instalados; abertura explícita. Sem catálogo de instalação, Docker/Podman BYO ou provisionamento | Projetar manifesto verificável, política de volumes, isolamento e consentimento para contêineres |
 
 ## Política de desenvolvimento
 
@@ -27,6 +27,10 @@ não serão iniciados, instalados, baixados ou sincronizados automaticamente.
   hardware e permissões. A referência conceitual não equivale ao código original.
 - PostgreSQL permanece como banco único do núcleo; Qdrant futuro seria
   **opcional**, nunca uma dependência obrigatória para computadores fracos.
+- A execução integral de plataformas externas que mantenham seus próprios
+  bancos não foi incorporada ao núcleo; equivalentes nativos devem deixar
+  explícita a cobertura parcial e manter o PostgreSQL como única persistência
+  de dados do assistente.
 - Funcionalidade de rede/comunidade/leaderboard nunca deve transmitir
   conteúdo ou pontuação sem consentimento explícito. Não há servidor
   comunitário no escopo atual.

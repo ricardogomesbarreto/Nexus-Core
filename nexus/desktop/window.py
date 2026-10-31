@@ -33,6 +33,7 @@ from nexus.desktop.tool_labels import action_label, resource_label
 from nexus.desktop.workbench import open_notes, open_data_tools, open_benchmark
 from nexus.desktop.library_panel import open_library
 from nexus.desktop.maps_panel import open_maps
+from nexus.desktop.apps_catalog import open_apps_catalog
 from nexus.desktop.presentation import (
     COLORS, DEFAULT_FONT, configure_presentation, message_size,
     composer_count, activity_state,
@@ -199,8 +200,9 @@ class DesktopWindow:
         resources.add_command(label="Anotações locais…", command=lambda: open_notes(root))
         resources.add_command(label="Biblioteca local…", command=lambda: open_library(root, app))
         resources.add_command(label="Mapas locais…", command=lambda: open_maps(root))
+        resources.add_command(label="Aplicativos locais…", command=lambda: open_apps_catalog(root))
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
-        resources.add_command(label="Medir CPU local…", command=lambda: open_benchmark(root))
+        resources.add_command(label="Medir CPU e memória…", command=lambda: open_benchmark(root))
         resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
         resources.add_command(label="Pausar/retomar fala", command=self._toggle_pause_voice)
         menu.add_cascade(label="Recursos", menu=resources)

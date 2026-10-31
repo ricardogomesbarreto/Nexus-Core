@@ -1,0 +1,39 @@
+# NEXUS CORE v0.9.19 — avanço verificável da suíte local
+
+Estado: desenvolvimento no PR #102, sem aceite físico e sem tag estável.
+
+## Entregue nesta rodada
+
+- Ferramentas de dados: hashes SHA-256/512, SHA3-256 e BLAKE2b-256;
+  Base32/64, hexadecimal, URL, ROT13 e formatação/minificação JSON. Receitas
+  opcionais de 1 a 8 operações, até 64 KiB de entrada **e de cada resultado**.
+  O terminal usa entrada padrão; a janela processa apenas após clique.
+  Nada é enviado para o Ollama nem salvo no banco.
+- Medição local voluntária de SHA-256 e cópia em RAM. O modo completo faz
+  duas fases de cerca de 400 ms, com dois buffers de 4 MiB; sem disco, rede,
+  pontuação ou ranking. Os resultados são indicativos e dependem da carga
+  do computador durante o teste.
+- Catálogo nativo e restrito de aplicativos: navegador padrão, gerenciador
+  de arquivos e terminal. Mostra disponibilidade sem abrir programas;
+  cada abertura é por clique. Arquivos e terminal pedem confirmação.
+  O navegador usa a configuração padrão do desktop, inclusive Brave quando
+  configurado assim pelo usuário. Não há instalação nem provisionamento.
+
+## Pendências que estas mudanças não encerram
+
+A [auditoria de cobertura](OFFLINE_SUITE_STATUS_v0.9.19.md) continua sendo a
+referência para oito capacidades. A biblioteca ZIM requer teste com arquivo
+real e não oferece busca integral. A busca por embeddings ainda compara
+amostras limitadas. Cursos nativos e notas não equivalem a plataformas de
+terceiros com serviços próprios. Mapas vetoriais, pesquisa geográfica,
+provisionamento de contêineres, ranking comunitário e integração integral
+de ferramentas externas permanecem pendentes. A operação deve continuar
+local e leve, com PostgreSQL como banco do assistente.
+
+## Validação
+
+- Testes dirigidos de vetores, limites e CLI; UI de catálogo exige display
+  virtual ou desktop real para exercício de botões.
+- Suíte local: 1.939 aprovados e 147 ignorados neste ambiente sem hardware,
+  display e PostgreSQL autenticado. CI do novo SHA e aceite Ubuntu/Fedora
+  ainda necessários antes de considerar qualquer release estável.

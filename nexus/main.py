@@ -228,6 +228,8 @@ def cli(argv: list[str] | None = None) -> None:
     )
     actions.add_argument("--benchmark", action="store_true",
                          help="mede CPU local por 400 ms, sem arquivo ou rede")
+    actions.add_argument("--benchmark-full", action="store_true",
+                         help="mede CPU e cópia em RAM localmente, sem arquivo ou rede")
     actions.add_argument(
         "--craft-capabilities", action="store_true",
         help=argparse.SUPPRESS,
@@ -302,9 +304,11 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--note-list", action="store_true", help="lista títulos de anotações locais")
     actions.add_argument("--note-search", metavar="TEXT", help="pesquisa títulos e texto de anotações locais")
     actions.add_argument("--note-delete", metavar="ID", type=int, help="exclui uma anotação local")
-    actions.add_argument("--data-tool", choices=("sha256", "base64-encode", "base64-decode",
-                                                "hex-encode", "hex-decode", "url-encode", "url-decode"),
+    from nexus.tools.data_local import OPERATIONS
+    actions.add_argument("--data-tool", choices=OPERATIONS,
                          help="processa texto UTF-8 da entrada padrão local, até 64 KiB")
+    actions.add_argument("--data-recipe", metavar="OPERATIONS",
+                         help="aplica até 8 operações locais separadas por vírgulas ao texto da entrada padrão")
     parser.add_argument("--note-title", metavar="TITLE", help="novo título de --note-update")
     parser.add_argument("--note-limit", type=int, default=20, help="quantidade de anotações listadas: 1 a 50")
     parser.add_argument("--knowledge-limit", type=int, default=5, help="resultados: 1 a 20")
@@ -326,18 +330,23 @@ def cli(argv: list[str] | None = None) -> None:
         parser.error("--note-update exige --note-title")
     if not 1 <= args.note_limit <= 50 or (args.note_limit != 20 and not (args.note_list or args.note_search is not None)):
         parser.error("--note-limit deve ser 1 a 50 e exige listagem ou pesquisa")
-    if any(note_actions) or args.data_tool is not None:
+    if args.data_tool is not None and args.data_recipe is not None:
+        parser.error("Escolha uma ferramenta ou uma receita de dados.")
+    if any(note_actions) or args.data_tool is not None or args.data_recipe is not None:
         if (args.knowledge_limit != 5 or args.knowledge_with_memory
                 or args.memory_days != 90 or args.memory_confirm
                 or args.workspace is not None or args.vision_question is not None
                 or args.vision_model != "gemma3:4b" or args.note_title is not None
                 and args.note_update is None):
             parser.error("Anotações e dados são comandos locais isolados")
-        if args.data_tool is not None:
-            from nexus.tools.data_local import MAX_BYTES, transform_text
+        if args.data_tool is not None or args.data_recipe is not None:
+            from nexus.tools.data_local import MAX_BYTES, transform_text, transform_recipe
             try:
                 payload = sys.stdin.buffer.read(MAX_BYTES + 1)
-                print(transform_text(args.data_tool, payload))
+                if args.data_recipe is not None:
+                    print(transform_recipe(args.data_recipe.split(","), payload))
+                else:
+                    print(transform_text(args.data_tool, payload))
             except ValueError as exc:
                 parser.error(str(exc))
             return
@@ -346,9 +355,10 @@ def cli(argv: list[str] | None = None) -> None:
         if code:
             raise SystemExit(code)
         return
-    if args.benchmark:
-        from nexus.platforms.benchmark import benchmark_cpu
-        print(json.dumps(benchmark_cpu(), ensure_ascii=False))
+    if args.benchmark or args.benchmark_full:
+        from nexus.platforms.benchmark import benchmark_cpu, benchmark_local
+        print(json.dumps(benchmark_local() if args.benchmark_full else benchmark_cpu(),
+                         ensure_ascii=False))
         return
     if args.acceptance_log:
         from nexus.platforms.acceptance import run_acceptance
