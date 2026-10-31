@@ -43,7 +43,13 @@ até oito operações, com limite de 64 KiB também em cada etapa. No terminal:
 4 MiB por cerca de 400 ms cada, sem disco, rede, pontuação ou ranking. O menu
 **Recursos → Aplicativos locais** lista navegador padrão, arquivos e terminal;
 há ação explícita para abrir, com confirmação para arquivos e terminal. Não
-instala programas, baixa imagens ou administra contêineres. Esses acréscimos
+instala programas nem baixa imagens. No mesmo painel, uma imagem identificada
+por ID imutável `sha256:` e **já instalada** pode ser executada, com confirmação
+individual, no Podman local sem root/cgroups v2, sem rede, sem montagens do host,
+com limites de CPU/RAM/tempo e saída de até 16 KiB. O terminal oferece
+`nexus-core --local-image-run sha256:ID_COMPLETO`; sem TTY a autorização falha.
+Não inicia Docker/Podman ao ligar o computador e não abre acesso do modelo a
+imagens arbitrárias. Esses acréscimos
 não completam as oito integrações externas; veja a matriz de estado abaixo.
 [Detalhes, comandos e limites dessa rodada](docs/LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md).
 

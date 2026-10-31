@@ -230,6 +230,8 @@ def cli(argv: list[str] | None = None) -> None:
                          help="mede CPU local por 400 ms, sem arquivo ou rede")
     actions.add_argument("--benchmark-full", action="store_true",
                          help="mede CPU e cópia em RAM localmente, sem arquivo ou rede")
+    actions.add_argument("--local-image-run", metavar="SHA256_ID",
+                         help="executa uma imagem já instalada no Podman local sem root e sem rede")
     actions.add_argument(
         "--craft-capabilities", action="store_true",
         help=argparse.SUPPRESS,
@@ -359,6 +361,26 @@ def cli(argv: list[str] | None = None) -> None:
         from nexus.platforms.benchmark import benchmark_cpu, benchmark_local
         print(json.dumps(benchmark_local() if args.benchmark_full else benchmark_cpu(),
                          ensure_ascii=False))
+        return
+    if args.local_image_run is not None:
+        from nexus.security import ConsoleConfirmation
+        from nexus.tools.local_container import (LocalContainerError,
+                                                 authorize_local_image, run_local_image)
+        try:
+            gate = authorize_local_image(args.local_image_run, ConsoleConfirmation().confirm)
+            result = run_local_image(args.local_image_run)
+        except LocalContainerError as exc:
+            parser.error(str(exc))
+        gate.audit_logger.record_execution(
+            "local_image_run", "local_image_run",
+            "success" if result.exit_code == 0 else "failed",
+            "Processo local encerrado; código " + str(result.exit_code))
+        print(json.dumps({"schema": "nexus.local-image.v1",
+                          "exit_code": result.exit_code, "output": result.output,
+                          "external_network_used": False, "image_downloaded": False},
+                         ensure_ascii=False))
+        if result.exit_code != 0:
+            raise SystemExit(1)
         return
     if args.acceptance_log:
         from nexus.platforms.acceptance import run_acceptance

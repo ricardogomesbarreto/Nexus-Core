@@ -8,6 +8,9 @@ Inclui os cursos nativos, melhorias de voz e estudo, diagnóstico Linux e
 adaptação Fedora descritos no README e nos guias da v0.9.19. Esta rodada
 acrescenta receitas limitadas de dados, hashes/JSON/Base32, medição de CPU e
 RAM e catálogo restrito de aplicativos instalados.
+Uma imagem OCI instalada localmente pode ser executada por ID imutável,
+sob consentimento individual, em Podman rootless isolado e com limites.
+Esse fluxo é opcional e exige teste físico antes de ser considerado estável.
 
 Limites e pendências verificáveis estão em
 [LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md](LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md)

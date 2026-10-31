@@ -14,7 +14,7 @@ ser confundidas.
 | Data Tools — **CyberChef** | `nexus/tools/data_local.py`, interface de dados | **Parcial/equivalente nativo**: SHA-256/512, SHA3-256, BLAKE2b-256, Base32/64, hex, URL, ROT13 e JSON; receitas até oito passos, 64 KiB por etapa; **não é o CyberChef completo** | Testar fluxos reais e ampliar operações apenas com casos de uso definidos |
 | Notes — **FlatNotes** | `nexus/notes/store.py`, painel de notas | **Equivalente nativo parcial**: Markdown CRUD e FTS no PostgreSQL; sem servidor/aplicativo FlatNotes | Experiência de edição, pesquisa e testes de escala |
 | System Benchmark — Built-in | `nexus/platforms/benchmark.py` | **Parcial**: medição voluntária de SHA-256 e cópia em RAM, ~800 ms e 8 MiB de buffers; não é escore geral; sem disco, tags/ranking | Validar dados no hardware e decidir se IO/etiquetas oferecem valor sem desgaste ou telemetria |
-| Supply Depot — Built-in | `nexus/desktop/apps_catalog.py`, `nexus/tools/desktop_apps.py` | **Parcial/equivalente nativo**: catálogo restrito de navegador padrão, arquivos e terminal instalados; abertura explícita. Sem catálogo de instalação, Docker/Podman BYO ou provisionamento | Projetar manifesto verificável, política de volumes, isolamento e consentimento para contêineres |
+| Supply Depot — Built-in | `nexus/desktop/apps_catalog.py`, `nexus/tools/local_container.py` | **Parcial/equivalente nativo**: catálogo restrito de aplicativos locais; execução voluntária de imagem OCI já instalada e identificada por SHA-256, somente com Podman local sem root/cgroups v2. Sem catálogo de instalação ou gerência persistente de contêineres | Testar Podman físico Ubuntu/Fedora, limites reais, falhas/cancelamento e política para eventual catálogo instalável |
 
 ## Política de desenvolvimento
 

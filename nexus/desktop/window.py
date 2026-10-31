@@ -200,7 +200,8 @@ class DesktopWindow:
         resources.add_command(label="Anotações locais…", command=lambda: open_notes(root))
         resources.add_command(label="Biblioteca local…", command=lambda: open_library(root, app))
         resources.add_command(label="Mapas locais…", command=lambda: open_maps(root))
-        resources.add_command(label="Aplicativos locais…", command=lambda: open_apps_catalog(root))
+        resources.add_command(label="Aplicativos locais…",
+                              command=lambda: open_apps_catalog(root, gate=app.security_gate))
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
         resources.add_command(label="Medir CPU e memória…", command=lambda: open_benchmark(root))
         resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
