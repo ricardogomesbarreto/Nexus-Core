@@ -28,10 +28,20 @@ serviços no boot.
 
 ## Sessão observada
 
+No **terminal 1**, inicie os serviços sob demanda e o registro:
+
 ```bash
 bash scripts/nexus_core_session.sh start
 ~/.local/bin/nexus-core --resource-check | python3 -m json.tool
 ollama list
+~/.local/bin/nexus-core --acceptance-log
+```
+
+Quando aparecer `[MANUAL]`, deixe o terminal 1 aguardando e abra no
+**terminal 2**:
+
+```bash
+cd "$HOME/Projetos/Nexus-Core"
 NEXUS_RESOURCE_PROFILE=eco python3 scripts/observe_desktop.py
 ```
 
@@ -70,7 +80,6 @@ chat para comprovar o funcionamento.
 ## Registro e encerramento
 
 ```bash
-~/.local/bin/nexus-core --acceptance-log
 bash scripts/nexus_core_session.sh stop
 bash scripts/nexus_core_session.sh status
 ```
@@ -79,8 +88,10 @@ O registro pede `s` apenas para o que foi testado na janela e funcionou;
 `f` para falha observada; `n` ou Enter para pendente. Ele omite conteúdo de
 áudio, transcrição e imagem. Compartilhe aqui o resumo e as linhas
 `[MEDICAO-LOCAL]` após conferir que os logs não incluem dados pessoais.
-O `stop` deve parar somente serviços iniciados pela sessão Nexus, preservando
-os que já estavam ativos antes de `start`.
+Depois de fechar a janela no terminal 2, responda às perguntas manuais no
+terminal 1. O fechamento da janela pode parar os serviços iniciados pelo
+Nexus; o `stop` final é idempotente e preserva os que já estavam ativos antes
+de `start`.
 
 Para retornar ao código estável depois do ensaio, feche o assistente, execute
 `git switch main`, `git pull --ff-only` e reinstale com
