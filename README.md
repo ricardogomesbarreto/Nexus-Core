@@ -129,6 +129,7 @@ pergunta no Ollama local e compara os vetores no processo, sem outro serviço
 de banco de dados. A amostra de oito trechos acima continua disponível e
 independente. A indexação não é automática, não baixa modelos e exige
 memória livre suficiente. Veja [comandos, limites e roteiro de teste](docs/SEMANTIC_INDEX_v0.9.19.md).
+[Aceite físico da candidata v0.9.19 no Ubuntu 26.04](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.19.md).
 **Perguntar com fontes do índice** usa até três desses trechos para solicitar
 uma resposta ao Ollama local sob confirmação; mostra as fontes e não executa
 ações nem salva a resposta. A pergunta ativa o modelo de embeddings somente
