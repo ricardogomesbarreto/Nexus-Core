@@ -10,7 +10,7 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.19.dev0; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19.dev0-722F37">
+  <img alt="Código v0.9.19.dev1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19.dev1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
@@ -112,7 +112,7 @@ Não há integração completa Kolibri nem tutoria adaptativa automática.
 **Compatibilidade com exportações Kolibri (inspeção):** na Biblioteca, o botão
 **Inspecionar exportação Kolibri** permite selecionar uma pasta KOLIBRI_DATA
 previamente copiada para o HOME e consultar IDs/tamanhos de até 60 bancos de
-canais, sem abrir bancos SQLite ou iniciar servidor. Veja
+canais, sem acessar os dados internos dos cursos nem iniciar servidor. Veja
 [limitações e instruções](docs/KOLIBRI_EXPORT_v0.9.19.md).
 
 **Pesquisa semântica híbrida limitada:** a amostra de até oito trechos agora
@@ -120,7 +120,7 @@ combina até quatro candidatos encontrados por texto/FTS e representantes de
 documentos recentes distintos; só depois, mediante autorização, compara
 embeddings no Ollama local. Essa comparação não persiste vetores.
 
-**Índice semântico local opcional (`0.9.19.dev0`, em Draft):** o menu
+**Índice semântico local opcional (`0.9.19.dev1`, em Draft):** o menu
 **Índice semântico** da Biblioteca permite calcular, com autorização, até
 16 vetores dos primeiros trechos de um documento importado. O PostgreSQL
 guarda até 256 vetores no total, vinculados aos trechos; excluir o documento
@@ -129,6 +129,12 @@ pergunta no Ollama local e compara os vetores no processo, sem outro serviço
 de banco de dados. A amostra de oito trechos acima continua disponível e
 independente. A indexação não é automática, não baixa modelos e exige
 memória livre suficiente. Veja [comandos, limites e roteiro de teste](docs/SEMANTIC_INDEX_v0.9.19.md).
+**Perguntar com fontes do índice** usa até três desses trechos para solicitar
+uma resposta ao Ollama local sob confirmação; mostra as fontes e não executa
+ações nem salva a resposta. A pergunta ativa o modelo de embeddings somente
+se já houver trechos indexados. O PR #102 passou pela CI no commit
+`b0a52632` (2.098 testes); esta extensão exige nova CI no SHA final.
+[Notas da revisão v0.9.19.dev1](docs/RELEASE_NOTES_v0.9.19.dev1.md).
 
 ## 0.9.18 — estudo local e prévia de voz
 

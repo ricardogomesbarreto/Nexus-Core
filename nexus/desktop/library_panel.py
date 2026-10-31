@@ -142,6 +142,11 @@ def open_library(root, app):
                         raise ValueError("Nenhum trecho indexado com este modelo.")
                     vector = LocalSemanticReranker().embed([term], model_name)[0]
                     result = store.search_embeddings(vector, model_name)
+                elif operation == "semantic_index_answer":
+                    from nexus.knowledge.semantic_local import answer_from_index
+                    term, model_name = value
+                    result = answer_from_index(term, model_name, store,
+                                               lambda: app.model_router)
                 elif operation == "semantic_index_clear":
                     result = store.clear_embeddings(value)
                 elif operation == "tutor":
@@ -268,6 +273,19 @@ def open_library(root, app):
         ):
             work("semantic_index_search", (term, model_name))
 
+    def semantic_index_answer():
+        term = current_query()
+        if term is None or busy:
+            return
+        model_name = _embedding_model()
+        if model_name and messagebox.askyesno(
+            "Nexus Core — resposta fundamentada",
+            "Gerar um embedding da pergunta e enviar até três trechos já "
+            "indexados ao modelo de conversa local? A resposta não será salva. "
+            "Confira sempre os trechos citados.", parent=window,
+        ):
+            work("semantic_index_answer", (term, model_name))
+
     def semantic_index_clear():
         document_id = _selected_document()
         if document_id is not None and messagebox.askyesno(
@@ -336,7 +354,7 @@ def open_library(root, app):
         if messagebox.askyesno(
             "Nexus Core — exportação Kolibri",
             "Examinar somente os nomes e tamanhos dos canais da pasta "
-            "KOLIBRI_DATA? Não serão lidos bancos SQLite, nem iniciados "
+            "KOLIBRI_DATA? Não serão lidos dados internos nem iniciados "
             "serviços ou importações.",
             parent=window,
         ):
@@ -422,6 +440,8 @@ def open_library(root, app):
     index_menu = tk.Menu(window, tearoff=False)
     index_menu.add_command(label="Indexar documento selecionado…", command=semantic_index)
     index_menu.add_command(label="Pesquisar no índice…", command=semantic_index_search)
+    index_menu.add_command(label="Perguntar com fontes do índice…",
+                           command=semantic_index_answer)
     index_menu.add_command(label="Remover índice do documento…", command=semantic_index_clear)
     library_menu = tk.Menu(window, tearoff=False)
     library_menu.add_cascade(label="Índice semântico", menu=index_menu)
@@ -548,7 +568,8 @@ def open_library(root, app):
             elif operation == "search":
                 lines = [f"Fonte {h.document_id}:{h.chunk_id} · {h.name}\n{h.text}"
                          for h in result]
-            elif operation in ("answer", "summary", "study_plan", "tutor"):
+            elif operation in ("answer", "summary", "study_plan", "tutor",
+                               "semantic_index_answer"):
                 lines = [result["answer"], "", "Trechos consultados:"]
                 lines += [f"{s['document_id']}:{s['chunk_id']} · {s['name']}\n{s['excerpt']}"
                           for s in result["sources"]]

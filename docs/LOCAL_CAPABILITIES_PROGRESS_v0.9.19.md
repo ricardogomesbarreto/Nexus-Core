@@ -34,6 +34,10 @@ Estado: desenvolvimento no PR #102, sem aceite físico e sem tag estável.
   compara até 256 vetores em memória limitada e mostra as fontes; exclusão
   do documento remove seus vetores por cascata. Não há outro serviço de banco
   e nenhuma varredura/indexação automática. [Detalhes e teste](SEMANTIC_INDEX_v0.9.19.md).
+- Pergunta fundamentada sob autorização: o índice gera o embedding de uma
+  pergunta, recupera até três fontes e só então consulta o modelo de conversa
+  local. Não cria ações de agente nem guarda a resposta. Pode demorar mais e
+  usar mais RAM que a pesquisa sem resposta.
 
 ## Pendências que estas mudanças não encerram
 
@@ -50,8 +54,8 @@ local e leve, com PostgreSQL como banco do assistente.
 
 - Testes dirigidos de vetores, limites e CLI; UI de catálogo exige display
   virtual ou desktop real para exercício de botões.
-- Suíte local: 1.948 aprovados e 149 ignorados neste ambiente sem hardware,
-  display e PostgreSQL autenticado. Os novos testes usam
-  um runtime simulado; não comprovam isolamento, limites ou execução física
-  em Podman. CI do novo SHA e aceite Ubuntu/Fedora
-  ainda necessários antes de considerar qualquer release estável.
+- Base do índice: CI GitHub do commit `b0a52632` aprovada com 2.098 testes
+  (PostgreSQL 16 e Tk/Xvfb). Os novos testes da pergunta fundamentada exigem
+  CI no SHA desta extensão. Testes locais sem hardware, display e PostgreSQL
+  autenticado não comprovam isolamento, limites ou execução física em Podman.
+  Aceite Ubuntu/Fedora ainda necessário antes de release estável.

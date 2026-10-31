@@ -68,6 +68,12 @@ def execute_knowledge_command(args, store_factory=PostgreSQLKnowledgeBase,
             matches = store.search_embeddings(vector, model, min(args.knowledge_limit, 5))
             result = {"hits": [{**_hit(match.hit), "score": match.score}
                                for match in matches], "model": model}
+        elif getattr(args, "knowledge_semantic_answer", None) is not None:
+            from nexus.knowledge.semantic_local import answer_from_index
+            from nexus.models.model_factory import build_model_router
+            result = answer_from_index(
+                args.knowledge_semantic_answer, args.embedding_model, store,
+                lambda: build_model_router(settings))
         elif getattr(args, "knowledge_index_delete", None) is not None:
             result = {"removed": store.clear_embeddings(args.knowledge_index_delete)}
         else:

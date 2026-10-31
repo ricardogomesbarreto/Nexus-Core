@@ -74,6 +74,24 @@ def test_index_requires_selection_and_consent(monkeypatch):
         assert events == []  # Consent denied.
         actions.invoke(0)
         wait(lambda: events == ["read", "embed", "save"])
+        wait(lambda: any("operação concluída" in w.cget("text")
+                         for w in labels()))
+        entry = next(w for w in panel.winfo_children()[0].winfo_children()
+                     if isinstance(w, ttk.Entry))
+        entry.delete(0, "end")
+        entry.insert(0, "Explique a luz")
+        def fake_answer(question, model, store, router_factory):
+            events.append("answer")
+            assert (question, model) == ("Explique a luz", "embed-local")
+            return {"answer": "A luz alimenta as plantas.", "sources": [{
+                "document_id": 9, "chunk_id": 12, "name": "material.md",
+                "excerpt": hit.text}], "model_used": True}
+        monkeypatch.setattr(semantic, "answer_from_index", fake_answer)
+        consent.extend([False, True])
+        actions.invoke(2)
+        assert "answer" not in events
+        actions.invoke(2)
+        wait(lambda: "answer" in events)
     finally:
         root.destroy()
         if panel is not None:

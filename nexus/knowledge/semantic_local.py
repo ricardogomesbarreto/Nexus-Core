@@ -144,3 +144,23 @@ class LocalSemanticReranker:
         if any(len(v) != width for v in vectors):
             raise SemanticSearchError("Dimensões de embeddings incompatíveis.")
         return vectors
+
+
+def answer_from_index(question: str, model: str, store, router_factory,
+                      *, embedder=None) -> dict:
+    """Answer from indexed local excerpts only; never offer agent tools."""
+    from nexus.knowledge.answer import KnowledgeAnswerError, answer_from_hits
+
+    if (not isinstance(question, str) or not 1 <= len(question.strip()) <= 160
+            or "\x00" in question):
+        raise KnowledgeAnswerError("Pergunta deve ter de 1 a 160 caracteres.")
+    if not isinstance(model, str) or not LocalSemanticReranker.MODEL_NAME.fullmatch(model):
+        raise SemanticSearchError("Nome de modelo de embeddings inválido.")
+    if not store.indexed_count(model):
+        raise SemanticSearchError("Nenhum trecho indexado com este modelo.")
+    vector = (embedder or LocalSemanticReranker()).embed([question.strip()], model)[0]
+    matches = store.search_embeddings(vector, model, 3)
+    hits = [match.hit for match in matches]
+    return answer_from_hits(question.strip(), hits,
+                            router_factory() if hits else None,
+                            search_kind="postgresql_semantic")

@@ -21,7 +21,7 @@ do HOME; não conceda permissões mais amplas apenas para contornar a regra.
 O NEXUS CORE lista até 60 IDs de canais (hexadecimal com 32 caracteres)
 e o tamanho do arquivo de banco de cada canal. Também indica a existência
 do diretório de recursos. Nomes de disciplinas, títulos e conteúdo não são
-extraídos. O banco SQLite interno do Kolibri **não é aberto** pelo NEXUS CORE:
+extraídos. Os dados internos do Kolibri **não são abertos** pelo NEXUS CORE:
 o PostgreSQL permanece o banco de persistência do assistente.
 
 A inspeção é limitada a até 300 entradas no diretório de bancos, não é

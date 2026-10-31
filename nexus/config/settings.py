@@ -46,7 +46,7 @@ class Settings:
     """
 
     app_name: str = "Nexus Core"
-    version: str = "0.9.19.dev0"
+    version: str = "0.9.19.dev1"
     node_name: str = "NEXUS-NODE-01"
 
     project_root: Path = PROJECT_ROOT

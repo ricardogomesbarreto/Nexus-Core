@@ -2,7 +2,7 @@
 
 Kolibri exports channel databases under content/databases and binary resources
 under content/storage. We inspect only filenames, inode types and sizes. We
-never open the SQLite databases, execute their contents, recurse into storage,
+never open channel databases, execute their contents, recurse into storage,
 connect to localhost, or modify an export. The selected folder must pass the
 NEXUS CORE HOME/path-security policy.
 """

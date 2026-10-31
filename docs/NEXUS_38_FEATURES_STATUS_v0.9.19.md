@@ -3,7 +3,7 @@
 **Referência técnica:** análise dos três ZIPs e do código v0.9.18; mudanças desta
 branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 **existente** = código anterior, aceite físico pode estar pendente;
-**novo** = código adicionado ao PR #102, CI final pendente;
+**novo** = código adicionado ao PR #102, CI final da extensão pendente;
 **parcial** = cobre somente parte do requisito;
 **pendente** = não entregue.
 
@@ -36,7 +36,7 @@ branch v0.9.19. **Não significa que todos foram homologados.** Definições:
 | 8 | Notas pessoais | Existente | Markdown e PostgreSQL |
 | 9 | Conversão de formatos | Existente | Ferramentas de dados locais |
 | 10 | Verificação SHA-256 | Existente | Ferramentas existentes |
-| 11 | Busca semântica | Novo/parcial | Embeddings Ollama sob autorização em até 8 candidatos (FTS + trechos de documentos distintos); sem índice vetorial completo |
+| 11 | Busca semântica | Novo/parcial | Amostra temporária de 8 candidatos ou índice opcional PostgreSQL de até 256 vetores; pergunta fundamentada em até 3 fontes do índice; sem indexação integral de corpus grande |
 | 12 | Catálogo de ferramentas | Parcial | Ferramentas internas; plugin manager ainda não integrado |
 | 13 | Avaliação de desempenho | Parcial | Monitor de recursos; benchmark de modelos pendente |
 | 14 | Organização de conhecimento | Existente | Biblioteca, notas e cartões por fontes |

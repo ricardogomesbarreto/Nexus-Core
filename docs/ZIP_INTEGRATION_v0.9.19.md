@@ -1,7 +1,8 @@
 # NEXUS CORE — v0.9.19 (proposta técnica em PR #102)
 
-Status: **implementação em branch, sem merge/tag/release**. A CI do SHA final e o
-aceite físico no Ubuntu ainda são obrigatórios. Não alterar design do Nexus Core.
+Status: **implementação em branch, sem merge/tag/release**. O índice semântico
+limitado passou pela CI em `b0a52632` (2.098 testes); esta extensão requer CI
+do SHA final e aceite físico no Ubuntu. Não alterar design do Nexus Core.
 
 ## Fontes inspecionadas
 
@@ -58,7 +59,7 @@ de interrupção e conversação contínua têm implementação preexistente, ma
 necessitam de aceite real de hardware.
 
 **NOMAD**: pesquisa integral nos arquivos ZIM, execução opcional e
-controlada de cursos Kolibri, mapa avançado, **indexação vetorial completa**,
+controlada de cursos Kolibri, mapa avançado, **indexação vetorial de corpus grande**,
 catálogo executável de apps e benchmark de inferência de ponta a ponta.
 Biblioteca .txt/.md, FTS PostgreSQL, consulta via Ollama, notas, conversões,
 SHA-256 e mapas PMTiles já existiam; não foram reimplementados nesta branch.
@@ -125,13 +126,15 @@ ter tamanho informado de até 900 MiB. As entradas e respostas são limitadas,
 o parâmetro `keep_alive: 0` solicita descarregar o modelo. Nenhum embedding
 fica salvo no disco. Antes de carregar o modelo, é verificada a memória
 realmente disponível; sem margem suficiente a operação é recusada.
-**Essa é uma amostra semântica limitada**, não indexação
-semântica global de todos os documentos nem busca exaustiva em toda a base. O modo anterior FTS segue disponível.
+**Essa é uma amostra semântica temporária limitada**. Um índice opcional
+adicionado posteriormente guarda até 256 vetores no PostgreSQL e permite
+perguntar com até três fontes do índice; nenhum deles indexa integralmente
+uma biblioteca grande. O modo FTS segue disponível.
 
 A configuração de velocidade e volume foi deslocada para **Recursos →
 Configurar voz local**, evitando reduzir a área de conversa na janela mínima
-(770×570). Uma execução anterior da CI detectou dois testes de layout falhos;
-a correção requer nova execução de CI no SHA final. A prévia física é pendente.
+(770×570). Os testes de layout anteriores foram corrigidos e a base do índice
+passou pela CI; a prévia física e a CI desta extensão ainda são pendentes.
 
 ## Transcrição de arquivos em formatos adicionais
 
@@ -169,7 +172,7 @@ Kolibri nem leitura de cursos e vídeos Kolibri.
 A Biblioteca oferece **Inspecionar exportação Kolibri**, opção que reconhece
 a estrutura oficial `KOLIBRI_DATA/content/databases` e indica se existe
 `content/storage` em uma exportação copiada para o HOME autorizado. Lista
-somente IDs dos canais e tamanho dos bancos; não abre SQLite, não interpreta
+somente IDs dos canais e tamanho dos arquivos; não lê dados internos, não interpreta
 atividades/arquivos nem inicia Kolibri, Docker, portas, downloads ou importações.
 
 O limite é de 60 bancos de canais em até 300 entradas de diretório, com
