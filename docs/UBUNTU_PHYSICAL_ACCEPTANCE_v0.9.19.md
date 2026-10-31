@@ -1,8 +1,8 @@
 # Aceite físico da v0.9.19.dev1 no Ubuntu 26.04
 
-Este roteiro testa a branch do [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102),
-commit `1f21793f5b2e4f0e924935473b84733b794a093c`. A CI aprovou o código,
-mas não mediu seu notebook, microfone, câmera, Wayland nem a qualidade das
+Este roteiro testa a branch do [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102).
+A CI do PR avalia o código publicado, mas não mede seu notebook, microfone,
+câmera, Wayland nem a qualidade das
 respostas. O teste não publica tag ou release.
 
 ## Preparar a versão de teste
@@ -20,7 +20,8 @@ python3 scripts/install_linux.py
 ~/.local/bin/nexus-core --version
 ```
 
-Confirme `0.9.19.dev1` e o SHA acima. Se `git status --short` mostrar alterações
+Confirme `0.9.19.dev1` e compare o SHA com a versão mais recente do PR.
+Se `git status --short` mostrar alterações
 suas, preserve-as antes de trocar de branch. O instalador pergunta antes de
 instalar dependências ou ativar a verificação de atualização. Não habilita
 serviços no boot.
