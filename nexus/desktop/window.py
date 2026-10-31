@@ -2332,6 +2332,9 @@ def _run_desktop_window() -> int:
         print("Não foi possível abrir a janela. Verifique a sessão gráfica Linux.", file=sys.stderr)
         return 2
 
+    from nexus.desktop.tk_gc import guard_tk_root
+    guard_tk_root(root)
+
     from nexus.main import build_application
 
     confirmation = DesktopConfirmation()

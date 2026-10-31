@@ -13,6 +13,7 @@ from nexus.study.offline_course import OfflineCourse, CourseError, read_lesson
 from nexus.study.course_search import search_course
 from nexus.study.recommendations import recommend_study_step
 from nexus.study_session import StudySession
+from nexus.desktop.tk_gc import guard_tk_root
 
 
 def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, volume=100):
@@ -21,6 +22,8 @@ def open_course(root, course: OfflineCourse, *, voice="Feminina", speed=1.0, vol
 
     if not isinstance(course, OfflineCourse):
         raise CourseError("Curso local inválido.")
+
+    guard_tk_root(root)
 
     window = tk.Toplevel(root)
     window.title("Nexus Core — Curso offline")

@@ -6,6 +6,7 @@ from threading import Thread
 from nexus.config.settings import settings
 from nexus.knowledge.answer import answer_from_hits
 from nexus.knowledge.store import PostgreSQLKnowledgeBase
+from nexus.desktop.tk_gc import guard_tk_root
 
 
 def _release_index_menus(event):
@@ -27,6 +28,7 @@ def open_library(root, app):
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
 
+    guard_tk_root(root)
     # Destroyed Tk widgets can remain in reference cycles from previous
     # windows. Collect them on the UI thread before the initial worker starts;
     # a daemon thread must not finalize Tcl objects it does not own.
