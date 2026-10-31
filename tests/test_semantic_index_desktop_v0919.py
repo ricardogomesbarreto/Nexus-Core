@@ -53,6 +53,7 @@ def test_index_requires_selection_and_consent(monkeypatch):
             time.sleep(.01)
         pytest.fail("Índice local não concluiu")
 
+    panel = None
     try:
         panel = library_panel.open_library(root, SimpleNamespace())
         labels = lambda: [w for w in panel.winfo_children()[0].winfo_children()
@@ -73,3 +74,5 @@ def test_index_requires_selection_and_consent(monkeypatch):
         wait(lambda: events == ["read", "embed", "save"])
     finally:
         root.destroy()
+        if panel is not None:
+            assert panel._nexus_index_menus == ()

@@ -7,6 +7,21 @@ from nexus.knowledge.answer import answer_from_hits
 from nexus.knowledge.store import PostgreSQLKnowledgeBase
 
 
+def _release_index_menus(event):
+    """Destroy Tcl menus on the UI thread before a worker can collect them."""
+    window = event.widget
+    if not getattr(window, "_nexus_index_menu_owner", False):
+        return
+    menus = getattr(window, "_nexus_index_menus", ())
+    window._nexus_index_menus = ()
+    window._nexus_index_menu_owner = False
+    for menu in menus:
+        try:
+            menu.destroy()
+        except Exception:
+            pass
+
+
 def open_library(root, app):
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
@@ -404,6 +419,11 @@ def open_library(root, app):
     library_menu = tk.Menu(window)
     library_menu.add_cascade(label="Índice semântico", menu=index_menu)
     window.configure(menu=library_menu)
+    # Keep both menus attached to the Toplevel and tear down their Tcl objects
+    # on the UI thread when a parent closes this window (including Xvfb tests).
+    window._nexus_index_menus = (index_menu, library_menu)
+    window._nexus_index_menu_owner = True
+    window.bind("<Destroy>", _release_index_menus, add="+")
 
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
