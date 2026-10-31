@@ -300,6 +300,14 @@ def cli(argv: list[str] | None = None) -> None:
     actions.add_argument("--knowledge-context", metavar="TEXT", help="recupera trechos de conhecimento explicitamente")
     actions.add_argument("--knowledge-answer", metavar="TEXT",
                          help="pergunta explicitamente ao Ollama local sobre até três trechos encontrados")
+    actions.add_argument("--knowledge-index", metavar="ID", type=int,
+                         help="indexa até 16 trechos do documento com embeddings Ollama já instalado")
+    actions.add_argument("--knowledge-semantic-search", metavar="TEXT",
+                         help="compara pergunta com índice opcional PostgreSQL local")
+    actions.add_argument("--knowledge-index-delete", metavar="ID", type=int,
+                         help="remove os vetores de um documento, preservando o texto")
+    parser.add_argument("--embedding-model", metavar="NAME",
+                        help="nome exato do modelo local para indexação ou pesquisa semântica")
     actions.add_argument("--note-create", metavar="TITLE", help="cria anotação local com corpo lido da entrada padrão")
     actions.add_argument("--note-update", metavar="ID", type=int, help="atualiza anotação; --note-title e corpo pela entrada padrão")
     actions.add_argument("--note-get", metavar="ID", type=int, help="lê uma anotação local")
@@ -399,15 +407,22 @@ def cli(argv: list[str] | None = None) -> None:
         args.knowledge_import is not None, args.knowledge_list,
         args.knowledge_search is not None, args.knowledge_delete is not None,
         args.knowledge_context is not None, args.knowledge_answer is not None,
+        args.knowledge_index is not None, args.knowledge_semantic_search is not None,
+        args.knowledge_index_delete is not None,
     )
     if sum(knowledge_actions) > 1 or (has_memory_action and any(knowledge_actions)):
         parser.error("Ações de memória e conhecimento devem ser executadas separadamente")
     if args.knowledge_with_memory and args.knowledge_context is None:
         parser.error("--knowledge-with-memory exige --knowledge-context")
+    if (args.embedding_model is None) != (args.knowledge_index is None and
+                                          args.knowledge_semantic_search is None):
+        parser.error("--embedding-model exige --knowledge-index ou --knowledge-semantic-search")
     if not 1 <= args.knowledge_limit <= 20:
         parser.error("--knowledge-limit deve estar entre 1 e 20")
     if args.knowledge_limit != 5 and not any(knowledge_actions):
         parser.error("--knowledge-limit exige ação de conhecimento")
+    if args.knowledge_semantic_search is not None and args.knowledge_limit > 5:
+        parser.error("Pesquisa semântica aceita até cinco resultados")
     if args.craft_capabilities or args.feature_check:
         if (has_memory_action or any(knowledge_actions) or args.knowledge_with_memory
                 or args.vision_question is not None or args.vision_model != "gemma3:4b"

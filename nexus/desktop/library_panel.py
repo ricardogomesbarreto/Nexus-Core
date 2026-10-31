@@ -103,6 +103,25 @@ def open_library(root, app):
                     hits = store.semantic_candidates(term, 8)
                     result = (LocalSemanticReranker().rerank(term, hits, model_name)
                               if hits else [])
+                elif operation == "semantic_index":
+                    from nexus.knowledge.semantic_local import LocalSemanticReranker
+                    document_id, model_name = value
+                    hits = store.indexable_chunks(document_id)
+                    if not hits:
+                        raise ValueError("Documento selecionado não possui trechos.")
+                    vectors = LocalSemanticReranker().embed([hit.text for hit in hits], model_name)
+                    result = store.save_embeddings(
+                        document_id, model_name,
+                        [(hit.chunk_id, vector) for hit, vector in zip(hits, vectors)])
+                elif operation == "semantic_index_search":
+                    from nexus.knowledge.semantic_local import LocalSemanticReranker
+                    term, model_name = value
+                    if not store.indexed_count(model_name):
+                        raise ValueError("Nenhum trecho indexado com este modelo.")
+                    vector = LocalSemanticReranker().embed([term], model_name)[0]
+                    result = store.search_embeddings(vector, model_name)
+                elif operation == "semantic_index_clear":
+                    result = store.clear_embeddings(value)
                 elif operation == "tutor":
                     from nexus.study.tutor import tutor_question
                     topic, level = value
@@ -185,6 +204,56 @@ def open_library(root, app):
         ):
             return
         work("semantic", (term, model_name.strip()))
+
+    def _selected_document():
+        positions = listing.curselection()
+        if not positions or busy:
+            status.configure(text="Selecione um documento da lista primeiro.")
+            return None
+        return document_ids[positions[0]]
+
+    def _embedding_model():
+        from tkinter import simpledialog
+        name = simpledialog.askstring(
+            "Nexus Core — índice local",
+            "Nome EXATO do modelo de embeddings já instalado no Ollama:",
+            parent=window,
+        )
+        return name.strip() if name else None
+
+    def semantic_index():
+        document_id = _selected_document()
+        if document_id is None:
+            return
+        model_name = _embedding_model()
+        if model_name and messagebox.askyesno(
+            "Nexus Core — índice local",
+            "Calcular e salvar no PostgreSQL vetores de até 16 trechos iniciais "
+            "deste documento usando o modelo local? Nenhum arquivo será enviado à internet.",
+            parent=window,
+        ):
+            work("semantic_index", (document_id, model_name))
+
+    def semantic_index_search():
+        term = current_query()
+        if term is None or busy:
+            return
+        model_name = _embedding_model()
+        if model_name and messagebox.askyesno(
+            "Nexus Core — pesquisa local",
+            "Comparar a pergunta com até 256 vetores locais no PostgreSQL? "
+            "Apenas a pergunta será processada pelo Ollama local.", parent=window,
+        ):
+            work("semantic_index_search", (term, model_name))
+
+    def semantic_index_clear():
+        document_id = _selected_document()
+        if document_id is not None and messagebox.askyesno(
+            "Nexus Core — índice local",
+            "Excluir todos os vetores deste documento? O texto importado será preservado.",
+            parent=window,
+        ):
+            work("semantic_index_clear", document_id)
 
     def tutor_guided():
         value = current_query()
@@ -328,6 +397,14 @@ def open_library(root, app):
         command=inspect_kolibri, style="Nexus.TButton",
     ).pack(side="right")
 
+    index_menu = tk.Menu(window, tearoff=False)
+    index_menu.add_command(label="Indexar documento selecionado…", command=semantic_index)
+    index_menu.add_command(label="Pesquisar no índice…", command=semantic_index_search)
+    index_menu.add_command(label="Remover índice do documento…", command=semantic_index_clear)
+    library_menu = tk.Menu(window)
+    library_menu.add_cascade(label="Índice semântico", menu=index_menu)
+    window.configure(menu=library_menu)
+
     for col in (0, 1):
         controls.columnconfigure(col, weight=1)
     for index, (label, action) in enumerate((("Importar texto", import_file),
@@ -433,7 +510,7 @@ def open_library(root, app):
             for doc in docs:
                 listing.insert("end", f"{doc.id} · {doc.name} · {doc.chunk_count} trechos")
             lines = []
-            if operation == "semantic":
+            if operation in ("semantic", "semantic_index_search"):
                 source_hits = [match.hit for match in result]
                 lines = [f"Similaridade {match.score:.3f} · "
                          f"Fonte {match.hit.document_id}:{match.hit.chunk_id}"
@@ -455,6 +532,10 @@ def open_library(root, app):
                          else f"Documento {result.id} já está na biblioteca."]
             elif operation == "delete":
                 lines = ["Documento excluído." if result else "Documento não encontrado."]
+            elif operation == "semantic_index":
+                lines = [f"{result} trechos indexados no PostgreSQL local."]
+            elif operation == "semantic_index_clear":
+                lines = [f"{result} vetores removidos; texto preservado."]
             display.configure(state="normal")
             display.delete("1.0", "end")
             display.insert("1.0", "\n\n".join(lines) if lines else "Nenhum resultado encontrado.")

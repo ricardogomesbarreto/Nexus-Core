@@ -28,13 +28,19 @@ Estado: desenvolvimento no PR #102, sem aceite físico e sem tag estável.
   auditoria local; uma janela fechada solicita cancelamento. É execução
   efêmera, não um gerenciador de serviços. Exemplo de teste com uma imagem
   aprovada e já instalada: `nexus-core --local-image-run sha256:ID_COMPLETO`.
+- Índice semântico PostgreSQL opt-in: até 16 trechos iniciais por documento
+  e 256 vetores no total. O Ollama gera vetores somente mediante confirmação
+  na Biblioteca ou comando explícito. Uma consulta gera um vetor da pergunta,
+  compara até 256 vetores em memória limitada e mostra as fontes; exclusão
+  do documento remove seus vetores por cascata. Não há outro serviço de banco
+  e nenhuma varredura/indexação automática. [Detalhes e teste](SEMANTIC_INDEX_v0.9.19.md).
 
 ## Pendências que estas mudanças não encerram
 
 A [auditoria de cobertura](OFFLINE_SUITE_STATUS_v0.9.19.md) continua sendo a
 referência para oito capacidades. A biblioteca ZIM requer teste com arquivo
-real e não oferece busca integral. A busca por embeddings ainda compara
-amostras limitadas. Cursos nativos e notas não equivalem a plataformas de
+real e não oferece busca integral. O índice semântico agora persiste amostras
+limitadas, sem indexação total de corpus grande. Cursos nativos e notas não equivalem a plataformas de
 terceiros com serviços próprios. Mapas vetoriais, pesquisa geográfica,
 catálogo de instalação, gerência persistente de contêineres, ranking comunitário e integração integral
 de ferramentas externas permanecem pendentes. A operação deve continuar
@@ -44,7 +50,7 @@ local e leve, com PostgreSQL como banco do assistente.
 
 - Testes dirigidos de vetores, limites e CLI; UI de catálogo exige display
   virtual ou desktop real para exercício de botões.
-- Suíte local: 1.945 aprovados e 147 ignorados neste ambiente sem hardware,
+- Suíte local: 1.948 aprovados e 149 ignorados neste ambiente sem hardware,
   display e PostgreSQL autenticado. Os novos testes usam
   um runtime simulado; não comprovam isolamento, limites ou execução física
   em Podman. CI do novo SHA e aceite Ubuntu/Fedora

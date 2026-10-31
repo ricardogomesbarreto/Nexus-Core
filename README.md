@@ -118,7 +118,17 @@ canais, sem abrir bancos SQLite ou iniciar servidor. Veja
 **Pesquisa semântica híbrida limitada:** a amostra de até oito trechos agora
 combina até quatro candidatos encontrados por texto/FTS e representantes de
 documentos recentes distintos; só depois, mediante autorização, compara
-embeddings no Ollama local. Não existe índice semântico global persistente.
+embeddings no Ollama local. Essa comparação não persiste vetores.
+
+**Índice semântico local opcional (`0.9.19.dev0`, em Draft):** o menu
+**Índice semântico** da Biblioteca permite calcular, com autorização, até
+16 vetores dos primeiros trechos de um documento importado. O PostgreSQL
+guarda até 256 vetores no total, vinculados aos trechos; excluir o documento
+os remove automaticamente. Uma pesquisa indexada gera somente o vetor da
+pergunta no Ollama local e compara os vetores no processo, sem outro serviço
+de banco de dados. A amostra de oito trechos acima continua disponível e
+independente. A indexação não é automática, não baixa modelos e exige
+memória livre suficiente. Veja [comandos, limites e roteiro de teste](docs/SEMANTIC_INDEX_v0.9.19.md).
 
 ## 0.9.18 — estudo local e prévia de voz
 

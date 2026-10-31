@@ -11,6 +11,9 @@ RAM e catálogo restrito de aplicativos instalados.
 Uma imagem OCI instalada localmente pode ser executada por ID imutável,
 sob consentimento individual, em Podman rootless isolado e com limites.
 Esse fluxo é opcional e exige teste físico antes de ser considerado estável.
+O índice opcional de embeddings permite pesquisar até 256 vetores de trechos
+autorizados persistidos no PostgreSQL; depende de modelo local já instalado,
+confirmação individual e memória livre. Não indexa a biblioteca ao importar.
 
 Limites e pendências verificáveis estão em
 [LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md](LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md)

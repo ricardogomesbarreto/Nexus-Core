@@ -4,7 +4,9 @@ Documents are ingested through descriptor-pinned Linux HOME access.
 Nothing is automatically collected, embedded, uploaded, or sent to the model.
 """
 import hashlib
+import math
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +56,8 @@ class PostgreSQLKnowledgeBase:
     CHUNK_OVERLAP = 100
     MAX_CHUNKS = 320
     MAX_RESULTS = 20
+    MAX_INDEX_CHUNKS_PER_DOCUMENT = 16
+    MAX_INDEX_ROWS = 256
     ALLOWED_EXTENSIONS = frozenset({".txt", ".md"})
 
     def __init__(self, settings: Settings, path_security: PathSecurity | None = None):
@@ -111,6 +115,20 @@ class PostgreSQLKnowledgeBase:
                     cursor.execute("""
                         CREATE INDEX IF NOT EXISTS nexus_knowledge_fts_idx
                         ON nexus_knowledge_chunks USING GIN (to_tsvector('simple', body))
+                    """)
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS nexus_knowledge_embeddings (
+                            chunk_id BIGINT NOT NULL REFERENCES nexus_knowledge_chunks(id)
+                                ON DELETE CASCADE,
+                            model VARCHAR(96) NOT NULL,
+                            embedding DOUBLE PRECISION[] NOT NULL
+                                CHECK (cardinality(embedding) BETWEEN 8 AND 2048),
+                            PRIMARY KEY (chunk_id, model)
+                        )
+                    """)
+                    cursor.execute("""
+                        CREATE INDEX IF NOT EXISTS nexus_knowledge_embeddings_model_idx
+                        ON nexus_knowledge_embeddings (model)
                     """)
                     cursor.execute("""
                         CREATE TABLE IF NOT EXISTS nexus_knowledge_audit (
@@ -380,6 +398,149 @@ class PostgreSQLKnowledgeBase:
             self._audit(cursor, "CONTEXT", count=len(selected))
             return selected
 
+        return self._transaction(action)
+
+    @staticmethod
+    def _embedding_model(model: str) -> str:
+        if (not isinstance(model, str) or not re.fullmatch(
+                r"[A-Za-z0-9][A-Za-z0-9_.:/+-]{0,95}", model)):
+            raise KnowledgeValidationError("Modelo de embeddings inválido.")
+        return model
+
+    def indexable_chunks(self, document_id: int) -> list[KnowledgeHit]:
+        """Fetch only the first 16 excerpts of a selected document."""
+        identifier = self._positive_id(document_id)
+
+        def action(cursor):
+            cursor.execute(
+                "SELECT d.id, c.id, d.name, c.ordinal, c.body "
+                "FROM nexus_knowledge_chunks c JOIN nexus_knowledge_documents d "
+                "ON d.id = c.document_id WHERE d.id = %s "
+                "ORDER BY c.ordinal ASC LIMIT %s",
+                (identifier, self.MAX_INDEX_CHUNKS_PER_DOCUMENT),
+            )
+            rows = cursor.fetchall()
+            self._audit(cursor, "CONTEXT", document_id=identifier, count=len(rows))
+            return [KnowledgeHit(int(row[0]), int(row[1]), row[2], int(row[3]), row[4])
+                    for row in rows]
+        return self._transaction(action)
+
+    @staticmethod
+    def _unit_vector(vector) -> list[float]:
+        if (not isinstance(vector, list) or not 8 <= len(vector) <= 2048
+                or any(type(v) not in (float, int) or not math.isfinite(v)
+                       for v in vector)):
+            raise KnowledgeValidationError("Vetor local inválido.")
+        norm = math.hypot(*vector)
+        if not math.isfinite(norm) or not 0.99 <= norm <= 1.01:
+            raise KnowledgeValidationError("Vetor deve estar normalizado.")
+        return [float(v) for v in vector]
+
+    def save_embeddings(self, document_id: int, model: str,
+                        entries: list[tuple[int, list[float]]]) -> int:
+        """Atomically replace at most 16 selected vectors; 256 rows globally."""
+        identifier = self._positive_id(document_id)
+        model = self._embedding_model(model)
+        if (not isinstance(entries, list)
+                or not 1 <= len(entries) <= self.MAX_INDEX_CHUNKS_PER_DOCUMENT
+                or any(not isinstance(item, tuple) or len(item) != 2 for item in entries)):
+            raise KnowledgeValidationError("Selecione entre 1 e 16 trechos.")
+        pairs = [(self._positive_id(chunk_id), self._unit_vector(vector))
+                 for chunk_id, vector in entries]
+        ids = [chunk_id for chunk_id, _ in pairs]
+        if len(set(ids)) != len(ids) or len({len(vector) for _, vector in pairs}) != 1:
+            raise KnowledgeValidationError("Trechos ou dimensões duplicados/incompatíveis.")
+
+        def action(cursor):
+            # One writer at a time for the global cap; no network/model call
+            # occurs inside this short PostgreSQL transaction.
+            cursor.execute("SELECT pg_advisory_xact_lock(91219001)")
+            cursor.execute(
+                "SELECT COUNT(*) FROM nexus_knowledge_chunks "
+                "WHERE document_id = %s AND id = ANY(%s)", (identifier, ids))
+            if cursor.fetchone()[0] != len(ids):
+                raise KnowledgeValidationError("Trechos não pertencem ao documento selecionado.")
+            cursor.execute("SELECT COUNT(*) FROM nexus_knowledge_embeddings")
+            total = cursor.fetchone()[0]
+            cursor.execute(
+                "SELECT COUNT(*) FROM nexus_knowledge_embeddings "
+                "WHERE model = %s AND chunk_id = ANY(%s)", (model, ids))
+            existing = cursor.fetchone()[0]
+            if total + len(pairs) - existing > self.MAX_INDEX_ROWS:
+                raise KnowledgeValidationError("Índice local atingiu o limite de 256 trechos.")
+            for chunk_id, vector in pairs:
+                cursor.execute(
+                    "INSERT INTO nexus_knowledge_embeddings (chunk_id, model, embedding) "
+                    "VALUES (%s, %s, %s) ON CONFLICT (chunk_id, model) "
+                    "DO UPDATE SET embedding = EXCLUDED.embedding",
+                    (chunk_id, model, vector),
+                )
+            self._audit(cursor, "CONTEXT", document_id=identifier, count=len(pairs))
+            return len(pairs)
+        return self._transaction(action)
+
+    def search_embeddings(self, query_vector: list[float], model: str,
+                          limit: int = 5):
+        """Rank at most 256 PostgreSQL rows in bounded process memory."""
+        vector = self._unit_vector(query_vector)
+        model = self._embedding_model(model)
+        if type(limit) is not int or not 1 <= limit <= 5:
+            raise KnowledgeValidationError("Limite semântico inválido.")
+
+        def action(cursor):
+            cursor.execute(
+                "SELECT d.id, c.id, d.name, c.ordinal, c.body, e.embedding "
+                "FROM nexus_knowledge_embeddings e "
+                "JOIN nexus_knowledge_chunks c ON c.id = e.chunk_id "
+                "JOIN nexus_knowledge_documents d ON d.id = c.document_id "
+                "WHERE e.model = %s ORDER BY c.id ASC LIMIT %s",
+                (model, self.MAX_INDEX_ROWS),
+            )
+            from nexus.knowledge.semantic_local import SemanticMatch
+            matches = []
+            for row in cursor.fetchall():
+                stored = row[5]
+                if len(stored) != len(vector):
+                    continue
+                try:
+                    stored = self._unit_vector(stored)
+                except KnowledgeValidationError:
+                    continue
+                hit = KnowledgeHit(int(row[0]), int(row[1]), row[2], int(row[3]), row[4])
+                matches.append(SemanticMatch(
+                    hit, round(sum(a * b for a, b in zip(vector, stored)), 5)))
+            matches.sort(key=lambda item: item.score, reverse=True)
+            result = matches[:limit]
+            self._audit(cursor, "SEARCH", count=len(result))
+            return result
+        return self._transaction(action)
+
+    def indexed_count(self, model: str) -> int:
+        """Check availability before loading an embedding model for search."""
+        model = self._embedding_model(model)
+
+        def action(cursor):
+            cursor.execute(
+                "SELECT COUNT(*) FROM nexus_knowledge_embeddings WHERE model = %s",
+                (model,),
+            )
+            count = int(cursor.fetchone()[0])
+            self._audit(cursor, "CONTEXT", count=count)
+            return count
+        return self._transaction(action)
+
+    def clear_embeddings(self, document_id: int) -> int:
+        """Remove all stored vectors of a chosen document without deleting text."""
+        identifier = self._positive_id(document_id)
+
+        def action(cursor):
+            cursor.execute(
+                "DELETE FROM nexus_knowledge_embeddings e "
+                "USING nexus_knowledge_chunks c "
+                "WHERE e.chunk_id = c.id AND c.document_id = %s", (identifier,))
+            count = cursor.rowcount
+            self._audit(cursor, "DELETE", document_id=identifier, count=count)
+            return count
         return self._transaction(action)
 
     def delete(self, document_id: int) -> bool:

@@ -1,8 +1,7 @@
-"""Busca semântica *opt-in* em poucos trechos usando embeddings Ollama locais.
+"""Busca semântica *opt-in* usando embeddings Ollama locais.
 
-Não baixa modelos, não inicia Ollama, não indexa automaticamente, não persiste
-vetores e não faz requisições para hosts externos. O conjunto de comparação
-é explicitamente limitado aos trechos fornecidos pelo chamador.
+Não baixa modelos, não inicia Ollama e não faz requisições externas.
+O índice opcional é persistido apenas pelo armazenamento PostgreSQL.
 """
 from __future__ import annotations
 
@@ -29,8 +28,9 @@ class SemanticMatch:
 
 class LocalSemanticReranker:
     MAX_CHUNKS = 8
+    MAX_EMBED_INPUTS = 16
     MAX_MODEL_SIZE = 900 * 1024 * 1024
-    MAX_EMBED_REPLY = 512 * 1024
+    MAX_EMBED_REPLY = 1024 * 1024
     MODEL_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/+-]{0,95}\Z")
 
     def __init__(self, origin="http://127.0.0.1:11434",
@@ -73,7 +73,7 @@ class LocalSemanticReranker:
                        for x in item)):
             raise SemanticSearchError("Vetor de embeddings local inválido.")
         norm = math.sqrt(sum(x * x for x in item))
-        if norm <= 0:
+        if not math.isfinite(norm) or norm <= 0:
             raise SemanticSearchError("Vetor de embeddings vazio.")
         return [x / norm for x in item]
 
@@ -93,6 +93,21 @@ class LocalSemanticReranker:
             if not isinstance(content, str) or not content.strip() or len(content) > 1000:
                 raise SemanticSearchError("Trecho inválido para busca semântica.")
             texts.append(content)
+        vectors = self.embed([question.strip(), *texts], model)
+        ranked = [
+            SemanticMatch(hit, round(sum(a * b for a, b in zip(vectors[0], vector)), 5))
+            for hit, vector in zip(hits, vectors[1:])
+        ]
+        return sorted(ranked, key=lambda m: m.score, reverse=True)[:limit]
+
+    def embed(self, texts: list[str], model: str) -> list[list[float]]:
+        """Embed at most 16 short local texts in one bounded request."""
+        if (not isinstance(model, str) or not self.MODEL_NAME.fullmatch(model)
+                or not isinstance(texts, list)
+                or not 1 <= len(texts) <= self.MAX_EMBED_INPUTS
+                or any(not isinstance(text, str) or not text.strip()
+                       or len(text) > 1000 or "\x00" in text for text in texts)):
+            raise SemanticSearchError("Modelo ou textos de embeddings inválidos.")
         models = self._request("GET", "/api/tags").get("models")
         if not isinstance(models, list):
             raise SemanticSearchError("Catálogo Ollama local inválido.")
@@ -118,18 +133,14 @@ class LocalSemanticReranker:
             )
         embedded = self._request(
             "POST", "/api/embed",
-            {"model": model, "input": [question.strip(), *texts],
+            {"model": model, "input": [text.strip() for text in texts],
              "truncate": False, "keep_alive": 0},
             max_bytes=self.MAX_EMBED_REPLY,
         ).get("embeddings")
-        if not isinstance(embedded, list) or len(embedded) != len(texts) + 1:
+        if not isinstance(embedded, list) or len(embedded) != len(texts):
             raise SemanticSearchError("Quantidade de vetores local inválida.")
         vectors = [self._vector(x) for x in embedded]
         width = len(vectors[0])
         if any(len(v) != width for v in vectors):
             raise SemanticSearchError("Dimensões de embeddings incompatíveis.")
-        ranked = [
-            SemanticMatch(hit, round(sum(a * b for a, b in zip(vectors[0], vector)), 5))
-            for hit, vector in zip(hits, vectors[1:])
-        ]
-        return sorted(ranked, key=lambda m: m.score, reverse=True)[:limit]
+        return vectors

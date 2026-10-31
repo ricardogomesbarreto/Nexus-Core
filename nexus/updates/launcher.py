@@ -37,6 +37,7 @@ LOCAL_ONLY_FLAGS = frozenset((
     "--local-image-run",
     "--knowledge-import", "--knowledge-list", "--knowledge-search",
     "--knowledge-delete", "--knowledge-context", "--knowledge-answer",
+    "--knowledge-index", "--knowledge-semantic-search", "--knowledge-index-delete",
 ))
 
 
