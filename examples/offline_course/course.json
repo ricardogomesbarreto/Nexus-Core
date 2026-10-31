@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "title": "Ciências — Curso offline de demonstração",
+  "lessons": [
+    {
+      "title": "Aula 1 — Luz e energia",
+      "file": "aula_01_luz.md"
+    },
+    {
+      "title": "Aula 2 — Ciclo da água",
+      "file": "aula_02_agua.md"
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import io
 import json
 import os
 import re
+import signal
 import select
 import shutil
 import subprocess
@@ -27,28 +28,61 @@ class _StoppableProcess:
     def __init__(self):
         self._lock = Lock()
         self._process = None
+        self._paused = False
 
     def _set_process(self, process):
         with self._lock:
             self._process = process
+            self._paused = False
 
     def _clear_process(self, process):
         with self._lock:
             if self._process is process:
                 self._process = None
+                self._paused = False
 
     def stop(self) -> None:
         with self._lock:
             process = self._process
             if process is not None and process.poll() is None:
                 try:
+                    if self._paused:
+                        # SIGTERM may remain pending for a stopped Linux process.
+                        process.send_signal(signal.SIGCONT)
+                        self._paused = False
                     process.terminate()
-                except ProcessLookupError:
+                except (ProcessLookupError, OSError):
                     pass
 
 
 class LocalSpeaker(_StoppableProcess):
     """Vozes locais PT-BR; Piper/RHVoice quando presentes, eSpeak como reserva."""
+
+    def pause(self) -> bool:
+        """Pause only the current owned Linux subprocess (never system audio)."""
+        with self._lock:
+            process = self._process
+            if process is None or process.poll() is not None or self._paused:
+                return False
+            try:
+                process.send_signal(signal.SIGSTOP)
+            except (ProcessLookupError, OSError, AttributeError):
+                return False
+            self._paused = True
+            return True
+
+    def resume(self) -> bool:
+        """Resume the same owned subprocess without replaying the message."""
+        with self._lock:
+            process = self._process
+            if process is None or process.poll() is not None or not self._paused:
+                return False
+            try:
+                process.send_signal(signal.SIGCONT)
+            except (ProcessLookupError, OSError, AttributeError):
+                return False
+            self._paused = False
+            return True
 
     VOICES = {"Feminina": "pt-br+f3", "Masculina": "pt-br+m3"}
     MAX_SPEECH = 2400
@@ -80,6 +114,7 @@ class LocalSpeaker(_StoppableProcess):
 
     def _speak_natural(
         self, text: str, cancelled: Callable[[], bool] | None, *, voice: str,
+        speed: float = 1.0, volume: int = 100,
     ) -> None:
         managed_binary = Path(sys.executable).with_name("piper")
         if voice == "Masculina":
@@ -101,15 +136,33 @@ class LocalSpeaker(_StoppableProcess):
                       "--length-scale", "1.05"]
                      if voice == "Masculina" else
                      [binary, "-p", "Leticia-F123", "-o", str(wav)])
-            for command, payload in (
-                (synth, self._spoken_text(text)),
-                ([player, str(wav)] if Path(player).name == "pw-play"
-                 else [player, "-q", str(wav)], None),
-            ):
+            playback = wav
+            commands = [(synth, self._spoken_text(text))]
+            if speed != 1.0 or volume != 100:
+                converter = shutil.which("ffmpeg")
+                if converter is None:
+                    raise VoiceError(
+                        "Ajuste de velocidade/volume requer FFmpeg local instalado."
+                    )
+                playback = Path(temp) / "adjusted.wav"
+                # No shell; filters consist exclusively of validated numeric values.
+                audio_filter = f"atempo={speed:.2f},volume={volume / 100:.2f}"
+                commands.append((
+                    [converter, "-nostdin", "-hide_banner", "-loglevel", "error",
+                     "-y", "-i", str(wav), "-af", audio_filter, str(playback)],
+                    None,
+                ))
+            commands.append((
+                [player, str(playback)] if Path(player).name == "pw-play"
+                else [player, "-q", str(playback)], None,
+            ))
+            for command, payload in commands:
                 if cancelled is not None and cancelled():
                     return
-                if payload is None and (not wav.is_file() or wav.stat().st_size < 44):
-                    raise VoiceError("A voz neural não produziu áudio válido.")
+                if payload is None:
+                    source = (playback if command[0] == player else wav)
+                    if not source.is_file() or source.stat().st_size < 44:
+                        raise VoiceError("A voz neural não produziu áudio válido.")
                 try:
                     process = subprocess.Popen(
                         command, stdin=subprocess.PIPE if payload is not None else subprocess.DEVNULL,
@@ -139,7 +192,11 @@ class LocalSpeaker(_StoppableProcess):
     def speak(
         self, text: str, voice: str = "Feminina",
         *, cancelled: Callable[[], bool] | None = None,
+        speed: float = 1.0, volume: int = 100,
     ) -> None:
+        if (type(speed) not in (int, float) or not 0.75 <= speed <= 1.25
+                or type(volume) is not int or not 50 <= volume <= 150):
+            raise VoiceError("Velocidade/volume de voz fora dos limites permitidos.")
         if voice not in self.VOICES:
             raise VoiceError("Seleção de voz inválida.")
         if not isinstance(text, str) or not text.strip():
@@ -147,10 +204,10 @@ class LocalSpeaker(_StoppableProcess):
         if cancelled is not None and cancelled():
             return
         if voice == "Masculina" and self.neural_voice_ready():
-            self._speak_natural(text, cancelled, voice=voice)
+            self._speak_natural(text, cancelled, voice=voice, speed=speed, volume=volume)
             return
         if voice == "Feminina" and self.female_voice_ready():
-            self._speak_natural(text, cancelled, voice=voice)
+            self._speak_natural(text, cancelled, voice=voice, speed=speed, volume=volume)
             return
         binary = shutil.which("espeak-ng")
         if binary is None:
@@ -159,7 +216,10 @@ class LocalSpeaker(_StoppableProcess):
             return
         try:
             process = subprocess.Popen(
-                [binary, "-v", self.VOICES[voice], "-b", "1", "--stdin"],
+                ([binary, "-v", self.VOICES[voice], "-b", "1"]
+                 + (["-s", str(round(175 * speed))] if speed != 1.0 else [])
+                 + (["-a", str(volume)] if volume != 100 else [])
+                 + ["--stdin"]),
                 stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE, text=True, encoding="utf-8",
             )

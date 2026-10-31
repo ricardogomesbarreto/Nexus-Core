@@ -20,6 +20,7 @@ READ_ONLY_FLAGS = frozenset((
     "--acceptance-log",
     "--resource-check",
     "--benchmark",
+    "--benchmark-full",
     "--craft-capabilities",
     "--feature-check",
     "--platform-check", "--ubuntu-doctor", "--ubuntu-preflight",
@@ -32,9 +33,12 @@ READ_ONLY_FLAGS = frozenset((
 # Explicit local note/text operations should never start a release check.
 LOCAL_ONLY_FLAGS = frozenset((
     "--note-create", "--note-update", "--note-get", "--note-list",
-    "--note-search", "--note-delete", "--data-tool",
+    "--note-search", "--note-delete", "--data-tool", "--data-recipe",
+    "--local-image-run",
     "--knowledge-import", "--knowledge-list", "--knowledge-search",
     "--knowledge-delete", "--knowledge-context", "--knowledge-answer",
+    "--knowledge-index", "--knowledge-semantic-search", "--knowledge-semantic-answer",
+    "--knowledge-index-delete",
 ))
 
 

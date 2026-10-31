@@ -21,7 +21,59 @@ def _positive_int(text: str) -> int | None:
     return number if 0 < number < 1 << 60 else None
 
 
+def _read_positive(path: str) -> int | None:
+    try:
+        return _positive_int(Path(path).read_text(encoding="ascii"))
+    except (OSError, ValueError):
+        return None
+
+
+def _cgroup_directories(base: str, controller: str) -> tuple[Path, ...]:
+    """Return bounded cgroup ancestors for this process, without path escape.
+
+    Linux systemd often assigns the application to a nested user.slice.
+    Reading only /sys/fs/cgroup/memory.max would miss MemoryMax on that
+    subtree. We read sysfs metadata for the ancestors as well as the root.
+    """
+    root = Path(base)
+    try:
+        lines = Path("/proc/self/cgroup").read_text(encoding="ascii")[:4096].splitlines()
+    except (OSError, ValueError):
+        return (root,)
+    relative = None
+    for line in lines:
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        hierarchy, controllers, path = parts
+        if (hierarchy == "0" and not controllers and controller == "unified") or (
+            controller != "unified" and controller in controllers.split(",")
+        ):
+            relative = path
+            break
+    if relative is None or not relative.startswith("/"):
+        return (root,)
+    segments = [p for p in relative.split("/") if p]
+    if len(segments) > 20 or any(
+        p in (".", "..") or len(p) > 160
+        or not all(c.isascii() and (c.isalnum() or c in "._-:") for c in p)
+        for p in segments
+    ):
+        return (root,)
+    paths = [root]
+    current = root
+    for segment in segments:
+        current = current / segment
+        paths.append(current)
+    return tuple(paths)
+
+
 def _memory_bytes() -> tuple[int | None, int | None]:
+    """Use the smallest active Linux memory cap, including cgroup v1/v2.
+
+    The process must never budget against the host's free RAM when it is
+    constrained by a much smaller container/systemd memory allowance.
+    """
     total = available = None
     try:
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
@@ -35,35 +87,61 @@ def _memory_bytes() -> tuple[int | None, int | None]:
         total *= 1024
     if available is not None:
         available *= 1024
-    # Linux cgroup v2 is used on modern Ubuntu/Debian and other distros.
-    # cgroup v1 is supported for older container environments.
-    for name in ("/sys/fs/cgroup/memory.max",
-                 "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
-        try:
-            limit = _positive_int(Path(name).read_text(encoding="ascii"))
-        except (OSError, ValueError):
-            continue
-        if limit is not None and (total is None or limit < total):
-            total = limit
-        break
-    try:
-        current = _positive_int(Path("/sys/fs/cgroup/memory.current").read_text())
-        if total is not None and current is not None:
-            remain = max(0, total - current)
-            available = min(available, remain) if available is not None else remain
-    except (OSError, ValueError):
-        pass
+
+    # v1 often reports a near-2**63 sentinel for an unlimited container.
+    # Discard implausible values and combine every *real* cap conservatively.
+    for directories, limit_name, usage_name in (
+        (_cgroup_directories("/sys/fs/cgroup", "unified"),
+         "memory.max", "memory.current"),
+        (_cgroup_directories("/sys/fs/cgroup/memory", "memory"),
+         "memory.limit_in_bytes", "memory.usage_in_bytes"),
+    ):
+        for directory in directories:
+            limit = _read_positive(str(directory / limit_name))
+            if limit is None or limit >= (1 << 60):
+                continue
+            if total is None or limit < total:
+                total = limit
+            usage = _read_positive(str(directory / usage_name))
+            if usage is not None:
+                remaining = max(0, limit - usage)
+                available = min(available, remaining) if available is not None else remaining
+            elif available is not None:
+                available = min(available, limit)
+    if total is not None and available is not None:
+        available = min(total, available)
     return total, available
 
 
+def _cpu_quota_cores() -> int | None:
+    """Honor the strictest CPU quota along this process's cgroup ancestry."""
+    limits = []
+    for directory in _cgroup_directories("/sys/fs/cgroup", "unified"):
+        try:
+            parts = (directory / "cpu.max").read_text(encoding="ascii").split()
+            if len(parts) == 2 and parts[0] != "max":
+                quota = _positive_int(parts[0])
+                period = _positive_int(parts[1])
+                if quota is not None and period is not None:
+                    limits.append(max(1, (quota + period - 1) // period))
+        except (OSError, ValueError):
+            pass
+    for directory in _cgroup_directories("/sys/fs/cgroup/cpu", "cpu"):
+        quota = _read_positive(str(directory / "cpu.cfs_quota_us"))
+        period = _read_positive(str(directory / "cpu.cfs_period_us"))
+        if quota is not None and period is not None:
+            limits.append(max(1, (quota + period - 1) // period))
+    return min(limits) if limits else None
+
 def _logical_cores() -> int:
     try:
-        if hasattr(os, "sched_getaffinity"):
-            return max(1, len(os.sched_getaffinity(0)))
+        affinity = (max(1, len(os.sched_getaffinity(0)))
+                    if hasattr(os, "sched_getaffinity")
+                    else max(1, os.cpu_count() or 1))
     except OSError:
-        pass
-    return max(1, os.cpu_count() or 1)
-
+        affinity = max(1, os.cpu_count() or 1)
+    quota = _cpu_quota_cores()
+    return min(affinity, quota) if quota is not None else affinity
 
 @dataclass(frozen=True)
 class ResourceBudget:
@@ -105,14 +183,25 @@ class ResourceBudget:
                 available_bytes = actual_available
         count = _logical_cores() if cores is None else max(1, int(cores))
         low_memory = (
-            (total_bytes is not None and total_bytes <= 8 * _GIB)
-            or (available_bytes is not None and available_bytes <= 2 * _GIB)
+            total_bytes is None or available_bytes is None
+            or total_bytes <= 8 * _GIB
+            or available_bytes <= 2 * _GIB
         )
         mode = ("eco" if low_memory else "balanced") if setting == "auto" else setting
         if mode == "eco":
+            total_mib = total_bytes // (1024 * 1024) if total_bytes else None
+            available_mib = (available_bytes // (1024 * 1024)
+                             if available_bytes is not None else None)
+            # Ultralight budgets only when the actual machine/container has
+            # <=4 GiB RAM. A 6.5 GiB notebook keeps its proven eco settings.
+            small_host = total_bytes is not None and total_bytes <= 4 * _GIB
+            if small_host:
+                return cls(
+                    mode, total_mib, available_mib,
+                    1, 768, 112, 768, 96, 512, "0s",
+                )
             return cls(
-                mode, total_bytes // (1024 * 1024) if total_bytes else None,
-                available_bytes // (1024 * 1024) if available_bytes is not None else None,
+                mode, total_mib, available_mib,
                 min(count, 2), 1024, 160, 1024, 144, 768, "0s",
             )
         return cls(

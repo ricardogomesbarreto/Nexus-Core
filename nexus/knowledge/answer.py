@@ -8,7 +8,8 @@ class KnowledgeAnswerError(RuntimeError):
     """Erro sanitizado para consulta explicitamente solicitada."""
 
 
-def answer_from_hits(question: str, hits: list, model_router) -> dict:
+def answer_from_hits(question: str, hits: list, model_router, *,
+                     search_kind: str = "postgresql_text") -> dict:
     """Consultar Ollama apenas com trechos devolvidos pela busca explícita.
 
     Documentos são dados não confiáveis; esta função não usa AgentPlanner,
@@ -16,12 +17,14 @@ def answer_from_hits(question: str, hits: list, model_router) -> dict:
     """
     if not isinstance(question, str) or not question.strip() or len(question) > 160:
         raise KnowledgeAnswerError("Pergunta deve ter de 1 a 160 caracteres.")
+    if search_kind not in ("postgresql_text", "postgresql_semantic"):
+        raise KnowledgeAnswerError("Tipo de pesquisa inválido.")
     sources = [{"document_id": hit.document_id, "chunk_id": hit.chunk_id,
                 "name": hit.name, "ordinal": hit.ordinal,
                 "excerpt": hit.text[:1000]} for hit in hits[:3]]
     if not sources:
         return {"answer": "Não encontrei trechos locais para esta pergunta.",
-                "sources": [], "model_used": False, "search_kind": "postgresql_text"}
+                "sources": [], "model_used": False, "search_kind": search_kind}
     prompt = json.dumps({"pergunta": question.strip(), "fontes": [
         {"id": f"{s['document_id']}:{s['chunk_id']}", "trecho": s["excerpt"]}
         for s in sources]}, ensure_ascii=False)
@@ -47,5 +50,5 @@ def answer_from_hits(question: str, hits: list, model_router) -> dict:
     ):
         raise KnowledgeAnswerError("O modelo local não concluiu uma resposta textual válida.")
     return {"answer": response.content.strip(), "sources": sources,
-            "model_used": True, "search_kind": "postgresql_text",
+            "model_used": True, "search_kind": search_kind,
             "notice": "Resposta gerada por modelo local; confira os trechos originais."}

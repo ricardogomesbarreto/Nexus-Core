@@ -10,12 +10,131 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.18; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.18-722F37">
+  <img alt="Código v0.9.19.dev1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19.dev1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## Fedora Linux — instalação em validação na v0.9.19
+
+O instalador guiado `python3 scripts/install_linux.py` passou a aceitar
+**Fedora Workstation 43–45**, detectado estritamente por `ID=fedora` e
+Python 3.12+. Utiliza **dnf** (nunca apt no Fedora), PostgreSQL/Ollama
+sob demanda, confirmação antes de instalar pacotes ou modelos e ambiente
+Python isolado. O Fedora exige `postgresql-setup --initdb` **apenas em
+bancos novos**, executado manualmente pelo administrador; o Nexus não
+inicializa ou apaga dados do banco automaticamente.
+
+[Guia Fedora, dependências, comandos e aceite físico](docs/FEDORA_COMPATIBILITY_v0.9.19.md).
+[Auditoria das oito capacidades da suíte offline](docs/OFFLINE_SUITE_STATUS_v0.9.19.md).
+
+**Ainda não homologado fisicamente no Fedora.** A CI existente executa
+testes de simulação Fedora em runner Linux, não substitui testes em Fedora
+real. Kiwix, Kolibri, Qdrant, CyberChef, FlatNotes, ProtoMaps e Supply
+Depot não devem ser apresentados como integrações completas.
+
+**Ferramentas locais em revisão no PR #102:** o painel de dados agora oferece
+SHA-512, SHA3-256, BLAKE2b-256, Base32, ROT13, formatação JSON e receitas de
+até oito operações, com limite de 64 KiB também em cada etapa. No terminal:
+`printf 'texto' | nexus-core --data-recipe base64-encode,base64-decode`.
+`nexus-core --benchmark-full` mede SHA-256 e cópia de um bloco de RAM de
+4 MiB por cerca de 400 ms cada, sem disco, rede, pontuação ou ranking. O menu
+**Recursos → Aplicativos locais** lista navegador padrão, arquivos e terminal;
+há ação explícita para abrir, com confirmação para arquivos e terminal. Não
+instala programas nem baixa imagens. No mesmo painel, uma imagem identificada
+por ID imutável `sha256:` e **já instalada** pode ser executada, com confirmação
+individual, no Podman local sem root/cgroups v2, sem rede, sem montagens do host,
+com limites de CPU/RAM/tempo e saída de até 16 KiB. O terminal oferece
+`nexus-core --local-image-run sha256:ID_COMPLETO`; sem TTY a autorização falha.
+Não inicia Docker/Podman ao ligar o computador e não abre acesso do modelo a
+imagens arbitrárias. Esses acréscimos
+não completam as oito integrações externas; veja a matriz de estado abaixo.
+[Detalhes, comandos e limites dessa rodada](docs/LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md).
+
+
+## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
+
+## Estabilização de recursos e compatibilidade Linux — v0.9.19 (Draft)
+
+A nova adaptação de desempenho considera a RAM realmente disponível ao
+processo, incluindo cgroups v1/v2 e limites hierárquicos do systemd/container,
+além de afinidade e quotas de CPU. Em até 4 GiB aplica parâmetros ultraleves
+de inferência; até 8 GiB utiliza eco e em máquinas maiores o modo automático
+pode utilizar equilibrado se houver memória livre. A interface Tk diminui
+a frequência de verificações ociosas de 80 para 250 ms, preservando 80 ms
+durante atividades; o indicador de conectividade é consultado com limites.
+
+O diagnóstico `nexus-core --resource-check` informa o novo
+`effective_profile` (sem executar inferência e sem iniciar serviços).
+Veja os [limites por hardware, comandos e testes de aceite](docs/LOW_RESOURCE_COMPATIBILITY_v0.9.19.md).
+**A compatibilidade alvo é Linux desktop; não é garantia de execução em
+qualquer hardware, Windows ou macOS.** Esta rodada é de estabilização,
+não de mudança visual, e não altera a licença, arquitetura local-first
+ou política de serviços sob demanda.
+
+
+**Em revisão; NÃO é release estável.** A branch de desenvolvimento acrescenta
+exercícios locais a partir de trechos autorizados, leitura de trechos em voz alta
+com interrupção e pausa/retomada do processo de fala local, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
+além de MP3/OGG/FLAC/M4A com FFmpeg local opcional,
+inventário **somente de metadados** de arquivos ZIM e materiais educativos
+em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
+local com exclusão vinculada à fonte. A Biblioteca oferece ainda ações
+explícitas de resumo e roteiro de estudo com Ollama, fundamentadas em até
+três trechos locais, sem salvar os textos gerados. O menu **Recursos → Configurar voz local** também permite escolher
+velocidade/volume da voz de forma persistente; artigos específicos de ZIM
+podem ser lidos localmente com zim-tools opcional, e o tutor oferece três
+níveis com fontes explícitas, sem avaliação adaptativa automática. Nada inicia servidores, baixa modelos,
+copia código de terceiros ou modifica o visual aprovado.
+
+O [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102)
+continua sem merge, e o aceite físico de áudio/Tk/PostgreSQL no Ubuntu e a CI
+do SHA final são necessários. Consulte a
+[matriz detalhada dos 38 requisitos](docs/NEXUS_38_FEATURES_STATUS_v0.9.19.md)
+e a [auditoria dos três ZIPs](docs/ZIP_INTEGRATION_v0.9.19.md).
+**Ainda não estão implementados** indexação semântica de toda a biblioteca,
+pesquisa textual completa em ZIM, serviços Kolibri, tutor adaptativo ou clonagem
+de voz. Existe uma busca por embeddings **apenas em até oito trechos recentes**,
+usando modelo Ollama já instalado e selecionado pelo usuário. A
+leitura pontual de ZIM depende de zim-tools instalado pelo usuário.
+
+**Cursos offline nativos (v0.9.19 em Draft):** a Biblioteca pode abrir uma pasta
+com manifesto course.json (versão 1) e até 20 aulas TXT/Markdown, sem servidor.
+Há leitura sob clique, pesquisa textual limitada e tolerante a acentos, narração
+opt-in de até 9.600 caracteres por aula (quatro trechos sequenciais de até 2.400), com pausa/interrupção, exercícios por
+aula, progresso temporário e sugestões heurísticas a partir dos acertos e gravação/restauração opcional do progresso
+no PostgreSQL local. Veja o [curso original de demonstração](examples/offline_course)
+e a [documentação de cursos](docs/OFFLINE_COURSES_v0.9.19.md).
+Não há integração completa Kolibri nem tutoria adaptativa automática.
+
+**Compatibilidade com exportações Kolibri (inspeção):** na Biblioteca, o botão
+**Inspecionar exportação Kolibri** permite selecionar uma pasta KOLIBRI_DATA
+previamente copiada para o HOME e consultar IDs/tamanhos de até 60 bancos de
+canais, sem acessar os dados internos dos cursos nem iniciar servidor. Veja
+[limitações e instruções](docs/KOLIBRI_EXPORT_v0.9.19.md).
+
+**Pesquisa semântica híbrida limitada:** a amostra de até oito trechos agora
+combina até quatro candidatos encontrados por texto/FTS e representantes de
+documentos recentes distintos; só depois, mediante autorização, compara
+embeddings no Ollama local. Essa comparação não persiste vetores.
+
+**Índice semântico local opcional (`0.9.19.dev1`, em Draft):** o menu
+**Índice semântico** da Biblioteca permite calcular, com autorização, até
+16 vetores dos primeiros trechos de um documento importado. O PostgreSQL
+guarda até 256 vetores no total, vinculados aos trechos; excluir o documento
+os remove automaticamente. Uma pesquisa indexada gera somente o vetor da
+pergunta no Ollama local e compara os vetores no processo, sem outro serviço
+de banco de dados. A amostra de oito trechos acima continua disponível e
+independente. A indexação não é automática, não baixa modelos e exige
+memória livre suficiente. Veja [comandos, limites e roteiro de teste](docs/SEMANTIC_INDEX_v0.9.19.md).
+**Perguntar com fontes do índice** usa até três desses trechos para solicitar
+uma resposta ao Ollama local sob confirmação; mostra as fontes e não executa
+ações nem salva a resposta. A pergunta ativa o modelo de embeddings somente
+se já houver trechos indexados. O PR #102 passou pela CI no commit
+`b0a52632` (2.098 testes); esta extensão exige nova CI no SHA final.
+[Notas da revisão v0.9.19.dev1](docs/RELEASE_NOTES_v0.9.19.dev1.md).
 
 ## 0.9.18 — estudo local e prévia de voz
 

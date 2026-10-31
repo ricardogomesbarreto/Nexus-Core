@@ -79,12 +79,12 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
         required = []
     # Never echo untrusted system paths, server replies or environment values.
     known_missing = [x for x in (
-        "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg", "python3-tk",
-        "python3-venv",
+        "psql", "pg_isready", "espeak-ng", "arecord", "ffmpeg",
+        "xdg-settings", "gtk-launch", "flock", "python3-tk", "python3-venv",
     ) if x in required]
     blockers = []
     if not profile.installer_supported:
-        blockers.append("ubuntu_install_prerequisites_not_met")
+        blockers.append("fedora_install_prerequisites_not_met" if profile.distro == "fedora" else "ubuntu_install_prerequisites_not_met")
     if known_missing:
         blockers.append("missing_desktop_packages")
     if pg["reachable"] is not True:
@@ -93,7 +93,11 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
         blockers.append("ollama_not_ready")
     actions = []
     if known_missing:
-        actions.append("Run the guided Ubuntu installer to review official apt dependencies.")
+        actions.append(
+            "Run the guided Fedora dnf installer to review official RPM dependencies."
+            if profile.distro == "fedora" else
+            "Run the guided Ubuntu installer to review official apt dependencies."
+        )
     if pg["reachable"] is not True:
         actions.append("Verify the local PostgreSQL service and its separate credential configuration.")
     if llm["reachable"] is not True:
@@ -101,7 +105,10 @@ def ubuntu_doctor(*, postgres=None, ollama=None, profile=None, inspect=None) -> 
     if profile.session != "x11":
         actions.append("Only optional xdotool window automation requires a local X11 session; Tk desktop UI can use Wayland.")
     if not profile.installer_supported:
-        actions.append("Ubuntu requires a recognized version and Python 3.12+; other distros are diagnostic-only.")
+        actions.append(
+            "Requires supported Ubuntu or Fedora 43–45 with Python 3.12+; "
+            "other distributions are diagnostic-only."
+        )
     return {
         "schema": "nexus.ubuntu-doctor.v1",
         "mode": "local_read_only",
