@@ -10,6 +10,29 @@ case "$action" in start|desktop|status|stop) ;; *)
   exit 2 ;;
 esac
 
+# Keep desktop diagnostics in the checkout rather than the user's home folder.
+# Only desktop launches write a log; status/start/stop remain unchanged.
+if [[ "$action" == "desktop" ]]; then
+  project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+  log_dir="$project_root/logs"
+  log_file="$log_dir/nexus-core-desktop.log"
+  if [[ -L "$log_dir" || -L "$log_file" ]]; then
+    printf '[ERRO] Caminho de logs com link simbólico recusado.\\n' >&2
+    exit 1
+  fi
+  (umask 077; mkdir -p -- "$log_dir")
+  if [[ ! -d "$log_dir" || ! -O "$log_dir" ||
+        ( -e "$log_file" && ( ! -f "$log_file" || ! -O "$log_file" ) ) ]]; then
+    printf '[ERRO] Diretório ou arquivo de logs inseguro.\\n' >&2
+    exit 1
+  fi
+  chmod 700 -- "$log_dir"
+  (umask 077; touch -- "$log_file")
+  chmod 600 -- "$log_file"
+  exec > >(tee -a -- "$log_file") 2>&1
+  printf '[LOG] Registros desta sessão: %s\\n' "$log_file"
+fi
+
 port="${NEXUS_DATABASE_PORT:-5432}"
 if ! [[ "$port" =~ ^[0-9]{1,5}$ ]] || (( 10#$port < 1 || 10#$port > 65535 )); then
   printf 'Porta PostgreSQL inválida.\n' >&2
