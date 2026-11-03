@@ -17,20 +17,20 @@ if [[ "$action" == "desktop" ]]; then
   log_dir="$project_root/logs"
   log_file="$log_dir/nexus-core-desktop.log"
   if [[ -L "$log_dir" || -L "$log_file" ]]; then
-    printf '[ERRO] Caminho de logs com link simbólico recusado.\\n' >&2
+    printf '[ERRO] Caminho de logs com link simbólico recusado.\n' >&2
     exit 1
   fi
   (umask 077; mkdir -p -- "$log_dir")
   if [[ ! -d "$log_dir" || ! -O "$log_dir" ||
         ( -e "$log_file" && ( ! -f "$log_file" || ! -O "$log_file" ) ) ]]; then
-    printf '[ERRO] Diretório ou arquivo de logs inseguro.\\n' >&2
+    printf '[ERRO] Diretório ou arquivo de logs inseguro.\n' >&2
     exit 1
   fi
   chmod 700 -- "$log_dir"
   (umask 077; touch -- "$log_file")
   chmod 600 -- "$log_file"
   exec > >(tee -a -- "$log_file") 2>&1
-  printf '[LOG] Registros desta sessão: %s\\n' "$log_file"
+  printf '[LOG] Registros desta sessão: %s\n' "$log_file"
 fi
 
 port="${NEXUS_DATABASE_PORT:-5432}"
