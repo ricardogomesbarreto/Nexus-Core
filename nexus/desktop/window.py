@@ -33,6 +33,7 @@ from nexus.desktop.tool_labels import action_label, resource_label
 from nexus.desktop.workbench import open_notes, open_data_tools, open_benchmark
 from nexus.desktop.library_panel import open_library
 from nexus.desktop.maps_panel import open_maps
+from nexus.desktop.apps_catalog import open_apps_catalog
 from nexus.desktop.presentation import (
     COLORS, DEFAULT_FONT, configure_presentation, message_size,
     composer_count, activity_state,
@@ -181,6 +182,7 @@ class DesktopWindow:
         self._resource_budget = ResourceBudget.detect()
         self._speak_generation = 0
         self._speaking = False
+        self._voice_paused = False
         self._startup_welcome_generation = None
         self._closing = False
         self._permission_dialog: PermissionDialog | None = None
@@ -198,8 +200,12 @@ class DesktopWindow:
         resources.add_command(label="Anotações locais…", command=lambda: open_notes(root))
         resources.add_command(label="Biblioteca local…", command=lambda: open_library(root, app))
         resources.add_command(label="Mapas locais…", command=lambda: open_maps(root))
+        resources.add_command(label="Aplicativos locais…",
+                              command=lambda: open_apps_catalog(root, gate=app.security_gate))
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
-        resources.add_command(label="Medir CPU local…", command=lambda: open_benchmark(root))
+        resources.add_command(label="Medir CPU e memória…", command=lambda: open_benchmark(root))
+        resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
+        resources.add_command(label="Pausar/retomar fala", command=self._toggle_pause_voice)
         menu.add_cascade(label="Recursos", menu=resources)
         root.configure(menu=menu)
         welcome_text, readiness_caption = desktop_startup_message(app)
@@ -391,6 +397,18 @@ class DesktopWindow:
         self.voice_selector.pack(side="left")
         self.voice_choice = _WidgetChoice(self.voice_selector)
         self.voice_selector.bind("<<ComboboxSelected>>", self._save_desktop_preferences)
+        # Settings live in a small on-demand dialog. Keeping them outside the
+        # fixed-height footer preserves the conversation area at 770x570.
+        self._speech_speed_percent = (
+            self._saved_preferences.voice_speed_percent
+            if self._saved_preferences is not None else 100
+        )
+        self._speech_volume_percent = (
+            self._saved_preferences.voice_volume_percent
+            if self._saved_preferences is not None else 100
+        )
+        self.voice_speed_choice = None
+        self.voice_volume_choice = None
         ttk.Label(voice_controls, text="Entrada:", style="Nexus.Caption.TLabel").pack(
             side="left", padx=(11, 4))
         self.audio_input_choice = ttk.Combobox(
@@ -658,6 +676,58 @@ class DesktopWindow:
         if not self._say_response(f"Olá. Sou o Nexus Core. Esta é a voz {voice.lower()}."):
             self._start_listening()
 
+    def _open_voice_profile(self) -> None:
+        """Voice preferences on demand: no extra fixed row at 770x570."""
+        from tkinter import ttk
+        dialog = self._voice_profile_dialog if hasattr(self, "_voice_profile_dialog") else None
+        if dialog is not None and dialog.winfo_exists():
+            dialog.lift()
+            return
+        import tkinter as tk
+        dialog = tk.Toplevel(self.root)
+        self._voice_profile_dialog = dialog
+        dialog.title("Nexus Core — Configurar voz local")
+        dialog.geometry("390x190")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        frame = ttk.Frame(dialog, padding=16, style="Nexus.App.TFrame")
+        frame.pack(fill="both", expand=True)
+        ttk.Label(frame, text="Velocidade da fala",
+                  style="Nexus.Section.TLabel").grid(row=0, column=0, sticky="w")
+        self.voice_speed_choice = ttk.Combobox(
+            frame, values=("75%", "100%", "125%"), state="readonly", width=8,
+        )
+        self.voice_speed_choice.set(f"{self._speech_speed_percent}%")
+        self.voice_speed_choice.grid(row=0, column=1, sticky="w", padx=12, pady=5)
+        ttk.Label(frame, text="Volume da voz",
+                  style="Nexus.Section.TLabel").grid(row=1, column=0, sticky="w")
+        self.voice_volume_choice = ttk.Combobox(
+            frame, values=("50%", "75%", "100%", "125%", "150%"),
+            state="readonly", width=8,
+        )
+        self.voice_volume_choice.set(f"{self._speech_volume_percent}%")
+        self.voice_volume_choice.grid(row=1, column=1, sticky="w", padx=12, pady=5)
+        self.voice_speed_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        self.voice_volume_choice.bind("<<ComboboxSelected>>", self._select_voice_profile)
+        ttk.Button(frame, text="Concluir", command=dialog.destroy,
+                   style="Nexus.TButton").grid(row=2, column=1, pady=(18, 0))
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+
+    def _select_voice_profile(self, event=None) -> None:
+        """Apply numeric UI choices on Tk thread; store only allowlisted values."""
+        try:
+            speed = int(self.voice_speed_choice.get().removesuffix("%"))
+            volume = int(self.voice_volume_choice.get().removesuffix("%"))
+            if speed not in (75, 100, 125) or volume not in (50, 75, 100, 125, 150):
+                raise ValueError
+        except (ValueError, AttributeError):
+            self.status.configure(text="Configuração de voz inválida.")
+            return
+        self._speech_speed_percent = speed
+        self._speech_volume_percent = volume
+        self._save_desktop_preferences()
+        self.status.configure(text=f"Voz local: velocidade {speed}%, volume {volume}%.")
+
     def _save_desktop_preferences(self, event=None) -> None:
         """Persist only user choices on this Linux account, never credentials."""
         if self._preference_store is None or self._closing:
@@ -675,6 +745,8 @@ class DesktopWindow:
                 listening_enabled=self._voice_active,
                 geometry=geometry,
                 remember_history=self.archive_enabled.get(),
+                voice_speed_percent=getattr(self, "_speech_speed_percent", 100),
+                voice_volume_percent=getattr(self, "_speech_volume_percent", 100),
             )
             # In the brief period before the Tk window is mapped, geometry
             # may still be 1x1. Never destroy a valid stored size for that.
@@ -1020,6 +1092,7 @@ class DesktopWindow:
         self._speak_generation += 1
         generation = self._speak_generation
         self._speaking = True
+        self._voice_paused = False
         self._speak_started = monotonic()
         live_event("fala", "iniciado")
         self._start_worker(self._speak, text, self.voice_choice.get(), generation)
@@ -1273,6 +1346,26 @@ class DesktopWindow:
             self.status.configure(text="Conversa contínua sem palavra de ativação")
         self._save_desktop_preferences()
 
+    def _toggle_pause_voice(self) -> None:
+        """Pause/resume only the assistant's own TTS process on Linux."""
+        if not self._speaking:
+            self.status.configure(text="Nenhuma fala ativa para pausar.")
+            return
+        if self._voice_paused:
+            result = getattr(self.speaker, "resume", lambda: False)()
+            if result:
+                self._voice_paused = False
+                self.status.configure(text="Fala retomada.")
+            else:
+                self.status.configure(text="Não foi possível retomar a fala.")
+        else:
+            result = getattr(self.speaker, "pause", lambda: False)()
+            if result:
+                self._voice_paused = True
+                self.status.configure(text="Fala pausada. Use Recursos para retomar.")
+            else:
+                self.status.configure(text="Não foi possível pausar a fala agora.")
+
     def _stop_speaking(self) -> None:
         """Invalidate a superseded TTS worker before its completion event."""
         if self._test_voice_speech_generation == self._speak_generation:
@@ -1280,6 +1373,7 @@ class DesktopWindow:
             live_event("teste", "falhou", source="voz")
         self._speak_generation += 1
         self._speaking = False
+        self._voice_paused = False
         self.speaker.stop()
 
     def _toggle_speech(self) -> None:
@@ -1727,10 +1821,16 @@ class DesktopWindow:
                 # The real eSpeak process must recheck after Popen: stop()
                 # can race with process registration. Injected speakers keep
                 # their original two-argument interface.
-                self.speaker.speak(
-                    text, voice,
-                    cancelled=lambda: self._closing or generation != self._speak_generation,
-                )
+                options = {
+                    "cancelled": lambda: self._closing or generation != self._speak_generation,
+                }
+                # Keep defaults compatible with legacy speakers and tests.
+                speed = getattr(self, "_speech_speed_percent", 100)
+                volume = getattr(self, "_speech_volume_percent", 100)
+                if speed != 100 or volume != 100:
+                    options["speed"] = speed / 100
+                    options["volume"] = volume
+                self.speaker.speak(text, voice, **options)
             else:
                 self.speaker.speak(text, voice)
             self._audio_events.put(("speak_done", "", generation))
@@ -1855,7 +1955,12 @@ class DesktopWindow:
                 self._set_network_status("unknown")
 
     def _poll(self) -> None:
-        self._refresh_network_status()
+        # OS connectivity snapshot may traverse application state; refreshing
+        # it every 80 ms at idle adds avoidable wakeups on small computers.
+        now = monotonic()
+        if (now - getattr(self, "_network_last_refresh", -1e9) >= 2.0):
+            self._refresh_network_status()
+            self._network_last_refresh = now
         self._refresh_activity_badge()
         # Prune completed workers on every GUI tick; otherwise a long-running
         # voice conversation would retain every prior thread indefinitely.
@@ -2164,7 +2269,14 @@ class DesktopWindow:
             self._finish_close()
             return
         self._refresh_privacy_status()
-        self.root.after(80, self._poll)
+        from nexus.desktop.eco_scheduler import next_desktop_poll_ms
+        interval_ms = next_desktop_poll_ms(
+            busy=self._busy, listening=self._listening,
+            speaking=self._speaking, camera=self._live_camera is not None,
+            closing=self._closing,
+            pending_voice=bool(self._listen_pending_generations),
+        )
+        self.root.after(interval_ms, self._poll)
 
     def _close(self) -> None:
         if self._closing:
@@ -2219,6 +2331,9 @@ def _run_desktop_window() -> int:
     except tk.TclError:
         print("Não foi possível abrir a janela. Verifique a sessão gráfica Linux.", file=sys.stderr)
         return 2
+
+    from nexus.desktop.tk_gc import guard_tk_root
+    guard_tk_root(root)
 
     from nexus.main import build_application
 

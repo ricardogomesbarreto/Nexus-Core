@@ -208,6 +208,12 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         ("Cartões de estudo", "Na Biblioteca local, criou um cartão a partir "
          "de um trecho, mostrou a resposta, revisou e confirmou o vínculo "
          "e a exclusão ao remover o documento?"),
+        ("Índice semântico local", "Na Biblioteca, importou dois textos, "
+         "indexou sob confirmação com modelo já instalado, pesquisou uma "
+         "frase por sentido e verificou a fonte; depois removeu o índice?"),
+        ("Resposta com fontes do índice", "Na Biblioteca, pediu uma "
+         "resposta fundamentada no índice, conferiu até três citações "
+         "nos textos originais e mediu o tempo e a memória?"),
     ):
         log(label, _observation(instruction, ask=ask, interactive=interactive, out=out), "observação humana")
     log("Automação de teclado em Wayland", "PENDENTE" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "NÃO APLICÁVEL",
