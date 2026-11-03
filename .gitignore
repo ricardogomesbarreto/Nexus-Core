@@ -4,6 +4,7 @@ __pycache__/
 .env
 .env.*
 logs/*
+!logs/.gitkeep
 data/cache/*
 data/database/*
 data/memory/*
