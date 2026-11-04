@@ -701,6 +701,13 @@ def _install_managed_python_locked(home: Path):
     )
     versions = _private_directory(home / "versions")
     target = versions / ("v" + settings.version)
+    # The copied standalone launcher and recovery helper validate slots with
+    # their own stdlib-only rules. Refuse an incompatible version *before*
+    # modifying any active link.
+    from nexus.updates.managed_entrypoint import _VERSION as launcher_version
+    from nexus.updates.recovery import VERSION as recovery_version
+    if not launcher_version.fullmatch(target.name) or not recovery_version.fullmatch(target.name):
+        raise RuntimeError("Formato da versão incompatível com inicializador ou recuperação.")
     if target.is_symlink():
         raise RuntimeError("Ambiente de instalação inseguro.")
     if not target.exists():
@@ -868,6 +875,13 @@ def main(argv: list[str] | None = None) -> int:
         home = install_managed_python()
         executable = write_launcher(home)
         recovery = write_recovery_launcher(home)
+        # A verified package is not sufficient if the installed standalone
+        # launcher rejects its version slot. Check the actual user command.
+        from nexus.updates.verification import validate_version_output
+        from nexus.config.settings import settings
+        launched = _run([str(executable), "--version"], timeout=20,
+                        capture=True, cwd=home)
+        validate_version_output(launched.stdout, settings.version)
         female_voice = prepare_female_voice()
         neural_voice = prepare_neural_voice(home)
         from nexus.updates.manager import set_autoupdate

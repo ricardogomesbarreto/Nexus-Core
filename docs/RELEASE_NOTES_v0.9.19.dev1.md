@@ -17,6 +17,11 @@ Linux local, Ollama sob demanda e PostgreSQL como único banco do assistente.
   amostras quase saturadas, sem guardar ou exibir o áudio. O aceite local
   apresenta somente o pico e a saturação, além do estado do teste.
 
+- Corrigida a ativação da versão de desenvolvimento: launcher, gerenciador e
+  recuperação reconhecem apenas nomes estritos `vX.Y.Z` ou `vX.Y.Z.devN`.
+  Reinstalar a mesma candidata preserva a versão anterior, e o instalador
+  verifica o launcher instalado antes de anunciar sucesso.
+
 A CI do SHA final e o aceite físico Ubuntu/Fedora ainda são obrigatórios antes
 de promover a versão. Em particular, medir latência, RAM e swap durante a
 pergunta, conferir se a resposta cita os trechos reais e exercitar voz,

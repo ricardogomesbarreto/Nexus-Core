@@ -137,6 +137,15 @@ se já houver trechos indexados. O PR #102 passou pela CI no commit
 `b0a52632` (2.098 testes); esta extensão exige nova CI no SHA final.
 [Notas da revisão v0.9.19.dev1](docs/RELEASE_NOTES_v0.9.19.dev1.md).
 
+**Instalação da candidata:** nomes de diretório `v0.9.19.dev1` são aceitos
+pelo launcher, pela recuperação offline e pelo gerenciador local. Uma
+reinstalação da mesma candidata preserva o link da versão anterior; o
+instalador agora confere o próprio `~/.local/bin/nexus-core --version` antes
+de declarar sucesso. O teste de bancada e a CI não substituem a execução
+no Ubuntu físico. Se o instalador falhar, confira a etapa indicada e execute
+`~/.local/bin/nexus-core-recover --activation-status` quando houver aviso de
+ativação interrompida.
+
 **Microfone na candidata 0.9.19.dev1:** a escuta contínua entrega ao Vosk
 somente amostras PCM completas, mesmo quando PipeWire/ALSA divide a captura
 entre leituras. `--voice-check` reconhece uma sessão PipeWire ativa mesmo sem

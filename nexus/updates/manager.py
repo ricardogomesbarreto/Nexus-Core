@@ -177,7 +177,7 @@ def _checked_current(home: Path) -> Path:
     current = target.resolve(strict=True)
     if current.parent != versions.resolve(strict=True):
         raise UpdateError("O link atual aponta para fora da instalação.")
-    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", current.name):
+    if not re.fullmatch(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.dev(0|[1-9]\d*))?", current.name, re.ASCII):
         raise UpdateError("Versão instalada inválida.")
     if not (current / "bin/python").is_file():
         raise UpdateError("Executável da instalação não encontrado.")
@@ -226,7 +226,7 @@ def _previous_target(home: Path, versions: Path) -> Path | None:
     except (OSError, RuntimeError) as exc:
         raise UpdateError("Versão anterior não pode ser verificada.") from exc
     if (target.parent != versions.resolve(strict=True)
-            or not re.fullmatch(r"v[0-9]+[.][0-9]+[.][0-9]+", target.name)):
+            or not re.fullmatch(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.dev(0|[1-9]\d*))?", target.name, re.ASCII)):
         raise UpdateError("Versão anterior aponta fora da instalação.")
     return target
 
@@ -251,6 +251,10 @@ def _switch_current(home: Path, version_dir: Path) -> None:
         raise UpdateError("Atualização simultânea não permitida.")
     if current.exists() or current.is_symlink():
         before = _checked_current(home)
+        if before == version_dir:
+            # Reinstalling the active development build must not replace the
+            # rollback target with a link to this same build.
+            return
         old_previous = _previous_target(home, versions)
         # All checks and the durable intent precede any mutation of links.
         _write_activation_intent(home, before=before, after=version_dir,

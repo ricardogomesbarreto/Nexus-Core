@@ -21,7 +21,7 @@ import tempfile
 
 
 _INSTALL_HOME = None
-VERSION = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$", re.ASCII)
+VERSION = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.dev(0|[1-9]\d*))?$", re.ASCII)
 
 
 class RecoveryError(ValueError):

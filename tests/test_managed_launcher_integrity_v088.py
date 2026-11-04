@@ -70,7 +70,8 @@ def test_invalid_environment_managed_home_is_rejected(tmp_path, monkeypatch):
         manager.managed_home()
 
 
-@pytest.mark.parametrize("version", ["v0.8.8-extra", "anything", "v01.2.3"])
+@pytest.mark.parametrize("version", ["v0.8.8-extra", "anything", "v01.2.3",
+                                     "v0.9.19.devx", "v0.9.19.dev01", "v0.9.19.dev1-extra"])
 def test_launcher_denies_unrecognized_version_directory(tmp_path, version):
     home, current, python = installed(tmp_path)
     directory = current.parent / version
@@ -254,3 +255,31 @@ def test_installer_rejects_bin_directory_symlink(tmp_path, monkeypatch):
     (tmp_path / ".local/bin").symlink_to(other)
     with pytest.raises(RuntimeError, match="link simbólico"):
         install_linux.write_launcher(home)
+
+
+@pytest.mark.parametrize("name", ["v0.9.19.dev0", "v0.9.19.dev1"])
+def test_development_runtime_is_valid_for_launcher_manager_and_recovery(tmp_path, name):
+    from nexus.updates import recovery
+    home, old, python = installed(tmp_path)
+    candidate = old.with_name(name)
+    old.rename(candidate)
+    (home / "current").unlink()
+    (home / "current").symlink_to(candidate)
+    assert entry.validate_current(home) == candidate / "bin/python"
+    assert manager._checked_current(home) == candidate
+    assert recovery._version_slot(home, "current") == candidate
+
+
+def test_reinstall_same_development_version_preserves_rollback_slot(tmp_path):
+    home, old, _ = installed(tmp_path)
+    candidate = old.with_name("v0.9.19.dev1")
+    old.rename(candidate)
+    (home / "current").unlink()
+    (home / "current").symlink_to(candidate)
+    prior = old.with_name("v0.9.12")
+    prior.mkdir(mode=0o700)
+    (home / "previous").symlink_to(prior)
+    manager._switch_current(home, candidate)
+    assert (home / "current").resolve() == candidate
+    assert (home / "previous").resolve() == prior
+    assert not (home / ".activation-intent.json").exists()
