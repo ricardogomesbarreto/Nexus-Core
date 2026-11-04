@@ -948,6 +948,14 @@ por esse mecanismo.
 
 ### Criação e edição local por conversa (integração em validação)
 
+Na janela, **Recursos → Editar foto local…** permite escolher uma foto,
+um efeito e um arquivo novo; **Recursos → Criar cartaz local…** pede título
+e destino PNG. A ação passa pela mesma autorização por arquivo da conversa,
+sem carregar o modelo Ollama. Depois da aprovação, **Ver imagem criada**
+mostra o resultado no próprio Nexus. O destino deve estar dentro da pasta
+pessoal e ainda não existir; fechar o seletor não grava nada. Esse caminho
+permite testar a saída real separadamente da prévia da câmera.
+
 O Nexus Core recebe comandos de texto ou voz **na própria conversa**, sem abrir
 um painel de botões dos aplicativos externos. Há três ferramentas sob o mesmo
 `SecurityGate` e confirmação por gravação: `edit_image_local` cria uma cópia
@@ -1993,7 +2001,7 @@ etapas separadamente:
 ~/.local/bin/nexus-core --desktop
 ```
 
-O segundo comando abre o microfone por até dez segundos, solicita uma frase
+O segundo comando abre o microfone por até vinte segundos, solicita uma frase
 em português e retorna a transcrição (ou `no_transcript`). A gravação não é
 salva. Se houver sinal mas nenhuma transcrição, confira a entrada padrão do
 PipeWire nas configurações de som, aguarde o Vosk carregar, fale com uma pausa

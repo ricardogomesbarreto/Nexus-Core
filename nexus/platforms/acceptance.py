@@ -146,7 +146,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     else:
         log("Sinal do microfone", "PENDENTE")
 
-    if _consent("Falar uma frase para o Vosk (escuta limitada a 30 segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
+    if _consent("Falar uma frase para o Vosk (escuta limitada a 20 segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
         begin("Reconhecimento de voz")
         speech = _json(["--recognition-test"], timeout=45)
         backend = speech.get("backend")
@@ -202,7 +202,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "Nexus, fechou a janela e confirmou que ambos permaneceram ativos?"),
         ("Serviços iniciados pelo Nexus", "Com serviços inicialmente parados, "
          "abriu e fechou o Nexus e confirmou que só os iniciados por ele pararam?"),
-        ("Imagem produzida", "Abriu o arquivo de imagem real; conferiu "
+        ("Imagem produzida", "Em Recursos > Editar foto local ou Criar cartaz local, abriu o arquivo de imagem real; conferiu "
          "conteúdo, permissões e original intacto após negar/autorizar?"),
         ("Documento produzido", "Abriu o documento de saída real em um "
          "leitor independente e conferiu o conteúdo e o original?"),

@@ -179,6 +179,13 @@ binário separadamente e conferir o resultado, sem executar os ZIPs de fonte.
 Observe duração, privacidade do arquivo (`0600`) e se o original permanece
 igual. Não confunda criação de cartaz com geração de fotografia por IA.
 
+Para isolar o teste de edição da transcrição de voz e da interpretação do
+modelo, use também **Recursos → Editar foto local…** e **Recursos → Criar
+cartaz local…**. Escolha uma origem e uma saída nova no seletor; negue uma
+vez e confirme que não há arquivo de saída; repita autorizando e confira
+o arquivo novo, as permissões `0600` e a prévia no Nexus. Não confunda a
+prévia da câmera ou o botão **Imagem** (análise visual) com uma imagem criada.
+
 Para a geometria, use uma cópia de foto com resolução de até 4096 por lado
 e teste os dois pedidos do README com **saídas novas**: `Redimensione ...`
 e `Recorte ... começando em x,y com largura por altura pixels ...`.
@@ -258,7 +265,7 @@ de observação manual: `[RELATADO]` indica apenas sua declaração, ainda não
 homologação independente. Depois de testar na janela, use `s` se funcionou ou
 `f` se falhou. Use `n` ou Enter quando **não testou**. A etapa de Vosk mostra
 backend, pico e quantidade de amostras, sem transcrição. Se ocorrer
-`no_transcript`, fale uma frase clara durante os dez segundos e observe as
+`no_transcript`, fale uma frase clara durante os vinte segundos e observe as
 métricas; em outra rodada, experimente `NEXUS_AUDIO_INPUT=alsa` antes do
 comando de aceite. Isso altera a captura apenas naquele processo.
 

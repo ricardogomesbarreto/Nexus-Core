@@ -204,6 +204,9 @@ class DesktopWindow:
                               command=lambda: open_apps_catalog(root, gate=app.security_gate))
         resources.add_command(label="Ferramentas de dados…", command=lambda: open_data_tools(root))
         resources.add_command(label="Medir CPU e memória…", command=lambda: open_benchmark(root))
+        resources.add_separator()
+        resources.add_command(label="Editar foto local…", command=self._edit_image_dialog)
+        resources.add_command(label="Criar cartaz local…", command=self._create_graphic_dialog)
         resources.add_command(label="Configurar voz local…", command=self._open_voice_profile)
         resources.add_command(label="Pausar/retomar fala", command=self._toggle_pause_voice)
         menu.add_cascade(label="Recursos", menu=resources)
@@ -1386,6 +1389,113 @@ class DesktopWindow:
 
     def _vision_file(self) -> None:
         self._request_vision("file")
+
+    def _edit_image_dialog(self) -> None:
+        """Pick explicit files and effect in Nexus, then use the normal consent gate."""
+        if self._closing or self._busy:
+            return
+        from tkinter import filedialog, simpledialog
+
+        source = filedialog.askopenfilename(
+            parent=self.root, title="Foto original (PNG, JPEG ou WebP)",
+            initialdir=str(image_start_directory()),
+            filetypes=[("Fotos", "*.png *.jpg *.jpeg *.webp")],
+        )
+        if not source:
+            return
+        choices = {"cinza": "grayscale", "desfoque": "blur", "nitidez": "sharpen",
+                   "sépia": "sepia", "autocontraste": "autocontrast",
+                   "girar esquerda": "rotate_left", "girar direita": "rotate_right",
+                   "espelhar horizontal": "flip_horizontal",
+                   "espelhar vertical": "flip_vertical", "clarear": "brighten",
+                   "contraste": "contrast", "inverter": "invert"}
+        effect = simpledialog.askstring(
+            "Nexus Core — editar foto",
+            "Escolha um efeito:\n" + ", ".join(choices),
+            parent=self.root, initialvalue="cinza",
+        )
+        if effect is None:
+            return
+        operation = choices.get(effect.strip().casefold())
+        if operation is None:
+            self.status.configure(text="Efeito desconhecido; escolha uma opção da lista")
+            return
+        destination = filedialog.asksaveasfilename(
+            parent=self.root, title="Salvar cópia editada com outro nome",
+            initialdir=str(Path(source).parent),
+            initialfile=f"{Path(source).stem}-editada.png",
+            defaultextension=".png",
+            filetypes=[("PNG", "*.png"), ("JPEG", "*.jpg"), ("WebP", "*.webp")],
+        )
+        if destination:
+            self._run_local_image_action("edit_image_local", {
+                "source": source, "output": destination, "operation": operation,
+            }, "Edição de foto")
+
+    def _create_graphic_dialog(self) -> None:
+        if self._closing or self._busy:
+            return
+        from tkinter import filedialog, simpledialog
+
+        title = simpledialog.askstring(
+            "Nexus Core — cartaz local", "Título do cartaz (até 100 caracteres):",
+            parent=self.root,
+        )
+        if title is None:
+            return
+        if not 1 <= len(title.strip()) <= 100:
+            self.status.configure(text="Título inválido (1 a 100 caracteres)")
+            return
+        destination = filedialog.asksaveasfilename(
+            parent=self.root, title="Salvar cartaz PNG novo",
+            initialdir=str(image_start_directory()), initialfile="cartaz-nexus.png",
+            defaultextension=".png", filetypes=[("PNG", "*.png")],
+        )
+        if destination:
+            self._run_local_image_action("create_graphic_local", {
+                "title": title, "output": destination,
+            }, "Criação de cartaz")
+
+    def _run_local_image_action(self, name: str, arguments: dict, label: str) -> None:
+        """Never write on Tk's thread or bypass the confirmation bridge."""
+        if self._closing or self._busy:
+            return
+        executor = getattr(self.app, "tool_executor", None)
+        if executor is None:
+            self.status.configure(text="Ferramenta de imagem local indisponível")
+            return
+        self._busy = True
+        self._operation_kind = "chat"
+        self._chat_source = "imagem"
+        self._operation_started = monotonic()
+        self._last_progress_interval = 0
+        self._cancel_requested = False
+        self.send_button.configure(state="disabled")
+        self.suggest_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
+        for button in self._vision_buttons:
+            button.configure(state="disabled")
+        if self._listening:
+            self._listen_generation += 1
+            self.recognizer.stop()
+        if self._speaking:
+            self._stop_speaking()
+        self.status.configure(text=f"{label}: aguardando autorização local…")
+        live_event("chat", "iniciado", source="imagem")
+        self._start_worker(self._execute_local_image, executor, name, arguments)
+
+    def _execute_local_image(self, executor, name: str, arguments: dict) -> None:
+        try:
+            result = executor.execute(name, **arguments)
+            outcome = AgentOutcome(result.success, tool_result=result,
+                                   error_code=result.error_code)
+            reply = ChatReply(ChatSession._describe(outcome), outcome)
+        except Exception:
+            reply = ChatReply(
+                "Não foi possível concluir a edição local.",
+                AgentOutcome(False, error_code="IMAGE_ERROR"),
+            )
+        self._replies.put(reply)
 
     def _vision_screen(self) -> None:
         self._request_vision("screen")

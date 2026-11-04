@@ -262,7 +262,7 @@ def cli(argv: list[str] | None = None) -> None:
     )
     actions.add_argument(
         "--recognition-test", action="store_true",
-        help="grava uma fala de até dez segundos e exibe transcrição Vosk (consentimento explícito)",
+        help="escuta uma fala por até vinte segundos e exibe transcrição Vosk (consentimento explícito)",
     )
     actions.add_argument("--desktop-check", action="store_true",
                          help="diagnostica suporte X11/xdotool sem interagir com janelas")
@@ -547,10 +547,12 @@ def cli(argv: list[str] | None = None) -> None:
         return
     if args.recognition_test:
         from nexus.voice import LocalRecognizer, VoiceError
-        print("Nexus Core: escutando uma frase por até dez segundos; fale e faça uma pausa...",
+        print("Nexus Core: escutando uma frase por até vinte segundos; fale e faça uma pausa...",
               file=sys.stderr)
         recognizer = LocalRecognizer()
-        recognizer.STREAM_LIMIT = 10
+        # Let the diagnostic exercise the same 18-second undecodable-audio
+        # window as the desktop. A shorter CLI limit concealed that fix.
+        recognizer.STREAM_LIMIT = 20
         peaks = []
         try:
             transcript = recognizer.recognize_continuous(on_audio_level=peaks.append)
