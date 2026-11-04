@@ -26,7 +26,7 @@ def validate_version_output(output: str | bytes, expected: str) -> None:
 
 
 def validate_platform_report(output: str | bytes) -> None:
-    """Enforce a recognized Ubuntu version and required runtime capabilities."""
+    """Enforce a recognized Ubuntu/Fedora version and required runtime capabilities."""
     try:
         text = output.decode("utf-8", errors="strict") if isinstance(output, bytes) else output
         if type(text) is not str or len(text) > 12_000:
@@ -34,19 +34,25 @@ def validate_platform_report(output: str | bytes) -> None:
         result = json.loads(text)
     except (ValueError, UnicodeError) as exc:
         raise RuntimeVerificationError("Diagnóstico de instalação inválido.") from exc
-    if type(result) is not dict or not (
-        result.get("mode") == "passive"
-        and result.get("target") == "ubuntu_compatible"
-        and result.get("system") == "Linux"
-        and result.get("distro") == "ubuntu"
-        and type(result.get("version_id")) is str
-        and re.fullmatch(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", result["version_id"]) is not None
-        and result.get("installer_supported") is True
-        and result.get("python_supported") is True
-        and result.get("changes_performed") is False
-        and result.get("missing_required") == []
-    ):
-        raise RuntimeVerificationError("Ubuntu ou dependências não validados.")
+    if type(result) is not dict:
+        raise RuntimeVerificationError("Diagnóstico de instalação inválido.")
+    distro, release = result.get("distro"), result.get("version_id")
+    supported = (
+        (distro == "ubuntu" and result.get("target") == "ubuntu_compatible"
+         and type(release) is str and
+         re.fullmatch(r"[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?", release) is not None)
+        or
+        (distro == "fedora" and result.get("target") == "fedora_compatible"
+         and type(release) is str and re.fullmatch(r"[0-9]{2}", release) is not None
+         and 43 <= int(release) <= 45)
+    )
+    if not (supported and result.get("mode") == "passive"
+            and result.get("system") == "Linux"
+            and result.get("installer_supported") is True
+            and result.get("python_supported") is True
+            and result.get("changes_performed") is False
+            and result.get("missing_required") == []):
+        raise RuntimeVerificationError("Linux Fedora/Ubuntu ou dependências não validados.")
 
 
 def verify_installed_runtime(

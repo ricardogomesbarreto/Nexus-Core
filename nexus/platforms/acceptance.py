@@ -140,11 +140,13 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         begin("Sinal do microfone")
         mic = _json(["--microphone-test"], timeout=20)
         log("Sinal do microfone", "PASSOU" if mic.get("microphone_tested") is True and mic.get("signal_detected") is True else "FALHOU",
-            f"status={mic.get('status') if mic.get('status') in ('signal_detected', 'no_signal', 'capture_failed', 'recorder_unavailable') else 'erro'}")
+            f"status={mic.get('status') if mic.get('status') in ('signal_detected', 'no_signal', 'capture_failed', 'recorder_unavailable') else 'erro'}; "
+            f"pico={_bounded_metric(mic.get('peak_percent'), maximum=100)}%; "
+            f"saturação={_bounded_metric(mic.get('clipped_percent'), maximum=100)}%")
     else:
         log("Sinal do microfone", "PENDENTE")
 
-    if _consent("Falar uma frase para o Vosk (até dez segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
+    if _consent("Falar uma frase para o Vosk (escuta limitada a 20 segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
         begin("Reconhecimento de voz")
         speech = _json(["--recognition-test"], timeout=45)
         backend = speech.get("backend")
@@ -179,8 +181,11 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "respostas faladas, com escuta retomada sem apertar botão?"),
         ("Voz feminina e masculina", "Ambas as vozes foram audíveis; pausa, "
          "retomada e cancelamento funcionaram?"),
-        ("Câmera e análise", "Após consentimento, viu prévia e foto, recebeu "
-         "descrição coerente e resposta falada? Mediu a latência?"),
+        ("Prévia e foto da câmera", "Após consentimento, a janela mostrou prévia "
+         "e capturou um quadro da câmera?"),
+        ("Descrição visual local", "O modelo realmente analisou a foto, "
+         "deu descrição coerente e resposta falada? Uma recusa por memória é falha "
+         "neste item; meça a latência."),
         ("Criar pasta autorizada",
          "No chat, peça 'Crie uma pasta chamada NexusCoreTeste'; "
          "negue uma vez, repita e autorize. O programa respeitou as decisões?"),
@@ -197,7 +202,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "Nexus, fechou a janela e confirmou que ambos permaneceram ativos?"),
         ("Serviços iniciados pelo Nexus", "Com serviços inicialmente parados, "
          "abriu e fechou o Nexus e confirmou que só os iniciados por ele pararam?"),
-        ("Imagem produzida", "Abriu o arquivo de imagem real; conferiu "
+        ("Imagem produzida", "Em Recursos > Editar foto local ou Criar cartaz local, abriu o arquivo de imagem real; conferiu "
          "conteúdo, permissões e original intacto após negar/autorizar?"),
         ("Documento produzido", "Abriu o documento de saída real em um "
          "leitor independente e conferiu o conteúdo e o original?"),
@@ -208,6 +213,12 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         ("Cartões de estudo", "Na Biblioteca local, criou um cartão a partir "
          "de um trecho, mostrou a resposta, revisou e confirmou o vínculo "
          "e a exclusão ao remover o documento?"),
+        ("Índice semântico local", "Na Biblioteca, importou dois textos, "
+         "indexou sob confirmação com modelo já instalado, pesquisou uma "
+         "frase por sentido e verificou a fonte; depois removeu o índice?"),
+        ("Resposta com fontes do índice", "Na Biblioteca, pediu uma "
+         "resposta fundamentada no índice, conferiu até três citações "
+         "nos textos originais e mediu o tempo e a memória?"),
     ):
         log(label, _observation(instruction, ask=ask, interactive=interactive, out=out), "observação humana")
     log("Automação de teclado em Wayland", "PENDENTE" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "NÃO APLICÁVEL",

@@ -15,7 +15,7 @@ import sys
 
 _INSTALL_HOME = None
 _CREDENTIALS_PATH = None
-_VERSION = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$", re.ASCII)
+_VERSION = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.dev(0|[1-9]\d*))?$", re.ASCII)
 
 
 class LauncherError(ValueError):

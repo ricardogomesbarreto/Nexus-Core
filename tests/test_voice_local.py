@@ -264,7 +264,7 @@ def test_continuous_recognizer_retries_noisy_input_without_words_before_thirty_s
     monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
         Model=lambda path: object(), KaldiRecognizer=Decoder))
     monkeypatch.setattr(voice_module.shutil, "which", lambda name: "/usr/bin/arecord")
-    process = FakeProcess(["arecord"], audio=array("h", [8000] * 100000).tobytes())
+    process = FakeProcess(["arecord"], audio=array("h", [8000] * 400000).tobytes())
     process.returncode = None
     monkeypatch.setattr(voice_module.subprocess, "Popen", lambda *a, **k: process)
     clock = iter(i * .25 for i in range(1000))
@@ -272,6 +272,10 @@ def test_continuous_recognizer_retries_noisy_input_without_words_before_thirty_s
     assert LocalRecognizer(model_dir).recognize_continuous() == ""
     assert process.stdout.tell() < len(process.audio)  # Ended without reading 30s.
     assert process.terminated
+
+
+def test_undecodable_voice_has_longer_bounded_window_for_slow_notebooks():
+    assert 10 < LocalRecognizer.MAX_UNDECODABLE_SECONDS < LocalRecognizer.STREAM_LIMIT
 
 
 def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):

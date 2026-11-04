@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+import configparser
 
 from nexus.security import RiskLevel
 from nexus.tools.base import NexusTool, ToolResult
@@ -74,7 +75,8 @@ class OpenDefaultBrowserTool(NexusTool):
     risk_level = RiskLevel.LOW
     contract = ToolContract(
         name=name, description=description, permission=risk_level,
-        inputs=(), outputs=(FieldSpec("browser_id", ValueKind.STRING),),
+        inputs=(), outputs=(FieldSpec("browser_id", ValueKind.STRING),
+                            FieldSpec("browser_name", ValueKind.STRING)),
     )
     # Desktop file IDs are data, never shell text or arbitrary executable paths.
     _DESKTOP_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.desktop\Z")
@@ -88,25 +90,61 @@ class OpenDefaultBrowserTool(NexusTool):
                      if os.path.isfile(path := os.path.join(directory, name))
                      and os.access(path, os.X_OK)), None)
 
+    @staticmethod
+    def _browser_name(browser_id: str) -> str:
+        """Read the desktop entry's visible name; never execute its contents."""
+        roots = [os.path.join(os.environ.get("XDG_DATA_HOME") or
+                              os.path.expanduser("~/.local/share"), "applications")]
+        roots.extend(os.path.join(directory, "applications") for directory in
+                     (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":")
+                     if directory.startswith("/"))
+        for root in roots:
+            entry = os.path.join(root, browser_id)
+            try:
+                if not os.path.isfile(entry) or os.path.getsize(entry) > 128 * 1024:
+                    continue
+                parser = configparser.ConfigParser(interpolation=None, strict=False)
+                parser.read(entry, encoding="utf-8")
+                label = parser.get("Desktop Entry", "Name", fallback="").strip()
+                if label and len(label) <= 80 and all(char.isprintable() for char in label):
+                    return label
+            except (OSError, UnicodeError, configparser.Error):
+                continue
+        return "navegador padrão"
+
     def execute(self, **kwargs) -> ToolResult:
         if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
             return ToolResult(False, self.name, error="Sessão gráfica Linux indisponível.")
         settings = self._system_binary("xdg-settings")
+        gio = self._system_binary("gio")
         launcher = self._system_binary("gtk-launch")
-        if not settings or not launcher:
-            return ToolResult(False, self.name, error="Instale xdg-utils e libgtk-3-bin para abrir o navegador padrão.")
+        if not launcher or not (settings or gio):
+            return ToolResult(False, self.name, error="Instale xdg-utils/GIO e libgtk-3-bin para abrir o navegador padrão.")
         environment = {key: os.environ[key] for key in LaunchApplicationTool.ENVIRONMENT
                        if key in os.environ}
         environment["PATH"] = os.pathsep.join(LaunchApplicationTool.SYSTEM_BIN_DIRS)
         try:
-            selected = subprocess.run(
-                [settings, "get", "default-web-browser"],
-                stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                timeout=3, check=False, env=environment,
-            )
-            browser_id = selected.stdout.strip()
-            if selected.returncode or not self._DESKTOP_ID.fullmatch(browser_id):
-                return ToolResult(False, self.name, error="Navegador padrão não identificado no Ubuntu.")
+            browser_id = ""
+            if settings:
+                selected = subprocess.run(
+                    [settings, "get", "default-web-browser"],
+                    stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                    timeout=3, check=False, env=environment,
+                )
+                if selected.returncode == 0:
+                    browser_id = selected.stdout.strip()
+            if not browser_id and gio:
+                selected = subprocess.run(
+                    [gio, "mime", "x-scheme-handler/http"],
+                    stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                    timeout=3, check=False, env=environment,
+                )
+                if selected.returncode == 0:
+                    line = selected.stdout.splitlines()[0] if selected.stdout else ""
+                    match = re.fullmatch(r"Default application for 'x-scheme-handler/http': ([A-Za-z0-9._-]+\.desktop)", line)
+                    browser_id = match.group(1) if match else ""
+            if not self._DESKTOP_ID.fullmatch(browser_id):
+                return ToolResult(False, self.name, error="Navegador padrão não identificado na sessão Linux.")
             subprocess.Popen(
                 [launcher, browser_id], stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -114,4 +152,6 @@ class OpenDefaultBrowserTool(NexusTool):
             )
         except (OSError, subprocess.TimeoutExpired):
             return ToolResult(False, self.name, error="Não foi possível consultar ou abrir o navegador padrão.")
-        return ToolResult(True, self.name, data={"browser_id": browser_id})
+        return ToolResult(True, self.name, data={
+            "browser_id": browser_id, "browser_name": self._browser_name(browser_id),
+        })

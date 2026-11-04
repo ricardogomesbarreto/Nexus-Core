@@ -60,7 +60,9 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     original = acceptance._json
     def diagnose(args, **kwargs):
         if args == ["--microphone-test"]:
-            return {"microphone_tested": True, "signal_detected": True, "status": "signal_detected"}
+            return {"microphone_tested": True, "signal_detected": True,
+                    "status": "signal_detected", "peak_percent": 100,
+                    "clipped_percent": 40, "audio": "private recording"}
         if args == ["--recognition-test"]:
             return {"recognition_tested": True, "status": "transcribed",
                     "transcript": "minha senha confidencial", "backend": "pipewire",
@@ -71,11 +73,12 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"] + ["n"] * 8)
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "n", "s", "n", "n", "n"] + ["n"] * 10)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
     assert "[PASSOU] Reconhecimento de voz" in report
+    assert "[PASSOU] Sinal do microfone — status=signal_detected; pico=100%; saturação=40%" in report
     assert "backend=pipewire; pico=42%; amostras=123; conteúdo omitido" in report
     assert "[PASSOU] Captura de câmera" in report
     assert "[RELATADO] Chat na janela" in report
@@ -86,9 +89,12 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     assert "[PENDENTE] Serviços iniciados pelo Nexus" in report
     assert "[PENDENTE] PDF produzido" in report
     assert "[PENDENTE] Cartões de estudo" in report
+    assert "[PENDENTE] Índice semântico local" in report
+    assert "[PENDENTE] Resposta com fontes do índice" in report
     assert "[RELATADO] Criar pasta autorizada" in report
+    assert "[PENDENTE] Descrição visual local" in report
     assert "[RELEASE] PENDENTE" in report
-    for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK"):
+    for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK", "private recording"):
         assert secret not in report
 
 
@@ -104,7 +110,7 @@ def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monke
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 8)
+    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 12)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -144,7 +150,7 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 8)
+    answers = iter(["", "", "", "n", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 12)
     prompts = []
     def ask(question):
         prompts.append(question)

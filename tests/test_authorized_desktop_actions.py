@@ -186,11 +186,64 @@ def test_exact_spoken_browser_request_skips_model_and_consent(tmp_path, monkeypa
     planner = AgentPlanner(NoModel(), registry, executor)
     prompt = json.dumps({"mensagem_atual": "Abra o navegador", "historico": []})
     result = planner.run(prompt)
-    assert result.success and result.tool_result.data == {"browser_id": "brave-browser.desktop"}
+    assert result.success and result.tool_result.data == {
+        "browser_id": "brave-browser.desktop", "browser_name": "navegador padrão",
+    }
     assert launched[0][0] == ["/usr/bin/gtk-launch", "brave-browser.desktop"]
     assert "NEXUS_DATABASE_PASSWORD" not in launched[0][1]["env"]
     assert launched[0][1]["env"]["PATH"] == "/usr/bin:/bin:/snap/bin"
     assert planner.plan(prompt).arguments == {}
+
+
+def test_default_browser_reads_user_desktop_name_without_launching_a_different_app(
+    tmp_path, monkeypatch,
+):
+    from nexus.desktop.conversation import ChatSession
+    from nexus.agent.planner import AgentOutcome
+    appdir = tmp_path / "applications"
+    appdir.mkdir()
+    (appdir / "brave_brave.desktop").write_text(
+        "[Desktop Entry]\nName=Brave Web Browser\nExec=another-program --ignored\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.setattr(OpenDefaultBrowserTool, "_system_binary",
+                        staticmethod(lambda name: "/usr/bin/" + name))
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.run", lambda *a, **kw:
+                        SimpleNamespace(returncode=0, stdout="brave_brave.desktop\n"))
+    calls = []
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.Popen",
+                        lambda argv, **kw: calls.append(argv) or SimpleNamespace())
+    result = OpenDefaultBrowserTool().execute()
+    assert result.success and result.data["browser_name"] == "Brave Web Browser"
+    assert calls == [["/usr/bin/gtk-launch", "brave_brave.desktop"]]
+    assert "Brave Web Browser" in ChatSession._describe(AgentOutcome(
+        success=True, tool_result=result,
+    ))
+
+
+def test_default_browser_falls_back_to_desktop_http_handler(tmp_path, monkeypatch):
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.setattr(OpenDefaultBrowserTool, "_system_binary",
+                        staticmethod(lambda name: "/usr/bin/" + name))
+    commands = []
+
+    def run(argv, **kwargs):
+        commands.append(argv)
+        return SimpleNamespace(returncode=0, stdout=(
+            "" if "xdg-settings" in argv[0] else
+            "Default application for 'x-scheme-handler/http': firefox.desktop\n"
+        ))
+
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.run", run)
+    started = []
+    monkeypatch.setattr("nexus.tools.desktop_apps.subprocess.Popen",
+                        lambda argv, **kw: started.append(argv) or SimpleNamespace())
+    result = OpenDefaultBrowserTool().execute()
+    assert result.success and result.data["browser_id"] == "firefox.desktop"
+    assert started == [["/usr/bin/gtk-launch", "firefox.desktop"]]
+    assert len(commands) == 2
 
 
 def test_default_browser_fails_closed_for_invalid_setting_or_missing_display(tmp_path, monkeypatch):

@@ -25,7 +25,17 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 MIN_VERSION = (3, 12)
 from nexus.platforms import UBUNTU_PACKAGES, linux_profile, platform_capabilities
+from nexus.platforms.linux import FEDORA_PACKAGES
 SYSTEM_PACKAGES = UBUNTU_PACKAGES
+FEDORA_REQUIREMENT_PACKAGES = {
+    "psql": ("postgresql",), "pg_isready": ("postgresql",),
+    "espeak-ng": ("espeak-ng",), "arecord": ("alsa-utils",),
+    "ffmpeg": ("ffmpeg-free",), "xdg-settings": ("xdg-utils",),
+    "gtk-launch": ("gtk3",), "flock": ("util-linux",),
+    "python3-tk": ("python3-tkinter",),
+    "python3-venv": ("python3", "python3-pip"),
+}
+
 PACKAGES_FOR_MISSING = {
     "psql": ("postgresql", "postgresql-client"),
     "pg_isready": ("postgresql", "postgresql-client"),
@@ -72,6 +82,35 @@ def _run(args: list[str], *, input_text=None, timeout=300,
     )
 
 
+def _installation_failure_hint(exc: BaseException) -> str:
+    """Report the failed gate without command arguments, output or credentials."""
+    from nexus.updates.manager import UpdateError
+    from nexus.updates.verification import RuntimeVerificationError
+
+    if isinstance(exc, subprocess.CalledProcessError):
+        command = exc.cmd if isinstance(exc.cmd, (list, tuple)) else ()
+        if "pip" in command and "install" in command:
+            step = "instalação dos pacotes Python"
+        elif len(command) >= 2 and tuple(command[-2:]) == ("pip", "check"):
+            step = "integridade das dependências Python"
+        elif command and command[-1] == "--version":
+            step = "execução da versão candidata"
+        elif command and command[-1] == "--platform-check":
+            step = "diagnóstico da plataforma candidata"
+        else:
+            step = "execução do ambiente Python"
+        return f"Etapa: {step}; código de saída: {exc.returncode}."
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return "Etapa: verificação do ambiente Python excedeu o tempo limite."
+    if isinstance(exc, RuntimeVerificationError):
+        return "Etapa: validação da versão ou da plataforma candidata."
+    if isinstance(exc, UpdateError):
+        return "Etapa: ativação da versão candidata; confira o status da recuperação offline."
+    if isinstance(exc, PermissionError):
+        return "Etapa: acesso ao ambiente Python do usuário negado."
+    return "Etapa não identificada; confira o executável instalado e a recuperação offline."
+
+
 def _ubuntu_supported() -> bool:
     """Never infer package-manager permissions from ID_LIKE=debian."""
     return linux_profile().installer_supported
@@ -90,9 +129,12 @@ def install_system_packages() -> bool:
     A refusal or unresolved dependency blocks the bootstrap rather than
     falsely reporting the application as fully installed.
     """
-    if not _ubuntu_supported():
+    profile = linux_profile()
+    if not profile.installer_supported:
         print("Instalador não habilitado nesta distribuição; rode --check.")
         return False
+    if profile.distro == "fedora":
+        return install_fedora_packages()
     missing = system_requirements()
     if not missing:
         print("Dependências de sistema encontradas.")
@@ -119,6 +161,41 @@ def install_system_packages() -> bool:
     unresolved = system_requirements()
     if unresolved:
         print("Dependências ainda ausentes: " + ", ".join(unresolved))
+        return False
+    return True
+
+
+def install_fedora_packages() -> bool:
+    """Fedora-specific dependency setup; no apt, shell or boot enable."""
+    profile = linux_profile()
+    if not (profile.installer_supported and profile.distro == "fedora"):
+        return False
+    missing = system_requirements()
+    if not missing:
+        print("Dependências de sistema Fedora encontradas.")
+        return True
+    if any(name not in FEDORA_REQUIREMENT_PACKAGES for name in missing):
+        print("Dependência sem pacote Fedora conhecido; instalação interrompida.")
+        return False
+    packages = sorted({
+        package for requirement in missing
+        for package in FEDORA_REQUIREMENT_PACKAGES[requirement]
+    })
+    if not installed("dnf") or not installed("sudo"):
+        print("dnf/sudo indisponíveis; não foi instalada nenhuma dependência.")
+        return False
+    print("Pacotes Fedora necessários: " + ", ".join(packages))
+    if not confirm("Instalar pacotes oficiais Fedora com sudo dnf?"):
+        print("Instalação de pacotes Fedora recusada.")
+        return False
+    try:
+        _run(["sudo", "dnf", "install", "-y", *packages], timeout=600)
+    except (OSError, subprocess.SubprocessError):
+        print("dnf falhou; nenhuma dependência foi considerada instalada.")
+        return False
+    unresolved = system_requirements()
+    if unresolved:
+        print("Dependências Fedora ainda ausentes: " + ", ".join(unresolved))
         return False
     return True
 
@@ -235,6 +312,19 @@ def prepare_local_models() -> bool:
     from time import monotonic, sleep
 
     binary = shutil.which("ollama")
+    if binary is None and linux_profile().distro == "fedora":
+        if installed("dnf") and installed("sudo") and confirm(
+            "Instalar Ollama dos repositórios oficiais Fedora via dnf (sem iniciar serviço)?"
+        ):
+            try:
+                _run(["sudo", "dnf", "install", "-y", "ollama"], timeout=600)
+                binary = shutil.which("ollama")
+            except (OSError, subprocess.SubprocessError):
+                print("Ollama não pôde ser instalado com dnf.")
+        if binary is None:
+            print("Instale Ollama pelos pacotes Fedora e repita a configuração "
+                  "para evitar downloads alternativos não verificados.")
+            return False
     managed = settings.data_dir / "runtime" / "ollama" / "bin" / "ollama"
     if binary is None and managed.is_file() and not managed.is_symlink():
         binary = str(managed)
@@ -258,12 +348,17 @@ def prepare_local_models() -> bool:
             print("systemd de usuário indisponível; instale/inicie Ollama e tente novamente.")
             return False
         if not installed("zstd"):
-            if not installed("sudo") or not confirm("Instalar zstd pelos pacotes Ubuntu?"):
+            if not installed("sudo") or not confirm(
+                "Instalar zstd pelo gerenciador nativo desta distribuição?"
+            ):
                 print("zstd é necessário para descompactar o pacote oficial Ollama.")
                 return False
             try:
-                _run(["sudo", "apt-get", "update"], timeout=300)
-                _run(["sudo", "apt-get", "install", "-y", "zstd"], timeout=600)
+                if linux_profile().distro == "fedora":
+                    _run(["sudo", "dnf", "install", "-y", "zstd"], timeout=600)
+                else:
+                    _run(["sudo", "apt-get", "update"], timeout=300)
+                    _run(["sudo", "apt-get", "install", "-y", "zstd"], timeout=600)
             except (OSError, subprocess.SubprocessError):
                 print("Não foi possível instalar zstd.")
                 return False
@@ -396,6 +491,13 @@ def prepare_neural_voice(home: Path) -> bool:
 def prepare_female_voice() -> bool:
     """Install Ubuntu's open RHVoice Leticia voice when explicitly selected."""
     from nexus.voice.local import LocalSpeaker
+    if linux_profile().distro == "fedora":
+        if LocalSpeaker.female_voice_ready():
+            print("Voz RHVoice Letícia disponível no Fedora.")
+            return True
+        print("RHVoice Letícia opcional: não instalar pacotes Ubuntu no Fedora; "
+              "eSpeak NG PT-BR permanece disponível.")
+        return False
     if LocalSpeaker.female_voice_ready():
         print("Voz feminina RHVoice Letícia já instalada.")
         return True
@@ -459,6 +561,52 @@ def verify_local_postgresql(python: Path, home: Path) -> None:
         raise PostgreSQLAuthenticationError("Login PostgreSQL não confirmado.") from exc
 
 
+def ensure_postgresql_running_fedora() -> bool:
+    """Start only the configured Fedora system unit with explicit consent.
+
+    Never auto-run initdb, change pg_hba.conf, enable units at boot or
+    destroy an existing database. The user initializes Fedora PG separately.
+    """
+    if not (linux_profile().distro == "fedora"
+            and installed("pg_isready") and installed("systemctl")
+            and installed("sudo")):
+        return False
+    port_text = os.environ.get("NEXUS_DATABASE_PORT", "5432")
+    if not port_text.isdecimal() or not 1 <= int(port_text) <= 65535:
+        print("Porta PostgreSQL inválida; serviço não foi alterado.")
+        return False
+    probe = ["pg_isready", "-q", "-h", "127.0.0.1", "-p", port_text]
+    try:
+        _run(probe, timeout=5)
+        return True
+    except (OSError, subprocess.SubprocessError):
+        pass
+    if not confirm("Iniciar PostgreSQL existente (postgresql.service), sem habilitar no boot?"):
+        print("PostgreSQL não iniciado; nenhuma unidade foi habilitada.")
+        return False
+    try:
+        active_before = _service_active_for_install("system", "postgresql.service")
+        _run(["sudo", "systemctl", "start", "postgresql.service"], timeout=40)
+        if not active_before:
+            from nexus.platforms.session_services import record_started_service
+            if not record_started_service("system", "postgresql.service"):
+                print("Serviço iniciado sem registro; pare manualmente quando terminar.")
+        from time import monotonic, sleep
+        deadline = monotonic() + 12
+        while monotonic() < deadline:
+            try:
+                _run(probe, timeout=5)
+                return True
+            except (OSError, subprocess.SubprocessError):
+                sleep(0.5)
+    except (OSError, subprocess.SubprocessError):
+        pass
+    print("PostgreSQL Fedora não está pronto. Se for instalação nova, inicialize "
+          "uma única vez com: sudo postgresql-setup --initdb "
+          "(somente se não existir banco anterior).")
+    return False
+
+
 def ensure_postgresql_running_for_install() -> bool:
     """Request one-time service start when PostgreSQL is stopped.
 
@@ -466,6 +614,8 @@ def ensure_postgresql_running_for_install() -> bool:
     verify_local_postgresql() must still authenticate with SELECT 1; pg_isready
     by itself is not a successful authentication test.
     """
+    if linux_profile().distro == "fedora":
+        return ensure_postgresql_running_fedora()
     import re
     from time import monotonic, sleep
 
@@ -551,6 +701,13 @@ def _install_managed_python_locked(home: Path):
     )
     versions = _private_directory(home / "versions")
     target = versions / ("v" + settings.version)
+    # The copied standalone launcher and recovery helper validate slots with
+    # their own stdlib-only rules. Refuse an incompatible version *before*
+    # modifying any active link.
+    from nexus.updates.managed_entrypoint import _VERSION as launcher_version
+    from nexus.updates.recovery import VERSION as recovery_version
+    if not launcher_version.fullmatch(target.name) or not recovery_version.fullmatch(target.name):
+        raise RuntimeError("Formato da versão incompatível com inicializador ou recuperação.")
     if target.is_symlink():
         raise RuntimeError("Ambiente de instalação inseguro.")
     if not target.exists():
@@ -665,7 +822,7 @@ def write_recovery_launcher(home: Path) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu Desktop")
+    parser = argparse.ArgumentParser(description="NEXUS CORE — instalação Ubuntu/Fedora Desktop")
     parser.add_argument("--check", action="store_true",
                         help="mostra diagnóstico somente leitura, em qualquer distribuição")
     args = parser.parse_args(argv)
@@ -683,25 +840,33 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     profile = linux_profile()
     if not profile.installer_supported:
-        print("Instalação requer Ubuntu reconhecido e Python 3.12+; "
-              "em outras distribuições use --check. Nada foi instalado.", file=sys.stderr)
+        print("Instalação requer Ubuntu reconhecido ou Fedora 43–45 com "
+              "Python 3.12+; em outras distribuições use --check. "
+              "Nada foi instalado.", file=sys.stderr)
         return 2
-    print(f"NEXUS CORE — instalação guiada para Ubuntu {profile.release}.")
+    print(f"NEXUS CORE — instalação guiada para {profile.distro} {profile.release}.")
     if not install_system_packages():
-        print("Instalação interrompida: requisitos do Ubuntu ainda ausentes.", file=sys.stderr)
+        print("Instalação interrompida: requisitos da distribuição ainda ausentes.", file=sys.stderr)
+        return 2
+    # Fedora packages do not initialize PostgreSQL automatically. We never
+    # run initdb; users must first review any existing database files.
+    if profile.distro == "fedora" and not ensure_postgresql_running_for_install():
+        print("Instalação Fedora adiada: inicialize o banco apenas se novo "
+              "(sudo postgresql-setup --initdb) e inicie o serviço sob demanda.",
+              file=sys.stderr)
         return 2
     if not provision_postgresql():
         print("Instalação interrompida: configure credenciais PostgreSQL locais "
               "e tente novamente.", file=sys.stderr)
         return 2
-    # The user's PostgreSQL cluster may be stopped deliberately to conserve
-    # RAM. Check it BEFORE downloading or preparing large local models.
-    # Starting the cluster is explicit; no unit is enabled at boot.
-    if not ensure_postgresql_running_for_install():
-        print("Instalação adiada: PostgreSQL local precisa estar ativo para "
-              "validar as credenciais; o ambiente anterior foi preservado.",
-              file=sys.stderr)
-        return 2
+    # Preserve the existing Ubuntu provisioning-first contract and tests.
+    if profile.distro == "ubuntu":
+        if not ensure_postgresql_running_for_install():
+            print("Instalação adiada: PostgreSQL local precisa estar ativo para "
+                  "validar as credenciais; o ambiente anterior foi preservado.",
+                  file=sys.stderr)
+            return 2
+
     if not prepare_local_models():
         print("Instalação interrompida: modelos locais de conversa e voz ainda ausentes.",
               file=sys.stderr)
@@ -710,6 +875,13 @@ def main(argv: list[str] | None = None) -> int:
         home = install_managed_python()
         executable = write_launcher(home)
         recovery = write_recovery_launcher(home)
+        # A verified package is not sufficient if the installed standalone
+        # launcher rejects its version slot. Check the actual user command.
+        from nexus.updates.verification import validate_version_output
+        from nexus.config.settings import settings
+        launched = _run([str(executable), "--version"], timeout=20,
+                        capture=True, cwd=home)
+        validate_version_output(launched.stdout, settings.version)
         female_voice = prepare_female_voice()
         neural_voice = prepare_neural_voice(home)
         from nexus.updates.manager import set_autoupdate
@@ -720,15 +892,17 @@ def main(argv: list[str] | None = None) -> int:
               "Revise usuário, senha, banco e serviço; a nova versão não foi ativada.",
               file=sys.stderr)
         return 2
-    except (OSError, RuntimeError, subprocess.SubprocessError):
-        print("Falha na instalação do ambiente Python do usuário.", file=sys.stderr)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        print("Falha na instalação do ambiente Python do usuário. "
+              + _installation_failure_hint(exc), file=sys.stderr)
         return 2
     print(f"Instalação concluída: {executable}")
     print(f"Recuperação offline instalada: {recovery}")
     print("Executar: ~/.local/bin/nexus-core")
     print("PostgreSQL: login local somente leitura confirmado antes da ativação.")
     print("Diagnóstico adicional: ~/.local/bin/nexus-core --ubuntu-preflight "
-          "(sem teste físico de áudio, câmera ou inferência).")
+          "(preflight local compatível com Linux; sem teste físico de áudio, "
+          "câmera ou inferência).")
     print("Atualizações automáticas: " + ("ativadas" if enabled else "desativadas"))
     print("Ollama e modelo de conversa encontrados; inferência real depende do teste local.")
     if not installed("docker"):

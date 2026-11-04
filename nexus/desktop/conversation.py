@@ -183,7 +183,7 @@ class ChatSession:
         if result.tool_name == "launch_application" and isinstance(data, dict):
             return f"Solicitei a abertura de {data['application']} no desktop."
         if result.tool_name == "open_default_browser" and isinstance(data, dict):
-            return f"Solicitei a abertura do navegador padrão ({data['browser_id']})."
+            return f"Solicitei a abertura do navegador padrão: {data.get('browser_name') or 'navegador padrão'}."
         if result.tool_name in {"edit_image_local", "image_geometry_local", "create_graphic_local", "craft_convert_local", "pdf_extract_pages_local", "pdf_combine_local", "pdf_organize_local", "pdf_render_local"} and isinstance(data, dict):
             return f"Arquivo criado no computador: {data['path']}"
         if result.tool_name == "image_colors_local" and isinstance(data, dict):

@@ -10,12 +10,182 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.18; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.18-722F37">
+  <img alt="Código v0.9.19.dev1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19.dev1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## Fedora Linux — instalação em validação na v0.9.19
+
+O instalador guiado `python3 scripts/install_linux.py` passou a aceitar
+**Fedora Workstation 43–45**, detectado estritamente por `ID=fedora` e
+Python 3.12+. Utiliza **dnf** (nunca apt no Fedora), PostgreSQL/Ollama
+sob demanda, confirmação antes de instalar pacotes ou modelos e ambiente
+Python isolado. O Fedora exige `postgresql-setup --initdb` **apenas em
+bancos novos**, executado manualmente pelo administrador; o Nexus não
+inicializa ou apaga dados do banco automaticamente.
+
+[Guia Fedora, dependências, comandos e aceite físico](docs/FEDORA_COMPATIBILITY_v0.9.19.md).
+[Auditoria das oito capacidades da suíte offline](docs/OFFLINE_SUITE_STATUS_v0.9.19.md).
+
+**Ainda não homologado fisicamente no Fedora.** A CI existente executa
+testes de simulação Fedora em runner Linux, não substitui testes em Fedora
+real. Kiwix, Kolibri, Qdrant, CyberChef, FlatNotes, ProtoMaps e Supply
+Depot não devem ser apresentados como integrações completas.
+
+**Ferramentas locais em revisão no PR #102:** o painel de dados agora oferece
+SHA-512, SHA3-256, BLAKE2b-256, Base32, ROT13, formatação JSON e receitas de
+até oito operações, com limite de 64 KiB também em cada etapa. No terminal:
+`printf 'texto' | nexus-core --data-recipe base64-encode,base64-decode`.
+`nexus-core --benchmark-full` mede SHA-256 e cópia de um bloco de RAM de
+4 MiB por cerca de 400 ms cada, sem disco, rede, pontuação ou ranking. O menu
+**Recursos → Aplicativos locais** lista navegador padrão, arquivos e terminal;
+há ação explícita para abrir, com confirmação para arquivos e terminal. Não
+instala programas nem baixa imagens. No mesmo painel, uma imagem identificada
+por ID imutável `sha256:` e **já instalada** pode ser executada, com confirmação
+individual, no Podman local sem root/cgroups v2, sem rede, sem montagens do host,
+com limites de CPU/RAM/tempo e saída de até 16 KiB. O terminal oferece
+`nexus-core --local-image-run sha256:ID_COMPLETO`; sem TTY a autorização falha.
+Não inicia Docker/Podman ao ligar o computador e não abre acesso do modelo a
+imagens arbitrárias. Esses acréscimos
+não completam as oito integrações externas; veja a matriz de estado abaixo.
+[Detalhes, comandos e limites dessa rodada](docs/LOCAL_CAPABILITIES_PROGRESS_v0.9.19.md).
+
+
+## Próxima etapa v0.9.19 — integração offline dos três ZIPs (PR #102)
+
+## Estabilização de recursos e compatibilidade Linux — v0.9.19 (Draft)
+
+**Aceite parcial de 4 de novembro no Ubuntu 26.04 (SHA `4e939e5`):** o navegador
+padrão abriu o Brave sem nova autorização; a janela exibia o ID técnico
+`brave_brave.desktop`. A escuta contínua, o reconhecimento pontual e a
+validação de arquivo de imagem foram relatados como falhos. A câmera
+capturou um quadro, mas as tentativas de descrição foram **recusadas por
+falta de RAM** no perfil eco (não contam como análise visual bem-sucedida).
+No observador, a RAM disponível chegou a 857 MiB, a swap a 3.328 MiB e
+o processo da janela a 183 MiB RSS. O Ollama usa memória adicional; os
+logs não permitem atribuir toda a pressão de recursos ao Nexus.
+
+Esta revisão mostra o nome legível do navegador configurado no desktop
+e consulta também o handler HTTP do GIO se `xdg-settings` não tiver
+resultado. O reconhecedor dá até 18 segundos para uma entrada ruidosa
+sem palavras parciais, antes de reiniciar a escuta; áudio e transcrição
+continuam apenas na sessão local. No perfil eco da **janela**, quando o
+modelo visual padrão não cabe, um modelo visual menor **já instalado**
+pode ser escolhido se houver pelo menos 512 MiB além de seu tamanho
+em disco. `NEXUS_VISION_MODEL` e o modelo indicado na CLI nunca são
+trocados. Nada é baixado automaticamente. Em memória insuficiente, a
+análise segue bloqueada e uma mensagem falada curta explica o motivo.
+Modelos Gemma 3 de 1B e 270M não aceitam imagens e são excluídos.
+O aceite agora separa captura da câmera e descrição pelo modelo.
+
+Para comparar um modelo compacto com o seu hardware, instale-o somente
+se desejar e depois repita a análise com `NEXUS_VISION_MODEL=moondream:latest`.
+O modelo ocupa aproximadamente 1,7 GB em disco e pode ser menos preciso;
+**o download e os testes físicos não foram feitos aqui**. Com aproximadamente
+2 GiB de RAM disponível, talvez ainda não haja margem suficiente para
+iniciá-lo sem travamentos. Veja o
+[roteiro de aceite](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.19.md).
+
+A nova adaptação de desempenho considera a RAM realmente disponível ao
+processo, incluindo cgroups v1/v2 e limites hierárquicos do systemd/container,
+além de afinidade e quotas de CPU. Em até 4 GiB aplica parâmetros ultraleves
+de inferência; até 8 GiB utiliza eco e em máquinas maiores o modo automático
+pode utilizar equilibrado se houver memória livre. A interface Tk diminui
+a frequência de verificações ociosas de 80 para 250 ms, preservando 80 ms
+durante atividades; o indicador de conectividade é consultado com limites.
+
+O diagnóstico `nexus-core --resource-check` informa o novo
+`effective_profile` (sem executar inferência e sem iniciar serviços).
+Veja os [limites por hardware, comandos e testes de aceite](docs/LOW_RESOURCE_COMPATIBILITY_v0.9.19.md).
+**A compatibilidade alvo é Linux desktop; não é garantia de execução em
+qualquer hardware, Windows ou macOS.** Esta rodada é de estabilização,
+não de mudança visual, e não altera a licença, arquitetura local-first
+ou política de serviços sob demanda.
+
+
+**Em revisão; NÃO é release estável.** A branch de desenvolvimento acrescenta
+exercícios locais a partir de trechos autorizados, leitura de trechos em voz alta
+com interrupção e pausa/retomada do processo de fala local, transcrição de WAV PCM mono/16 kHz pelo Vosk já instalado,
+além de MP3/OGG/FLAC/M4A com FFmpeg local opcional,
+inventário **somente de metadados** de arquivos ZIM e materiais educativos
+em pasta selecionada, e resultados opcionais de exercícios no PostgreSQL
+local com exclusão vinculada à fonte. A Biblioteca oferece ainda ações
+explícitas de resumo e roteiro de estudo com Ollama, fundamentadas em até
+três trechos locais, sem salvar os textos gerados. O menu **Recursos → Configurar voz local** também permite escolher
+velocidade/volume da voz de forma persistente; artigos específicos de ZIM
+podem ser lidos localmente com zim-tools opcional, e o tutor oferece três
+níveis com fontes explícitas, sem avaliação adaptativa automática. Nada inicia servidores, baixa modelos,
+copia código de terceiros ou modifica o visual aprovado.
+
+O [PR #102](https://github.com/ricardogomesbarreto/Nexus-Core/pull/102)
+continua sem merge, e o aceite físico de áudio/Tk/PostgreSQL no Ubuntu e a CI
+do SHA final são necessários. Consulte a
+[matriz detalhada dos 38 requisitos](docs/NEXUS_38_FEATURES_STATUS_v0.9.19.md)
+e a [auditoria dos três ZIPs](docs/ZIP_INTEGRATION_v0.9.19.md).
+**Ainda não estão implementados** indexação semântica de toda a biblioteca,
+pesquisa textual completa em ZIM, serviços Kolibri, tutor adaptativo ou clonagem
+de voz. Existe uma busca por embeddings **apenas em até oito trechos recentes**,
+usando modelo Ollama já instalado e selecionado pelo usuário. A
+leitura pontual de ZIM depende de zim-tools instalado pelo usuário.
+
+**Cursos offline nativos (v0.9.19 em Draft):** a Biblioteca pode abrir uma pasta
+com manifesto course.json (versão 1) e até 20 aulas TXT/Markdown, sem servidor.
+Há leitura sob clique, pesquisa textual limitada e tolerante a acentos, narração
+opt-in de até 9.600 caracteres por aula (quatro trechos sequenciais de até 2.400), com pausa/interrupção, exercícios por
+aula, progresso temporário e sugestões heurísticas a partir dos acertos e gravação/restauração opcional do progresso
+no PostgreSQL local. Veja o [curso original de demonstração](examples/offline_course)
+e a [documentação de cursos](docs/OFFLINE_COURSES_v0.9.19.md).
+Não há integração completa Kolibri nem tutoria adaptativa automática.
+
+**Compatibilidade com exportações Kolibri (inspeção):** na Biblioteca, o botão
+**Inspecionar exportação Kolibri** permite selecionar uma pasta KOLIBRI_DATA
+previamente copiada para o HOME e consultar IDs/tamanhos de até 60 bancos de
+canais, sem acessar os dados internos dos cursos nem iniciar servidor. Veja
+[limitações e instruções](docs/KOLIBRI_EXPORT_v0.9.19.md).
+
+**Pesquisa semântica híbrida limitada:** a amostra de até oito trechos agora
+combina até quatro candidatos encontrados por texto/FTS e representantes de
+documentos recentes distintos; só depois, mediante autorização, compara
+embeddings no Ollama local. Essa comparação não persiste vetores.
+
+**Índice semântico local opcional (`0.9.19.dev1`, em Draft):** o menu
+**Índice semântico** da Biblioteca permite calcular, com autorização, até
+16 vetores dos primeiros trechos de um documento importado. O PostgreSQL
+guarda até 256 vetores no total, vinculados aos trechos; excluir o documento
+os remove automaticamente. Uma pesquisa indexada gera somente o vetor da
+pergunta no Ollama local e compara os vetores no processo, sem outro serviço
+de banco de dados. A amostra de oito trechos acima continua disponível e
+independente. A indexação não é automática, não baixa modelos e exige
+memória livre suficiente. Veja [comandos, limites e roteiro de teste](docs/SEMANTIC_INDEX_v0.9.19.md).
+[Aceite físico da candidata v0.9.19 no Ubuntu 26.04](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.19.md).
+**Perguntar com fontes do índice** usa até três desses trechos para solicitar
+uma resposta ao Ollama local sob confirmação; mostra as fontes e não executa
+ações nem salva a resposta. A pergunta ativa o modelo de embeddings somente
+se já houver trechos indexados. O PR #102 passou pela CI no commit
+`b0a52632` (2.098 testes); esta extensão exige nova CI no SHA final.
+[Notas da revisão v0.9.19.dev1](docs/RELEASE_NOTES_v0.9.19.dev1.md).
+
+**Instalação da candidata:** nomes de diretório `v0.9.19.dev1` são aceitos
+pelo launcher, pela recuperação offline e pelo gerenciador local. Uma
+reinstalação da mesma candidata preserva o link da versão anterior; o
+instalador agora confere o próprio `~/.local/bin/nexus-core --version` antes
+de declarar sucesso. O teste de bancada e a CI não substituem a execução
+no Ubuntu físico. Se o instalador falhar, confira a etapa indicada e execute
+`~/.local/bin/nexus-core-recover --activation-status` quando houver aviso de
+ativação interrompida.
+
+**Microfone na candidata 0.9.19.dev1:** a escuta contínua entrega ao Vosk
+somente amostras PCM completas, mesmo quando PipeWire/ALSA divide a captura
+entre leituras. `--voice-check` reconhece uma sessão PipeWire ativa mesmo sem
+`arecord` (a inspeção não grava áudio). `--microphone-test` descarta a gravação
+de três segundos e informa `peak_percent` e `clipped_percent`; quando
+`clipping_suspected` for verdadeiro, reduza o ganho da entrada nas configurações
+de som e repita o teste. O registro `--acceptance-log` mostra apenas métricas
+limitadas, sem áudio nem transcrição. Isso não comprova que a escuta contínua
+responda a duas falas consecutivas no notebook: faça o teste físico na janela.
 
 ## 0.9.18 — estudo local e prévia de voz
 
@@ -777,6 +947,14 @@ quando necessário. Áudio bruto, fotos e frames não são persistidos
 por esse mecanismo.
 
 ### Criação e edição local por conversa (integração em validação)
+
+Na janela, **Recursos → Editar foto local…** permite escolher uma foto,
+um efeito e um arquivo novo; **Recursos → Criar cartaz local…** pede título
+e destino PNG. A ação passa pela mesma autorização por arquivo da conversa,
+sem carregar o modelo Ollama. Depois da aprovação, **Ver imagem criada**
+mostra o resultado no próprio Nexus. O destino deve estar dentro da pasta
+pessoal e ainda não existir; fechar o seletor não grava nada. Esse caminho
+permite testar a saída real separadamente da prévia da câmera.
 
 O Nexus Core recebe comandos de texto ou voz **na própria conversa**, sem abrir
 um painel de botões dos aplicativos externos. Há três ferramentas sob o mesmo
@@ -1823,7 +2001,7 @@ etapas separadamente:
 ~/.local/bin/nexus-core --desktop
 ```
 
-O segundo comando abre o microfone por até dez segundos, solicita uma frase
+O segundo comando abre o microfone por até vinte segundos, solicita uma frase
 em português e retorna a transcrição (ou `no_transcript`). A gravação não é
 salva. Se houver sinal mas nenhuma transcrição, confira a entrada padrão do
 PipeWire nas configurações de som, aguarde o Vosk carregar, fale com uma pausa

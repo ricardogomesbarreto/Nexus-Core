@@ -55,7 +55,8 @@ class LocalVision:
                       "ou elementos visíveis com precisão e responda em português brasileiro. "
                       "Se estiver ilegível ou incerto, informe a limitação; não invente.")
     VISION_MODEL_PREFIXES = ("gemma3:", "llava:", "llama3.2-vision:",
-                             "qwen2.5vl:", "qwen3-vl:", "moondream:", "minicpm-v:")
+                             "qwen2.5vl:", "qwen3-vl:", "moondream:", "minicpm-v:",
+                             "granite3.2-vision:")
     MODEL_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_./:-]{0,127}$")
     MAX_CAMERA_INDEX = 255
 
@@ -83,6 +84,13 @@ class LocalVision:
         if not isinstance(model, str) or not cls.MODEL_PATTERN.fullmatch(model):
             raise VisionInputError("Identificador de modelo local inválido.")
         return model
+
+    @classmethod
+    def _is_visual_model(cls, name: str) -> bool:
+        # Gemma 3 270m/1b accept text only, despite the shared family name.
+        if name.startswith("gemma3:"):
+            return bool(re.fullmatch(r"gemma3:(?:latest|(?:4|12|27)b(?:[-_][A-Za-z0-9_]+)?)", name))
+        return name.startswith(cls.VISION_MODEL_PREFIXES)
 
     @classmethod
     def _normalize_image(cls, data: bytes, *, max_edge: int | None = None) -> bytes:
@@ -335,7 +343,7 @@ class LocalVision:
         explicit = os.environ.get("NEXUS_VISION_MODEL", "").strip()
         candidate = self.validate_model(explicit) if explicit else requested
         if candidate in names:
-            if not candidate.startswith(self.VISION_MODEL_PREFIXES):
+            if not self._is_visual_model(candidate):
                 raise VisionError(
                     f"O modelo '{candidate}' não possui capacidade visual confirmada. "
                     "Use um modelo visual local, como gemma3:4b."
@@ -343,7 +351,7 @@ class LocalVision:
             return candidate
         if not explicit:
             for name in names:
-                if name.startswith(self.VISION_MODEL_PREFIXES):
+                if self._is_visual_model(name):
                     return self.validate_model(name)
         raise VisionError(
             f"Modelo visual '{candidate}' não está instalado no Ollama local. "
@@ -387,9 +395,33 @@ class LocalVision:
                 "configure um modelo visual local menor. Nenhuma imagem foi enviada."
             )
 
+    def _smaller_installed_model(self, requested: str) -> str | None:
+        """Only use an already installed visual model that fits the eco budget."""
+        available = self.resource_budget.available_now_mib()
+        if available is None or available < 1024:
+            return None
+        try:
+            installed = self.transport.list_models()
+        except OllamaTransportError:
+            return None
+        options = []
+        for name in installed if isinstance(installed, list) else ():
+            if (not isinstance(name, str) or name == requested
+                    or not self._is_visual_model(name)
+                    or not self.MODEL_PATTERN.fullmatch(name)):
+                continue
+            try:
+                size = self.transport.model_size(name)
+            except (OllamaTransportError, AttributeError):
+                continue
+            if type(size) is int and size > 0 and (size + 1024 * 1024 - 1) // (1024 * 1024) + 512 <= available:
+                options.append((size, name))
+        return min(options)[1] if options else None
+
     def describe(self, image: bytes, *, question: str | None = None,
                  model: str = "gemma3:4b",
-                 is_cancelled: Callable[[], bool] | None = None) -> dict:
+                 is_cancelled: Callable[[], bool] | None = None,
+                 allow_fallback: bool = False) -> dict:
         def check_cancelled() -> None:
             if is_cancelled is not None and is_cancelled():
                 raise VisionError("Análise cancelada.")
@@ -398,7 +430,19 @@ class LocalVision:
         prompt = self.validate_question(question)
         model_name = self._installed_vision_model(self.validate_model(model))
         check_cancelled()
-        self._check_visual_memory(model_name)
+        try:
+            self._check_visual_memory(model_name)
+        except VisionError:
+            # Only the desktop's implicit default can change. Explicit model
+            # selection, including NEXUS_VISION_MODEL and CLI choices, is fixed.
+            alternate = (self._smaller_installed_model(model_name)
+                         if allow_fallback and model == "gemma3:4b"
+                         and not os.environ.get("NEXUS_VISION_MODEL")
+                         and self.resource_budget.mode == "eco" else None)
+            if alternate is None:
+                raise
+            self._check_visual_memory(alternate)
+            model_name = alternate
         check_cancelled()
         normalized = self._normalize_image(
             image, max_edge=self.resource_budget.vision_edge)

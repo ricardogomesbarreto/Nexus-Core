@@ -16,8 +16,9 @@ import nexus.voice as voice_module
 def test_recognition_cli_exposes_input_peak_and_backend(monkeypatch, capsys, peak, spoken, expected):
     class Recognizer:
         STREAM_LIMIT = 30
+        last_instance = None
         def __init__(self):
-            pass
+            Recognizer.last_instance = self
         def recognize_continuous(self, cancelled=None, on_audio_level=None):
             on_audio_level(peak)
             return spoken
@@ -26,7 +27,8 @@ def test_recognition_cli_exposes_input_peak_and_backend(monkeypatch, capsys, pea
 
     monkeypatch.setattr(voice_module, "LocalRecognizer", Recognizer)
     main_module.cli(["--recognition-test"])
-    result = json.loads(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    result = json.loads(captured.out)
     assert result["recognition_tested"] is True
     assert result["status"] == expected
     assert result["peak_percent"] == peak
@@ -34,6 +36,8 @@ def test_recognition_cli_exposes_input_peak_and_backend(monkeypatch, capsys, pea
     assert result["level_samples"] == 1
     assert result["diagnosis"]
     assert result["transcript"] == spoken
+    assert "vinte segundos" in captured.err
+    assert Recognizer.last_instance.STREAM_LIMIT == 20
 
 
 def test_recognition_cli_distinguishes_no_samples(monkeypatch, capsys):
