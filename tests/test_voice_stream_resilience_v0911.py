@@ -60,6 +60,47 @@ def test_recognizer_polls_real_pcm_fd_and_produces_words(monkeypatch, tmp_path):
     proc.stdout.close()
 
 
+def test_recognizer_carries_incomplete_pcm_sample_between_short_reads(monkeypatch, tmp_path):
+    model_dir = tmp_path / "vosk"
+    model_dir.mkdir()
+    received = bytearray()
+
+    class Decoder:
+        def __init__(self, model, rate):
+            assert rate == 16000
+        def AcceptWaveform(self, frames):
+            assert len(frames) % 2 == 0
+            received.extend(frames)
+            return received == b"\x01\x02\x03\x04"
+        def Result(self): return json.dumps({"text": "frase completa"})
+        def FinalResult(self): return json.dumps({"text": ""})
+
+    monkeypatch.setitem(sys.modules, "vosk", types.SimpleNamespace(
+        Model=lambda path: object(), KaldiRecognizer=Decoder,
+    ))
+    monkeypatch.setattr(LocalRecognizer, "capture_command",
+                        classmethod(lambda cls, **kwargs: ["mock-recorder"]))
+    parts = iter([b"\x01", b"\x02\x03", b"\x04"])
+    monkeypatch.setattr(voice.select, "select", lambda *a: ([109], [], []))
+    monkeypatch.setattr(voice.os, "read", lambda *a: next(parts, b""))
+
+    class Reader:
+        def fileno(self): return 109
+    class Process:
+        stdout = Reader()
+        stopped = False
+        def poll(self): return 0 if self.stopped else None
+        def terminate(self): self.stopped = True
+        def wait(self, timeout=None): return 0
+        def kill(self): self.stopped = True
+
+    proc = Process()
+    monkeypatch.setattr(voice.subprocess, "Popen", lambda args, **kwargs: proc)
+    assert LocalRecognizer(model_dir).recognize_continuous() == "frase completa"
+    assert bytes(received) == b"\x01\x02\x03\x04"
+    assert proc.stopped
+
+
 def test_no_pcm_data_does_not_hold_voice_worker_after_pause(monkeypatch, tmp_path):
     model_dir = tmp_path / "vosk"
     model_dir.mkdir()

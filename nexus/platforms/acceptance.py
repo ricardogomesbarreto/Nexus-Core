@@ -140,7 +140,9 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
         begin("Sinal do microfone")
         mic = _json(["--microphone-test"], timeout=20)
         log("Sinal do microfone", "PASSOU" if mic.get("microphone_tested") is True and mic.get("signal_detected") is True else "FALHOU",
-            f"status={mic.get('status') if mic.get('status') in ('signal_detected', 'no_signal', 'capture_failed', 'recorder_unavailable') else 'erro'}")
+            f"status={mic.get('status') if mic.get('status') in ('signal_detected', 'no_signal', 'capture_failed', 'recorder_unavailable') else 'erro'}; "
+            f"pico={_bounded_metric(mic.get('peak_percent'), maximum=100)}%; "
+            f"saturação={_bounded_metric(mic.get('clipped_percent'), maximum=100)}%")
     else:
         log("Sinal do microfone", "PENDENTE")
 

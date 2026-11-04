@@ -137,6 +137,16 @@ se já houver trechos indexados. O PR #102 passou pela CI no commit
 `b0a52632` (2.098 testes); esta extensão exige nova CI no SHA final.
 [Notas da revisão v0.9.19.dev1](docs/RELEASE_NOTES_v0.9.19.dev1.md).
 
+**Microfone na candidata 0.9.19.dev1:** a escuta contínua entrega ao Vosk
+somente amostras PCM completas, mesmo quando PipeWire/ALSA divide a captura
+entre leituras. `--voice-check` reconhece uma sessão PipeWire ativa mesmo sem
+`arecord` (a inspeção não grava áudio). `--microphone-test` descarta a gravação
+de três segundos e informa `peak_percent` e `clipped_percent`; quando
+`clipping_suspected` for verdadeiro, reduza o ganho da entrada nas configurações
+de som e repita o teste. O registro `--acceptance-log` mostra apenas métricas
+limitadas, sem áudio nem transcrição. Isso não comprova que a escuta contínua
+responda a duas falas consecutivas no notebook: faça o teste físico na janela.
+
 ## 0.9.18 — estudo local e prévia de voz
 
 Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão

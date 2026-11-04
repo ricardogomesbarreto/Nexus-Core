@@ -11,6 +11,11 @@ Linux local, Ollama sob demanda e PostgreSQL como único banco do assistente.
   de busca textual e a amostra temporária de oito trechos seguem disponíveis.
 - Auditoria da cobertura dos três ZIPs atualizada: os recursos nativos são
   parciais e os produtos externos não estão embutidos no NEXUS CORE.
+- A captura contínua mantém um byte PCM incompleto entre leituras para entregar
+  amostras s16 alinhadas ao Vosk. O diagnóstico reconhece PipeWire ativo sem
+  exigir ALSA e o teste explícito do microfone informa a porcentagem de
+  amostras quase saturadas, sem guardar ou exibir o áudio. O aceite local
+  apresenta somente o pico e a saturação, além do estado do teste.
 
 A CI do SHA final e o aceite físico Ubuntu/Fedora ainda são obrigatórios antes
 de promover a versão. Em particular, medir latência, RAM e swap durante a

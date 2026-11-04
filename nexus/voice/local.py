@@ -320,6 +320,18 @@ class LocalRecognizer(_StoppableProcess):
             samples.byteswap()
         return min(100, int(100 * max((abs(value) for value in samples), default=0) / 32768))
 
+    @staticmethod
+    def clipped_percent(frames: bytes) -> int:
+        """Share of nearly saturated PCM samples; used only in an explicit test."""
+        samples = array("h")
+        samples.frombytes(frames[:len(frames) // 2 * 2])
+        if sys.byteorder != "little":
+            samples.byteswap()
+        if not samples:
+            return 0
+        return min(100, round(100 * sum(abs(value) >= 32700 for value in samples)
+                              / len(samples)))
+
     def recognize(self) -> str:
         model = self._load_model()
         command = self.capture_command(duration=self.DURATION, wav=True)
@@ -401,6 +413,9 @@ class LocalRecognizer(_StoppableProcess):
             last_voice = 0.0
             partial_text = ""
             last_partial_change = 0.0
+            # A short read may split an s16 sample. Keep at most one byte so
+            # the decoder and level meter always see complete PCM samples.
+            pcm_tail = b""
             # PipeWire streams have no fixed end time. Buffered .read(8000)
             # can stall while waiting for exactly 8000 bytes, ignoring pause,
             # timeout or a changed input source. A pollable Linux fd permits
@@ -442,6 +457,13 @@ class LocalRecognizer(_StoppableProcess):
                     frames = process.stdout.read(8000)
                 if not frames:
                     break
+                frames = pcm_tail + frames
+                if len(frames) & 1:
+                    pcm_tail, frames = frames[-1:], frames[:-1]
+                else:
+                    pcm_tail = b""
+                if not frames:
+                    continue
                 now = monotonic()
                 level = self.peak_level(frames)
                 if on_audio_level is not None and monotonic() >= next_level:
