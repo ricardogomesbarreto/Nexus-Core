@@ -146,7 +146,7 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
     else:
         log("Sinal do microfone", "PENDENTE")
 
-    if _consent("Falar uma frase para o Vosk (até dez segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
+    if _consent("Falar uma frase para o Vosk (escuta limitada a 30 segundos, sem guardar a transcrição)?", ask=ask, interactive=interactive, out=out):
         begin("Reconhecimento de voz")
         speech = _json(["--recognition-test"], timeout=45)
         backend = speech.get("backend")
