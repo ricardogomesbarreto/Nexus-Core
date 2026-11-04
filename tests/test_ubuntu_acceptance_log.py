@@ -73,7 +73,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "s", "n", "n", "n"] + ["n"] * 10)
+    replies = iter(["SIM", "SIM", "SIM", "SIM", "s", "f", "n", "s", "n", "s", "n", "n", "n"] + ["n"] * 10)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -92,6 +92,7 @@ def test_physical_results_are_distinct_from_observations_and_secrets(monkeypatch
     assert "[PENDENTE] Índice semântico local" in report
     assert "[PENDENTE] Resposta com fontes do índice" in report
     assert "[RELATADO] Criar pasta autorizada" in report
+    assert "[PENDENTE] Descrição visual local" in report
     assert "[RELEASE] PENDENTE" in report
     for secret in ("minha senha confidencial", "PRIVATE_IMAGE", "Sensitive Camera", "NEXUSCOREOK", "private recording"):
         assert secret not in report

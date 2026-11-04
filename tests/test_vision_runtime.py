@@ -101,6 +101,41 @@ def test_eco_allows_model_when_local_memory_estimate_has_headroom(monkeypatch):
         "description"] == "Uma imagem."
 
 
+def test_eco_desktop_can_use_installed_smaller_visual_model(monkeypatch):
+    class Inventory:
+        def list_models(self): return ["gemma3:4b", "moondream:latest", "qwen3:1.7b"]
+        def model_size(self, name):
+            return (3 if name == "gemma3:4b" else 1) * 1024 ** 3
+        def chat(self, *, payload, timeout):
+            assert payload["model"] == "moondream:latest"
+            assert payload["keep_alive"] == "0s"
+            return {"done": True, "message": {"content": "Um objeto."}}
+
+    monkeypatch.delenv("NEXUS_VISION_MODEL", raising=False)
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2100))
+    service = LocalVision(Settings(), transport=Inventory())
+    assert service.describe(image_bytes(), allow_fallback=True)["model"] == "moondream:latest"
+    with pytest.raises(VisionError, match="Memória insuficiente"):
+        service.describe(image_bytes(), model="gemma3:4b")
+
+
+def test_eco_never_uses_non_visual_or_non_fitting_fallback(monkeypatch):
+    class Inventory:
+        def list_models(self): return ["gemma3:4b", "gemma3:1b", "moondream:latest"]
+        def model_size(self, name): return (1 if name == "gemma3:1b" else 3) * 1024 ** 3
+        def chat(self, *, payload, timeout):
+            raise AssertionError("No inference under memory pressure")
+
+    monkeypatch.delenv("NEXUS_VISION_MODEL", raising=False)
+    monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2100))
+    with pytest.raises(VisionError, match="Nenhuma imagem foi enviada"):
+        LocalVision(Settings(), transport=Inventory()).describe(
+            image_bytes(), allow_fallback=True,
+        )
+
+
 def test_eco_blocks_vision_under_one_gib_without_model_metadata(monkeypatch):
     monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
     monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 617))

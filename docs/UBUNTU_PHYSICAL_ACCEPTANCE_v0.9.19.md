@@ -55,8 +55,21 @@ desempenho em outra máquina.
 Na janela, teste duas falas consecutivas sem apertar o microfone entre elas;
 ouça ambas as respostas e confira se a escuta retoma. Teste vozes feminina e
 masculina, pausa/cancelamento, prévia e fotografia da câmera com consentimento,
-e uma análise visual com resposta falada. A falta de câmera ou modelo deve ser
-anotada como pendente ou falha conforme o que foi realmente tentado.
+e uma análise visual com resposta falada. **Captura e descrição são itens
+separados:** a prévia ou o `--camera-test` não comprovam que o Ollama
+analisou a imagem. Uma recusa por falta de RAM é falha na descrição.
+Anote se o modelo mudou para um visual local menor já instalado. Uma
+escolha explícita de modelo visual nunca muda automaticamente.
+
+No teste de voz, se `--recognition-test` retornar `no_transcript`, compare
+`NEXUS_AUDIO_INPUT=alsa ~/.local/bin/nexus-core --recognition-test` e
+`NEXUS_AUDIO_INPUT=pipewire ~/.local/bin/nexus-core --recognition-test`
+com o mesmo enunciado e volume moderado, sem compartilhar transcrições.
+O indicador de pico em 100% isoladamente não comprova saturação; confira
+também a porcentagem de amostras saturadas. Se falhar em ambos, a escuta
+contínua ainda não está homologada. Para imagem editada, identifique o
+arquivo produzido no chat, abra-o em um visualizador independente e
+confira o original. Prévia da câmera não cria um arquivo de edição.
 
 ## Biblioteca e índice semântico
 

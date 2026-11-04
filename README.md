@@ -58,6 +58,37 @@ não completam as oito integrações externas; veja a matriz de estado abaixo.
 
 ## Estabilização de recursos e compatibilidade Linux — v0.9.19 (Draft)
 
+**Aceite parcial de 4 de novembro no Ubuntu 26.04 (SHA `4e939e5`):** o navegador
+padrão abriu o Brave sem nova autorização; a janela exibia o ID técnico
+`brave_brave.desktop`. A escuta contínua, o reconhecimento pontual e a
+validação de arquivo de imagem foram relatados como falhos. A câmera
+capturou um quadro, mas as tentativas de descrição foram **recusadas por
+falta de RAM** no perfil eco (não contam como análise visual bem-sucedida).
+No observador, a RAM disponível chegou a 857 MiB, a swap a 3.328 MiB e
+o processo da janela a 183 MiB RSS. O Ollama usa memória adicional; os
+logs não permitem atribuir toda a pressão de recursos ao Nexus.
+
+Esta revisão mostra o nome legível do navegador configurado no desktop
+e consulta também o handler HTTP do GIO se `xdg-settings` não tiver
+resultado. O reconhecedor dá até 18 segundos para uma entrada ruidosa
+sem palavras parciais, antes de reiniciar a escuta; áudio e transcrição
+continuam apenas na sessão local. No perfil eco da **janela**, quando o
+modelo visual padrão não cabe, um modelo visual menor **já instalado**
+pode ser escolhido se houver pelo menos 512 MiB além de seu tamanho
+em disco. `NEXUS_VISION_MODEL` e o modelo indicado na CLI nunca são
+trocados. Nada é baixado automaticamente. Em memória insuficiente, a
+análise segue bloqueada e uma mensagem falada curta explica o motivo.
+Modelos Gemma 3 de 1B e 270M não aceitam imagens e são excluídos.
+O aceite agora separa captura da câmera e descrição pelo modelo.
+
+Para comparar um modelo compacto com o seu hardware, instale-o somente
+se desejar e depois repita a análise com `NEXUS_VISION_MODEL=moondream:latest`.
+O modelo ocupa aproximadamente 1,7 GB em disco e pode ser menos preciso;
+**o download e os testes físicos não foram feitos aqui**. Com aproximadamente
+2 GiB de RAM disponível, talvez ainda não haja margem suficiente para
+iniciá-lo sem travamentos. Veja o
+[roteiro de aceite](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.19.md).
+
 A nova adaptação de desempenho considera a RAM realmente disponível ao
 processo, incluindo cgroups v1/v2 e limites hierárquicos do systemd/container,
 além de afinidade e quotas de CPU. Em até 4 GiB aplica parâmetros ultraleves

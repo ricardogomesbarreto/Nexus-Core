@@ -1094,8 +1094,9 @@ class DesktopWindow:
         self._speaking = True
         self._voice_paused = False
         self._speak_started = monotonic()
-        live_event("fala", "iniciado")
-        self._start_worker(self._speak, text, self.voice_choice.get(), generation)
+        selected_voice = self.voice_choice.get()
+        live_event("fala", "iniciado", voice=selected_voice.lower())
+        self._start_worker(self._speak, text, selected_voice, generation)
         return True
 
     def _send(self, event=None, *, advisory_only=False, channel="texto"):
@@ -1696,7 +1697,10 @@ class DesktopWindow:
         if self._listening:
             self._listen_generation += 1
             self.recognizer.stop()
-        if not self._say_response(message):
+        spoken = ("Não há memória suficiente para analisar a imagem agora. "
+                  "Tente novamente com um modelo visual local menor."
+                  if "Memória insuficiente para análise visual" in message else message)
+        if not self._say_response(spoken):
             self._start_listening()
 
     def _show_camera_frame(self, frame: bytes, source: str = "camera") -> None:
@@ -1776,7 +1780,10 @@ class DesktopWindow:
                 result.get("description"), str
             ) or not result["description"].strip():
                 raise VisionError("Resposta visual local inválida.")
-            self._vision_events.put(("success", question, result["description"][:12000]))
+            description = result["description"]
+            if result.get("model") not in (None, "gemma3:4b"):
+                description = (f"Modelo visual local: {result['model']}.\n" + description)
+            self._vision_events.put(("success", question, description[:12000]))
         except VisionError as exc:
             self._vision_events.put(("error", question, str(exc)))
         except Exception:
@@ -1790,6 +1797,7 @@ class DesktopWindow:
             return service.describe(
                 image, question=question,
                 is_cancelled=lambda: self._cancel_requested or self._closing,
+                allow_fallback=True,
             )
         return service.describe(image, question=question)
 

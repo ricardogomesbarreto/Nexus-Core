@@ -39,13 +39,17 @@ def live_event(event: str, state: str, *, source: str | None = None,
                tool: str | None = None, elapsed_ms: int | None = None,
                profile: str | None = None, threads: int | None = None,
                memory_mib: int | None = None, peak_percent: int | None = None,
-               samples: int | None = None) -> None:
+               samples: int | None = None, voice: str | None = None) -> None:
     """Emit a single bounded status via the existing console/file logger."""
     if event not in EVENTS or state not in STATES:
         raise ValueError("Evento de execução inválido")
     fields = [f"evento={event}", f"estado={state}"]
     if source is not None:
         fields.append(f"origem={source if source in SOURCES else 'outra'}")
+    if voice is not None:
+        if event != "fala":
+            raise ValueError("Voz somente em eventos de fala")
+        fields.append(f"voz={voice if voice in ('feminina', 'masculina') else 'outra'}")
     if tool is not None:
         fields.append(f"ferramenta={TOOL_EVENTS.get(tool, tool) if tool in TOOLS else 'outra'}")
     if elapsed_ms is not None:

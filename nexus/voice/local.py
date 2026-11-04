@@ -256,7 +256,10 @@ class LocalRecognizer(_StoppableProcess):
     DURATION = 8
     STREAM_LIMIT = 30
     END_OF_SPEECH_SECONDS = 1.2
-    MAX_UNDECODABLE_SECONDS = 8.0
+    # A notebook with swap pressure can take longer to produce the first
+    # partial. Eight seconds cut off the physical acceptance recording before
+    # Vosk had a chance to decode it; retain a bounded retry window.
+    MAX_UNDECODABLE_SECONDS = 18.0
 
     def __init__(self, model_path: str | Path | None = None):
         super().__init__()

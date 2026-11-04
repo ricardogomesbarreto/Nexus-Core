@@ -274,6 +274,10 @@ def test_continuous_recognizer_retries_noisy_input_without_words_before_thirty_s
     assert process.terminated
 
 
+def test_undecodable_voice_has_longer_bounded_window_for_slow_notebooks():
+    assert 10 < LocalRecognizer.MAX_UNDECODABLE_SECONDS < LocalRecognizer.STREAM_LIMIT
+
+
 def test_continuous_recognizer_never_opens_mic_after_pause(monkeypatch, tmp_path):
     model_dir = tmp_path / "model"
     model_dir.mkdir()

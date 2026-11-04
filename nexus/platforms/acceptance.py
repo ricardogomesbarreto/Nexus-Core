@@ -181,8 +181,11 @@ def run_acceptance(*, ask=input, out=None, interactive=None) -> int:
          "respostas faladas, com escuta retomada sem apertar botão?"),
         ("Voz feminina e masculina", "Ambas as vozes foram audíveis; pausa, "
          "retomada e cancelamento funcionaram?"),
-        ("Câmera e análise", "Após consentimento, viu prévia e foto, recebeu "
-         "descrição coerente e resposta falada? Mediu a latência?"),
+        ("Prévia e foto da câmera", "Após consentimento, a janela mostrou prévia "
+         "e capturou um quadro da câmera?"),
+        ("Descrição visual local", "O modelo realmente analisou a foto, "
+         "deu descrição coerente e resposta falada? Uma recusa por memória é falha "
+         "neste item; meça a latência."),
         ("Criar pasta autorizada",
          "No chat, peça 'Crie uma pasta chamada NexusCoreTeste'; "
          "negue uma vez, repita e autorize. O programa respeitou as decisões?"),
