@@ -110,7 +110,7 @@ def test_recognition_failure_logs_bounded_metrics_and_untried_manual_steps(monke
         return original(args, **kwargs)
 
     monkeypatch.setattr(acceptance, "_json", diagnose)
-    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 10)
+    replies = iter(["", "", "SIM", "n", "", "n", "", "", "", "", ""] + ["n"] * 12)
     output = io.StringIO()
     assert acceptance.run_acceptance(ask=lambda _: next(replies), out=output, interactive=True) == 1
     report = output.getvalue()
@@ -150,7 +150,7 @@ def test_entrypoint_dispatches_acceptance_without_starting_application(monkeypat
 
 def test_folder_and_application_outcomes_are_independent(monkeypatch):
     _passive(monkeypatch)
-    answers = iter(["", "", "", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 10)
+    answers = iter(["", "", "", "n", "n", "n", "n", "n", "f", "n", "s", "n"] + ["n"] * 12)
     prompts = []
     def ask(question):
         prompts.append(question)
