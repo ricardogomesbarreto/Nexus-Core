@@ -82,6 +82,35 @@ def _run(args: list[str], *, input_text=None, timeout=300,
     )
 
 
+def _installation_failure_hint(exc: BaseException) -> str:
+    """Report the failed gate without command arguments, output or credentials."""
+    from nexus.updates.manager import UpdateError
+    from nexus.updates.verification import RuntimeVerificationError
+
+    if isinstance(exc, subprocess.CalledProcessError):
+        command = exc.cmd if isinstance(exc.cmd, (list, tuple)) else ()
+        if "pip" in command and "install" in command:
+            step = "instalação dos pacotes Python"
+        elif len(command) >= 2 and tuple(command[-2:]) == ("pip", "check"):
+            step = "integridade das dependências Python"
+        elif command and command[-1] == "--version":
+            step = "execução da versão candidata"
+        elif command and command[-1] == "--platform-check":
+            step = "diagnóstico da plataforma candidata"
+        else:
+            step = "execução do ambiente Python"
+        return f"Etapa: {step}; código de saída: {exc.returncode}."
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return "Etapa: verificação do ambiente Python excedeu o tempo limite."
+    if isinstance(exc, RuntimeVerificationError):
+        return "Etapa: validação da versão ou da plataforma candidata."
+    if isinstance(exc, UpdateError):
+        return "Etapa: ativação da versão candidata; confira o status da recuperação offline."
+    if isinstance(exc, PermissionError):
+        return "Etapa: acesso ao ambiente Python do usuário negado."
+    return "Etapa não identificada; confira o executável instalado e a recuperação offline."
+
+
 def _ubuntu_supported() -> bool:
     """Never infer package-manager permissions from ID_LIKE=debian."""
     return linux_profile().installer_supported
@@ -849,8 +878,9 @@ def main(argv: list[str] | None = None) -> int:
               "Revise usuário, senha, banco e serviço; a nova versão não foi ativada.",
               file=sys.stderr)
         return 2
-    except (OSError, RuntimeError, subprocess.SubprocessError):
-        print("Falha na instalação do ambiente Python do usuário.", file=sys.stderr)
+    except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+        print("Falha na instalação do ambiente Python do usuário. "
+              + _installation_failure_hint(exc), file=sys.stderr)
         return 2
     print(f"Instalação concluída: {executable}")
     print(f"Recuperação offline instalada: {recovery}")

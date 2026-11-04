@@ -541,3 +541,27 @@ def test_bootstrap_rejects_wrong_installed_version(tmp_path, monkeypatch):
         install_linux.install_managed_python()
     from nexus.updates.manager import managed_home
     assert not (managed_home() / "current").exists()
+
+
+def test_installer_failure_hint_identifies_gate_without_leaking_arguments():
+    from subprocess import CalledProcessError
+    secret = "minha-senha-nao-imprimir"
+    for argv, expected in (
+        (["python", "-m", "pip", "install", secret], "instalação dos pacotes Python"),
+        (["python", "-I", "-m", "pip", "check"], "integridade das dependências Python"),
+        (["python", "-I", "-m", "nexus.main", "--version"], "execução da versão candidata"),
+        (["python", "-I", "-m", "nexus.main", "--platform-check"],
+         "diagnóstico da plataforma candidata"),
+    ):
+        message = install_linux._installation_failure_hint(CalledProcessError(17, argv))
+        assert expected in message
+        assert "código de saída: 17" in message
+        assert secret not in message
+        assert "python" not in message
+
+
+def test_installer_failure_hint_marks_activation_without_exposing_details():
+    from nexus.updates.manager import UpdateError
+    message = install_linux._installation_failure_hint(UpdateError("caminho e segredo privados"))
+    assert "ativação da versão candidata" in message
+    assert "segredo" not in message
