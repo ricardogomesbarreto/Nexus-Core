@@ -17,6 +17,71 @@
 
 # Nexus Core
 
+Assistente desktop local para Linux, com conversa via Ollama, voz, análise autorizada de imagem/tela/câmera, memória, biblioteca e ferramentas mediadas por permissões. Gratuito e licenciado sob MIT; processamento local e funcionamento offline dependem dos modelos e componentes previamente instalados.
+
+## Estado verificado em 17/11/2026
+
+| Referência | Versão e situação |
+|---|---|
+| Código integrado à `main` | **`0.9.18`**, conforme [pyproject.toml](pyproject.toml), no [SHA 909554b](https://github.com/ricardogomesbarreto/Nexus-Core/commit/909554b56e611c8f99ef31fdfda1f29156abde93) auditado |
+| Última release estável publicada | [`v0.7.2`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.7.2), SHA `1dddbc7` |
+| Última pré-release publicada | [`v0.9.12-rc.3`](https://github.com/ricardogomesbarreto/Nexus-Core/releases/tag/v0.9.12-rc.3), SHA `6429a5e`; não inclui automaticamente os incrementos 0.9.13–0.9.18 |
+| Próxima candidata em PR | **`0.9.19`**, [PR #104](https://github.com/ricardogomesbarreto/Nexus-Core/pull/104), aberto, consolidando #102/#103; não integrada nem publicada |
+| Catálogo GitHub | **31 tags e 19 releases publicadas**; existem tags históricas sem release correspondente |
+| Aceite físico | Voz contínua, visão, permissões, memória/latência, recuperação e compatibilidade desktop ainda exigem validação no equipamento real |
+
+Nenhuma tag estável `0.9.x` foi encontrada no catálogo consultado. A versão do código instalado, a tag candidata e a última release estável são referências distintas. As tags existentes devem ser preservadas; atualizar o README não publica uma versão.
+
+## Funcionalidades da main
+
+| Área | Implementação e limite |
+|---|---|
+| Conversa | Ollama local, modelos instalados e perfis de recursos; a qualidade e a latência dependem do hardware/modelo |
+| Voz | Vosk para reconhecimento e TTS local conforme instalação; seleção de voz e prévia sob comando |
+| Visão | Análise solicitada de imagem, câmera e tela; permissões e componentes compatíveis obrigatórios |
+| Memória e estudo | PostgreSQL local, histórico/preferências, biblioteca, notas e cartões com fonte explícita; revisão manual de cartões na 0.9.18 |
+| Ferramentas | Arquivos, documentos/PDF, imagem e ações limitadas com mediação, consentimento e auditoria; CLIs opcionais dependem de instalação própria |
+| Desktop | Janela Tk, cancelamento e sessão única; eventos de teclado em outras janelas continuam sujeitos às limitações X11/Wayland |
+| Recursos | Perfil eco, limites antes da inferência e parada das instâncias registradas pela sessão; medir o resultado físico |
+
+O CORE continua desktop e local; a migração MySQL/MariaDB dos produtos web não altera seu banco PostgreSQL. Ollama, modelos, voz e Docker possuem requisitos e licenças próprios. O projeto não recebe hospedagem Hostinger nem assinatura dos produtos web.
+
+## Instalação e serviços sob demanda
+
+Requisitos do pacote: Python **3.12+**, PostgreSQL local e dependências opcionais conforme a capacidade. A CI usa Ubuntu 24.04/Python 3.12; o aceite em Ubuntu 26.04/Wayland e outras distribuições é separado. Consulte o [instalador](scripts/install_linux.py), as [notas 0.9.18](docs/RELEASE_NOTES_v0.9.18.md) e o [roteiro físico](docs/UBUNTU_PHYSICAL_ACCEPTANCE_v0.9.18.md).
+
+Em um checkout revisado da `main`, use:
+
+```bash
+python3 scripts/install_linux.py
+bash scripts/nexus_core_session.sh status
+bash scripts/nexus_core_session.sh start
+NEXUS_RESOURCE_PROFILE=eco bash scripts/nexus_core_session.sh desktop
+```
+
+Depois de fechar a janela:
+
+```bash
+bash scripts/nexus_core_session.sh stop
+```
+
+O script inicia serviços sob demanda e preserva instâncias preexistentes. Não habilita início no boot; serviços de outros aplicativos não devem ser encerrados indiscriminadamente. Docker só é necessário para capacidades que usam o sandbox. O instalador e os diagnósticos não comprovam, por si só, microfone, câmera ou inferência física.
+
+## Qualidade, publicação e próximos passos
+
+A [CI de push da main, SHA 909554b](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/41093118058), concluiu com **sucesso** em 30/10/2026. O job Linux executou 12 etapas com Python 3.12, PostgreSQL 16, Docker e Xvfb. Isso valida a automação desse commit; não transforma a 0.9.18 em release estável nem certifica dispositivos físicos. Execuções de publicadores que preservam tags existentes também não publicam a versão atual do pacote.
+
+Prioridades: concluir a validação da candidata 0.9.19, revisar segurança e logs, executar CI no SHA consolidado e repetir o roteiro físico de voz/câmera, offline, serviços, desempenho e recuperação. A compatibilidade Fedora proposta permanece em validação na branch. Só promover uma release após revisão e evidências correspondentes à versão.
+
+[Releases publicadas](https://github.com/ricardogomesbarreto/Nexus-Core/releases) · [Tags existentes](https://github.com/ricardogomesbarreto/Nexus-Core/tags) · [Roadmap e gates](docs/ROADMAP_v0.9.12_RELEASE_STATUS.md) · [Licença MIT](LICENSE).
+
+## Histórico técnico e instruções por versão
+
+Os registros abaixo preservam a evolução do projeto, comandos e decisões em seus contextos originais. Expressões como “próximo”, “pendente” e “estado” nesses registros se referem à etapa descrita. A tabela de estado acima é a referência atual de main, tags e releases; instruções de versões antigas precisam ser usadas no checkout correspondente.
+
+<details>
+<summary>Consultar histórico completo de implementação, arquitetura e versões</summary>
+
 ## 0.9.18 — estudo local e prévia de voz
 
 Na **Biblioteca local**, uma pesquisa de texto importado oferece **Criar cartão
@@ -3498,9 +3563,9 @@ A licença dos pesos e o model card devem ser auditados antes de distribuição 
 
 ---
 
-# Estado atual
+# Estado histórico da documentação 0.9.12
 
-**Versão do código na `main`: `v0.9.12`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
+**Registro histórico:** na redação deste trecho, a versão do código era `v0.9.12`. A última release estável publicada é v0.7.2; a homologação física e as tags posteriores continuam pendentes.** As subseções sobre
 `v0.3.0` e `v0.3.1` abaixo preservam decisões e baselines
 **históricos**; não representam, isoladamente, as capacidades ou
 dependências atuais do código `v0.9.12` na `main`. Para as funcionalidades disponíveis,
@@ -3645,7 +3710,7 @@ Essas capacidades devem ser introduzidas por releases próprias.
 
 ---
 
-# Baseline atual
+# Baseline histórica da Model Layer
 
 ```text
 Release Target:       v0.3.9
@@ -6745,9 +6810,11 @@ Essa separação é deliberada.
 
 ---
 
-# Limitações atuais
+# Limitações históricas da Model Layer 0.3.x
 
-Ainda não existem:
+Naquela etapa ainda não existiam as capacidades abaixo. A lista não representa a main 0.9.18; memória, biblioteca, visão, ações autorizadas, diagnóstico, instalação e recuperação foram acrescentados posteriormente:
+
+Ainda não existiam:
 
 * memória persistente;
 * Knowledge Base;
@@ -6970,3 +7037,5 @@ Development Status:    ACTIVE
 **Nexus Core**
 
 Assistente pessoal de inteligência artificial **local-first**, construído sobre segurança, modularidade, controle operacional e evolução incremental.
+
+</details>
