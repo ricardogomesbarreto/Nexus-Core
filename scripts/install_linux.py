@@ -320,17 +320,21 @@ def prepare_local_models() -> bool:
 
     # Text and vision models are distinct: qwen3:1.7b cannot inspect PNGs.
     # A multi-gigabyte model is never pulled without an explicit decision.
-    vision_model = os.environ.get("NEXUS_VISION_MODEL", "gemma3:4b").strip()
+    from nexus.models.resource_budget import ResourceBudget
+    compact = ResourceBudget.detect().compact
+    compact_vision = "moondream:latest" if compact else "gemma3:4b"
+    vision_model = os.environ.get("NEXUS_VISION_MODEL", compact_vision).strip()
     from nexus.vision.local import LocalVision
     try:
         vision_model = LocalVision.validate_model(vision_model)
     except (ValueError, TypeError):
         print("NEXUS_VISION_MODEL inválido; escolha um identificador Ollama local.")
-        vision_model = "gemma3:4b"
+        vision_model = compact_vision
     vision_probe = ollama_model_probe(model_name=vision_model)
     if not vision_probe.get("installed", False):
+        size_notice = "download de modelo local" if compact else "download de vários GB"
         if confirm(
-            f"Instalar modelo visual Ollama {vision_model} (download de vários GB)? "
+            f"Instalar modelo visual Ollama {vision_model} ({size_notice})? "
             "Necessário para compreender imagens, webcam e tela."
         ):
             try:

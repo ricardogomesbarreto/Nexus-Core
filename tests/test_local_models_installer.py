@@ -208,6 +208,30 @@ def test_guided_installer_offers_visual_model_without_silent_download(tmp_path, 
     assert "vários GB" in questions[0]
 
 
+def test_four_gib_installer_offers_smaller_vision_model_with_consent(tmp_path, monkeypatch):
+    import nexus.config.settings as config
+    import nexus.platforms.preflight as preflight
+    from nexus.models.resource_budget import ResourceBudget
+
+    (tmp_path / "voice" / local_models.VOSK_NAME).mkdir(parents=True)
+    monkeypatch.setattr(config, "settings", replace(
+        settings, data_dir=tmp_path, voice_model_path=None
+    ))
+    monkeypatch.setattr(ResourceBudget, "detect", lambda **kw: ResourceBudget(
+        "eco", 4096, 2500, 2, 768, 128, 768, 96, 512, "0s"))
+    monkeypatch.delenv("NEXUS_VISION_MODEL", raising=False)
+    monkeypatch.setattr(install_linux.shutil, "which", lambda name: "/usr/bin/ollama")
+    monkeypatch.setattr(preflight, "ollama_model_probe", lambda *, model_name: {
+        "installed": model_name != "moondream:latest", "status": "model_listed"})
+    questions = []
+    monkeypatch.setattr(install_linux, "confirm",
+                        lambda question: questions.append(question) or False)
+    monkeypatch.setattr(install_linux, "_run",
+                        lambda *a, **kw: pytest.fail("Download não autorizado"))
+    assert install_linux.prepare_local_models() is True
+    assert len(questions) == 1 and "moondream:latest" in questions[0]
+
+
 def test_guided_installer_downloads_vision_model_only_after_consent(tmp_path, monkeypatch):
     import nexus.config.settings as config
     import nexus.platforms.preflight as preflight

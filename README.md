@@ -10,12 +10,16 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.19rc1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19rc1-722F37">
+  <img alt="Código v0.9.20rc1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.20rc1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## v0.9.20rc1 — candidata de uso compacto em 4 GB
+
+O perfil `eco` aplica limites menores ao contexto, processamento de texto e prévia da câmera quando há até 5 GiB de RAM utilizável. Antes de carregar o modelo de texto em máquinas compactas, confere o tamanho do modelo local e mantém uma reserva de memória. Se ele não couber, informa o limite em vez de iniciar uma inferência com risco de travamento. A prévia da câmera continua independente da análise visual. Consulte as [notas e o roteiro de teste](docs/RELEASE_NOTES_v0.9.20rc1.md). A estabilidade em um notebook de 4 GB ainda requer medição física; `gemma3:4b` pode não caber para análise de fotos.
 
 ## v0.9.19rc1 — candidata de baixo consumo para testes
 

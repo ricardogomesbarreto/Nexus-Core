@@ -101,6 +101,29 @@ def test_eco_allows_model_when_local_memory_estimate_has_headroom(monkeypatch):
         "description"] == "Uma imagem."
 
 
+def test_four_gib_uses_installed_small_vision_model_for_authorized_photo(monkeypatch):
+    budget = ResourceBudget.detect(requested="eco", total_bytes=4 * 1024 ** 3,
+                                   available_bytes=2500 * 1024 ** 2, cores=4)
+    monkeypatch.setattr(ResourceBudget, "detect", lambda **kw: budget)
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2500))
+    monkeypatch.delenv("NEXUS_VISION_MODEL", raising=False)
+    class Inventory:
+        payload = None
+        def list_models(self): return ["moondream:latest"]
+        def model_size(self, name):
+            assert name == "moondream:latest"
+            return 1700 * 1024 ** 2
+        def chat(self, *, payload, timeout):
+            self.payload = payload
+            return {"done": True, "message": {"content": "Uma cadeira."}}
+    transport = Inventory()
+    result = LocalVision(Settings(), transport=transport).describe(image_bytes())
+    assert result == {"model": "moondream:latest", "description": "Uma cadeira."}
+    assert transport.payload["options"]["num_batch"] == 16
+    assert transport.payload["keep_alive"] == "0s"
+    assert base64.b64decode(transport.payload["messages"][0]["images"][0]).startswith(b"\x89PNG")
+
+
 def test_eco_blocks_vision_under_one_gib_without_model_metadata(monkeypatch):
     monkeypatch.setenv("NEXUS_RESOURCE_PROFILE", "eco")
     monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 617))

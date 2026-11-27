@@ -24,6 +24,12 @@ def test_camera_preview_rejects_invalid_rate(fps):
         CameraStream(0, fps=fps)
 
 
+@pytest.mark.parametrize("width", [0, 320, 960, True, "480"])
+def test_camera_preview_rejects_invalid_width(width):
+    with pytest.raises(VisionInputError):
+        CameraStream(0, width=width)
+
+
 def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
     read_fd, write_fd = os.pipe()
 
@@ -41,12 +47,12 @@ def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
     monkeypatch.setattr(camera_module.shutil, "which", lambda name: "/usr/bin/ffmpeg")
     monkeypatch.setattr(camera_module.subprocess, "Popen",
                         lambda args, **kwargs: commands.append(args) or process)
-    stream = CameraStream(10, fps=2)
+    stream = CameraStream(10, fps=2, width=480)
     stream.start()
     try:
         assert "/dev/video10" in commands[0]
         assert "pipe:1" in commands[0]
-        assert "fps=2,scale=640:-2" in commands[0]
+        assert "fps=2,scale=480:-2" in commands[0]
         os.write(write_fd, b"junk\xff")
         time.sleep(0.05)
         os.write(write_fd, b"\xd8first\xff\xd9\xff\xd8last\xff\xd9")

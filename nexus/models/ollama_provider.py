@@ -125,6 +125,24 @@ class OllamaProvider:
         if budget is not None:
             if budget.text_memory_low():
                 raise ModelProviderResourceError("Memória livre insuficiente para iniciar o modelo local.")
+            if budget.compact:
+                # Disk size is a lower bound for RAM use, not a promise that
+                # the model will fit. Leave room for the OS and Ollama runtime.
+                size_query = getattr(self.transport, "model_size", None)
+                if callable(size_query):
+                    try:
+                        size = size_query(self.model)
+                    except OllamaTransportError as exc:
+                        raise ModelProviderResourceError(
+                            "Não foi possível verificar o tamanho do modelo local."
+                        ) from exc
+                    available = budget.available_now_mib()
+                    if (type(size) is not int or size <= 0 or available is None
+                            or (size + 1024 * 1024 - 1) // (1024 * 1024) + 512 > available):
+                        raise ModelProviderResourceError(
+                            "O modelo local não cabe com segurança na memória disponível "
+                            "para o perfil de 4 GB. Libere RAM ou configure um modelo menor."
+                        )
             # Bounded to avoid thermal load and simultaneous large models.
             payload["options"].update(budget.text_options(
                 request.context_length, request.max_output_tokens,

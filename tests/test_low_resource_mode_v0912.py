@@ -45,6 +45,41 @@ def test_balanced_profile_preserves_fast_response_on_powerful_pc():
     assert budget.keep_alive == "45s"
 
 
+def test_four_gib_profile_bounds_context_batch_and_visual_pixels():
+    budget = ResourceBudget.detect(requested="auto", total_bytes=4 * GIB,
+                                   available_bytes=2500 * MIB, cores=8)
+    assert budget.mode == "eco" and budget.compact
+    assert budget.text_context == 768
+    assert budget.text_options(4096, 512) == {
+        "num_ctx": 768, "num_thread": 2, "num_batch": 16,
+        "num_predict": 128,
+    }
+    assert budget.vision_edge == 512
+    assert budget.vision_options()["num_batch"] == 16
+    assert budget.text_keep_alive() == "0s"
+
+
+def test_four_gib_text_refuses_model_that_exceeds_live_headroom(monkeypatch):
+    budget = ResourceBudget.detect(requested="eco", total_bytes=4 * GIB,
+                                   available_bytes=2500 * MIB, cores=4)
+    monkeypatch.setattr(ResourceBudget, "detect", lambda **kw: budget)
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 1800))
+    class SizedTransport(Transport):
+        def model_size(self, name):
+            assert name == "qwen3:1.7b"
+            return 1400 * MIB
+    transport = SizedTransport()
+    router = build_model_router(Settings(), transport_factory=lambda **kw: transport)
+    request = ModelRequest(prompt="Oi", context_length=2048)
+    with pytest.raises(ModelProviderResourceError, match="não cabe"):
+        router.generate(request)
+    assert transport.calls == []
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2500))
+    assert router.generate(request).content
+    assert transport.calls[0][0]["options"]["num_batch"] == 16
+    assert transport.calls[0][0]["keep_alive"] == "0s"
+
+
 def test_eco_reuses_text_briefly_only_with_live_and_startup_headroom(monkeypatch):
     ample = ResourceBudget.detect(requested="eco", total_bytes=8 * GIB,
                                   available_bytes=5 * GIB, cores=8)

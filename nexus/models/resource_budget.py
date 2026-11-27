@@ -78,6 +78,12 @@ class ResourceBudget:
     vision_edge: int
     keep_alive: str
 
+    @property
+    def compact(self) -> bool:
+        """Use tighter limits on machines with about 4 GiB of usable RAM."""
+        return (self.mode == "eco" and self.total_ram_mib is not None
+                and self.total_ram_mib <= 5120)
+
     @staticmethod
     def available_now_mib() -> int | None:
         """Recheck current pressure before inference, not just at startup."""
@@ -127,6 +133,12 @@ class ResourceBudget:
         )
         mode = ("eco" if low_memory else "balanced") if setting == "auto" else setting
         if mode == "eco":
+            if total_bytes is not None and total_bytes <= 5 * _GIB:
+                return cls(
+                    mode, total_bytes // (1024 * 1024),
+                    available_bytes // (1024 * 1024) if available_bytes is not None else None,
+                    min(count, 2), 768, 128, 768, 96, 512, "0s",
+                )
             return cls(
                 mode, total_bytes // (1024 * 1024) if total_bytes else None,
                 available_bytes // (1024 * 1024) if available_bytes is not None else None,
@@ -142,7 +154,7 @@ class ResourceBudget:
         options = {
             "num_ctx": min(context, self.text_context),
             "num_thread": self.num_thread,
-            "num_batch": 64 if self.mode == "eco" else 128,
+            "num_batch": 16 if self.compact else (64 if self.mode == "eco" else 128),
         }
         if max_output is not None:
             options["num_predict"] = min(max_output, self.text_predict)
@@ -155,6 +167,6 @@ class ResourceBudget:
             "num_ctx": self.vision_context,
             "num_predict": self.vision_predict,
             "num_thread": self.num_thread,
-            "num_batch": 64 if self.mode == "eco" else 128,
+            "num_batch": 16 if self.compact else (64 if self.mode == "eco" else 128),
             "temperature": 0.2,
         }
