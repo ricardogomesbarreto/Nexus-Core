@@ -388,7 +388,7 @@ class LocalVision:
             )
 
     def describe(self, image: bytes, *, question: str | None = None,
-                 model: str = "gemma3:4b",
+                 model: str | None = None,
                  is_cancelled: Callable[[], bool] | None = None) -> dict:
         def check_cancelled() -> None:
             if is_cancelled is not None and is_cancelled():
@@ -396,7 +396,11 @@ class LocalVision:
 
         check_cancelled()
         prompt = self.validate_question(question)
-        model_name = self._installed_vision_model(self.validate_model(model))
+        # The compact default matches the installer's smaller suggestion.
+        # An explicitly requested model or NEXUS_VISION_MODEL still wins.
+        preferred = "moondream:latest" if self.resource_budget.compact else "gemma3:4b"
+        model_name = self._installed_vision_model(self.validate_model(
+            preferred if model is None else model))
         check_cancelled()
         self._check_visual_memory(model_name)
         check_cancelled()

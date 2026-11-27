@@ -109,7 +109,7 @@ def test_four_gib_uses_installed_small_vision_model_for_authorized_photo(monkeyp
     monkeypatch.delenv("NEXUS_VISION_MODEL", raising=False)
     class Inventory:
         payload = None
-        def list_models(self): return ["moondream:latest"]
+        def list_models(self): return ["gemma3:4b", "moondream:latest"]
         def model_size(self, name):
             assert name == "moondream:latest"
             return 1700 * 1024 ** 2
