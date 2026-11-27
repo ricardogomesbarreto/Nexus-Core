@@ -109,7 +109,7 @@ jobs:
             --verify-tag \
             --prerelease \
             --title "NEXUS CORE v0.9.19-rc.1 — candidato para testes" \
-            --notes-file docs/RELEASE_NOTES_v0.9.19-rc.1.md
+            --notes-file docs/RELEASE_NOTES_v0.9.19rc1.md
           check="$(gh release view v0.9.19-rc.1 --json isPrerelease --jq .isPrerelease)"
           test "$check" = "true"
           assets="$(gh release view v0.9.19-rc.1 --json assets --jq '[.assets[].name] | sort | join(",")')"
