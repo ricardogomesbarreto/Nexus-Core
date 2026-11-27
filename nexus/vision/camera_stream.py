@@ -16,10 +16,13 @@ class CameraStream:
 
     MAX_FRAME_BYTES = 2 * 1024 * 1024
 
-    def __init__(self, index: int):
+    def __init__(self, index: int, *, fps: int = 5):
         if type(index) is not int or not 0 <= index <= LocalVision.MAX_CAMERA_INDEX:
             raise VisionInputError("Índice de câmera inválido.")
+        if type(fps) is not int or not 1 <= fps <= 10:
+            raise VisionInputError("Taxa da prévia inválida.")
         self.index = index
+        self.fps = fps
         self._stop = Event()
         self._lock = Lock()
         self._process = None
@@ -43,7 +46,7 @@ class CameraStream:
             self._process = subprocess.Popen(
                 [binary, "-hide_banner", "-loglevel", "error", "-nostdin",
                  "-f", "video4linux2", "-i", f"/dev/video{self.index}",
-                 "-vf", "fps=5,scale=640:-2", "-f", "image2pipe",
+                 "-vf", f"fps={self.fps},scale=640:-2", "-f", "image2pipe",
                  "-vcodec", "mjpeg", "pipe:1"],
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                 stderr=self._diagnostics, bufsize=0,

@@ -46,6 +46,18 @@ def test_history_is_bounded_to_six_short_exchanges():
     assert agent.requests[-1][0]["historico"][0]["usuario"] == "mensagem 1"
 
 
+def test_eco_prompt_keeps_two_short_turns_without_erasing_chat_history():
+    agent = FakeAgent([AgentOutcome(True, content=f"resposta {i} " + "x" * 600)
+                       for i in range(4)])
+    session = ChatSession(agent, prompt_turn_limit=2, prompt_item_limit=420)
+    for index in range(4):
+        session.ask(f"pergunta {index}")
+    assert len(session.history) == 4
+    prompt = agent.requests[-1][0]["historico"]
+    assert [item["usuario"] for item in prompt] == ["pergunta 1", "pergunta 2"]
+    assert all(len(item["assistente"]) <= 420 for item in prompt)
+
+
 @pytest.mark.parametrize("message", ["", "  ", "x" * 4001, None])
 def test_invalid_message_is_rejected_before_model(message):
     agent = FakeAgent([])

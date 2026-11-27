@@ -117,13 +117,17 @@ class DesktopWindow:
             if self._saved_preferences is not None
             and self._saved_preferences.remember_history else None
         )
+        self._resource_budget = ResourceBudget.detect()
+        context_limits = ({"prompt_turn_limit": 2, "prompt_item_limit": 420}
+                          if self._resource_budget.mode == "eco" else {})
         try:
-            self.session = ChatSession(app.agent, archive=chosen_archive)
+            self.session = ChatSession(app.agent, archive=chosen_archive,
+                                       **context_limits)
         except ChatArchiveError:
             self._history_load_warning = (
                 "O histórico local está inválido; as conversas anteriores não foram apagadas."
             )
-            self.session = ChatSession(app.agent)
+            self.session = ChatSession(app.agent, **context_limits)
         self.tk = tk
         self.messagebox = messagebox
         self.speaker = speaker if speaker is not None else LocalSpeaker()
@@ -178,7 +182,6 @@ class DesktopWindow:
         self._test_voice_turns_remaining = 0
         self._test_voice_reply_pending = False
         self._test_voice_speech_generation = None
-        self._resource_budget = ResourceBudget.detect()
         self._speak_generation = 0
         self._speaking = False
         self._startup_welcome_generation = None
@@ -1012,7 +1015,7 @@ class DesktopWindow:
         # Convert only the TTS copy; do not modify the source turn or logs.
         text = speech_from_model_text(
             text, max_characters=(
-                450 if self._resource_budget.mode == "eco" else 1300
+                220 if self._resource_budget.mode == "eco" else 1300
             ),
         )
         if not text:
@@ -1371,7 +1374,7 @@ class DesktopWindow:
         ) or self._closing:
             live_event("camera", "negado", source="camera_live")
             return
-        stream = CameraStream(index)
+        stream = CameraStream(index, fps=2 if self._resource_budget.mode == "eco" else 5)
         try:
             stream.start()
             preview = self.tk.Toplevel(self.root)

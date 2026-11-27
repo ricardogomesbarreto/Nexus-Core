@@ -18,6 +18,12 @@ def test_invalid_camera_never_opens_a_process(index):
         CameraStream(index)
 
 
+@pytest.mark.parametrize("fps", [0, 11, True, "2"])
+def test_camera_preview_rejects_invalid_rate(fps):
+    with pytest.raises(VisionInputError):
+        CameraStream(0, fps=fps)
+
+
 def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
     read_fd, write_fd = os.pipe()
 
@@ -35,11 +41,12 @@ def test_live_stream_keeps_only_latest_frame_and_stops(monkeypatch):
     monkeypatch.setattr(camera_module.shutil, "which", lambda name: "/usr/bin/ffmpeg")
     monkeypatch.setattr(camera_module.subprocess, "Popen",
                         lambda args, **kwargs: commands.append(args) or process)
-    stream = CameraStream(10)
+    stream = CameraStream(10, fps=2)
     stream.start()
     try:
         assert "/dev/video10" in commands[0]
         assert "pipe:1" in commands[0]
+        assert "fps=2,scale=640:-2" in commands[0]
         os.write(write_fd, b"junk\xff")
         time.sleep(0.05)
         os.write(write_fd, b"\xd8first\xff\xd9\xff\xd8last\xff\xd9")

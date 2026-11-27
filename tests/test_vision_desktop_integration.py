@@ -148,8 +148,9 @@ def desktop(monkeypatch):
     frame = io.BytesIO()
     Image.new("RGB", (8, 8), "red").save(frame, format="JPEG")
     class FakeCameraStream:
-        def __init__(self, index):
+        def __init__(self, index, *, fps=5):
             self.index = index
+            self.fps = fps
             self.stopped = False
         def start(self): pass
         def stop(self): self.stopped = True

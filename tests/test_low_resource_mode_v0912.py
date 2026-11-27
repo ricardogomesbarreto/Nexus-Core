@@ -45,6 +45,20 @@ def test_balanced_profile_preserves_fast_response_on_powerful_pc():
     assert budget.keep_alive == "45s"
 
 
+def test_eco_reuses_text_briefly_only_with_live_and_startup_headroom(monkeypatch):
+    ample = ResourceBudget.detect(requested="eco", total_bytes=8 * GIB,
+                                  available_bytes=5 * GIB, cores=8)
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 5000))
+    assert ample.text_keep_alive() == "10s"
+    assert ample.keep_alive == "0s"  # Vision always unloads after a request.
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 3000))
+    assert ample.text_keep_alive() == "0s"
+    tight = ResourceBudget.detect(requested="eco", total_bytes=8 * GIB,
+                                 available_bytes=2 * GIB, cores=8)
+    monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 5000))
+    assert tight.text_keep_alive() == "0s"
+
+
 def test_available_memory_can_select_eco_on_large_busy_workstation():
     budget = ResourceBudget.detect(
         requested="auto", total_bytes=32 * GIB,

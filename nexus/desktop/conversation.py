@@ -24,8 +24,15 @@ class ChatSession:
     MAX_CONTEXT_ITEM = 1200
     MAX_DISPLAY = 4000
 
-    def __init__(self, agent, archive: ChatArchive | None = None):
+    def __init__(self, agent, archive: ChatArchive | None = None, *,
+                 prompt_turn_limit: int = MAX_TURNS,
+                 prompt_item_limit: int = MAX_CONTEXT_ITEM):
+        if not (1 <= prompt_turn_limit <= self.MAX_TURNS
+                and 1 <= prompt_item_limit <= self.MAX_CONTEXT_ITEM):
+            raise ValueError("Limites de contexto inválidos.")
         self.agent = agent
+        self.prompt_turn_limit = prompt_turn_limit
+        self.prompt_item_limit = prompt_item_limit
         self._archive = archive
         self.history: list[tuple[str, str]] = (
             archive.load()[-self.MAX_TURNS:] if archive is not None else []
@@ -71,8 +78,9 @@ class ChatSession:
             if self._closed.is_set():
                 raise RuntimeError("A conversa foi encerrada.")
             context = [
-                {"usuario": user, "assistente": assistant}
-                for user, assistant in self.history[-self.MAX_TURNS:]
+                {"usuario": user[:self.prompt_item_limit],
+                 "assistente": assistant[:self.prompt_item_limit]}
+                for user, assistant in self.history[-self.prompt_turn_limit:]
             ]
             prompt = json.dumps(
                 {"historico": context, "mensagem_atual": message},

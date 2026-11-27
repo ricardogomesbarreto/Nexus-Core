@@ -10,12 +10,16 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.18; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.18-722F37">
+  <img alt="Código v0.9.19rc1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.19rc1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## v0.9.19rc1 — candidata de baixo consumo para testes
+
+No desktop em perfil `eco`, o contexto recente enviado ao modelo, a leitura em voz e a prévia da câmera foram reduzidos. O modelo de texto só permanece carregado brevemente quando há memória livre suficiente; a visão mantém a proteção por RAM. Leia as [notas e o roteiro de teste](docs/RELEASE_NOTES_v0.9.19rc1.md). Esta candidata ainda não tem aceite físico em notebook de 8 GB e não é uma versão estável.
 
 ## 0.9.18 — estudo local e prévia de voz
 

@@ -129,7 +129,7 @@ class OllamaProvider:
             payload["options"].update(budget.text_options(
                 request.context_length, request.max_output_tokens,
             ))
-            payload["keep_alive"] = budget.keep_alive
+            payload["keep_alive"] = budget.text_keep_alive()
 
         try:
             raw_response = self.transport.chat(
