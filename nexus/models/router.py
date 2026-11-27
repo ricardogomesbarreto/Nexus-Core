@@ -169,3 +169,18 @@ class ModelRouter:
             )
 
         return response
+
+    def generate_stream(self, request: ModelRequest, *, on_partial,
+                        is_cancelled) -> ModelResponse:
+        if not isinstance(request, ModelRequest):
+            raise ModelValidationError("request deve ser ModelRequest")
+        if request.json_mode:
+            raise ModelValidationError("Streaming não aceita JSON de ferramentas.")
+        provider = self.resolve(self._default_provider_id)
+        stream = getattr(provider, "generate_stream", None)
+        if not callable(stream):
+            return self.generate(request)
+        response = stream(request, on_partial=on_partial, is_cancelled=is_cancelled)
+        if not isinstance(response, ModelResponse):
+            raise ModelProtocolError("provider retornou objeto diferente de ModelResponse")
+        return response

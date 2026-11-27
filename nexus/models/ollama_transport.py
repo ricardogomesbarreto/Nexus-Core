@@ -1,4 +1,5 @@
 import json
+from time import monotonic
 from json import JSONDecodeError
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -35,9 +36,11 @@ class OllamaHTTPError(OllamaTransportError):
 
 
 class OllamaInvalidJSONError(OllamaTransportError):
-    """
-    O Ollama respondeu com JSON inválido.
-    """
+    """O Ollama respondeu com JSON inválido."""
+
+
+class OllamaCancelledError(OllamaTransportError):
+    """A text response was interrupted before completion."""
 
 
 class OllamaTransport:
@@ -46,6 +49,9 @@ class OllamaTransport:
     """
 
     MAX_CHAT_RESPONSE_BYTES = 8 * 1024 * 1024
+    MAX_STREAM_BYTES = 128 * 1024
+    MAX_STREAM_LINE_BYTES = 4096
+    MAX_STREAM_TEXT_CHARS = 8192
 
     def __init__(
         self,
@@ -115,6 +121,60 @@ class OllamaTransport:
             raise OllamaInvalidJSONError(
                 "Ollama retornou JSON inválido"
             ) from exc
+
+    def chat_stream(self, *, payload, timeout: float, on_partial, is_cancelled):
+        """Read bounded Ollama NDJSON; close the socket on cancellation/error."""
+        request = Request(
+            f"{self.base_url}/api/chat",
+            data=json.dumps({**payload, "stream": True}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        chunks = []
+        characters = total_bytes = 0
+        deadline = monotonic() + timeout
+        try:
+            if is_cancelled():
+                raise OllamaCancelledError("Solicitação cancelada.")
+            with self.opener(request, timeout=timeout) as response:
+                while True:
+                    if is_cancelled():
+                        raise OllamaCancelledError("Solicitação cancelada.")
+                    if monotonic() > deadline:
+                        raise OllamaTimeoutError("timeout ao acessar o Ollama")
+                    line = response.readline(self.MAX_STREAM_LINE_BYTES + 1)
+                    if not line:
+                        raise OllamaInvalidJSONError("Fluxo do Ollama terminou sem conclusão")
+                    total_bytes += len(line)
+                    if (len(line) > self.MAX_STREAM_LINE_BYTES
+                            or total_bytes > self.MAX_STREAM_BYTES or not line.endswith(b"\n")):
+                        raise OllamaInvalidJSONError("Fluxo do Ollama excedeu o limite")
+                    try:
+                        frame = json.loads(line.decode("utf-8"))
+                    except (UnicodeDecodeError, JSONDecodeError) as exc:
+                        raise OllamaInvalidJSONError("Ollama retornou fluxo inválido") from exc
+                    if not isinstance(frame, dict) or not isinstance(frame.get("message"), dict):
+                        raise OllamaInvalidJSONError("Ollama retornou fluxo inválido")
+                    chunk = frame["message"].get("content")
+                    if type(chunk) is not str:
+                        raise OllamaInvalidJSONError("Ollama retornou texto inválido")
+                    characters += len(chunk)
+                    if characters > self.MAX_STREAM_TEXT_CHARS:
+                        raise OllamaInvalidJSONError("Resposta de texto excedeu o limite")
+                    chunks.append(chunk)
+                    if is_cancelled():
+                        raise OllamaCancelledError("Solicitação cancelada.")
+                    if chunk:
+                        on_partial("".join(chunks))
+                    if frame.get("done") is True:
+                        return {**frame, "message": {"content": "".join(chunks)}}
+        except HTTPError as exc:
+            raise OllamaHTTPError(f"Ollama respondeu HTTP {exc.code}", status_code=exc.code) from exc
+        except TimeoutError as exc:
+            raise OllamaTimeoutError("timeout ao acessar o Ollama") from exc
+        except URLError as exc:
+            if isinstance(exc.reason, TimeoutError):
+                raise OllamaTimeoutError("timeout ao acessar o Ollama") from exc
+            raise OllamaUnavailableError("Ollama indisponível") from exc
 
     def list_models(self, *, timeout: float = 5.0) -> list[str]:
         """Read installed Ollama model names on loopback only (no pulls)."""

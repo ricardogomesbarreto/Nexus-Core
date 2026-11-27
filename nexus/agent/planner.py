@@ -358,7 +358,7 @@ class AgentPlanner:
         self.registry = registry
         self.executor = executor
 
-    def plan(self, prompt: str) -> AgentProposal:
+    def plan(self, prompt: str, *, on_partial=None, is_cancelled=None) -> AgentProposal:
         application = _simple_app_request(prompt)
         if application == "browser" and self.registry.exists("open_default_browser"):
             return AgentProposal(type="tool_call", tool_name="open_default_browser",
@@ -378,7 +378,7 @@ class AgentPlanner:
         if conversational:
             # Plain text avoids schema compilation and malformed JSON on small
             # local models. This branch can only be displayed, never executed.
-            response = self.model_router.generate(ModelRequest(
+            request = ModelRequest(
                 prompt=prompt,
                 system_prompt=(
                     "Você é NEXUS CORE, assistente local conversacional. Responda "
@@ -396,7 +396,12 @@ class AgentPlanner:
                 ),
                 context_length=2048, think=False, max_output_tokens=192,
                 timeout_seconds=45,
-            ))
+            )
+            stream = getattr(self.model_router, "generate_stream", None)
+            response = (stream(request, on_partial=on_partial,
+                               is_cancelled=is_cancelled)
+                        if on_partial is not None and callable(stream)
+                        else self.model_router.generate(request))
             if not isinstance(response, ModelResponse) or not response.done:
                 raise ProposalError("Resposta incompleta ou inválida do modelo.")
             answer = response.content.strip()
@@ -560,12 +565,14 @@ class AgentPlanner:
 
     def run(
         self, prompt: str, is_cancelled: Callable[[], bool] | None = None,
-        *, allow_tools: bool = True,
+        *, allow_tools: bool = True, on_partial=None,
     ) -> AgentOutcome:
         if is_cancelled is not None and is_cancelled():
             return AgentOutcome(False, error="Solicitação cancelada.", error_code="CANCELLED")
         try:
-            proposal = self.plan(prompt)
+            proposal = (self.plan(prompt, on_partial=on_partial,
+                                  is_cancelled=is_cancelled or (lambda: False))
+                        if on_partial is not None else self.plan(prompt))
         except ProposalError as exc:
             self.executor.security_gate.audit_logger.record(
                 tool_name="agent", action="agent_proposal",

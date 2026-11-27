@@ -17,6 +17,7 @@ from nexus.models.ollama_transport import (
     OllamaTimeoutError,
     OllamaTransportError,
     OllamaUnavailableError,
+    OllamaCancelledError,
 )
 
 
@@ -85,6 +86,17 @@ class OllamaProvider:
         self,
         request: ModelRequest,
     ) -> ModelResponse:
+        return self._generate(request)
+
+    def generate_stream(self, request: ModelRequest, *, on_partial,
+                        is_cancelled) -> ModelResponse:
+        """Stream only plain conversational replies; caller decides eligibility."""
+        if request.json_mode:
+            raise ModelValidationError("Streaming não aceita propostas de ferramentas.")
+        return self._generate(request, on_partial=on_partial, is_cancelled=is_cancelled)
+
+    def _generate(self, request: ModelRequest, *, on_partial=None,
+                  is_cancelled=None) -> ModelResponse:
         if not isinstance(request, ModelRequest):
             raise ModelValidationError(
                 "request deve ser ModelRequest"
@@ -150,10 +162,15 @@ class OllamaProvider:
             payload["keep_alive"] = budget.text_keep_alive()
 
         try:
-            raw_response = self.transport.chat(
-                payload=payload,
-                timeout=request.timeout_seconds or self.timeout,
-            )
+            if on_partial is None:
+                raw_response = self.transport.chat(
+                    payload=payload, timeout=request.timeout_seconds or self.timeout,
+                )
+            else:
+                raw_response = self.transport.chat_stream(
+                    payload=payload, timeout=request.timeout_seconds or self.timeout,
+                    on_partial=on_partial, is_cancelled=is_cancelled,
+                )
 
         except OllamaUnavailableError as exc:
             raise ModelProviderUnavailableError(
@@ -175,7 +192,7 @@ class OllamaProvider:
                 "provider Ollama retornou erro HTTP"
             ) from exc
 
-        except OllamaTransportError as exc:
+        except (OllamaCancelledError, OllamaTransportError) as exc:
             raise ModelProviderError(
                 "falha no transporte do provider Ollama"
             ) from exc

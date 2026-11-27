@@ -1,6 +1,7 @@
 """Conversa efêmera: um pedido e no máximo uma ação por turno."""
 
 import json
+from inspect import signature
 from dataclasses import dataclass
 from threading import Event, Lock
 
@@ -69,7 +70,8 @@ class ChatSession:
             raise RuntimeError("A conversa foi encerrada.")
         self._cancelled.clear()
 
-    def ask(self, message: str, *, advisory_only: bool = False) -> ChatReply:
+    def ask(self, message: str, *, advisory_only: bool = False,
+            on_partial=None) -> ChatReply:
         if not isinstance(message, str) or not message.strip():
             raise ValueError("Escreva uma mensagem antes de enviar.")
         if len(message) > self.MAX_MESSAGE:
@@ -87,6 +89,8 @@ class ChatSession:
                 ensure_ascii=False,
             )
             cancelled = lambda: self._closed.is_set() or self._cancelled.is_set()
+            progress = ({"on_partial": on_partial} if on_partial is not None
+                        and "on_partial" in signature(self.agent.run).parameters else {})
             local_reply = None if advisory_only else local_conversation_answer(message)
             if local_reply is not None:
                 # Read-only time/date never invoke the model or a system tool.
@@ -101,10 +105,12 @@ class ChatSession:
                     "diretriz": "Responda com sugestões concretas; não use ferramentas.",
                 }, ensure_ascii=False)
                 outcome = self.agent.run(
-                    prompt, is_cancelled=cancelled, allow_tools=False
+                    prompt, is_cancelled=cancelled, allow_tools=False,
+                    **progress,
                 )
             else:
-                outcome = self.agent.run(prompt, is_cancelled=cancelled)
+                outcome = self.agent.run(prompt, is_cancelled=cancelled,
+                                         **progress)
             if cancelled():
                 return ChatReply(
                     "Solicitação cancelada.",
