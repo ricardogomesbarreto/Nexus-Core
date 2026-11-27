@@ -118,7 +118,9 @@ class DesktopWindow:
             and self._saved_preferences.remember_history else None
         )
         self._resource_budget = ResourceBudget.detect()
-        context_limits = ({"prompt_turn_limit": 2, "prompt_item_limit": 420}
+        context_limits = ({"prompt_turn_limit": 1, "prompt_item_limit": 240}
+                          if self._resource_budget.compact else
+                          {"prompt_turn_limit": 2, "prompt_item_limit": 420}
                           if self._resource_budget.mode == "eco" else {})
         try:
             self.session = ChatSession(app.agent, archive=chosen_archive,
@@ -1015,6 +1017,7 @@ class DesktopWindow:
         # Convert only the TTS copy; do not modify the source turn or logs.
         text = speech_from_model_text(
             text, max_characters=(
+                160 if self._resource_budget.compact else
                 220 if self._resource_budget.mode == "eco" else 1300
             ),
         )
@@ -1374,7 +1377,8 @@ class DesktopWindow:
         ) or self._closing:
             live_event("camera", "negado", source="camera_live")
             return
-        stream = CameraStream(index, fps=2 if self._resource_budget.mode == "eco" else 5)
+        stream = CameraStream(index, fps=2 if self._resource_budget.mode == "eco" else 5,
+                              width=480 if self._resource_budget.compact else 640)
         try:
             stream.start()
             preview = self.tk.Toplevel(self.root)

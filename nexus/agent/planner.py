@@ -589,7 +589,8 @@ class AgentPlanner:
             return AgentOutcome(
                 False,
                 error="A memória disponível está muito baixa para iniciar o modelo local. "
-                      "Feche aplicativos pesados, confira 'free -h' e 'ollama ps' "
+                      "Feche aplicativos pesados ou configure um modelo menor; "
+                      "confira 'free -h' e 'ollama ps' "
                       "e tente novamente. Nenhuma inferência foi iniciada.",
                 error_code="RESOURCE_PRESSURE",
             )
