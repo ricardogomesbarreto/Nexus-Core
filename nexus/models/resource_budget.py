@@ -88,6 +88,23 @@ class ResourceBudget:
         available = self.available_now_mib()
         return self.mode == "eco" and available is not None and available < 1024
 
+    def text_keep_alive(self) -> str:
+        """Briefly reuse a small text model only when RAM has ample headroom.
+
+        Vision retains the strict zero-second eco policy. A previous startup
+        reading is not enough to authorize keeping a model in memory.
+        """
+        if self.mode != "eco":
+            return self.keep_alive
+        available = self.available_now_mib()
+        if (available is not None and available >= 4096
+                and self.available_ram_mib is not None
+                and self.available_ram_mib >= 4096
+                and self.total_ram_mib is not None
+                and self.total_ram_mib >= 6144):
+            return "10s"
+        return "0s"
+
     @classmethod
     def detect(cls, *, requested: str | None = None,
                total_bytes: int | None = None,
