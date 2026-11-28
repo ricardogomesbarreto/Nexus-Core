@@ -17,7 +17,7 @@ jobs:
   linux:
     name: Python 3.12 / Linux / PostgreSQL / Docker
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     services:
       postgres:
         image: postgres:16
@@ -51,6 +51,11 @@ jobs:
         run: |
           python -m compileall -q nexus tests
           xvfb-run -a pytest -q -rs -W error::pytest.PytestUnraisableExceptionWarning
+      - name: Desktop real sob limite compartilhado de 4 GB
+        if: hashFiles('tests/acceptance/Dockerfile') != ''
+        run: |
+          docker build -f tests/acceptance/Dockerfile -t nexus-compact-test .
+          docker run --rm --memory=4000000000 --memory-swap=4000000000 --cpus=2 nexus-compact-test
       - name: Verificar executável Linux
         run: nexus-core --version
 

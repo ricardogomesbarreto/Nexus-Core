@@ -290,3 +290,22 @@ def test_gui_test_panel_never_claims_unobserved_success(monkeypatch, caplog):
             gc.collect()
         except tk.TclError:
             pass
+
+
+def test_cgroup_budget_counts_clean_unmapped_cache(monkeypatch):
+    from pathlib import Path
+    from nexus.models.resource_budget import _memory_bytes
+
+    contents = {
+        "/proc/meminfo": "MemTotal: 8388608 kB\nMemAvailable: 4194304 kB",
+        "/sys/fs/cgroup/memory.max": str(4 * 1024**3),
+        "/sys/fs/cgroup/memory.current": str(3 * 1024**3),
+        "/sys/fs/cgroup/memory.stat": (
+            "file 2000000000\nshmem 400000000\nfile_mapped 100000000\n"
+            "file_dirty 30000000\nfile_writeback 20000000"
+        ),
+    }
+    monkeypatch.setattr(Path, "read_text", lambda path, **kw: contents[str(path)])
+    assert _memory_bytes() == (4 * 1024**3, 1024**3 + 1450000000)
+    contents["/sys/fs/cgroup/memory.stat"] = "file invalid"
+    assert _memory_bytes() == (4 * 1024**3, 1024**3)

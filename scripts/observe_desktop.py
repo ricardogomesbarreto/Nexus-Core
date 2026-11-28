@@ -94,10 +94,21 @@ def main(argv=None) -> int:
     except OSError:
         print("[MEDICAO-LOCAL] Não foi possível iniciar a sessão.", file=sys.stderr)
         return 1
-    samples: list[dict[str, int | None]] = []
+    count = 0
+    peak_swap = peak_rss = min_available = None
     try:
         while process.poll() is None:
-            samples.append(_sample(process.pid, elapsed=int(time.monotonic() - start)))
+            sample = _sample(process.pid, elapsed=int(time.monotonic() - start))
+            count += 1
+            swap = sample["swap_usada_mib"]
+            rss = sample["nexus_rss_mib"]
+            available = sample["ram_disponivel_mib"]
+            if swap is not None and (peak_swap is None or swap > peak_swap):
+                peak_swap = swap
+            if rss is not None and (peak_rss is None or rss > peak_rss):
+                peak_rss = rss
+            if available is not None and (min_available is None or available < min_available):
+                min_available = available
             try:
                 process.wait(timeout=arguments.interval)
             except subprocess.TimeoutExpired:
@@ -112,14 +123,8 @@ def main(argv=None) -> int:
                   file=sys.stderr)
             return 130
     elapsed = int(time.monotonic() - start)
-    peak_swap = max((item["swap_usada_mib"] for item in samples
-                     if type(item["swap_usada_mib"]) is int), default=None)
-    peak_rss = max((item["nexus_rss_mib"] for item in samples
-                    if type(item["nexus_rss_mib"]) is int), default=None)
-    min_available = min((item["ram_disponivel_mib"] for item in samples
-                         if type(item["ram_disponivel_mib"]) is int), default=None)
     print("[MEDICAO-LOCAL] resumo "
-          f"duracao_s={elapsed} amostras={len(samples)} "
+          f"duracao_s={elapsed} amostras={count} "
           f"ram_disponivel_min_mib={_number(min_available)} "
           f"swap_usada_max_mib={_number(peak_swap)} "
           f"nexus_rss_max_mib={_number(peak_rss)} "
