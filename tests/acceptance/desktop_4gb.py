@@ -44,7 +44,7 @@ def main():
             if i == 2:
                 assert first is not None and window.session.history == history
             else:
-                assert window.session.history[-1][0] == prompt
+                assert window.session.history and window.session.history[-1][0] == prompt, window.transcript.get("1.0", "end")[-600:]
                 assert window.session.history[-1][1].strip()
             print(f"turn={i+1} first_visible_s={first} total_s={now-start:.3f} "
                   f"max_ui_tick_s={max_tick:.3f}", flush=True)
