@@ -8,7 +8,7 @@ import re
 import unicodedata
 from difflib import SequenceMatcher
 from pathlib import Path
-from queue import Empty, Queue
+from queue import Empty, Full, Queue
 from threading import Thread
 from time import monotonic
 
@@ -141,6 +141,8 @@ class DesktopWindow:
         )
         self.recognizer = recognizer if recognizer is not None else LocalRecognizer()
         self._replies: Queue[ChatReply] = Queue()
+        self._stream_text: Queue[str] = Queue(maxsize=1)
+        self._stream_start: str | None = None
         self._audio_events: Queue[tuple[str, str, int]] = Queue()
         self._vision_events: Queue[tuple[str, str, str]] = Queue()
         self._camera_frames: Queue[bytes] = Queue()
@@ -930,6 +932,27 @@ class DesktopWindow:
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
+    def _show_partial(self, message: str) -> None:
+        """Update one temporary assistant turn on Tk's thread, with bounded text."""
+        if self._cancel_requested or self._closing or not self._busy:
+            return
+        self.transcript.configure(state="normal")
+        if self._stream_start is None:
+            self._stream_start = self.transcript.index("end-1c")
+            self.transcript.insert("end", "Nexus Core\n", "assistant")
+        else:
+            self.transcript.delete(f"{self._stream_start}+11c", "end-1c")
+        self.transcript.insert("end", message + "\n\n", "message-assistant")
+        self.transcript.configure(state="disabled")
+        self.transcript.see("end")
+
+    def _clear_partial(self) -> None:
+        if self._stream_start is not None:
+            self.transcript.configure(state="normal")
+            self.transcript.delete(self._stream_start, "end-1c")
+            self.transcript.configure(state="disabled")
+            self._stream_start = None
+
     def _start_worker(self, target, *args) -> None:
         """Retain workers; collect stale Tk widgets on the GUI thread first."""
         # Tk/Tcl objects finalized by Python GC in a worker can abort the
@@ -1073,6 +1096,12 @@ class DesktopWindow:
         self._refresh_composer_count()
         self._append("Você", message, "user")
         self.session.prepare_turn()
+        self._stream_start = None
+        while not self._stream_text.empty():
+            try:
+                self._stream_text.get_nowait()
+            except Empty:
+                break
         self.microphone_indicator.show_peak(0, listening=False)
         self._mic_last_signal = 0.0
         self._busy = True
@@ -1098,8 +1127,23 @@ class DesktopWindow:
         return "break"
 
     def _answer(self, message: str, advisory_only: bool = False) -> None:
+        def partial(value: str) -> None:
+            if self.session._cancelled.is_set() or self.session._closed.is_set():
+                return
+            try:
+                self._stream_text.put_nowait(value)
+            except Full:
+                try:
+                    self._stream_text.get_nowait()
+                except Empty:
+                    pass
+                try:
+                    self._stream_text.put_nowait(value)
+                except Full:
+                    pass
         try:
-            reply = self.session.ask(message, advisory_only=advisory_only)
+            reply = self.session.ask(message, advisory_only=advisory_only,
+                                     on_partial=partial)
         except Exception:
             reply = ChatReply(
                 "Não foi possível processar a solicitação.",
@@ -2088,6 +2132,12 @@ class DesktopWindow:
                             live_event("teste", "falhou", source="voz")
         while True:
             try:
+                partial_text = self._stream_text.get_nowait()
+            except Empty:
+                break
+            self._show_partial(partial_text)
+        while True:
+            try:
                 reply = self._replies.get_nowait()
             except Empty:
                 break
@@ -2101,6 +2151,7 @@ class DesktopWindow:
                     tool_result = reply.outcome.tool_result
                     live_event("ferramenta", "concluido" if tool_result.success else "falhou",
                                tool=tool_result.tool_name)
+                self._clear_partial()
                 self._finish_operation()
                 if cancelled or reply.outcome.error_code == "CANCELLED":
                     self._test_voice_reply_pending = False

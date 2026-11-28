@@ -10,12 +10,16 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.20rc1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.20rc1-722F37">
+  <img alt="Código v0.9.21rc1; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.21rc1-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## v0.9.21rc1 — respostas incrementais e cancelamento
+
+Perguntas comuns agora podem exibir texto conforme o Ollama gera, usando fluxo limitado a 8.192 caracteres e um único estado pendente na interface. O cancelamento fecha o fluxo entre trechos e a resposta parcial não é salva nem falada. Comandos e propostas de ferramentas seguem sem streaming. O perfil compacto de 4 GB permanece ativo. [Notas e roteiro de teste](docs/RELEASE_NOTES_v0.9.21rc1.md). Este pré-release ainda exige medições reais de RAM, swap, CPU e latência num notebook de 4 GB.
 
 ## v0.9.20rc1 — candidata de uso compacto em 4 GB
 
