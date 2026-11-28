@@ -130,6 +130,8 @@ class OllamaTransport:
             headers={"Content-Type": "application/json"}, method="POST",
         )
         chunks = []
+        next_preview = 0.0
+        published_chars = 0
         characters = total_bytes = 0
         deadline = monotonic() + timeout
         try:
@@ -139,7 +141,8 @@ class OllamaTransport:
                 while True:
                     if is_cancelled():
                         raise OllamaCancelledError("Solicitação cancelada.")
-                    if monotonic() > deadline:
+                    now = monotonic()
+                    if now > deadline:
                         raise OllamaTimeoutError("timeout ao acessar o Ollama")
                     line = response.readline(self.MAX_STREAM_LINE_BYTES + 1)
                     if not line:
@@ -160,13 +163,21 @@ class OllamaTransport:
                     characters += len(chunk)
                     if characters > self.MAX_STREAM_TEXT_CHARS:
                         raise OllamaInvalidJSONError("Resposta de texto excedeu o limite")
-                    chunks.append(chunk)
+                    if chunk:
+                        chunks.append(chunk)
                     if is_cancelled():
                         raise OllamaCancelledError("Solicitação cancelada.")
-                    if chunk:
-                        on_partial("".join(chunks))
                     if frame.get("done") is True:
-                        return {**frame, "message": {"content": "".join(chunks)}}
+                        text = "".join(chunks)
+                        if characters > published_chars:
+                            on_partial(text)
+                        return {**frame, "message": {"content": text}}
+                    # Match the desktop poll interval. Joining on every token
+                    # repeatedly copies a growing response during fast bursts.
+                    if chunk and (published_chars == 0 or now >= next_preview):
+                        on_partial("".join(chunks))
+                        published_chars = characters
+                        next_preview = now + 0.080
         except HTTPError as exc:
             raise OllamaHTTPError(f"Ollama respondeu HTTP {exc.code}", status_code=exc.code) from exc
         except TimeoutError as exc:

@@ -159,3 +159,15 @@ def test_planner_streams_conversation_but_not_tool_proposals(tmp_path):
     assert partials == ["Olá"] and router.streams == 1
     assert agent.run("Abra um programa específico?", on_partial=partials.append).content
     assert router.full == 1 and partials == ["Olá"]
+
+
+def test_stream_coalesces_bursts_and_flushes_pending_text(monkeypatch):
+    clock = iter([0.0, 0.01, 0.02, 0.11, 0.12, 0.13])
+    monkeypatch.setattr("nexus.models.ollama_transport.monotonic", lambda: next(clock))
+    frames = Frames([line("A"), line("B"), line("C"), line("D"), line("", done=True)])
+    previews = []
+    result = OllamaTransport(opener=lambda *a, **k: frames).chat_stream(
+        payload={}, timeout=2, on_partial=previews.append, is_cancelled=lambda: False,
+    )
+    assert previews == ["A", "ABC", "ABCD"]
+    assert result["message"]["content"] == "ABCD"
