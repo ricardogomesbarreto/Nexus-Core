@@ -1,4 +1,5 @@
 import math
+from time import monotonic, sleep
 from collections.abc import Mapping
 
 from nexus.models.contracts import (
@@ -77,6 +78,7 @@ class OllamaProvider:
         self.model = model
         self.transport = transport
         self.timeout = timeout
+        self._compact_expiry = 0.0
 
     @property
     def provider_id(self) -> str:
@@ -94,6 +96,39 @@ class OllamaProvider:
         if request.json_mode:
             raise ModelValidationError("Streaming não aceita propostas de ferramentas.")
         return self._generate(request, on_partial=on_partial, is_cancelled=is_cancelled)
+
+    def _compact_keep_alive(self, budget, *, streaming, is_cancelled):
+        size_query = getattr(self.transport, "model_size", None)
+        if not callable(size_query):
+            if budget.text_memory_low():
+                raise ModelProviderResourceError("Memória livre insuficiente para iniciar o modelo local.")
+            return "0s"
+        try:
+            size = size_query(self.model)
+        except OllamaTransportError as exc:
+            raise ModelProviderResourceError(
+                "Não foi possível verificar o tamanho do modelo local."
+            ) from exc
+        if type(size) is not int or size <= 0:
+            raise ModelProviderResourceError("Tamanho do modelo inválido.")
+        size_mib = (size + 1024**2 - 1) // 1024**2
+        required = max(1024, size_mib + 512)
+        # The previous turn may still own its short lease. Recheck on the
+        # worker, never discount resident weights or bypass the cold-load guard.
+        deadline = min(self._compact_expiry, monotonic() + 5)
+        while True:
+            if is_cancelled and is_cancelled():
+                raise ModelProviderError("Solicitação cancelada.")
+            available = budget.available_now_mib()
+            if available is not None and available >= required:
+                return "4s" if streaming and available >= size_mib + 1536 else "0s"
+            remaining = deadline - monotonic()
+            if available is None or remaining <= 0:
+                raise ModelProviderResourceError(
+                    "O modelo local não cabe com segurança na memória disponível "
+                    "para o perfil de 4 GB. Libere RAM ou configure um modelo menor."
+                )
+            sleep(min(0.1, remaining))
 
     def _generate(self, request: ModelRequest, *, on_partial=None,
                   is_cancelled=None) -> ModelResponse:
@@ -135,31 +170,18 @@ class OllamaProvider:
             payload["options"]["num_predict"] = request.max_output_tokens
         budget = getattr(self, "resource_budget", None)
         if budget is not None:
-            if budget.text_memory_low():
-                raise ModelProviderResourceError("Memória livre insuficiente para iniciar o modelo local.")
             if budget.compact:
-                # Disk size is a lower bound for RAM use, not a promise that
-                # the model will fit. Leave room for the OS and Ollama runtime.
-                size_query = getattr(self.transport, "model_size", None)
-                if callable(size_query):
-                    try:
-                        size = size_query(self.model)
-                    except OllamaTransportError as exc:
-                        raise ModelProviderResourceError(
-                            "Não foi possível verificar o tamanho do modelo local."
-                        ) from exc
-                    available = budget.available_now_mib()
-                    if (type(size) is not int or size <= 0 or available is None
-                            or (size + 1024 * 1024 - 1) // (1024 * 1024) + 512 > available):
-                        raise ModelProviderResourceError(
-                            "O modelo local não cabe com segurança na memória disponível "
-                            "para o perfil de 4 GB. Libere RAM ou configure um modelo menor."
-                        )
+                payload["keep_alive"] = self._compact_keep_alive(
+                    budget, streaming=on_partial is not None, is_cancelled=is_cancelled,
+                )
+            else:
+                if budget.text_memory_low():
+                    raise ModelProviderResourceError("Memória livre insuficiente para iniciar o modelo local.")
+                payload["keep_alive"] = budget.text_keep_alive()
             # Bounded to avoid thermal load and simultaneous large models.
             payload["options"].update(budget.text_options(
                 request.context_length, request.max_output_tokens,
             ))
-            payload["keep_alive"] = budget.text_keep_alive()
 
         try:
             if on_partial is None:
@@ -196,6 +218,10 @@ class OllamaProvider:
             raise ModelProviderError(
                 "falha no transporte do provider Ollama"
             ) from exc
+
+        finally:
+            if payload.get("keep_alive") == "4s":
+                self._compact_expiry = monotonic() + 5
 
         return self._parse_response(
             raw_response
