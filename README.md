@@ -21,6 +21,8 @@
 
 A janela acrescenta os novos trechos da resposta sem redesenhar a mensagem inteira. O perfil compacto usa duas threads, contexto de 768 tokens e lotes de 32 tokens na entrada textual. A CI exercita dez perguntas reais com qwen3:1.7b, dois cancelamentos e o encerramento do desktop. [Notas e teste](docs/RELEASE_NOTES_v0.9.21rc3.md).
 
+No [ensaio do PR #115](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/46185787946), a janela concluiu oito respostas, cancelou duas e encerrou normalmente. Pico do conjunto de 3,27 GB, zero OOM, primeiro texto em 3,69–5,97 s e maior intervalo observado no loop gráfico de 27 ms. As oito respostas completas consumiram 28,35–34,13 segundos de CPU agregada por turno, sob limite de duas CPUs. A suíte passou em 1.903 testes. Na [RC2](https://github.com/ricardogomesbarreto/Nexus-Core/actions/runs/46183006430), as quatro primeiras perguntas do mesmo roteiro levaram 6,17–8,64 s até o primeiro texto. Os ensaios usaram executores distintos. [Homologação no notebook](https://github.com/ricardogomesbarreto/Nexus-Core/issues/114).
+
 ### Próximas entregas
 
 | Versão ou marco | Trabalho pendente |
