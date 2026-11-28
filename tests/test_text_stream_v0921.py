@@ -119,9 +119,15 @@ def test_transcript_replaces_one_partial_turn_and_discards_it_on_cancel():
         window._show_partial("primeiro segundo")
         assert window.transcript.get("1.0", "end").count("Nexus Core") == 1
         assert "primeiro segundo" in window.transcript.get("1.0", "end")
+        window._append("Sistema", "Aviso posterior", "assistant")
+        window._show_partial("prévia revisada 🐧")
+        window._show_partial("prévia revisada 🐧 completa")
+        rendered = window.transcript.get("1.0", "end")
+        assert "prévia revisada 🐧 completa" in rendered and "Aviso posterior" in rendered
         window._cancel_requested = True
         window._clear_partial()
-        assert "primeiro" not in window.transcript.get("1.0", "end")
+        assert "prévia" not in window.transcript.get("1.0", "end")
+        assert "Aviso posterior" in window.transcript.get("1.0", "end")
     finally:
         root.destroy()
 

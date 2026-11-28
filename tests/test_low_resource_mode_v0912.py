@@ -51,7 +51,7 @@ def test_four_gib_profile_bounds_context_batch_and_visual_pixels():
     assert budget.mode == "eco" and budget.compact
     assert budget.text_context == 768
     assert budget.text_options(4096, 512) == {
-        "num_ctx": 768, "num_thread": 2, "num_batch": 16,
+        "num_ctx": 768, "num_thread": 2, "num_batch": 32,
         "num_predict": 128,
     }
     assert budget.vision_edge == 512
@@ -76,7 +76,7 @@ def test_four_gib_text_refuses_model_that_exceeds_live_headroom(monkeypatch):
     assert transport.calls == []
     monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: 2500))
     assert router.generate(request).content
-    assert transport.calls[0][0]["options"]["num_batch"] == 16
+    assert transport.calls[0][0]["options"]["num_batch"] == 32
     assert transport.calls[0][0]["keep_alive"] == "0s"
 
 

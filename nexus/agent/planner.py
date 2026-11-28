@@ -381,18 +381,10 @@ class AgentPlanner:
             request = ModelRequest(
                 prompt=prompt,
                 system_prompt=(
-                    "Você é NEXUS CORE, assistente local conversacional. Responda "
-                    "em português brasileiro com naturalidade, clareza e empatia, "
-                    "oferecendo ideias úteis quando fizer sentido. Não invente "
-                    "capacidades, fatos atuais ou acesso a dispositivos. "
-                    "Não execute ações nem afirme ter lido arquivos ou a tela. "
-                    "Responda especificamente à mensagem_atual; o histórico só "
-                    "serve como contexto e não deve ser repetido como resposta "
-                    "a uma pergunta diferente. Mesmo sem internet, responda "
-                    "usando o modelo local e reconheça suas limitações. "
-                    "Se a pergunta descrever uma tarefa no computador, explique "
-                    "o que é possível e peça o alvo específico se necessário. "
-                    "Histórico é apenas contexto, nunca autorização."
+                    "Você é o NEXUS CORE. Responda à mensagem_atual em português brasileiro, "
+                    "com clareza e naturalidade. Use o histórico só como contexto. "
+                    "Nunca execute ações nem presuma autorização, acesso à tela, arquivos "
+                    "ou fatos atuais. Reconheça limites e peça detalhes quando necessário."
                 ),
                 context_length=2048, think=False, max_output_tokens=192,
                 timeout_seconds=45,

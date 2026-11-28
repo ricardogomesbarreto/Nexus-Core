@@ -10,12 +10,26 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.21rc2; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.21rc2-722F37">
+  <img alt="Código v0.9.21rc3; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.21rc3-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## v0.9.21-rc.3 — leitura incremental em 4 GB
+
+A janela acrescenta os novos trechos da resposta sem redesenhar a mensagem inteira. O perfil compacto usa duas threads, contexto de 768 tokens e lotes de 32 tokens na entrada textual. A CI exercita dez perguntas reais com qwen3:1.7b, dois cancelamentos e o encerramento do desktop. [Notas e teste](docs/RELEASE_NOTES_v0.9.21rc3.md).
+
+### Próximas entregas
+
+| Versão ou marco | Trabalho pendente |
+| --- | --- |
+| 0.9.21 estável | Homologar o desktop no Ubuntu 26.04 de 4 GB com Wayland, áudio, câmera e serviços sob demanda. |
+| Linha 0.9.x, sem número atribuído | Concluir e medir os marcos de integração Craft, imagem, documentos, PDF, inspeção defensiva, perfil eco e acessibilidade conforme o roadmap G1–G8. |
+| 1.0, marco de produção | Consolidar instalação reproduzível, recuperação, segurança, documentação, observabilidade, interfaces e portabilidade. |
+
+As candidatas 0.9.19, 0.9.20 e 0.9.21 documentam a evolução da mesma linha. Os respectivos testes físicos seguem nas issues [#107](https://github.com/ricardogomesbarreto/Nexus-Core/issues/107), [#109](https://github.com/ricardogomesbarreto/Nexus-Core/issues/109), [#111](https://github.com/ricardogomesbarreto/Nexus-Core/issues/111) e [#112](https://github.com/ricardogomesbarreto/Nexus-Core/issues/112).
 
 ## v0.9.21rc2 — leitura e sessões prolongadas
 

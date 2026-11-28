@@ -938,18 +938,30 @@ class DesktopWindow:
             return
         self.transcript.configure(state="normal")
         if self._stream_start is None:
-            self._stream_start = self.transcript.index("end-1c")
+            self._stream_start = "preview_start"
+            self.transcript.mark_set(self._stream_start, "end-1c")
+            self.transcript.mark_gravity(self._stream_start, "left")
             self.transcript.insert("end", "Nexus Core\n", "assistant")
-        else:
-            self.transcript.delete(f"{self._stream_start}+11c", "end-1c")
-        self.transcript.insert("end", message + "\n\n", "message-assistant")
+            self.transcript.insert("end", "\n\n", "message-assistant")
+            self.transcript.mark_set("preview_end", "end-1c")
+            self.transcript.mark_gravity("preview_end", "left")
+            self._displayed_preview = ""
+        if not message.startswith(self._displayed_preview):
+            self.transcript.delete("preview_start+11c", "preview_end-2c")
+            self._displayed_preview = ""
+        suffix = message[len(self._displayed_preview):]
+        if suffix:
+            self.transcript.insert("preview_end-2c", suffix, "message-assistant")
+        self._displayed_preview = message
         self.transcript.configure(state="disabled")
         self.transcript.see("end")
 
     def _clear_partial(self) -> None:
         if self._stream_start is not None:
             self.transcript.configure(state="normal")
-            self.transcript.delete(self._stream_start, "end-1c")
+            self.transcript.delete(self._stream_start, "preview_end")
+            self.transcript.mark_unset(self._stream_start, "preview_end")
+            self._displayed_preview = ""
             self.transcript.configure(state="disabled")
             self._stream_start = None
 

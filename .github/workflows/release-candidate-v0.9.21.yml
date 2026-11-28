@@ -1,4 +1,4 @@
-name: Publish Nexus Core v0.9.21-rc.2 (candidate)
+name: Publish Nexus Core v0.9.21-rc.3 (candidate)
 
 # A GitHub prerelease is NOT the stable v0.9.19. The stable publish workflow
 # remains deliberately blocked until real Ubuntu 26.04 acceptance is recorded.
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: nexus-core-v0921-rc2-publish
+  group: nexus-core-v0921-rc3-publish
   cancel-in-progress: false
 
 jobs:
@@ -48,20 +48,20 @@ jobs:
           set -euo pipefail
           version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           git fetch origin main --tags
-          if [[ "$version" != "0.9.21rc2" || "$(git rev-parse HEAD)" != "$TESTED_SHA" || "$(git rev-parse origin/main)" != "$TESTED_SHA" ]]; then
+          if [[ "$version" != "0.9.21rc3" || "$(git rev-parse HEAD)" != "$TESTED_SHA" || "$(git rev-parse origin/main)" != "$TESTED_SHA" ]]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
             echo "Candidate skipped: main advanced, SHA differs or version mismatch."
             exit 0
           fi
           # A successful prerelease is immutable: all future CI pushes must
           # skip without reporting a false failure because main has advanced.
-          if gh release view v0.9.21-rc.2 >/dev/null 2>&1; then
-            published="$(gh release view v0.9.21-rc.2 --json isPrerelease --jq .isPrerelease)"
+          if gh release view v0.9.21-rc.3 >/dev/null 2>&1; then
+            published="$(gh release view v0.9.21-rc.3 --json isPrerelease --jq .isPrerelease)"
             if [[ "$published" != "true" ]]; then
               echo "::error::Candidate tag has a non-prerelease publication."
               exit 1
             fi
-            if ! git show-ref --verify --quiet refs/tags/v0.9.21-rc.2; then
+            if ! git show-ref --verify --quiet refs/tags/v0.9.21-rc.3; then
               echo "::error::Published candidate lacks its annotated tag."
               exit 1
             fi
@@ -71,8 +71,8 @@ jobs:
           fi
           # If a tag exists without a release, it must be for this exact SHA
           # before an interrupted publishing attempt may be retried.
-          if git show-ref --verify --quiet refs/tags/v0.9.21-rc.2; then
-            target="$(git rev-list -n 1 v0.9.21-rc.2)"
+          if git show-ref --verify --quiet refs/tags/v0.9.21-rc.3; then
+            target="$(git rev-list -n 1 v0.9.21-rc.3)"
             if [[ "$target" != "$TESTED_SHA" ]]; then
               echo "::error::Unpublished candidate tag targets another commit."
               exit 1
@@ -86,7 +86,7 @@ jobs:
           set -euo pipefail
           python -m pip install 'build==1.3.0'
           python -m build --wheel
-          wheel=dist/nexus_core-0.9.21rc2-py3-none-any.whl
+          wheel=dist/nexus_core-0.9.21rc3-py3-none-any.whl
           test -s "$wheel"
           sha256sum "$wheel" | tee dist/SHA256SUMS
           python -m zipfile --test "$wheel"
@@ -99,19 +99,19 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git show-ref --verify --quiet refs/tags/v0.9.21-rc.2; then
-            git tag -a v0.9.21-rc.2 -m "Nexus Core 0.9.21rc2 — candidate, physical acceptance pending"
-            git push origin refs/tags/v0.9.21-rc.2
+          if ! git show-ref --verify --quiet refs/tags/v0.9.21-rc.3; then
+            git tag -a v0.9.21-rc.3 -m "Nexus Core 0.9.21rc3 — candidate, physical acceptance pending"
+            git push origin refs/tags/v0.9.21-rc.3
           fi
-          gh release create v0.9.21-rc.2 \
-            dist/nexus_core-0.9.21rc2-py3-none-any.whl \
+          gh release create v0.9.21-rc.3 \
+            dist/nexus_core-0.9.21rc3-py3-none-any.whl \
             dist/SHA256SUMS \
             --verify-tag \
             --prerelease \
-            --title "NEXUS CORE v0.9.21-rc.2 — candidato para testes" \
-            --notes-file docs/RELEASE_NOTES_v0.9.21rc2.md
-          check="$(gh release view v0.9.21-rc.2 --json isPrerelease --jq .isPrerelease)"
+            --title "NEXUS CORE v0.9.21-rc.3 — candidato para testes" \
+            --notes-file docs/RELEASE_NOTES_v0.9.21rc3.md
+          check="$(gh release view v0.9.21-rc.3 --json isPrerelease --jq .isPrerelease)"
           test "$check" = "true"
-          assets="$(gh release view v0.9.21-rc.2 --json assets --jq '[.assets[].name] | sort | join(",")')"
-          test "$assets" = "SHA256SUMS,nexus_core-0.9.21rc2-py3-none-any.whl"
+          assets="$(gh release view v0.9.21-rc.3 --json assets --jq '[.assets[].name] | sort | join(",")')"
+          test "$assets" = "SHA256SUMS,nexus_core-0.9.21rc3-py3-none-any.whl"
           echo "Prerelease published and asset names verified. Stable release remains blocked."
