@@ -1,5 +1,7 @@
 """Real text turns in a disposable Tk, PostgreSQL and Ollama session."""
+import json
 import time
+from urllib.request import urlopen
 import tkinter as tk
 from pathlib import Path
 
@@ -31,7 +33,14 @@ def main():
             stats = dict(line.split() for line in cpu_file.read_text().splitlines())
             return int(stats["usage_usec"]) / 1_000_000
 
+        def loaded_models():
+            with urlopen("http://127.0.0.1:11434/api/ps", timeout=2) as response:
+                return [m["name"] for m in json.load(response)["models"]]
+
+        warm_turns = 0
         for i, prompt in enumerate(prompts):
+            warm = "qwen3:1.7b" in loaded_models()
+            warm_turns += int(warm)
             print(f"before_turn={i+1} available_mib={budget.available_now_mib()} "
                   f"cgroup_current={Path('/sys/fs/cgroup/memory.current').read_text().strip()}", flush=True)
             history = list(window.session.history)
@@ -62,8 +71,15 @@ def main():
             assert first is not None, "No incremental preview appeared"
             assert len(window.session.history) <= window.session.MAX_TURNS
             print(f"turn={i+1} first_visible_s={first} total_s={now-start:.3f} "
-                  f"max_ui_tick_s={max_tick:.3f} cpu_s={cpu_seconds()-cpu_start:.3f}", flush=True)
+                  f"max_ui_tick_s={max_tick:.3f} cpu_s={cpu_seconds()-cpu_start:.3f} warm={warm}", flush=True)
             assert max_tick < 2, "Desktop event loop stalled"
+        assert warm_turns, "The short reuse window was never exercised"
+        idle_start = time.monotonic()
+        while loaded_models():
+            root.update()
+            assert time.monotonic() - idle_start < 10, "Model remained loaded at idle"
+            time.sleep(0.1)
+        print(f"warm_turns={warm_turns} idle_unload_s={time.monotonic()-idle_start:.2f}", flush=True)
         closed = []
         root.bind("<Destroy>", lambda event: closed.append(True) if event.widget is root else None, add="+")
         window._close()

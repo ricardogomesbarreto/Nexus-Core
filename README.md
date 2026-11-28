@@ -10,12 +10,16 @@
   <img alt="Python 3.12 ou superior" src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white">
   <img alt="PostgreSQL local" src="https://img.shields.io/badge/PostgreSQL-local-4169E1?logo=postgresql&logoColor=white">
   <img alt="Linux desktop" src="https://img.shields.io/badge/Linux-desktop-FCC624?logo=linux&logoColor=black">
-  <img alt="Código v0.9.21rc3; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.21rc3-722F37">
+  <img alt="Código v0.9.21rc4; aceite físico pendente" src="https://img.shields.io/badge/c%C3%B3digo-v0.9.21rc4-722F37">
   <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-2F855A">
   <a href="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml"><img alt="CI do Nexus Core" src="https://github.com/ricardogomesbarreto/Nexus-Core/actions/workflows/ci.yml/badge.svg?branch=main"></a>
 </p>
 
 # Nexus Core
+
+## v0.9.21-rc.4 — perguntas consecutivas em 4 GB
+
+O perfil compacto pode reaproveitar o modelo de texto durante quatro segundos entre perguntas quando há memória suficiente. O ensaio de dez turnos também verifica que o Ollama descarrega o modelo em repouso. [Notas da RC4](docs/RELEASE_NOTES_v0.9.21rc4.md).
 
 ## v0.9.21-rc.3 — leitura incremental em 4 GB
 

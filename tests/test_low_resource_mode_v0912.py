@@ -309,3 +309,20 @@ def test_cgroup_budget_counts_clean_unmapped_cache(monkeypatch):
     assert _memory_bytes() == (4 * 1024**3, 1024**3 + 1450000000)
     contents["/sys/fs/cgroup/memory.stat"] = "file invalid"
     assert _memory_bytes() == (4 * 1024**3, 1024**3)
+
+
+def test_compact_model_lease_requires_stream_and_live_headroom(monkeypatch):
+    from nexus.models.ollama_provider import OllamaProvider
+
+    class Inventory:
+        def model_size(self, name):
+            return 1400 * MIB
+
+    provider = OllamaProvider(model="tiny", transport=Inventory())
+    budget = ResourceBudget.detect(requested="eco", total_bytes=4 * GIB,
+                                   available_bytes=3 * GIB, cores=2)
+    for available, streaming, expected in (
+        (3000, True, "4s"), (3000, False, "0s"), (2100, True, "0s"),
+    ):
+        monkeypatch.setattr(ResourceBudget, "available_now_mib", staticmethod(lambda: available))
+        assert provider._compact_keep_alive(budget, streaming=streaming, is_cancelled=None) == expected
