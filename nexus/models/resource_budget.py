@@ -168,7 +168,7 @@ class ResourceBudget:
         options = {
             "num_ctx": min(context, self.text_context),
             "num_thread": self.num_thread,
-            "num_batch": 16 if self.compact else (64 if self.mode == "eco" else 128),
+            "num_batch": 32 if self.compact else (64 if self.mode == "eco" else 128),
         }
         if max_output is not None:
             options["num_predict"] = min(max_output, self.text_predict)
