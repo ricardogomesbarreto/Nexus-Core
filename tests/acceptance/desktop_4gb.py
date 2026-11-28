@@ -1,6 +1,7 @@
 """Real text turns in a disposable Tk, PostgreSQL and Ollama session."""
 import time
 import tkinter as tk
+from pathlib import Path
 
 from nexus.desktop.confirmation import DesktopConfirmation
 from nexus.desktop.window import DesktopWindow
@@ -22,6 +23,8 @@ def main():
                    "Explique em detalhes como as nuvens se formam.",
                    "Por que as folhas costumam ser verdes?"]
         for i, prompt in enumerate(prompts):
+            print(f"before_turn={i+1} available_mib={budget.available_now_mib()} "
+                  f"cgroup_current={Path('/sys/fs/cgroup/memory.current').read_text().strip()}", flush=True)
             history = list(window.session.history)
             window.input.insert("1.0", prompt)
             start = time.monotonic()

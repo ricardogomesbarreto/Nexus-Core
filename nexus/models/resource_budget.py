@@ -21,6 +21,19 @@ def _positive_int(text: str) -> int | None:
     return number if 0 < number < 1 << 60 else None
 
 
+def _reclaimable_file_bytes() -> int:
+    """Estimate clean unmapped file cache; exclude shared and in-use pages."""
+    try:
+        stats = dict(line.split() for line in
+                     Path("/sys/fs/cgroup/memory.stat").read_text().splitlines())
+        file_bytes = int(stats["file"])
+        reserved = sum(int(stats[key]) for key in
+                       ("shmem", "file_mapped", "file_dirty", "file_writeback"))
+        return max(0, file_bytes - reserved)
+    except (OSError, ValueError, KeyError):
+        return 0
+
+
 def _memory_bytes() -> tuple[int | None, int | None]:
     total = available = None
     try:
@@ -49,7 +62,8 @@ def _memory_bytes() -> tuple[int | None, int | None]:
     try:
         current = _positive_int(Path("/sys/fs/cgroup/memory.current").read_text())
         if total is not None and current is not None:
-            remain = max(0, total - current)
+            working = max(0, current - _reclaimable_file_bytes())
+            remain = max(0, total - working)
             available = min(available, remain) if available is not None else remain
     except (OSError, ValueError):
         pass
